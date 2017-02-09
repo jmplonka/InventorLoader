@@ -1,5 +1,11 @@
 # InventorLoader
 Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD. Until now only the structure of IPD, IAM and IDW files can be dumpt, but neither parts (IPT) nor assemblies (IAM), nor drawings (IDW) can be displayed.
+
+## Prerequisits
+- The AddON requires additional python packages in the FreeCAD python installation: 
+  - https://pypi.python.org/pypi/xlrd: for reading embedded Excel workbooks
+  - http://pypi.python.org/pypi/xlutils: for preparing imported Excel workbooks to be stored
+  - https://pypi.python.org/pypi/xlwt: for writing embedded Excel workbooks
 ## Status:
 > Alpha!
 
