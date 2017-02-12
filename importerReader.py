@@ -42,8 +42,8 @@ KEY_THUMBNAIL_2          = 0x1C
 KEY_DOC_SUM_INFO_COMPANY = 0x15
 
 KEY_CODEPAGE             = 0x01
-
 KEY_SET_NAME             = 0xFF
+KEY_LANGUAGE_CODE        = 0x80000000
 
 try:
 	import xlrd
@@ -91,7 +91,7 @@ def ReadInventorSummaryInformation(doc, properties, path):
 
 	name = getPropertySetName(properties, path)
 
-	logMessage('\t\'%s\': (CP=%s)' %(name, hex(properties[KEY_CODEPAGE])))
+	logMessage('\t\'%s\': LC=%s)' %(name, hex(properties[KEY_LANGUAGE_CODE])))
 	doc.CreatedBy = getProperty(properties, KEY_SUM_INFO_AUTHOR)
 	doc.Comment = getProperty(properties, KEY_SUM_INFO_COMMENT)
 	doc.LastModifiedBy = getProperty(properties, KEY_SUM_INFO_MODIFYER)
@@ -108,7 +108,7 @@ def ReadInventorDocumentSummaryInformation(doc, properties, path):
 
 	name = getPropertySetName(properties, path)
 
-	logMessage('\t\'%s\': (CP=%s)' %(name, hex(properties[KEY_CODEPAGE])))
+	logMessage('\t\'%s\': (LC=%s)' %(name, hex(properties[KEY_LANGUAGE_CODE])))
 	doc.Company = getProperty(properties, KEY_DOC_SUM_INFO_COMPANY)
 
 	if (name not in model.iProperties):
@@ -121,16 +121,19 @@ def ReadInventorDocumentSummaryInformation(doc, properties, path):
 def ReadOtherProperties(properties, path):
 	global model
 
-	name = getPropertySetName(properties, path)
+	languageCode = 1031 # en_EN
 
-	logMessage('\t\'%s\': (CP=%X)' %(name, properties[KEY_CODEPAGE]))
+	name = getPropertySetName(properties, path)
+	if (KEY_LANGUAGE_CODE in properties):
+		languageCode = properties[KEY_LANGUAGE_CODE]
+	logMessage('\t\'%s\': (LC = %X)' %(name, languageCode))
 
 	props = {}
 
 	keys = properties.keys()
 	keys.sort()
 	for key in keys:
-		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME)):
+		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
 			if (type(val) is str):
 				if ((key == KEY_THUMBNAIL_1) or (key == KEY_THUMBNAIL_2)):
@@ -266,7 +269,7 @@ def ReadProtein(data):
 	protein = open ('%s\\Protein.zip' %(folder), 'wb')
 	protein.write(zip)
 	protein.close()
-	# logMessage(>> sys.stderr, '\tfound protein - stored as \'%s\\%s\'!' %(folder, 'Protein.zip'))
+	# logMessage('\t>>>INFO: found protein - stored as \'%s\\%s\'!' %(folder, 'Protein.zip'), Log.LOG_INFO)
 	return size + 4
 
 def ReadWorkbook(doc, data, name, stream):
@@ -295,171 +298,132 @@ def ReadWorkbook(doc, data, name, stream):
 
 	xls = copy(wbk)
 	xls.save(filename)
-	# logMessage(>> sys.stderr, '\tfound workook - stored as \'%s\'!' %(filename))
+	# logMessage('>>>INFO - found workook: stored as %r!' %(filename), Log.LOG_INFO)
 	return len(data)
 
-def ReadRSeSegment(data, offset, idx):
+def ReadRSeSegment(data, offset, idx, count):
 	seg = RSeSegment()
 	seg.name, i = getLen32Text16(data, offset)
 	seg.ID, i = getUUID(data, i, 'RSeSegment[%d].ID'  %(idx))
 	seg.revisionRef, i = getUUID(data, i, 'RSeSegment.revisionRef')
 	seg.value1, i = getUInt32(data, i)
 	seg.count1, i = getUInt32(data, i)
-	seg.values, i = getUInt32A(data, i, 5) # ???, ???, ???, numSec1, ???
+	seg.arr1, i = getUInt32A(data, i, 5) # ???, ???, ???, numSec1, ???
 	seg.count2, i = getUInt32(data, i)
+	seg.type, i = getLen32Text16(data, i)
+	seg.arr2, i = getUInt16A(data, i, count)
 	seg.objects = []
 	seg.nodes = []
 
+	logMessage('\t%s' %(seg.name))
+	logMessage('\t\t[{0},{1}]'.format(seg.value1, IntArr2Str(seg.arr1,4)))
+	logMessage('\t\t{0}: [{1}]'.format(seg.type, IntArr2Str(seg.arr2,4)))
+
 	return seg, i
 
+def ReadRSeSegmentObject(data, offset, seg, idx):
+	i = offset
+
+	obj = RSeSegmentObject()
+	obj.revisionRef, i = getUUID(data, i, 'RSeSegmentType.revisionRef')
+	obj.values, i = getUInt8A(data, i, 9)
+	obj.segRef, i = getUUID(data, i, 'RSeSegmentType.segRef')
+	obj.value1, i = getUInt32(data, i)
+	obj.value2, i = getUInt32(data, i)
+	seg.objects.append(obj)
+
+	return obj, i
+
+def ReadRSeSegmentNode(data, offset, seg, count, idx):
+	i = offset
+
+	node = RSeSegmentValue2()
+	node.index, i = getUInt32(data, i)
+	node.indexSegList1, i = getSInt16(data, i)
+	node.indexSegList2, i = getSInt16(data, i)
+	node.values, i = getUInt16A(data, i, count)
+	node.number, i = getUInt16(data, i)
+	seg.nodes.append(node)
+
+	logMessage('\t\t%2X: %s' %(idx, node))
+
+	return node, i
+
 def ReadRSeSegmentType10(data, offset, seg):
-	seg.typ.text, i = getLen32Text16(data, offset)
-	seg.typ.arr1, i = getUInt16A(data, i, 6)
-	logMessage('\t\t{0}: [{1}]'.format(seg.typ.text, IntArr2Str(seg.typ.arr1,4)))
+	i = offset
+
+	cnt = seg.count1
 	idx = 0
-	while (idx<seg.count1):
-		value1 = RSeSegmentValue1()
-		value1.revisionRef, i = getUUID(data, i, 'RSeSegmentType.revisionRef')
-		value1.values, i = getUInt8A(data, i, 9)
-		value1.segRef, i = getUUID(data, i, 'RSeSegmentType.segRef')
-		value1.value1, i = getUInt32(data, i)
-		value1.value2, i = getUInt32(data, i)
-		logMessage('\t\t%2X: %s' %(idx, value1))
-		seg.objects.append(value1)
+	while (idx < cnt):
+		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
 		idx += 1
 	return i
 
 def ReadRSeSegmentType15(data, offset, seg):
-	global model
+	i = offset
 
-	seg.typ.text, i = getLen32Text16(data, offset)
-	seg.typ.arr1, i = getUInt16A(data, i, 6)
-	logMessage('\t\t{0}: [{1}]'.format(seg.typ.text, IntArr2Str(seg.typ.arr1,4)))
+	cnt = seg.count1
 	idx = 0
-	while (idx<seg.count1):
-		value1 = RSeSegmentValue1()
-		value1.revisionRef, i = getUUID(data, i, 'RSeSegmentType.revisionRef')
-		value1.values, i = getUInt8A(data, i, 9)
-		value1.segRef, i = getUUID(data, i, 'RSeSegmentType.segRef')
-		value1.value1, i = getUInt32(data, i)
-		value1.value2, i = getUInt32(data, i)
-		logMessage('\t\t%2X: %s' %(idx, value1))
-		seg.objects.append(value1)
+	while (idx < cnt):
+		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
 		idx += 1
 
 	cnt, i = getUInt32(data, i)
 	idx = 1
 	while (idx < cnt):
-		value2 = RSeSegmentValue2()
-		value2.index, i = getUInt32(data, i)
-		value2.indexSegList1, i = getSInt16(data, i)
-		value2.indexSegList2, i = getSInt16(data, i)
-		value2.values, i = getUInt16A(data, i, 4)
-		value2.number, i = getUInt16(data, i)
-
-		logMessage('\t\t%2X: %s' %(idx, value2))
-		seg.nodes.append(value2)
+		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
 		idx += 1
 
 	return i
 
 def ReadRSeSegmentType1A(data, offset, seg):
-	global model
+	i = offset
 
-	seg.typ.text, i = getLen32Text16(data, offset)
-	seg.typ.arr1, i = getUInt16A(data, i, 8)
-	logMessage('\t\t{0}: [{1}]'.format(seg.typ.text, IntArr2Str(seg.typ.arr1,4)))
+	cnt = seg.count1
 	idx = 0
-	while (idx<seg.count1):
-		value1 = RSeSegmentValue1()
-		value1.revisionRef, i = getUUID(data, i, 'RSeSegmentType.revisionRef')
-		value1.values, i = getUInt8A(data, i, 9)
-		value1.segRef, i = getUUID(data, i, 'RSeSegmentType.segRef')
-		value1.value1, i = getUInt32(data, i)
-		value1.value2, i = getUInt32(data, i)
-		logMessage('\t\t%2X: %s' %(idx, value1))
-		seg.objects.append(value1)
+	while (idx < cnt):
+		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
 		idx += 1
+
 	cnt, i = getUInt32(data, i)
 	idx = 1
 	while (idx < cnt):
-		value2 = RSeSegmentValue2()
-		value2.index, i = getUInt32(data, i)
-		value2.indexSegList1, i = getSInt16(data, i)
-		value2.indexSegList2, i = getSInt16(data, i)
-		value2.values, i = getUInt16A(data, i, 4)
-		value2.number, i = getUInt16(data, i)
-
-		logMessage('\t\t%2X: %s' %(idx, value2))
-		seg.nodes.append(value2)
+		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
 		idx += 1
 
 	return i
 
 def ReadRSeSegmentType1D(data, offset, seg):
-	global model
+	i = offset
 
-	seg.typ.text, i = getLen32Text16(data, offset)
-	seg.typ.arr1, i = getUInt16A(data, i, 8)
-	logMessage('\t\t{0}: [{1}]'.format(seg.typ.text, IntArr2Str(seg.typ.arr1,4)))
+	cnt = seg.count1
 	idx = 0
-	while (idx<seg.count1):
-		value1 = RSeSegmentValue1()
-		value1.revisionRef, i = getUUID(data, i, 'RSeSegmentType.revisionRef')
-		value1.values, i = getUInt8A(data, i, 9)
-		value1.segRef, i = getUUID(data, i, 'RSeSegmentType.segRef')
-		value1.value1, i = getUInt32(data, i)
-		value1.value2, i = getUInt32(data, i)
-		logMessage('\t\t%2X: %s' %(idx, value1))
-		seg.objects.append(value1)
+	while (idx < cnt):
+		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
 		idx += 1
+
 	cnt, i = getUInt32(data, i)
 	idx = 1
 	while (idx < cnt):
-		value2 = RSeSegmentValue2()
-		value2.index, i = getUInt32(data, i)
-		value2.indexSegList1, i = getSInt16(data, i)
-		value2.indexSegList2, i = getSInt16(data, i)
-		value2.values, i = getUInt16A(data, i, 4)
-		value2.number, i = getUInt16(data, i)
-
-		logMessage('\t\t%2X: %s' %(idx, value2))
-		seg.nodes.append(value2)
+		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
 		idx += 1
 
 	return i
 
 def ReadRSeSegmentType1F(data, offset, seg):
-	cnt1 = seg.count1
+	i = offset
 	cnt2 = 0
-	seg.typ.text, i = getLen32Text16(data, offset)
-	seg.typ.arr1, i = getUInt16A(data, i, 10)
-	logMessage('\t\t{0}: [{1}]'.format(seg.typ.text, IntArr2Str(seg.typ.arr1,4)))
 
+	cnt = seg.count1
 	idx = 0
-	while (idx < cnt1):
-		value1 = RSeSegmentValue1()
-		value1.revisionRef, i = getUUID(data, i, 'RSeSegmentType.revisionRef')
-		value1.values, i = getUInt8A(data, i, 9)
-		value1.segRef, i = getUUID(data, i, 'RSeSegmentType.segRef')
-		value1.value1, i = getUInt32(data, i)
-		value1.value2, i = getUInt32(data, i)
-		logMessage('\t\t%2X: %s' %(idx, value1))
-		seg.objects.append(value1)
+	while (idx < cnt):
+		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
 		idx += 1
-		cnt2 = value1.value2
+		cnt2 = obj.value2
 
 	idx = 1
 	while (idx < cnt2):
-		value2 = RSeSegmentValue2()
-		value2.index, i = getUInt32(data, i)
-		value2.indexSegList1, i = getSInt16(data, i)
-		value2.indexSegList2, i = getSInt16(data, i)
-		value2.values, i = getUInt16A(data, i, 6)
-		value2.number, i = getUInt16(data, i)
-
-		logMessage('\t\t%2X: %s' %(idx, value2))
-		seg.nodes.append(value2)
+		node, i = ReadRSeSegmentNode(data, i, seg, 6, idx)
 		idx += 1
 	return i
 
@@ -467,12 +431,11 @@ def ReadRSeSegInfo10(data, offset):
 	global model
 
 	model.RSeSegInfo = RSeSegInformation()
+
 	cnt, i = getSInt32(data, offset)
 	idx = 0
 	while (idx < cnt):
-		seg, i = ReadRSeSegment(data, i, idx)
-		logMessage('\t%s' %(seg.name))
-		logMessage('\t\t[{0},{1}]'.format(seg.value1, IntArr2Str(seg.values,4)))
+		seg, i = ReadRSeSegment(data, i, idx, 6)
 
 		i = ReadRSeSegmentType10(data, i, seg)
 
@@ -486,12 +449,11 @@ def ReadRSeSegInfo15(data, offset):
 	global model
 
 	model.RSeSegInfo = RSeSegInformation()
+
 	cnt, i = getSInt32(data, offset)
 	idx = 0
 	while (idx < cnt):
-		seg, i = ReadRSeSegment(data, i, idx)
-		logMessage('\t%s' %(seg.name))
-		logMessage('\t\t[{0},{1}]'.format(seg.value1, IntArr2Str(seg.values,4)))
+		seg, i = ReadRSeSegment(data, i, idx, 6)
 
 		i = ReadRSeSegmentType15(data, i, seg)
 
@@ -528,9 +490,7 @@ def ReadRSeSegInfo1A(data, offset):
 	cnt, i = getSInt32(data, offset)
 	idx = 0
 	while (idx < cnt):
-		seg, i = ReadRSeSegment(data, i, idx)
-		logMessage('\t%s' %(seg.name))
-		logMessage('\t\t[{0},{1}]'.format(seg.value1, IntArr2Str(seg.values,4)))
+		seg, i = ReadRSeSegment(data, i, idx, 8)
 
 		i = ReadRSeSegmentType1A(data, i, seg)
 
@@ -567,9 +527,7 @@ def ReadRSeSegInfo1D(data):
 	cnt, i = getSInt32(data, 0)
 	idx = 0
 	while (idx < cnt):
-		seg, i = ReadRSeSegment(data, i, idx)
-		logMessage('\t%s' %(seg.name))
-		logMessage('\t\t[{0},{1}]'.format(seg.value1, IntArr2Str(seg.values,4)))
+		seg, i = ReadRSeSegment(data, i, idx, 8)
 
 		i = ReadRSeSegmentType1D(data, i, seg)
 
@@ -599,69 +557,6 @@ def ReadRSeSegInfo1D(data):
 
 	return i
 
-def getText1(uid):
-	b = uid.hex
-
-	if (b == '90874d1611d0d1f80008cabc0663dc09'): return 'RDxPart'
-	if (b == 'ce52df4211d0d2d00008ccbc0663dc09'): return 'RDxPlane'
-	if (b == '8ef06c8911d1043c60007cb801f31bb0'): return 'RDxLine3'
-	if (b == 'ce52df3e11d0d2d00008ccbc0663dc09'): return 'RDxPoint3'
-	if (b == '90874d4711d0d1f80008cabc0663dc09'): return 'RDxBody'
-	if (b == '90874d1111d0d1f80008cabc0663dc09'): return 'RDxPlanarSketch'
-	if (b == 'ce52df3b11d0d2d00008ccbc0663dc09'): return 'RDxArc2'
-	if (b == '74df96e011d1e069800066b1e13554c7'): return 'RDxDiameter2'
-
-	if (b == 'ce52df3511d0d2d00008ccbc0663dc09'): return 'RDxPoint2'
-	if (b == 'ce52df3a11d0d2d00008ccbc0663dc09'): return 'RDxLine2'
-
-	if (b == '1105855811d295e360000cb38932edb0'): return 'RDxDistanceDimension2'
-	if (b == '00acc00011d1e05f800066b1e13554c7'): return 'RDxHorizontalDistance2'
-	if (b == '3683ff4011d1e05f800066b1e13554c7'): return 'RDxVerticalDistance2'
-	if (b == '90874d9111d0d1f80008cabc0663dc09'): return 'RDxFeature'
-	if (b == '2067324411d21dc560002aab01f31bb0'): return 'RDxRectangularPattern'
-	if (b == 'fad9a9b511d2330560002cab01f31bb0'): return 'RDxMirrorPattern'
-	if (b == '6759d86f11d27838600094b70b02ecb0'): return 'FWxRenderingStyle'
-	if (b == 'f645595c11d51333100060a6bba647b5'): return 'MIxTransactablePartition'
-	if (b == 'cc0f752111d18027e38619962259017a'): return 'RSeAcisEntityWrapper'
-	if (b == '26287e9611d490bd1000e2962dba09b5'): return 'RDxDeselTableNode'
-	if (b == '2d86fc2642dfe34030c08ab05ef9bfc5'): return 'RDxReferenceEdgeLoopId'
-	if (b == '8f41fd2411d26eac00082aab32a3dc09'): return 'RDxStopNode'
-	if (b == '2b24130911d272cc60007bb79b49ebb0'): return 'RDxBrowserFolder'
-	if (b == '3c95b7ce11d13388000820a5b17adc09'): return 'NBxNotebook'
-	if (b == 'd81cde4711d265f760005dbead9287b0'): return 'NBxEntry'
-
-	if (b == '671bb70011d1e068800066b1e13554c7'): return 'RDxRadius2'
-	if (b == '590d0a1011d1e6ca80006fb1e13554c7'): return 'RDxAngle2'
-
-	if (b == '1fbb3c0111d2684da0009e9a3c3aa076'): return 'RDxString'
-
-	# logError("\tWARNING - can't find name for type %s" %(b))
-
-	return uid
-
-def getText2(uid):
-	b = uid.hex
-
-	if (b == 'ca7163a111d0d3b20008bfbb21eddc09'): return 'UCxComponentNode'
-	if (b == '14533d8211d1087100085ba406e5dc09'): return 'UCxWorkplaneNode'
-	if (b == '2c7020f611d1b3c06000b1b801f31bb0'): return 'UCxWorkaxisNode'
-	if (b == '2c7020f811d1b3c06000b1b801f31bb0'): return 'UCxWorkpointNode'
-	if (b == '9a676a5011d45da66000e3b81269f1b0'): return 'PMxBodyNode'
-	if (b == '60fd184511d0d79d0008bfbb21eddc09'): return 'SCxSketchNode'
-	if (b == 'a94779e011d438066000b1b7b035f1b0'): return 'PMxSingleFeatureOutline'
-	if (b == 'a94779e111d438066000b1b7b035f1b0'): return 'PMxPatternOutline'
-	if (b == '022ac1b511d20d356000f99ac5361ab0'): return 'PMxPartDrawAttr'
-	if (b == 'af48560f11d48dc71000d58dc04a0ab5'): return 'PMxColorStylePrimAttr'
-	if (b == '452121b611d514d6100061a6bba647b5'): return 'RDxModelerTxnMgr'
-	if (b == '90874d4711d0d1f80008cabc0663dc09'): return 'RDxBody'
-	if (b == 'b251bfc011d24761a0001580d694c7c9'): return 'PMxEntryManager'
-	if (b == '21e870bb11d0d2d000d8ccbc0663dc09'): return 'BRxEntry'
-	if (b == 'dbbad87b11d228b0600052bead9287b0'): return 'NBxItem'
-
-	# logError("\tWARNING - can't find name for node %s" %(b))
-
-	return uid
-
 def ReadRSeSegInfo1F(data):
 	global model
 
@@ -669,9 +564,7 @@ def ReadRSeSegInfo1F(data):
 	cnt, i = getSInt32(data, 0)
 	idx = 0
 	while (idx < cnt):
-		seg, i = ReadRSeSegment(data, i, idx)
-		logMessage('\t%s' %(seg.name))
-		logMessage('\t\t[{0},{1}]'.format(seg.value1, IntArr2Str(seg.values,4)))
+		seg, i = ReadRSeSegment(data, i, idx, 10)
 
 		i = ReadRSeSegmentType1F(data, i, seg)
 
@@ -681,6 +574,7 @@ def ReadRSeSegInfo1F(data):
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
 	logMessage('\t[%s]' %(IntArr2Str(model.RSeSegInfo.val, 4)))
+
 	cnt, i = getUInt32(data, i)
 	idx = 0
 	logMessage('\tList 1')
@@ -706,13 +600,12 @@ def ReadRSeSegInfo1F(data):
 def ReadRSeDb10(data, offset):
 	global model
 
-	model.RSeDb.arr1, i = getUInt16A(data, offset, 4)
-	model.RSeDb.dat1, i = getDateTime(data, i)
-	model.RSeDb.arr4, i = getUInt16A(data, i, 8)
+	i = offset
+	model.RSeDb.arr3, i = getUInt16A(data, i, 8)
 	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.uid2, i = getUUID(data, i, 'RSeDb[1].uid')
-	model.RSeDb.arr3, i = getUInt32A(data, i, 2)
+	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
 	model.RSeDb.arr5, i = getUInt32A(data, i, 6)
 
@@ -728,14 +621,14 @@ def ReadRSeDb10(data, offset):
 def ReadRSeDb15(data, offset):
 	global model
 
-	model.RSeDb.arr1, i = getUInt16A(data, offset, 4)
-	model.RSeDb.dat1, i = getDateTime(data, i)
+	i = offset
+
 	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
-	model.RSeDb.arr4, i = getUInt16A(data, i, 14)
+	model.RSeDb.arr3, i = getUInt16A(data, i, 14)
 	model.RSeDb.dat3, i = getDateTime(data, i)
 	model.RSeDb.uid2, i = getUUID(data, i, 'RSeDb[1].uid')
-	model.RSeDb.arr3, i = getUInt32A(data, i, 2)
+	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
 	model.RSeDb.arr5, i = getUInt32A(data, i, 6)
 
@@ -743,6 +636,9 @@ def ReadRSeDb15(data, offset):
 	logMessage('\t%s [%X]' %(model.RSeDb.uid, model.RSeDb.version))
 	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr1, 4)))
 	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr2, 4)))
+	logMessage('\t[%s]: %s' %(IntArr2Str(model.RSeDb.arr3, 4), model.RSeDb.uid2))
+	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr4, 4)))
+	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr5, 4)))
 
 	i = ReadRSeSegInfo15(data, i)
 
@@ -751,25 +647,30 @@ def ReadRSeDb15(data, offset):
 def ReadRSeDb1A(data, offset):
 	global model
 
-	model.RSeDb.arr1, i = getUInt16A(data, offset, 4)
-	model.RSeDb.dat1, i = getDateTime(data, i)
+	i = offset
+
 	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.txt2, i  = getLen32Text16(data, i)
-	model.RSeDb.arr4, i = getUInt16A(data, i, 12)
+	model.RSeDb.arr3, i = getUInt16A(data, i, 12)
 	model.RSeDb.dat3, i = getDateTime(data, i)
 	model.RSeDb.uid2, i = getUUID(data, i, 'RSeDb[1].uid')
 	model.RSeDb.u16, i  = getUInt16(data, i)
-	model.RSeDb.arr3, i = getUInt32A(data, i, 2)
+	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
-	model.RSeDb.arr6, i = getUInt32A(data, i, 2)
+	model.RSeDb.arr5, i = getUInt32A(data, i, 2)
 	model.RSeDb.txt3, i = getLen32Text16(data, i)
-	model.RSeDb.arr7, i = getUInt32A(data, i, 4)
+	model.RSeDb.arr6, i = getUInt32A(data, i, 4)
 
 	logMessage('\t%r: %s' %(model.RSeDb.txt, model.RSeDb.txt2))
 	logMessage('\t%s [%X]' %(model.RSeDb.uid, model.RSeDb.version))
 	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr1, 4)))
 	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr2, 4)))
+	logMessage('\t[%s]: %s' %(IntArr2Str(model.RSeDb.arr3, 4), model.RSeDb.uid2))
+	logMessage('\t%d: [%s]' %(model.RSeDb.u16, IntArr2Str(model.RSeDb.arr4, 4)))
+	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr5, 4)))
+	logMessage('\t%r' %(model.RSeDb.txt3))
+	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr6, 4)))
 
 	i = ReadRSeSegInfo1A(data, i)
 
@@ -778,24 +679,8 @@ def ReadRSeDb1A(data, offset):
 def ReadRSeDb1D(data, offset):
 	global model
 
-	model.RSeDb.arr1, i = getUInt16A(data, offset, 4)
-	model.RSeDb.dat1, i = getDateTime(data, i)
-	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
-	model.RSeDb.dat2, i = getDateTime(data, i)
-	model.RSeDb.txt, i = getLen32Text16(data, i)
+	i = offset
 
-	logMessage('\t%r: %s' %(model.RSeDb.txt, model.RSeDb.txt2))
-	logMessage('\t%s [%X]' %(model.RSeDb.uid, model.RSeDb.version))
-	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr1, 4)))
-	logMessage('\t[%s]' %(IntArr2Str(model.RSeDb.arr2, 4)))
-
-	return i
-
-def ReadRSeDb1F(data, offset):
-	global model
-
-	model.RSeDb.arr1, i = getUInt16A(data, offset, 4)
-	model.RSeDb.dat1, i = getDateTime(data, i)
 	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
@@ -814,6 +699,8 @@ def ReadRSeDb(data):
 	i = 0
 	model.RSeDb.uid, i = getUUID(data, i, 'RSeDb.uid')
 	model.RSeDb.version, i = getUInt32(data, i)
+	model.RSeDb.arr1, i = getUInt16A(data, i, 4)
+	model.RSeDb.dat1, i = getDateTime(data, i)
 
 	if(model.RSeDb.version == 0x10):
 		i = ReadRSeDb10(data, i)
@@ -821,6 +708,10 @@ def ReadRSeDb(data):
 		i = ReadRSeDb15(data, i)
 	elif(model.RSeDb.version == 0x1A):
 		i = ReadRSeDb1A(data, i)
+	elif(model.RSeDb.version == 0x1D):
+		i = ReadRSeDb1D(data, i)
+	elif(model.RSeDb.version == 0x1F):
+		i = ReadRSeDb1D(data, i)
 	else:
 		logError('>>> ERROR - reading RSeDB version %X: unknown format!' %(model.RSeDb.version))
 
@@ -868,11 +759,11 @@ def getRevisionRef(revIdx):
 
 	return revRef
 
-def ReadRSeStorageDataSectionSizeArray(data, offset):
+def ReadRSeMetaDataSectionSizeArray(data, offset):
 	size, i = getUInt32(data, offset)
 	return i
 
-def ReadRSeStorageDataSection1(value, data, offset, newFile):
+def ReadRSeMetaDataSection1(value, data, offset, newFile):
 	newFile.write('Section 1:\n')
 	cnt, i = getUInt32(data, offset)
 	j = 0
@@ -883,11 +774,11 @@ def ReadRSeStorageDataSection1(value, data, offset, newFile):
 		value.sec1.append(sec)
 		j += 1
 
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 
 	return i
 
-def ReadRSeStorageDataSection2(value, data, offset, newFile):
+def ReadRSeMetaDataSection2(value, data, offset, newFile):
 	newFile.write('Section 2:\n')
 	cnt, i = getUInt32(data, offset)
 	n = 0
@@ -912,10 +803,10 @@ def ReadRSeStorageDataSection2(value, data, offset, newFile):
 		newFile.write('\t%02X: %s\n' %(n, sec))
 		value.sec2.append(sec)
 		n += 1
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSection3(value, data, offset, newFile):
+def ReadRSeMetaDataSection3(value, data, offset, newFile):
 	cnt, i = getUInt32(data, offset)
 	n = 0
 	newFile.write('Section 3:\n')
@@ -926,33 +817,33 @@ def ReadRSeStorageDataSection3(value, data, offset, newFile):
 		newFile.write('\t%02X: %s\n' %(n, sec))
 		value.sec3.append(sec)
 		n += 1
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSection4Data(data, offset):
+def ReadRSeMetaDataSection4Data(data, offset):
 	val = RSeStorageSection4Data()
 	val.num, i = getUInt16(data, offset)
 	val.val, i = getUInt32(data, i)
 	return val, i
 
-def ReadRSeStorageDataSection4(value, data, offset, newFile):
+def ReadRSeMetaDataSection4(value, data, offset, newFile):
 	newFile.write('Section 4:\n')
 	cnt, i = getUInt32(data, offset)
 	n = 0
 	while (n < cnt):
 		sec = RSeStorageSection4(value)
 		sec.uid, i = getUUID(data, i, '%s.Sec4[%X].uidRef' % (value.txt2, n))
-		val, i = ReadRSeStorageDataSection4Data(data, i)
+		val, i = ReadRSeMetaDataSection4Data(data, i)
 		sec.arr.append(val)
-		val, i = ReadRSeStorageDataSection4Data(data, i)
+		val, i = ReadRSeMetaDataSection4Data(data, i)
 		sec.arr.append(val)
 		newFile.write('\t%02X: %s\n' %(n, sec))
 		value.sec4.append(sec)
 		n += 1
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSection5(value, data, offset, newFile, size):
+def ReadRSeMetaDataSection5(value, data, offset, newFile, size):
 	newFile.write('Section 5:\n')
 	#index section 4
 	sec = RSeStorageSection5(value)
@@ -967,10 +858,10 @@ def ReadRSeStorageDataSection5(value, data, offset, newFile, size):
 		else:
 			newFile.write('\t%04X: %s\n' % (n, IntArr2Str(sec.indexSec4[n:m], 4)))
 		n += w
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSection6(value, data, offset, newFile, size, cnt):
+def ReadRSeMetaDataSection6(value, data, offset, newFile, size, cnt):
 	global dumplinelength
 
 	sec = RSeStorageSection6(value)
@@ -1020,10 +911,10 @@ def ReadRSeStorageDataSection6(value, data, offset, newFile, size, cnt):
 	#newFile.write('\t%s\n' %(','.join(['%s' % (a) for a in sec.arr1])))
 	#newFile.write('\t%s\n' %(','.join(['[%s]' % (IntArr2Str(a, 4)) for a in sec.arr2])))
 
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSection7(value, data, offset, newFile, size, cnt):
+def ReadRSeMetaDataSection7(value, data, offset, newFile, size, cnt):
 	newFile.write('Section 7:\n')
 	i = offset
 	n = 0
@@ -1045,10 +936,10 @@ def ReadRSeStorageDataSection7(value, data, offset, newFile, size, cnt):
 		newFile.write('\t%02X: %s\n' %(n, sec))
 		n += 1
 		value.sec7.append(sec)
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSection8(value, data, offset, newFile, size, cnt):
+def ReadRSeMetaDataSection8(value, data, offset, newFile, size, cnt):
 	newFile.write('Section 8:\n')
 	i = offset
 	n = 0
@@ -1059,10 +950,10 @@ def ReadRSeStorageDataSection8(value, data, offset, newFile, size, cnt):
 		newFile.write('\t%02X: %s\n' %(n, sec))
 		n += 1
 		value.sec8.append(sec)
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSection9(value, data, offset, newFile, size, cnt):
+def ReadRSeMetaDataSection9(value, data, offset, newFile, size, cnt):
 	newFile.write('Section 9:\n')
 	i = offset
 	n = 0
@@ -1073,10 +964,10 @@ def ReadRSeStorageDataSection9(value, data, offset, newFile, size, cnt):
 		newFile.write('\t%02X: %s\n' %(n, sec))
 		n += 1
 		value.sec9.append(sec)
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSectionA(value, data, offset, newFile, size, cnt):
+def ReadRSeMetaDataSectionA(value, data, offset, newFile, size, cnt):
 	"""
 	Same values as in RSeSegmentType
 	"""
@@ -1089,10 +980,10 @@ def ReadRSeStorageDataSectionA(value, data, offset, newFile, size, cnt):
 		# newFile.write('\t%02X: %s\n' %(n, sec))
 		n += 1
 		value.secA.append(sec)
-	i = ReadRSeStorageDataSectionSizeArray(data, i)
+	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeStorageDataSectionB(value, data, offset, newFile, size, cnt):
+def ReadRSeMetaDataSectionB(value, data, offset, newFile, size, cnt):
 	newFile.write('Section 11:\n')
 	i = offset
 	n = 0
@@ -1104,7 +995,7 @@ def ReadRSeStorageDataSectionB(value, data, offset, newFile, size, cnt):
 		value.secB.append(sec)
 	return i
 
-def ReadRSeStorageData(dataM, dataB, name):
+def ReadRSeMetaData(dataM, dataB, name):
 	global model
 	global _inventor_file
 	global dumplinelength
@@ -1112,7 +1003,7 @@ def ReadRSeStorageData(dataM, dataB, name):
 	i = 0
 	folder = _inventor_file[0:-4]
 
-	value = RSeStorageHeader()
+	value = RSeMetaData()
 	value.txt1, i = getLen32Text8(dataM, i)
 	value.ver, i = getUInt16(dataM, i)
 	value.arr1, i = getUInt16A(dataM, i, 8)
@@ -1160,10 +1051,10 @@ def ReadRSeStorageData(dataM, dataB, name):
 	value.arr3, i = getUInt16A(data, i, 7)
 	newFile.write('\t[%s]\n' %(IntArr2Str(value.arr3, 4)))
 
-	i = ReadRSeStorageDataSection1(value, data, i, newFile)
-	i = ReadRSeStorageDataSection2(value, data, i, newFile)
-	i = ReadRSeStorageDataSection3(value, data, i, newFile)
-	i = ReadRSeStorageDataSection4(value, data, i, newFile)
+	i = ReadRSeMetaDataSection1(value, data, i, newFile)
+	i = ReadRSeMetaDataSection2(value, data, i, newFile)
+	i = ReadRSeMetaDataSection3(value, data, i, newFile)
+	i = ReadRSeMetaDataSection4(value, data, i, newFile)
 
 	l = 0x48
 	i = len(data) - l - 0x18
@@ -1176,22 +1067,22 @@ def ReadRSeStorageData(dataM, dataB, name):
 				n = 0
 				dumplinelength = l / c
 				if (k==6):
-					ReadRSeStorageDataSection6(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSection6(value, data, j, newFile, l, c)
 				elif (k==7):
-					ReadRSeStorageDataSection7(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSection7(value, data, j, newFile, l, c)
 				elif (k==8):
-					ReadRSeStorageDataSection8(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSection8(value, data, j, newFile, l, c)
 				elif (k==9):
-					ReadRSeStorageDataSection9(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSection9(value, data, j, newFile, l, c)
 				elif (k==10):
-					ReadRSeStorageDataSectionA(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSectionA(value, data, j, newFile, l, c)
 				elif (k==11):
-					ReadRSeStorageDataSectionB(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSectionB(value, data, j, newFile, l, c)
 				else:
 					newFile.write('Section %X:\n' %(k))
 					newFile.write(HexAsciiDumpAddr(data[j:j+l], j, True))
 			else:
-				ReadRSeStorageDataSection5(value, data, j, newFile, l)
+				ReadRSeMetaDataSection5(value, data, j, newFile, l)
 		l = s - 4
 		i -= (s + 4)
 		k -= 1

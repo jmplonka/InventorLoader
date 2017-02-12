@@ -54,8 +54,7 @@ class RSeDatabase():
 	txt = ''
 	txt2 = ''
 
-class RSeSegmentValue1():
-	luid   = None
+class RSeSegmentObject():
 	revisionRef = None # reference to RSeDbRevisionInfo
 	values = []
 	value1 = 0
@@ -77,29 +76,23 @@ class RSeSegmentValue2():
 	def __str__(self):
 		return '%02X,%02X,%X,[%s],%04X' % (self.indexSegList1, self.indexSegList2, self.index, IntArr2Str(self.values, 4), self.number)
 
-class RSeSegmentType():
-	name = ''
-	arr1 = []
-	parent = None
-
-	def __init__(self, parent):
-		self.parent = parent
-
 class RSeSegment():
 	name = ''
 	ID = None
 	revisionRef = None # reference to RSeDbRevisionInfo
 	value1 = 0
 	count1 = 0
-	values = None
+	arr1 = None
 	count2 = 0
-	typ = None
+	type = ''
+	arr2 = None
+	metaData = None
 	objects = None
 	nodes = None
 
 	def __init__(self):
-		self.typ = RSeSegmentType(self)
-		self.values = []
+		self.arr1 = []
+		self.arr2 = []
 		self.objects = []
 		self.nodes = []
 
@@ -281,7 +274,7 @@ class RSeStorageSectionB():
 	def __str__(self):
 		return '[%s]' %(IntArr2Str(self.arr, 4))
 
-class RSeStorageHeader():
+class RSeMetaData():
 	txt1 = ''
 	ver = 0
 	arr1 = []

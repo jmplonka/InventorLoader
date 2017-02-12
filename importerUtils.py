@@ -287,6 +287,69 @@ def getLen32Text16(data, offset):
 		txt = txt[:-1]
 	return txt, end
 
+def getText1(uid):
+	b = uid.hex
+
+	if (b == '90874d1611d0d1f80008cabc0663dc09'): return 'RDxPart'
+	if (b == 'ce52df4211d0d2d00008ccbc0663dc09'): return 'RDxPlane'
+	if (b == '8ef06c8911d1043c60007cb801f31bb0'): return 'RDxLine3'
+	if (b == 'ce52df3e11d0d2d00008ccbc0663dc09'): return 'RDxPoint3'
+	if (b == '90874d4711d0d1f80008cabc0663dc09'): return 'RDxBody'
+	if (b == '90874d1111d0d1f80008cabc0663dc09'): return 'RDxPlanarSketch'
+	if (b == 'ce52df3b11d0d2d00008ccbc0663dc09'): return 'RDxArc2'
+	if (b == '74df96e011d1e069800066b1e13554c7'): return 'RDxDiameter2'
+
+	if (b == 'ce52df3511d0d2d00008ccbc0663dc09'): return 'RDxPoint2'
+	if (b == 'ce52df3a11d0d2d00008ccbc0663dc09'): return 'RDxLine2'
+
+	if (b == '1105855811d295e360000cb38932edb0'): return 'RDxDistanceDimension2'
+	if (b == '00acc00011d1e05f800066b1e13554c7'): return 'RDxHorizontalDistance2'
+	if (b == '3683ff4011d1e05f800066b1e13554c7'): return 'RDxVerticalDistance2'
+	if (b == '90874d9111d0d1f80008cabc0663dc09'): return 'RDxFeature'
+	if (b == '2067324411d21dc560002aab01f31bb0'): return 'RDxRectangularPattern'
+	if (b == 'fad9a9b511d2330560002cab01f31bb0'): return 'RDxMirrorPattern'
+	if (b == '6759d86f11d27838600094b70b02ecb0'): return 'FWxRenderingStyle'
+	if (b == 'f645595c11d51333100060a6bba647b5'): return 'MIxTransactablePartition'
+	if (b == 'cc0f752111d18027e38619962259017a'): return 'RSeAcisEntityWrapper'
+	if (b == '26287e9611d490bd1000e2962dba09b5'): return 'RDxDeselTableNode'
+	if (b == '2d86fc2642dfe34030c08ab05ef9bfc5'): return 'RDxReferenceEdgeLoopId'
+	if (b == '8f41fd2411d26eac00082aab32a3dc09'): return 'RDxStopNode'
+	if (b == '2b24130911d272cc60007bb79b49ebb0'): return 'RDxBrowserFolder'
+	if (b == '3c95b7ce11d13388000820a5b17adc09'): return 'NBxNotebook'
+	if (b == 'd81cde4711d265f760005dbead9287b0'): return 'NBxEntry'
+
+	if (b == '671bb70011d1e068800066b1e13554c7'): return 'RDxRadius2'
+	if (b == '590d0a1011d1e6ca80006fb1e13554c7'): return 'RDxAngle2'
+
+	if (b == '1fbb3c0111d2684da0009e9a3c3aa076'): return 'RDxString'
+
+	# logError("\tWARNING - can't find name for type %s" %(b))
+
+	return uid
+
+def getText2(uid):
+	b = uid.hex
+
+	if (b == 'ca7163a111d0d3b20008bfbb21eddc09'): return 'UCxComponentNode'
+	if (b == '14533d8211d1087100085ba406e5dc09'): return 'UCxWorkplaneNode'
+	if (b == '2c7020f611d1b3c06000b1b801f31bb0'): return 'UCxWorkaxisNode'
+	if (b == '2c7020f811d1b3c06000b1b801f31bb0'): return 'UCxWorkpointNode'
+	if (b == '9a676a5011d45da66000e3b81269f1b0'): return 'PMxBodyNode'
+	if (b == '60fd184511d0d79d0008bfbb21eddc09'): return 'SCxSketchNode'
+	if (b == 'a94779e011d438066000b1b7b035f1b0'): return 'PMxSingleFeatureOutline'
+	if (b == 'a94779e111d438066000b1b7b035f1b0'): return 'PMxPatternOutline'
+	if (b == '022ac1b511d20d356000f99ac5361ab0'): return 'PMxPartDrawAttr'
+	if (b == 'af48560f11d48dc71000d58dc04a0ab5'): return 'PMxColorStylePrimAttr'
+	if (b == '452121b611d514d6100061a6bba647b5'): return 'RDxModelerTxnMgr'
+	if (b == '90874d4711d0d1f80008cabc0663dc09'): return 'RDxBody'
+	if (b == 'b251bfc011d24761a0001580d694c7c9'): return 'PMxEntryManager'
+	if (b == '21e870bb11d0d2d000d8ccbc0663dc09'): return 'BRxEntry'
+	if (b == 'dbbad87b11d228b0600052bead9287b0'): return 'NBxItem'
+
+	# logError("\tWARNING - can't find name for node %s" %(b))
+
+	return uid
+
 # IFF: IF Function
 def IFF(expression, valueTrue, valueFalse):
 	if expression:

@@ -55,6 +55,7 @@ def ReadElement(ole, fname, doc, readProperties):
 	elif (fname[0]=='RSeStorage'):
 		if (isEmbeddings(fname)):
 			if (name.startswith('\x05')):
+				# ReadOtherProperties(ole.getproperties(fname, convert_time=True), fname)
 				end = skip(stream)
 			elif (name == '\x01Ole'):
 #				end = ReadRSeEmbeddingsOle(stream)
@@ -64,6 +65,7 @@ def ReadElement(ole, fname, doc, readProperties):
 			elif (name == 'DatabaseInterfaces'):
 				end = ReadRSeEmbeddingsDatabaseInterfaces(stream)
 			elif (name == 'Contents'):
+				# end = ReadRSeEmbeddingsContents(stream)
 				end = skip(stream)
 			elif (name == 'Workbook'):
 				end = ReadWorkbook(doc, stream, fname[-2], name)
@@ -81,14 +83,14 @@ def ReadElement(ole, fname, doc, readProperties):
 			elif (name == 'RSeDbRevisionInfo'):
 				end = ReadRSeDbRevisionInfo(stream)
 			elif (name.startswith('B')):
-				# Skip! will be handled in 'ReadRSeStorageData'
+				# Skip! will be handled in 'ReadRSeMetaData'
 				end = skip(stream)
 			elif (name.startswith('M')):
 				fnameB = []
 				for n in (fname):
 					fnameB.append(n)
 				fnameB[-1] = 'B' + name[1:]
-				end = ReadRSeStorageData(stream, ole.openstream(fnameB).read(), fnameB[-1])
+				end = ReadRSeMetaData(stream, ole.openstream(fnameB).read(), name[1:])
 			else:
 				end = ReadIgnorable(fname, stream)
 	else:
@@ -215,7 +217,7 @@ def open(filename, skip=[], only=[], root=None):
 		doc.Label = docname
 
 		setInventorFile(filename)
-		
+
 		if (ReadFile(doc, True)):
 			print "DONE!"
 
