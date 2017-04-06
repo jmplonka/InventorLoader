@@ -46,3 +46,9 @@ That allows it to embed Excel workboos e.g.
 - Features like Pads, Pockets, Revolutions, etc.
 - Features like Fillet, Champher, Draft, etc.
 - Features like boolean operations, mirrors, etc.
+=======
+## Next steps:
+- Retrieve browserview structure with names from Browser's Segment Data.- add Sketch's Constraints
+- retrieve graphic's object names from Broweser-Segment
+- Extrusions ...
+>>>>>>> f26ca18... Version 0.1: import 2D-Sketch + Point, Line, (Arc-)Circle, (Arc-)Ellipse
