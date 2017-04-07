@@ -15,7 +15,18 @@ That allows it to embed Excel workboos e.g.
 - The addon is able to read (not analyse) Inventor files from 2003 till 2017 (RSe Meta Stream Version Version 3 till 8)
 - Read the iProperties (only a few can be set in FreeCAD)
 - Display embedded workbooks as a new spreadsheet
+- Read BrowserView structure (started V2015 & IPT files only)
+
+| File | Description | IPT | IAM | IDW |
+| --- | --- | --- | --- | --- |
+| [5]xyz | iProperties | done | done | done |
+| RSeDb | Database | done | done | done |
+| RSeSegInfo | Content Structure | structure | structure | structure |
+| M... | Segment MetaInfo | started | started | started | started |
+| B... | Segment Data | sarted |  |  |
+| Workbook | Spreadsheet | done | done | done |
 
 ## Next steps:
-- add sketches for points, lines, circles, elipses etc. (help needed to read the coordinates).
-- retrieve object names from the file.
+- Retrieve browserview structure with names from Browser's Segment Data.
+- add sketches for points, lines, circles, elipses etc.
+- Extrusions ...
