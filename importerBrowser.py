@@ -8,13 +8,13 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 TODO:
 '''
 
-from importerSegment import SegmentReader, checkReadAll, ReadChildRef, ReadParentRef, skipBlockSize
-from importerClasses import BrowserNode
+from importerSegment import SegmentReader, checkReadAll
+from importerSegNode import AbstractNode, BrowserNode
 from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.0'
+__version__     = '0.1.1'
 __status__      = 'In-Development'
 
 class BrowserReader(SegmentReader):
@@ -28,829 +28,654 @@ class BrowserReader(SegmentReader):
 	def skipDumpRawData(self):
 		return True
 
-	def Read_Str53(self, block, node):
-		i = self.ReadLen32Text16(block, 0, node)
-		i = self.ReadUInt8A(block, i, 5, node, 'Str53.a0')
+	def Read_Str53(self, node):
+		i = node.ReadLen32Text16(0)
+		i = node.ReadUInt8A(i, 5, 'Str53.a0')
 		if (node.get('Str53.a0')[4] == 0):
 			node.set('Str53.u16_0', 0)
 		else:
-			i = self.ReadUInt16(block, i, node, 'Str53.u16_0')
-		i = self.ReadUInt16A(block, i, 3, node, 'Str53.a1')
+			i = node.ReadUInt16(i, 'Str53.u16_0')
+		i = node.ReadUInt16A(i, 3, 'Str53.a1')
 
-		i = skipBlockSize(block, i)
-
-		return i
-
-	def Read_Str01(self, block, offset, node):
-		i = offset
-
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadLen32Text16(block, i, node, 'Str01.str1')
-		i = self.ReadUInt8(block, i, node, 'Str01.u8_0')
+		i = self.skipBlockSize(i)
 
 		return i
 
-	def Read_Str23(self, block, offset, node):
-		i = offset
-
-		i = self.ReadLen32Text16(block, i, node, 'Str23.str0')
-		i = self.ReadLen32Text16(block, i, node, 'Str23.str1')
-		i = self.ReadSInt32A(block, i, 3, node, 'Str23.a0')
-
-		i = skipBlockSize(block, i)
+	def Read_Str01(self, offset, node):
+		i = node.ReadLen32Text16(offset)
+		i = node.ReadLen32Text16(i, 'Str01.str1')
+		i = node.ReadUInt8(i, 'Str01.u8_0')
 
 		return i
 
-	def Read_664(self, block, offset, node):
-		i = offset
-
-		i = self.ReadUInt32(block, i, node, 'key')
-		i = self.ReadUInt16A(block, i, 4, node, '664.a0')
-		i = self.ReadUInt8(block, i, node, '664.u8_0')
-		i = self.ReadUInt16A(block, i, 6, node, '664.a1')
-		i = self.ReadUInt8(block, i, node, '664.u8_1')
-		i = self.ReadUInt16A(block, i, 4, node, '664.a2')
-		i = self.ReadUInt8(block, i, node, '664.u8_2')
-
-		i = skipBlockSize(block, i)
+	def Read_Str23(self, offset, node):
+		i = node.ReadLen32Text16(offset, 'Str23.str0')
+		i = node.ReadLen32Text16(i, 'Str23.str1')
+		i = node.ReadSInt32A(i, 3, 'Str23.a0')
+		i = self.skipBlockSize(i)
 
 		return i
 
-	def Read_09cb9718(self, node, block):
-		i = self.ReadUInt32A(block, 0, 3, node, 'a0')
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt32(block, i, node, 'u32_0')
-		i = skipBlockSize(block, i)
+	def Read_664(self, offset, node):
+		i = node.ReadUInt32(offset, 'key')
+		i = node.ReadUInt16A(i, 4, '664.a0')
+		i = node.ReadUInt8(i, '664.u8_0')
+		i = node.ReadUInt16A(i, 6, '664.a1')
+		i = node.ReadUInt8(i, '664.u8_1')
+		i = node.ReadUInt16A(i, 4, '664.a2')
+		i = node.ReadUInt8(i, '664.u8_2')
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_0e7f99a4(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadSInt32(block, i, node, 's32_0')
-		i = self.Read_Str23(block, i, node)
+	def Read_09CB9718(self, node):
+		i = node.ReadUInt32A(0, 3, 'a0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_0f590179(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadSInt32(block, i, node, 's32_0')
-		i = self.Read_Str23(block, i, node)
+	def Read_0E7F99A4(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadSInt32(i, 's32_0')
+		i = self.Read_Str23(i, node)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_11d83d80(self, node, block):
+	def Read_0F590179(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadSInt32(i, 's32_0')
+		i = self.Read_Str23(i, node)
+
+		return i
+
+	def Read_11D83D80(self, node):
 		vers = getFileVersion()
 
 		if (vers < 2011):
-			i = self.ReadUInt32A(block, 0, 3, node, 'a0')
-			a0 = node.get('a0')
+			node.content += ' \'\' Str53.a0=[00,00,00,00,00] Str53.a1=[0000,0000,0000] lst0={'
+			a0, i = getUInt32A(node.data, 0, 3)
 			if (a0[0] > 0):
-				node.content += ' {' + (IntArr2Str(a0[1:], 4))
+				node.content += (IntArr2Str(a0[1:], 4))
 			sep = ''
 			lst0 = []
 			j = 0
 			while (j < a0[0]):
 				j += 1
-				a2, i = getUInt16A(block, i, 4)
+				a2, i = getUInt16A(node.data, i, 4)
 				node.content += sep + IntArr2Str(a2, 4)
 				sep = ','
 				lst0.append(a2)
-			if (a0[0] > 0):
-				node.content += '}'
+			node.content += '}'
 			node.set('lst0', lst0)
 		else:
-			i = self.Read_Str53(block, node)
-			i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
+			i = self.Read_Str53(node)
+			i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 
 		if (vers < 2011):
-			dummy, i = getUInt8A(block, i, 15)
+			dummy, i = getUInt8A(node.data, i, 15)
 
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_189b3560(self, node, block):
+	def Read_189B3560(self, node):
 		vers = getFileVersion()
 		i = 0
 
-		i = self.ReadUInt16A(block, i, 3, node, 'a0')
+		i = node.ReadUInt16A(i, 3, 'a0')
 		if (vers < 2011):
 			if (node.get('a0')[0] == 0):
 				a1 = [0, 0, 0]
 			else:
-				i = self.ReadUInt8A(block, i, 3, node, 'a1')
-		i = skipBlockSize(block, i)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadUInt32(block, i, node, 'u32_0')
+				i = node.ReadUInt8A(i, 3, 'a1')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt32(i, 'u32_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_18baa333(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
+	def Read_18BAA333(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_19910142(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_19910142(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_1b16984a(self, node, block):
-		i = self.ReadUInt16A(block, 0, 3, node, 'a0')
-		i = skipBlockSize(block, i)
-		i = skipBlockSize(block, i)
-		i = self.ReadList6(block, i, node, 'lst0')
-		i = self.ReadUInt8(block, i, node, 'u8_0')
+	def Read_1B16984A(self, node):
+		i = node.ReadUInt16A(0, 3, 'a0')
+		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i)
+		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
+		i = node.ReadUInt8(i, 'u8_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_1d8866a4(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_1D8866A4(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_240bf169(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_240BF169(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_2ac37c16(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_2AC37C16(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_2b398dfb(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_2B398DFB(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_33ddfc82(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_33DDFC82(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_3e54e601(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.ReadUInt32(block, i, node, 'u32_0')
-		i = skipBlockSize(block, i)
+	def Read_3E54E601(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_44664c6f(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_44664C6F(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_44dbcb35(self, node, block):
-		i = self.ReadUInt32(block, 0, node, 'u32_0')
-		i = skipBlockSize(block, i)
-		i = ReadChildRef(block, i, node)
-		i = skipBlockSize(block, i)
-		i = ReadChildRef(block, i, node)
-		i = skipBlockSize(block, i)
-		i = skipBlockSize(block, i)
-		i = ReadParentRef(block, i, node)
+	def Read_44DBCB35(self, node):
+		i = node.ReadUInt32(0, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i)
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i)
+		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i)
+		i = node.ReadParentRef(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_4a156cbc(self, node, block):
+	def Read_4A156CBC(self, node):
 		node.typeName = '3dSketch'
 
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_50c73580(self, node, block):
+	def Read_50C73580(self, node):
 		node.typeName = '3dObject'
 
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt8(block, i, node, 'u8_5')
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt8(i, 'u8_5')
 
 		if (getFileVersion() > 2016):
-			dummy, i = getUInt32A(block, i, 2)
+			dummy, i = getUInt32A(node.data, i, 2)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_67361ccf(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadSInt32(block, i, node, 's32_0')
-		i = self.Read_Str23(block, i, node)
+	def Read_67361CCF(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadSInt32(i, 's32_0')
+		i = self.Read_Str23(i, node)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_69a4ed42(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadSInt32(block, i, node, 's32_0')
-		i = self.Read_Str23(block, i, node)
+	def Read_69A4ED42(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadSInt32(i, 's32_0')
+		i = self.Read_Str23(i, node)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_6cdd3ab0(self, node, block):
-		node.typeName = 'Origin'
+	def Read_6CDD3AB0(self, node):
+		node.typeName = 'BrowserFolder'
 
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_716b5cd1(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt16A(block, i, 4, node, 'a0')
+	def Read_716B5CD1(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt16A(i, 4, 'a0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_74eef6b7(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_74EEF6B7(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_761c4fa0(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt32(block, i, node, 'u32_0')
+	def Read_761C4FA0(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_7dfcc817(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = self.ReadSInt32(block, i, node, 's32_0')
-		i = skipBlockSize(block, i)
+	def Read_7DFCC817(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = node.ReadSInt32(i, 's32_0')
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_7dfcc818(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadSInt32(block, i, node, 's32_0')
-		i = self.ReadLen32Text16(block, i, node, 'str0')
-		i = self.ReadUInt32A(block, i, 2, node, 'a0')
+	def Read_7DFCC818(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadSInt32(i, 's32_0')
+		i = node.ReadLen32Text16(i, 'str0')
+		i = node.ReadUInt32A(i, 2, 'a0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_82ebfbd9(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_82EBFBD9(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_84fa6b6c(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt8A(block, i, 3, node, 'a0')
-		i = self.ReadLen32Text16(block, i, node, 'str0')
+	def Read_84FA6B6C(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt8A(i, 3, 'a0')
+		i = node.ReadLen32Text16(i, 'str0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_8bf242f4(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt16A(block, i, 2, node, 'a0')
+	def Read_8BF242F4(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt16A(i, 2, 'a0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_8c5986a1(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt16A(block, i, 4, node, 'a0')
+	def Read_8C5986A1(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt16A(i, 4, 'a0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_9b451345(self, node, block):
-		i = self.ReadUInt32(block, 0, node, 'u32_0')
-		i = skipBlockSize(block, i)
-		i = ReadChildRef(block, i, node)
-		i = skipBlockSize(block, i)
-		i = ReadChildRef(block, i, node)
-		i = ReadParentRef(block, i, node)
+	def Read_9B451345(self, node):
+		i = node.ReadUInt32(0, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i)
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i)
+		i = node.ReadParentRef(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_9e77ccc1(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.ReadUInt16A(block, i, 2, node, 'a0')
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadUInt8(block, i, node, 'u8_0')
-		i = skipBlockSize(block, i)
+	def Read_9E77CCC1(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_9e77ccc3(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt16A(block, i, 4, node, 'a4')
-		i = skipBlockSize(block, i)
+	def Read_9E77CCC3(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt16A(i, 4, 'a4')
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_9e77ccc5(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt16A(block, i, 4, node, 'a0')
-		i = skipBlockSize(block, i)
+	def Read_9E77CCC5(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt16A(i, 4, 'a0')
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_9e77ccc7(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt16A(block, i, 4, node, 'a0')
-		i = skipBlockSize(block, i)
+	def Read_9E77CCC7(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt16A(i, 4, 'a0')
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_a1df3b79(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_A1DF3B79(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_b251bfc0(self, node, block):
+	def Read_B251BFC0(self, node):
 		'''
 		Entry Manager
 		'''
-		i = self.Read_Header0(block, node)
-		i = self.ReadList7(block, i, node, 'lst0')
-		i = self.ReadUInt32(block, i, node, 'u32_0')
+		node.typeName = 'EntryManager'
+		i = node.Read_Header0()
+		i = node.ReadList7(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
+		i = node.ReadUInt32(i, 'u32_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_b4278fff(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.ReadUInt32A(block, i, 2, node, 'a0')
+	def Read_B4278FFF(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = node.ReadUInt32A(i, 2, 'a0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_b75ae9ef(self, node, block):
+	def Read_B75AE9EF(self, node):
 		i = 0
 
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadUInt8(block, i, node, 'u8_0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt8(i, 'u8_0')
 		if (node.get('u8_0') > 0):
-			i = self.ReadUInt16A(block, i, 1084, node, 'aX')
-		i = self.ReadUInt16(block, i, node, 'u16_0')
-		i = self.ReadLen32Text16(block, i, node, 'str0')
-		i = self.ReadLen32Text16(block, i, node, 'str1')
-		i = self.ReadSInt32A(block, i, 4, node, 'a1')
-		i = self.ReadUInt8(block, i, node, 'u8_1')
-		i = self.ReadUInt16(block, i, node, 'u16_1')
-		i = self.ReadLen32Text16(block, i, node, 'str2')
-		i = self.ReadLen32Text16(block, i, node, 'str3')
-		i = self.ReadSInt32A(block, i, 2, node, 'a2')
+			i = node.ReadUInt16A(i, 1084, 'aX')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadLen32Text16(i, 'str0')
+		i = node.ReadLen32Text16(i, 'str1')
+		i = node.ReadSInt32A(i, 4, 'a1')
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt16(i, 'u16_1')
+		i = node.ReadLen32Text16(i, 'str2')
+		i = node.ReadLen32Text16(i, 'str3')
+		i = node.ReadSInt32A(i, 2, 'a2')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_baf2d1c6(self, node, block):
+	def Read_BAF2D1C6(self, node):
 		node.typeName = 'SpiralCurve'
 
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_cbbcfa51(self, node, block):
+	def Read_CBBCFA51(self, node):
 		# Only found in Bauteil001 and Bauteil002
 		i = 0
 
-		i = ReadParentRef(block, i, node)
-		i = self.ReadUInt16A(block, i, 8, node, 'a0')
+		i = node.ReadParentRef(i)
+		i = node.ReadUInt16A(i, 8, 'a0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_cf604e8b(self, node, block):
+	def Read_CF604E8B(self, node):
 		# Only found in Part7-bida-megalh!
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt16(block, i, node, 'u16_1')
-		i = self.ReadList2(block, i, node,  SegmentReader._TYP_1D_UINT32_, 'lst0')
-		i = self.ReadSInt32A(block, i, 2, node, 'a0')
-		i = self.ReadUInt8(block, i, node, 'u8_0')
+		i = node.Read_Header0()
+		i = node.ReadUInt16(i, 'u16_1')
+		i = node.ReadList2(i,  AbstractNode._TYP_1D_UINT32_, 'lst0')
+		i = node.ReadSInt32A(i, 2, 'a0')
+		i = node.ReadUInt8(i, 'u8_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_d2b2df09(self, node, block):
+	def Read_D2B2DF09(self, node):
 		# Only found in Bauteil001 and Bauteil002
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt16(block, i, node, 'u16_0')
-		i = self.ReadList2(block, i, node,  SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.ReadUInt32(block, i, node, 'u32_0')
+		i = node.Read_Header0()
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadList2(i,  AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadUInt32(i, 'u32_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_d81cde47(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadLen32Text16(block, i, node, 'str0')
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt16A(block, i, 3, node, 'a4')
-		i = self.ReadUInt8(block, i, node, 'u8_4')
+	def Read_D81CDE47(self, node):
+		node.typeName = 'NBxEntry'
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = node.ReadLen32Text16(i)
+		i = node.ReadLen32Text16(i, 'str0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt16A(i, 3, 'a4')
+		i = node.ReadUInt8(i, 'u8_4')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_d95a2df2(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = self.Read_Str01(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadSInt32(block, i, node, 's32_0')
-		i = self.ReadLen32Text16(block, i, node, 'str2')
-		i = self.ReadLen32Text16(block, i, node, 'str3')
-		i = self.ReadUInt32(block, i, node, 'u32_0')
+	def Read_D95A2DF2(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadSInt32(i, 's32_0')
+		i = node.ReadLen32Text16(i, 'str2')
+		i = node.ReadLen32Text16(i, 'str3')
+		i = node.ReadUInt32(i, 'u32_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_dd1adf96(self, node, block):
+	def Read_DD1ADF96(self, node):
 		node.typeName = 'Solid'
 
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUInt32A(block, i, 3, node, 'a5')
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 3, 'a5')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_df9ca7b0(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = ReadParentRef(block, i, node)
-		i = ReadChildRef(block, i, node)
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadList4(block, i, node, SegmentReader._TYP_STRING16_, 'lst0')
-		i = self.ReadUInt16A(block, i, 3, node, 'a1')
+	def Read_DF9CA7B0(self, node):
+		i = node.Read_Header0()
+		i = node.ReadParentRef(i)
+		i = node.ReadCrossRef(i)
+		i = node.ReadLen32Text16(i)
+		i = node.ReadList4(i, AbstractNode._TYP_STRING16_, 'lst0')
+		i = node.ReadUInt16A(i, 3, 'a1')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_e82bc461(self, node, block):
+	def Read_E82BC461(self, node):
 		vers = getFileVersion()
 
-		i = self.ReadUInt32(block, 0, node, 'u32_0')
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst1')
+		i = node.ReadUInt32(0, 'u32_0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst1')
 		if (vers > 2015):
-			i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst2')
+			i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst2')
 		else:
-			i = ReadChildRef(block, i, node)
-		i = self.ReadUInt8(block, i, node, 'u8_0')
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadUInt8A(block, i, 5, node, 'a1')
+			i = node.ReadChildRef(i)
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt8A(i, 5, 'a1')
 		if (node.get('a1')[4] == 0):
 			node.set('u16_0', 0)
 		else:
-			i = self.ReadUInt16(block, i, node, 'u16_0')
-		i = self.ReadUInt16A(block, i, 3, node, 'a2')
-		i = skipBlockSize(block, i)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst3')
-		i = self.ReadUInt16A(block, i, 6, node, 'a3')
-		i = self.ReadUInt8(block, i, node, 'u8_1')
-		i = self.ReadUInt16A(block, i, 6, node, 'a4')
-		i = self.ReadUInt8(block, i, node, 'u8_2')
-		i = self.ReadUInt16A(block, i, 4, node, 'a5')
-		i = self.ReadUInt8(block, i, node, 'u8_3')
-		i = self.ReadUUID(block, i, node, 'uid0')
-		i = self.ReadUInt32(block, i, node, 'u32_1')
-		i = skipBlockSize(block, i)
+			i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadUInt16A(i, 3, 'a2')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst3')
+		i = node.ReadUInt16A(i, 6, 'a3')
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt16A(i, 6, 'a4')
+		i = node.ReadUInt8(i, 'u8_2')
+		i = node.ReadUInt16A(i, 4, 'a5')
+		i = node.ReadUInt8(i, 'u8_3')
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = self.skipBlockSize(i)
 		if (vers != 2011):
-			i = self.ReadSInt32A(block, i, 2, node, 'a5')
+			i = node.ReadSInt32A(i, 2, 'a5')
 		else:
 			node.set('a5', [0, 0])
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_f757bc76(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.ReadUInt16A(block, i, 4, node, 'a0')
-		i = self.ReadUInt8(block, i, node, 'u8_0')
-		i = ReadParentRef(block, i, node)
-		i = ReadChildRef(block, i, node)
-		i = ReadChildRef(block, i, node)
-		i = self.ReadUInt8(block, i, node, 'u8_1')
-		i = ReadChildRef(block, i, node)
-		i = self.ReadUInt16A(block, i, 8, node, 'a2')
-		i = self.ReadUInt8(block, i, node, 'u8_2')
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadLen32Text16(block, i, node, 'str1')
-		i = self.ReadLen32Text16(block, i, node, 'str2')
-		i = self.ReadUInt32(block, i, node, 'u32_0')
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst1')
-		i = self.ReadUInt8A(block, i, 10, node, 'a4')
+	def Read_F757BC76(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadUInt16A(i, 4, 'a0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadParentRef(i)
+		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i)
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadChildRef(i)
+		i = node.ReadUInt16A(i, 8, 'a2')
+		i = node.ReadUInt8(i, 'u8_2')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadLen32Text16(i, 'str1')
+		i = node.ReadLen32Text16(i, 'str2')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst1')
+		i = node.ReadUInt8A(i, 10, 'a4')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_f7676ab0(self, node, block):
+	def Read_F7676AB0(self, node):
 		node.typeName = 'Sketch'
 
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_f7676ab1(self, node, block):
-		i = self.ReadUInt32(block, 0, node, 'u32_0')
-		i = self.ReadUInt8(block, i, node, 'u8_0')
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadUInt8(block, i, node, 'u8_1')
-		i = self.ReadUInt16A(block, i, 5, node, 'a0')
-		i = skipBlockSize(block, i)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_F7676AB1(self, node):
+		i = node.ReadUInt32(0, 'u32_0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt16A(i, 5, 'a0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_f7676ab2(self, node, block):
-		node.typeName = 'Extrusion'
+	def Read_F7676AB2(self, node):
+		node.typeName = 'Feature'
 
 		vers = getFileVersion()
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
-		i = self.ReadUUID(block, i, node, 'uid_0')
-		i = self.ReadUInt32(block, i, node, 'u32_0')
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadUInt32(i, 'u32_0')
 		if (vers > 2011):
-			i = self.ReadSInt32A(block, i, 2, node, 'a5')
+			i = node.ReadSInt32A(i, 2, 'a5')
 		else:
 			node.set('a5', [0, 0])
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_f99b4bfd(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_F99B4BFD(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_fcf044c3(self, node, block):
-		i = self.Read_Str53(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.Read_664(block, i, node)
-		i = skipBlockSize(block, i)
+	def Read_FCF044C3(self, node):
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.Read_664(i, node)
+		i = self.skipBlockSize(i)
 
-		checkReadAll(node, i, len(block))
-		return
-
-	def HandleBlock(self, file, block, node, seg):
-		ntid = node.typeID.time_low
-		if (ntid == 0x09cb9718):
-			self.Read_09cb9718(node, block)
-		elif (ntid == 0x0e7f99a4):
-			self.Read_0e7f99a4(node, block)
-		elif (ntid == 0x0f590179):
-			self.Read_0f590179(node, block)
-		elif (ntid == 0x11d83d80):
-			self.Read_11d83d80(node, block)
-		elif (ntid == 0x189b3560):
-			self.Read_189b3560(node, block)
-		elif (ntid == 0x18baa333):
-			self.Read_18baa333(node, block)
-		elif (ntid == 0x19910142):
-			self.Read_19910142(node, block)
-		elif (ntid == 0x1b16984a):
-			self.Read_1b16984a(node, block)
-		elif (ntid == 0x1d8866a4):
-			self.Read_1d8866a4(node, block)
-		elif (ntid == 0x240bf169):
-			self.Read_240bf169(node, block)
-		elif (ntid == 0x2ac37c16):
-			self.Read_2ac37c16(node, block)
-		elif (ntid == 0x2b398dfb):
-			self.Read_2b398dfb(node, block)
-		elif (ntid == 0x33ddfc82):
-			self.Read_33ddfc82(node, block)
-		elif (ntid == 0x3e54e601):
-			self.Read_3e54e601(node, block)
-		elif (ntid == 0x44664c6f):
-			self.Read_44664c6f(node, block)
-		elif (ntid == 0x44dbcb35):
-			self.Read_44dbcb35(node, block)
-		elif (ntid == 0x4a156cbc):
-			self.Read_4a156cbc(node, block)
-		elif (ntid == 0x50c73580):
-			self.Read_50c73580(node, block)
-		elif (ntid == 0x67361ccf):
-			self.Read_67361ccf(node, block)
-		elif (ntid == 0x69a4ed42):
-			self.Read_69a4ed42(node, block)
-		elif (ntid == 0x6cdd3ab0):
-			self.Read_6cdd3ab0(node, block)
-		elif (ntid == 0x716b5cd1):
-			self.Read_716b5cd1(node, block)
-		elif (ntid == 0x74eef6b7):
-			self.Read_74eef6b7(node, block)
-		elif (ntid == 0x761c4fa0):
-			self.Read_761c4fa0(node, block)
-		elif (ntid == 0x7dfcc817):
-			self.Read_7dfcc817(node, block)
-		elif (ntid == 0x7dfcc818):
-			self.Read_7dfcc818(node, block)
-		elif (ntid == 0x82ebfbd9):
-			self.Read_82ebfbd9(node, block)
-		elif (ntid == 0x84fa6b6c):
-			self.Read_84fa6b6c(node, block)
-		elif (ntid == 0x8bf242f4):
-			self.Read_8bf242f4(node, block)
-		elif (ntid == 0x8c5986a1):
-			self.Read_8c5986a1(node, block)
-		elif (ntid == 0x9b451345):
-			self.Read_9b451345(node, block)
-		elif (ntid == 0x9e77ccc1):
-			self.Read_9e77ccc1(node, block)
-		elif (ntid == 0x9e77ccc3):
-			self.Read_9e77ccc3(node, block)
-		elif (ntid == 0x9e77ccc5):
-			self.Read_9e77ccc5(node, block)
-		elif (ntid == 0x9e77ccc7):
-			self.Read_9e77ccc7(node, block)
-		elif (ntid == 0xa1df3b79):
-			self.Read_a1df3b79(node, block)
-		elif (ntid == 0xb251bfc0):
-			self.Read_b251bfc0(node, block)
-		elif (ntid == 0xb4278fff):
-			self.Read_b4278fff(node, block)
-		elif (ntid == 0xb75ae9ef):
-			self.Read_b75ae9ef(node, block)
-		elif (ntid == 0xbaf2d1c6):
-			self.Read_baf2d1c6(node, block)
-		elif (ntid == 0xcbbcfa51):
-			self.Read_cbbcfa51(node, block)
-		elif (ntid == 0xcf604e8b):
-			self.Read_cf604e8b(node, block)
-		elif (ntid == 0xd2b2df09):
-			self.Read_d2b2df09(node, block)
-		elif (ntid == 0xd81cde47):
-			self.Read_d81cde47(node, block)
-		elif (ntid == 0xd95a2df2):
-			self.Read_d95a2df2(node, block)
-		elif (ntid == 0xdd1adf96):
-			self.Read_dd1adf96(node, block)
-		elif (ntid == 0xdf9ca7b0):
-			self.Read_df9ca7b0(node, block)
-		elif (ntid == 0xe82bc461):
-			self.Read_e82bc461(node, block)
-		elif (ntid == 0xf757bc76):
-			self.Read_f757bc76(node, block)
-		elif (ntid == 0xf7676ab0):
-			self.Read_f7676ab0(node, block)
-		elif (ntid == 0xf7676ab1):
-			self.Read_f7676ab1(node, block)
-		elif (ntid == 0xf7676ab2):
-			self.Read_f7676ab2(node, block)
-		elif (ntid == 0xf99b4bfd):
-			self.Read_f99b4bfd(node, block)
-		elif (ntid == 0xfcf044c3):
-			self.Read_fcf044c3(node, block)
-		else:
-			self.ReadUnknownBlock(file, node, block, True)
-		return
+		return i

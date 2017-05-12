@@ -15,17 +15,24 @@ import zlib
 import operator
 import glob
 import struct
-from importerSegment   import SegmentReader
-from importerBrowser   import BrowserReader
-from importerGraphics  import GraphicsReader
-from importerResults   import ResultReader
-from importerNotebook  import NotebookReader
-from importerClasses   import *
-from importerUtils     import *
+from importerClasses     import *
+from importerSegment     import SegmentReader
+from importerApp         import AppReader
+from importerBRep        import BRepReader
+from importerBrowser     import BrowserReader
+from importerDC          import DCReader
+from importerDesignView  import DesignViewReader
+from importerEeData      import EeDataReader
+from importerEeScene     import EeSceneReader
+from importerFBAttribute import FBAttributeReader
+from importerGraphics    import GraphicsReader
+from importerNotebook    import NotebookReader
+from importerResults     import ResultReader
+from importerUtils       import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.0'
+__version__     = '0.1.1'
 __status__      = 'In-Development'
 
 # Indicator that everything is ready for the import
@@ -107,7 +114,12 @@ def ReadInventorSummaryInformation(doc, properties, path):
 
 	for key in properties:
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
-			model.iProperties[name][key] = getProperty(properties, key)
+			val = getProperty(properties, key)
+			#if (key == KEY_THUMBNAIL_1):
+			#	val = writeThumbnail(val)
+			#elif (key == KEY_THUMBNAIL_2):
+			#	val = writeThumbnail(val)
+			model.iProperties[name][key] = val
 	return
 
 def ReadInventorDocumentSummaryInformation(doc, properties, path):
@@ -124,7 +136,8 @@ def ReadInventorDocumentSummaryInformation(doc, properties, path):
 
 	for key in properties:
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
-			model.iProperties[name][key] = getProperty(properties, key)
+			val = getProperty(properties, key)
+			model.iProperties[name][key] = val
 	return
 
 def ReadOtherProperties(properties, path):
@@ -145,10 +158,7 @@ def ReadOtherProperties(properties, path):
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
 			if (type(val) is str):
-				if ((key == KEY_THUMBNAIL_1) or (key == KEY_THUMBNAIL_2)):
-					logMessage('\t%02X = [THUMBNAIL]' %(key))
-				else:
-					logMessage('\t%02X = %r' %(key, val))
+				logMessage('\t%02X = %r' %(key, val))
 			else:
 				logMessage('\t%02X = %s' %(key, val))
 			props[key] = val
@@ -1048,28 +1058,40 @@ def findSegment(segRef):
 	return None
 
 def getReader(seg):
+	reader = None
 	if (RSeMetaData.isApp(seg)):
-		reader = SegmentReader(False)
-	elif (RSeMetaData.isBrowser(seg)):
-		reader = BrowserReader()
-	elif (RSeMetaData.isGraphics(seg)):
-		reader = GraphicsReader()
-	elif (RSeMetaData.isResult(seg)):
-		reader = ResultReader()
-	elif (RSeMetaData.isDesignView(seg)):
-		reader = SegmentReader(False)
-	elif (RSeMetaData.isEeData(seg)):
-		reader = SegmentReader(False)
-	elif (RSeMetaData.isEeScene(seg)):
-		reader = SegmentReader(False)
-	elif (RSeMetaData.isFBAttribute(seg)):
-		reader = SegmentReader(False)
-	elif (RSeMetaData.isNBNotebook(seg)):
-		reader = NotebookReader()
+		pass
+		# reader = AppReader()
 	elif (RSeMetaData.isBRep(seg)):
-		reader = SegmentReader(False)
+		# Skip reading Browser Repository data
+		pass
+		# reader = BRepReader()
+	elif (RSeMetaData.isBrowser(seg)):
+		pass
+		# reader = BrowserReader()
 	elif (RSeMetaData.isDC(seg)):
-		reader = SegmentReader(False)
+		reader = DCReader()
+	elif (RSeMetaData.isGraphics(seg)):
+		pass
+		# reader = GraphicsReader()
+	elif (RSeMetaData.isResult(seg)):
+		pass
+		# reader = ResultReader()
+	elif (RSeMetaData.isDesignView(seg)):
+		pass
+		# reader = DesignViewReader()
+	elif (RSeMetaData.isEeData(seg)):
+		pass
+		# reader = EeDataReader()
+	elif (RSeMetaData.isEeScene(seg)):
+		pass
+		# reader = EeSceneReader()
+	elif (RSeMetaData.isFBAttribute(seg)):
+		pass
+		# reader = FBAttributeReader()
+	elif (RSeMetaData.isNBNotebook(seg)):
+		pass
+		# reader = NotebookReader()
 	else:
 		logWarning('>W: %s will be read, but not considered!' %(seg.name))
 		reader = SegmentReader(False)

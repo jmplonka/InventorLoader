@@ -13,7 +13,7 @@ from struct import unpack
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.0'
+__version__     = '0.1.1'
 __status__      = 'In-Development'
 
 _dumpLineLength = 0x20
@@ -123,6 +123,26 @@ def getSInt16(data, offset):
 	end = offset + 2
 	assert end <= len(data), "Trying to read SInt16 beyond data end (%X > %X)" %(end, len(data))
 	val = unpack('<h', data[offset:end])[0]
+	return val, end
+
+def getSInt16A(data, offset, size):
+	'''
+	Returns an array of single singned 16-Bit values.
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the signed 16-Bit value.
+		size
+			The size of the array.
+	Returns:
+		The array of unsigned 32-Bit values at offset.
+		The new position in the 'stream'.
+	'''
+	end = offset + 2 * size
+	assert end <= len(data), "Trying to read SInt16 array beyond data end (%d, %X > %X)" %(size, end, len(data))
+	val = unpack('<' +'h'*size, data[offset:end])
+	val = list(val)
 	return val, end
 
 def getUInt32(data, offset):
@@ -363,9 +383,19 @@ def getText8(data, offset, l):
 	i = offset
 	end = i + l
 	txt = data[i: end].decode('UTF-8').encode('cp1252')
+
 	if (txt[-1:] == '\0'):
 		txt = txt[:-1]
+
+	if (txt[-1:] == '\n'):
+		txt = txt[:-1]
+
 	return txt, end
+
+def getLen8Text8(data, offset):
+	l, i = getUInt8(data, offset)
+	txt, i = getText8(data, i, l)
+	return txt, i
 
 def getLen32Text8(data, offset):
 	l, i = getUInt32(data, offset)
@@ -376,7 +406,11 @@ def getLen32Text16(data, offset):
 	l, i = getUInt32(data, offset)
 	end = i + 2 * l
 	txt = data[i: end].decode('UTF-16LE').encode('cp1252')
+
 	if (txt[-1:] == '\0'):
+		txt = txt[:-1]
+
+	if (txt[-1:] == '\n'):
 		txt = txt[:-1]
 	return txt, end
 
@@ -601,3 +635,4 @@ class Color():
 		b = int(self.blue  * 0xFF)
 		a = int(self.alpha * 0xFF)
 		return '#%02X%02X%02X%02X' %(a, r, g, b)
+

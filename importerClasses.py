@@ -6,13 +6,30 @@ importerClasses.py:
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-from importerUtils import IntArr2Str, FloatArr2Str, logMessage
+import traceback
+from importerUtils import IntArr2Str, FloatArr2Str, logMessage, logError, getInventorFile, getUInt16, getUInt16A
 from math          import pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.0'
+__version__     = '0.1.1'
 __status__      = 'In-Development'
+
+def writeThumbnail(data):
+	folder = getInventorFile()[0:-4]
+	filename = folder + '/_.png'
+	with open(filename, 'wb') as thumbnail:
+		# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
+		thumbnail.write(data[0x10:])
+	filename = folder + '/_.txt'
+	with open(filename, 'wb') as thumbnail:
+		# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
+		arr, i = getUInt16A(data, 0, 8)
+		thumbnail.write(IntArr2Str(arr, 2))
+	thmb = Thumbnail()
+	thmb.width, i = getUInt16(data, 10)
+	thmb.height, i = getUInt16(data, i)
+	return thmb
 
 class UFRxDocument():
 	def __init__(self):
@@ -418,90 +435,6 @@ class BrowserRef():
 		self.data3       = None
 		self.data4       = None
 
-class AbstractNode():
-	def __init__(self):
-		self.typeID       = None
-		self.name         = None
-		self.index        = -1
-		self.parentIndex  = None
-		self.hasParent    = False
-		self.content      = ''
-		self.childIndexes = []
-		self.printable    = True
-		self.properties   = {}
-
-	def set(self, name, value):
-		'''
-		Sets the value for the property name.
-		name:  The name of the property.
-		value: The value of the property.
-		'''
-		oldVal = None
-
-		if (name):
-			if (name in self.properties):
-				# logMessage('>W0005: name already defined in %08X[%d]!' %(self.typeID.time_low, self.index))
-				oldVal = self.properties[name]
-			self.properties[name] = value
-		return oldVal
-
-	def get(self, name):
-		'''
-		Returns the value fo the property given by the name.
-		name: The name of the property.
-		Returns None if the property is not yet set.
-		'''
-		if (name in self.properties):
-			return self.properties[name]
-		return None
-
-	def delete(self, name):
-		'''
-		Removes the value from the property given by the name.
-		name: The name of the property.
-		'''
-		if (name in self.properties):
-			del self.properties[name]
-
-	def __str__(self):
-		if (self.name is None):
-			return '(%04X): %s%s' %(self.index, self.typeID, self.content)
-		return '(%04X): %s \'%s\'%s' %(self.index, self.typeID, self.name, self.content)
-
-class BrowserNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class GraphicsNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-		self.key = 0
-		self.keyRef = 0
-
-class BinaryNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class DesignViewNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class NotebookNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class BRepNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class DCNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class ResultNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
 class ResultItem4():
 	a0 = None
 	def __init__(self):
@@ -525,16 +458,55 @@ class GraphicsFont():
 	def __str__(self):
 		return '(%d) %s (%s) %r %r %r %r' %(self.number, self.name, FloatArr2Str(self.f), self.ukn1, self.ukn2, self.ukn3, self.ukn4)
 
+class Length():
+	def __init__(self, x, factor = 0.1, unit = 'mm'):
+		self.x = x
+		self.factor = factor
+		self.unit = unit
+
+	def getMM(self):
+		return self.x / 0.1
+
+	def __str__(self):
+		return '%g %s' %(self.x / self.factor, self.unit)
+
+class Angle():
+	def __init__(self, w):
+		self.x = Angle.rad2grad(w)
+
+	@staticmethod
+	def rad2grad(rad):
+		return rad * 180.0 / pi
+
+	@staticmethod
+	def grad2rad(grad):
+		return grad * pi / 180
+
+	def getRAD(self):
+		return Angle.grad2rad(self.x)
+
+	def getGRAD(self):
+		return self.x
+
+	def __str__(self):
+		return '%g\xC2\xB0' %(self.x)
+
 class DataNode():
-	def __init__(self, data):
+	def __init__(self, data, isRef):
 		self.children = []
 		self._map = {}
 		## data must bean instance of AbstractNode!
 		self.data = data
+		self.isRef = isRef
 		self.first = None
 		self.previous = None
 		self.parent = None
 		self.next = None
+		if (data):
+			data.handled = False
+			data.sketchIndex = -1
+			if (isRef == False):
+				data.node = self
 
 	def size(self):
 		return len(self.children)
@@ -543,7 +515,49 @@ class DataNode():
 		return self.size() == 0
 
 	def getIndex(self):
-		return self.data.index
+		if (self.data):
+			return self.data.index
+		return -1
+
+	def getRef(self, ref):
+		if (ref):
+			return self.getChild(ref.index)
+		return None
+
+	def getName(self):
+		if (self.data):
+			if (self.data.name):
+				return self.data.name
+		return ''
+
+	def getTypeName(self):
+		if (self.data):
+			return self.data.typeName
+		return ''
+
+	def isHandled(self):
+		if (self.data):
+			return self.data.handled
+		return false
+
+	def setHandled(self, handled):
+		if (self.data):
+			self.data.handled = handled
+
+	def getSketchIndex(self):
+		if (self.data):
+			return self.data.sketchIndex
+		return -1
+
+	def setSketchEntity(self, index, entity):
+		if (self.data):
+			self.data.sketchIndex = index
+			self.data.sketchEntity = entity
+
+	def getSketchEntity(self):
+		if (self.data):
+			return self.data.sketchEntity
+		return None
 
 	def append(self, node):
 		if (self.size() > 0):
@@ -560,9 +574,6 @@ class DataNode():
 
 		return node
 
-	def getKey(self):
-		return self.data.typeID.time_low
-
 	def getChild(self, index):
 		if (index in self._map):
 			return self._map[index]
@@ -571,7 +582,7 @@ class DataNode():
 	def getFirstChild(self, key):
 		child = self.first
 		while (child):
-			if (child.getKey() == key):
+			if (child.getTypeName() == key):
 				return child
 			child = child.next
 		return None
@@ -580,19 +591,107 @@ class DataNode():
 		lst = []
 		child = self.first
 		while (child):
-			if (child.getKey() == key):
+			if (child.getTypeName() == key):
 				lst.append(child)
 			child = child.next
 		return lst
 
 	def getVariable(self, name):
-		return self.data.get(name)
+		if (self.data):
+			return self.data.get(name)
+		return None
+
+	def getSegment(self):
+		if (self.data):
+			return self.data.segment
+		return None
+
+	def getRefText(self):
+		ref = self.getVariable('label')
+		if (ref):
+			name = ref.node.name
+		else:
+			name = self.getName()
+		if ((name) and (len(name) > 0)):
+			return '(%04X): %s \'%s\'' %(self.getIndex(), self.getTypeName(), name)
+		
+		return '(%04X): %s' %(self.getIndex(), self.getTypeName())
 
 	def __str__(self):
 		node = self.data
-		if (node.name is None):
+		if (node and (node.name is None)):
 			return '(%04X): %s%s' %(node.index, node.typeName, node.content)
 		return '(%04X): %s \'%s\'%s' %(node.index, node.typeName, node.name, node.content)
+
+class DimensionNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getValueRaw(self):
+		return self.getVariable('values')[0]
+
+	def getUnitName(self):
+		if (self.data):
+			try:
+				return self.data.getUnitName()
+			except Exception as e:
+				logError('ERROR: Can\'t find unit for (%04X): %s \'%s\'!' %(self.getIndex(), self.getTypeName(), self.getName()))
+				logError('>E: ' + traceback.format_exc())
+		return ''
+
+	def getRefText(self):
+		x = self.getValue()
+		try:
+			if (isinstance(x, Angle)):
+				return '(%04X): %s \'%s\'=%s' %(self.getIndex(), self.getTypeName(), self.getName(), x)
+			if (isinstance(x, Length)):
+				return '(%04X): %s \'%s\'=%s' %(self.getIndex(), self.getTypeName(), self.getName(), x)
+			return '(%04X): %s \'%s\'=%s!!!' %(self.getIndex(), self.getTypeName(), self.getName(), x)
+		except Exception as e:
+			return '(%04X): %s \'%s\'=%s - %s' %(self.getIndex(), self.getTypeName(), self.getName(), x, e)
+
+	def getValue(self):
+		x = self.getValueRaw()
+		type = self.getUnitName()
+		if (type == 'DimensionUnitRAD'):
+			return Angle(x)
+		if (type == 'DimensionUnitCM'):
+			return Length(x)
+		if (type == 'DimensionUnitINCH'):
+			return Length(x, 25.4, 'inch')
+		if (type == 'DimensionTypeFactor3D'):
+			return x
+		return x
+
+class DimensionValue():
+	def __init__(self, value):
+		self.value = value
+
+	def getValue(self):
+		return self.value
+
+	def getName(self):
+		return ''
+
+	def getTypeName(self):
+		return 'Dimension'
+
+class FeatureNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getTypeName(self):
+		typ = self.getVariable('properties')[0]
+		if (typ):
+			return typ.node.typeName
+		return self.data.typeName
+
+class ValueNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		return '(%04X): %s=%X' %(self.getIndex(), self.getTypeName(), self.getVariable('value'))
 
 class B32BF6AC():
 	def __init__(self, m, x):
@@ -628,31 +727,63 @@ class _32RA():
 	def __str__(self):
 		return 'i=%X f=%X n=%X' %(self.i, self.f, self.n)
 
-class Angle():
-	def __init__(self, w):
-		self.x = Angle.rad2grad(w)
-
-	@staticmethod
-	def rad2grad(rad):
-		return rad * 180.0 / pi
-
-	@staticmethod
-	def grad2rad(grad):
-		return grad * pi / 180
-
-	def __str__(self):
-		s = decode('%g\xB0' %(self.x), utf=True)
-		return s
-
 class NodeRef():
 	TYPE_PARENT = 1
 	TYPE_CHILD  = 2
 	TYPE_CROSS  = 3
 
 	def __init__(self, n, m, refType):
-		self.index = n + ((m & 0x7FFF) << 16)
-		self.mask  = (m & 0x8000) >> 15
-		self.type  = refType
+		self.index  = n + ((m & 0x7FFF) << 16)
+		self.mask   = (m & 0x8000) >> 15
+		self.type   = refType
+		self.number = 0
+		self.node   = None
+
+	def getBranchNode(self):
+		if (self.node):
+			return self.node.node
+		return None
 
 	def __str__(self):
 		return '[%04X,%X]' %(self.index, self.mask)
+
+class BRepChunk():
+	def __init__(self, key, val):
+		self.key = key
+		self.val = val
+
+	def __str__(self):
+		if (self.key == 0x04):
+			return '%X' %(self.val)
+		elif (self.key == 0x06):
+			return '(%s)' %(FloatArr2Str(self.val))
+		elif (self.key == 0x07):
+			return '\'%s\'' %(self.val)
+		elif (self.key == 0x0B):
+			str = '['
+			sep = ''
+			for x in self.val:
+				str += sep
+				str += '%s' %(x)
+				sep = ','
+			str += ']'
+			return str
+		elif (self.key == 0x0C):
+			return '%X' %(self.val)
+		elif (self.key == 0x0D):
+			return '\'%s\'' %(self.val)
+		elif (self.key == 0x0E):
+			return '\'%s\'' %(self.val)
+		elif (self.key == 0x11):
+			return '\n'
+		return ''
+
+class ViewObject():
+	def __init__(self):
+		self.ShapeColor = None
+		self.LineColor  = None
+		self.PointColor = None
+	def hide(self):
+		pass
+	def show(self):
+		pass

@@ -8,13 +8,13 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 TODO:
 '''
 
-from importerSegment import SegmentReader, ReadChildRef, ReadParentRef, checkReadAll, skipBlockSize
-from importerClasses import NotebookNode
-from importerUtils import *
+from importerSegment import SegmentReader, checkReadAll
+from importerSegNode import AbstractNode, NotebookNode
+from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.0'
+__version__     = '0.1.1'
 __status__      = 'In-Development'
 
 class NotebookReader(SegmentReader):
@@ -27,150 +27,116 @@ class NotebookReader(SegmentReader):
 	def skipDumpRawData(self):
 		return True
 
-	def Read_386e04f0(self, node, block):
+	def Read_386E04F0(self, node):
 		'''
 		Rich Text Block
 		TODO:
 			convert RTF to HTML/TEXT
 		'''
-		i = self.Read_Header0(block, node)
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_1D_CHAR_, 'lst0')
+		i = node.Read_Header0()
+		i = node.ReadList2(i, AbstractNode._TYP_1D_CHAR_, 'lst0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_3c95b7ce(self, node, block):
+	def Read_3C95B7CE(self, node):
 		'''
 		Notebook
 		'''
 		node.typeName = 'Notebook'
 
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt32A(block, i, 2, node, 'a0')
-		i = skipBlockSize(block, i)
-		i = self.ReadList3(block, i, node, SegmentReader._TYP_NODE_X_REF_, 'lst0')
-		i = skipBlockSize(block, i)
-		i = ReadChildRef(block, i, node)
-		i = self.ReadUInt8(block, i, node, 'u8_0')
-		i = self.ReadUInt32(block, i, node, 'u32_0')
-		i = self.ReadUInt8(block, i, node, 'u8_1')
+		i = node.Read_Header0()
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i)
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt8(i, 'u8_1')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_4c415964(self, node, block):
+	def Read_4C415964(self, node):
 		'''
 		Notice
 		'''
 		node.typeName = 'Notice'
 
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt32A(block, i, 2, node, 'a0')
-		i = skipBlockSize(block, i)
-		i = self.ReadList3(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadList3(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst1')
-		i = self.ReadUInt16A(block, i, 2, node, 'a1')
+		i = node.Read_Header0()
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst1')
+		i = node.ReadUInt16A(i, 2, 'a1')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_74e34413(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt32A(block, i, 2, node, 'a0')
-		i = skipBlockSize(block, i)
-		i = self.ReadList3(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.ReadUInt32A(block, i, 7, node, 'a1')
+	def Read_74E34413(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadUInt32A(i, 7, 'a1')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_7abdf905(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadList3(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = self.ReadUUID(block, i, node, 'uid0')
-		i = ReadChildRef(block, i, node)
-		i = self.ReadUInt8(block, i, node, 'u8_0')
+	def Read_7ABDF905(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadChildRef(i)
+		i = node.ReadUInt8(i, 'u8_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_8115e243(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt8A(block, i, 7, node, 'a0')
-		i = self.ReadList2(block, i, node, SegmentReader._TYP_1D_UINT32_, 'lst0')
-		i = ReadChildRef(block, i, node)
-		i = self.ReadUInt8(block, i, node, 'u8_0')
+	def Read_8115E243(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt8A(i, 7, 'a0')
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
+		i = node.ReadChildRef(i)
+		i = node.ReadUInt8(i, 'u8_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_cc253bb7(self, node, block):
+	def Read_CC253BB7(self, node):
 		'''
 		Comment
 		'''
 		node.typeName = 'Comment'
 
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt32A(block, i, 6, node, 'a0')
-		i = self.ReadLen32Text16(block, i, node)
-		i = ReadChildRef(block, i, node)
-		i = self.ReadUInt8A(block, i, 8, node, 'a2')
-		i = self.ReadLen32Text16(block, i, node, 'author')
+		i = node.Read_Header0()
+		i = node.ReadUInt32A(i, 6, 'a0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadChildRef(i)
+		i = node.ReadUInt8A(i, 8, 'a2')
+		i = node.ReadLen32Text16(i, 'author')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_d8705bc7(self, node, block):
+	def Read_D8705BC7(self, node):
 		'''
 		View
 		'''
 		node.typeName = 'View'
 
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt32A(block, i, 6, node, 'a0')
-		i = self.ReadLen32Text16(block, i, node)
-		i = self.ReadFloat64A(block, i, 7, node, 'a1')
-		i = self.ReadUInt8(block, i, node, 'u8_0')
-		i = self.ReadFloat64A(block, i, 12, node, 'a2')
-		i = self.ReadUInt32(block, i, node, 'u32_0')
+		i = node.Read_Header0()
+		i = node.ReadUInt32A(i, 6, 'a0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadFloat64A(i, 7, 'a1')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadFloat64A(i, 12, 'a2')
+		i = node.ReadUInt32(i, 'u32_0')
 
-		checkReadAll(node, i, len(block))
-		return
+		return i
 
-	def Read_e23e5ae6(self, node, block):
-		i = self.Read_Header0(block, node)
-		i = self.ReadUInt32A(block, i, 2, node, 'a0')
-		i = self.ReadUInt8(block, i, node, 'u8_0')
-		i = skipBlockSize(block, i)
-		i = self.ReadList3(block, i, node, SegmentReader._TYP_NODE_REF_, 'lst0')
-		i = skipBlockSize(block, i)
-		i = ReadParentRef(block, i, node)
+	def Read_E23E5AE6(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = self.skipBlockSize(i)
+		i = node.ReadParentRef(i)
 
-		checkReadAll(node, i, len(block))
-		return
-
-	def HandleBlock(self, file, block, node, seg):
-		ntid = node.typeID.time_low
-		if (ntid == 0x386e04f0):
-			self.Read_386e04f0(node, block)
-		elif (ntid == 0x3c95b7ce):
-			self.Read_3c95b7ce(node, block)
-		elif (ntid == 0x4c415964):
-			self.Read_4c415964(node, block)
-		elif (ntid == 0x74e34413):
-			self.Read_74e34413(node, block)
-		elif (ntid == 0x7abdf905):
-			self.Read_7abdf905(node, block)
-		elif (ntid == 0x8115e243):
-			self.Read_8115e243(node, block)
-		elif (ntid == 0xcc253bb7):
-			self.Read_cc253bb7(node, block)
-		elif (ntid == 0xd8705bc7):
-			self.Read_d8705bc7(node, block)
-		elif (ntid == 0xe23e5ae6):
-			self.Read_e23e5ae6(node, block)
-		else:
-			self.ReadUnknownBlock(file, node, block, True)
-
-		return node
+		return i
