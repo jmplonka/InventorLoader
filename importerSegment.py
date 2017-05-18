@@ -14,7 +14,7 @@ from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.1.2'
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
@@ -176,6 +176,8 @@ def buildBranch(parent, file, nodes, node, level = 0):
 			branch = FeatureNode(node, False)
 		elif (node.typeName == 'ValueByte'):
 			branch = ValueNode(node, False)
+		elif (node.typeName == 'ValueSInt32'):
+			branch = ValueNode(node, False)
 		else:
 			branch = DataNode(node, False)
 		parent.append(branch)
@@ -213,7 +215,7 @@ def buildTree(file, seg):
 						radius.node = node
 						child.set('refRadius', radius)
 			else:
-				logError('>E0010: Index out of range (%X>%X) for %s' %(ref.index, l, node.typeID))
+				logError('>E0010: (%04X): %s - Index out of range (%X>%X) for' %(node.index, node.typeName, ref.index, l))
 
 		ref = node.parentIndex
 		node.parent = None

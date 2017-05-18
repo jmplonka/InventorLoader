@@ -42,13 +42,11 @@ That allows it to embed Excel workboos e.g.
 	- added reading of object names
 	- 2D sketch constraints and dimensions
 
+- 0.3: Started working on FxFeatures.
+	- Added placement to sketches. Sometimes Placements have to "Orientation" references, so that a correct placement is not possible
+	- Added pad feature. Maybe this will be chagned to Part instead of PartDesign.
+
 ## Next steps:
-- Features like Pads, Pockets, Revolutions, etc.
+- Features like Pockets, Revolutions, etc.
 - Features like Fillet, Champher, Draft, etc.
 - Features like boolean operations, mirrors, etc.
-=======
-## Next steps:
-- Retrieve browserview structure with names from Browser's Segment Data.- add Sketch's Constraints
-- retrieve graphic's object names from Broweser-Segment
-- Extrusions ...
->>>>>>> f26ca18... Version 0.1: import 2D-Sketch + Point, Line, (Arc-)Circle, (Arc-)Ellipse

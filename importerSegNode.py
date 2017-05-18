@@ -9,12 +9,12 @@ TODO:
 '''
 
 import traceback
-from importerClasses import Header0, NodeRef, Angle, GraphicsFont
+from importerClasses import Header0, NodeRef, Angle, GraphicsFont, ModelerTxnMgr
 from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.1.2'
 __status__      = 'In-Development'
 
 def isList(data, code):
@@ -76,6 +76,8 @@ class AbstractNode():
 	_TYP_MAP_TEXT16_X_REF_  = 0x7006
 	_TYP_MAP_X_REF_KEY_     = 0x7007
 	_TYP_MAP_X_REF_FLOAT64_ = 0x7008
+
+	_TYP_MAP_MDL_TXN_MGR_    = 0x6000
 
 	def __init__(self):
 		self.typeID       = None
@@ -295,7 +297,7 @@ class AbstractNode():
 
 	def ReadMetaData_02(self, offset, typ):
 		sep = ''
-		hasFlag = (getFileVersion() < 2011)
+		skipBlockSize = (getFileVersion() < 2011)
 		cnt, i = getUInt32(self.data, offset)
 		lst = []
 
@@ -348,8 +350,8 @@ class AbstractNode():
 						str = '(%s)' %(IntArr2Str(val, 4))
 					elif (t == AbstractNode._TYP_2D_SINT16_):
 						val, i = getSInt16A(self.data, i, 2)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s)' %(IntArr2Str(val, 4))
 					elif (t == AbstractNode._TYP_2D_UINT32_):
 						val, i = getUInt32A(self.data, i, 2)
@@ -359,38 +361,38 @@ class AbstractNode():
 						str = '(%s)' %(IntArr2Str(val, 8))
 					elif (t == AbstractNode._TYP_2D_FLOAT32_):
 						val, i = getFloat32A(self.data, i, 2)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s)' %(FloatArr2Str(val))
 					elif (t == AbstractNode._TYP_2D_FLOAT64_):
 						val, i = getFloat64A(self.data, i, 2)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s)' %(FloatArr2Str(val))
 					elif (t == AbstractNode._TYP_3D_UINT16_):
 						val, i = getUInt16A(self.data, i, 3)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s)' %(IntArr2Str(val, 4))
 					elif (t == AbstractNode._TYP_3D_SINT16_):
 						val, i = getSInt16A(self.data, i, 3)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s)' %(IntArr2Str(val, 4))
 					elif (t == AbstractNode._TYP_3D_UINT32_):
 						val, i = getUInt32A(self.data, i, 3)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s)' %(IntArr2Str(val, 8))
 					elif (t == AbstractNode._TYP_3D_SINT32_):
 						val, i = getSInt32A(self.data, i, 3)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s)' %(IntArr2Str(val, 8))
 					elif (t == AbstractNode._TYP_3D_FLOAT32_): # 3D-Float32
 						val, i = getFloat32A(self.data, i, 3)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s)' %(FloatArr2Str(val))
 					elif (t == AbstractNode._TYP_3D_FLOAT64_):
 						val, i = getFloat64A(self.data, i, 3)
@@ -411,12 +413,12 @@ class AbstractNode():
 						val.append(f)
 						u, i = getUInt32(self.data, i)
 						val.append(u)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						a, i = getUInt8A(self.data, i, 4)
 						val.append(a)
-						if (hasFlag):
-							flg, i = getUInt32(self.data, i)
+						if (skipBlockSize):
+							i += 4
 						str = '(%s) %X [%s]' %(FloatArr2Str(f), u, IntArr2Str(a, 1))
 					elif (t == AbstractNode._TYP_LIST_GUESS_):
 						i = self.ReadList2(i, AbstractNode._TYP_GUESS_, 'lst_tmp')
@@ -488,7 +490,7 @@ class AbstractNode():
 
 	def ReadMetaData_04(self, offset, typ):
 		lst = []
-		hasFlag = (getFileVersion() < 2011)
+		skipBlockSize = (getFileVersion() < 2011)
 
 		cnt, i = getUInt32(self.data, offset)
 		if (cnt > 0):
@@ -517,16 +519,16 @@ class AbstractNode():
 					str = '[%s]' %(IntArr2Str(val, 8))
 				elif (t == AbstractNode._TYP_2D_UINT32_):
 					val, i = getUInt32A(self.data, i, 2)
-					if (hasFlag):
-						dummy, i = getUInt32(self.data, i)
+					if (skipBlockSize):
+						i += 4
 					str = '[%s]' %(IntArr2Str(val, 8))
 				elif (t == AbstractNode._TYP_RESULT_ITEM4_):
 					val = ResultItem4()
 					val.a0, i = getUInt16A(self.data, i, 4)
 					val.a1, i = getFloat64A(self.data, i, 3)
 					val.a2, i = getFloat64A(self.data, i, 3)
-					if (hasFlag):
-						dummy, i = getUInt32(self.data, i)
+					if (skipBlockSize):
+						i += 4
 					str = '%s' %(val)
 				j += 1
 				lst.append(val)
@@ -559,6 +561,7 @@ class AbstractNode():
 	def ReadMetaData_MAP(self, offset, typ):
 		lst = {}
 		sep = ''
+		skipBlockSize = (getFileVersion() < 2011)
 
 		cnt, i = getUInt32(self.data, offset)
 		if (cnt > 0):
@@ -599,6 +602,23 @@ class AbstractNode():
 					key, i = getLen32Text16(self.data, i)
 					i = self.ReadChildRef(i, 'tmp')
 					val = self.get('tmp')
+					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
+				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_):
+					key = len(lst)
+					val = ModelerTxnMgr()
+					i = self.ReadCrossRef(i, 'tmp', False, j)
+					val.ref_1 = self.get('tmp')
+					val.u32_0, i = getUInt32(self.data, i)
+					i =  self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'tmp')
+					val.lst = self.get('tmp')
+					val.u8_0, i  = getUInt8(self.data, i)
+					if (skipBlockSize):
+						i += 4
+					val.u32_1, i = getUInt32(self.data, i)
+					val.u8_1, i  = getUInt8(self.data, i)
+					val.s32_0, i  = getSInt32(self.data, i)
+					if (skipBlockSize):
+						i += 8
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT16_X_REF_):
 					key, i = getLen32Text16(self.data, i)

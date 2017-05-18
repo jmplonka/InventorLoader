@@ -16,7 +16,7 @@ from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.1.2'
 __status__      = 'In-Development'
 
 class GraphicsReader(SegmentReader):
@@ -1966,13 +1966,15 @@ class GraphicsReader(SegmentReader):
 		ntid = node.typeID.time_low
 		if (ntid == 0x6e176bb6):
 			node.updateTypeId('B32BF6A7-11D2-09F4-6000-F99AC5361AB0')
+			ntid = 0xB32BF6A7
 		elif (ntid == 0xb255d907):
 			node.updateTypeId('C29D5C11-11D3-7C12-0000-279800000000')
+			ntid = 0xC29D5C11
 		try:
-			readType = getattr(self, 'Read_%s' %(node.typeName))
+			readType = getattr(self, 'Read_%08X' %(ntid))
 			i = readType(node)
 		except AttributeError:
-			logError("ERROR: %s.Read_%s not defined!"  %(self.__class__.__name__, node.typeName))
+			logError("ERROR: %s.Read_%08X not defined!"  %(self.__class__.__name__, ntid))
 		except:
 			logError('>E: ' + traceback.format_exc())
 

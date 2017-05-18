@@ -9,12 +9,12 @@ import Sketcher
 import FreeCAD
 import traceback
 from importerUtils   import logMessage, logWarning, logError, LOG, IFF
-from importerClasses import RSeMetaData, Angle, Length, DimensionNode, DimensionValue
-from math            import sqrt, acos, atan2
+from importerClasses import RSeMetaData, Angle, Length, DimensionNode, DimensionValue, FeatureNode
+from math            import sqrt, acos, atan2, degrees
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.1.2'
 __status__      = 'In-Development'
 
 def ignoreBranch(node):
@@ -23,29 +23,31 @@ def ignoreBranch(node):
 def notSupportedNode(node):
 	return None
 
-def getOrientation(sketch):
-	orientation = sketch.getFirstChild('Orientation')
+def getOrientationCode(sketch):
+	orientation = sketch.getVariable('refOrientation').node
+	a0 = 0
 	if (orientation):
-		return orientation.getVariable('orientation')
-	return 0
+		a0 = orientation.get('CodedFloat.a0')
+		a0 = a0[1] << 16 | a0[0]
+	return a0
 
 def isXYPlane(sketch):
-	orientation = getOrientation(sketch)
-	return (orientation == 0x7BDE8421)
+	orientation = getOrientationCode(sketch)
+	return (orientation == 0x7DEB8214)
 
 def isXZPlane(sketch):
-	orientation = getOrientation(sketch)
+	orientation = getOrientationCode(sketch)
 	return (orientation == 0x7DBF8241)
 
 def isYZPlane(sketch):
-	orientation = getOrientation(sketch)
-	return (orientation == 0x7DEB8214)
+	orientation = getOrientationCode(sketch)
+	return (orientation == 0x7BDE8421)
 
 def createVector(x, y, z):
 	return FreeCAD.Vector(x, y, z)
 
-def createRotation(x, y, z, d):
-	return FreeCAD.Rotation(x, y, z, d)
+def createRotation(axis, angle):
+	return FreeCAD.Rotation(axis, angle)
 
 def createGroup(doc, name):
 	grp = None
@@ -89,14 +91,25 @@ def calcAngle3D(x1, y1, z1, x2, y2, z2):
 	return Angle(angle)
 
 def getX(p):
-	if hasattr(p, 'X'):
-		return p.X
-	return p.x
+	if (p):
+		if hasattr(p, 'X'):
+			return p.X
+		return p.x
+	return 0.0
 
 def getY(p):
-	if hasattr(p, 'Y'):
-		return p.Y
-	return p.y
+	if (p):
+		if hasattr(p, 'Y'):
+			return p.Y
+		return p.y
+	return 0.0
+
+def getZ(p):
+	if (p):
+		if hasattr(p, 'Z'):
+			return p.Z
+		return p.z
+	return 0.0
 
 def getDistanceX(p, q):
 	return getX(q) - getX(p)
@@ -250,6 +263,26 @@ def getNextLineIndex(coincidens, startIndex):
 			return i
 		return getNextLineIndex(coincidens, i + 1)
 	return len(coincidens)
+
+def getListNode(list, index):
+	if (index < len(list)):
+		ref = list[index]
+		if (ref):
+			return ref.node
+	return None
+
+def getOrigin(placementNode):
+	if (placementNode.getTypeName() == 'Sketch2DPlacementPlane'):
+		plane  = placementNode.getVariable('refPlane').node
+		origin = plane.get('origin')
+		return createVector(origin[0] * 10.0, origin[1] * 10.0, origin[2] * 10.0)
+	elif (placementNode.getTypeName() == 'Sketch2DPlacement'):
+		ref = placementNode.getVariable('refPoint')
+		if (ref):
+			point = ref.node
+			return createVector(point.get('x') * 10.0, point.get('y') * 10.0, point.get('z') * 10.0)
+	logWarning('WARNING - don\'t know where to place (%04X): %s - setting to (0,0,0)!' %(placementNode.getIndex(), placementNode.getTypeName()))
+	return createVector(0.0, 0.0, 0.0)
 
 class FreeCADImporter:
 
@@ -772,7 +805,11 @@ class FreeCADImporter:
 			if (not key in self.mapConstraints):
 				lengthMM = getLengthPoints(point1, point2)
 				length = Length(lengthMM, 1.0, 'mm')
-				if (index1 < 0):
+				if (point1.getTypeName() == 'Line2D'):
+					constraint = Sketcher.Constraint('Distance', index2, 1, index1, lengthMM)
+				elif (point2.getTypeName() == 'Line2D'):
+					constraint = Sketcher.Constraint('Distance', index1, 1, index2, lengthMM)
+				elif (index1 < 0):
 					constraint = Sketcher.Constraint('Distance', index1, 1, index2, 1, lengthMM)
 				else:
 					constraint = Sketcher.Constraint('Distance', index2, 1, index1, 1, lengthMM)
@@ -879,16 +916,30 @@ class FreeCADImporter:
 		name = getNodeName(sketchNode)
 		sketchObj = self.doc.addObject('Sketcher::SketchObject', name)
 		sketchNode.setSketchEntity(-1, sketchObj)
-		if (isXYPlane(sketchNode)):
-			logMessage('        adding 2D-Sketch \'%s\' on XY-plane ...' %(name), LOG.LOG_INFO)
-			rot = createRotation(0.0, 0.0, 0.0, 1.0)
-		elif (isXZPlane(sketchNode)):
-			logMessage('        adding 2D-Sketch \'%s\' on XZ-plane ...' %(name), LOG.LOG_INFO)
-			rot = createRotation(-sqrt(0.5), 0.0, 0.0, -sqrt(0.5))
+		orientationNode = sketchNode.getVariable('refOrientation')
+		directionNode = sketchNode.getVariable('refDirection').node
+		placementNode = directionNode.node.next
+
+		# Angle between the sketch direction and (0/0/1):
+		dirX = directionNode.get('x')
+		dirY = directionNode.get('y')
+		dirZ = directionNode.get('z')
+		rotAngle = degrees(acos(dirZ))
+
+		# Rotation from (0/0/1) to direction:
+		if ((dirY != 0) or (dirX != 0)):
+			rotAxis  = createVector(-dirY, dirX, 0.0)
 		else:
-			logMessage('        adding 2D-Sketch \'%s\' on YZ-plane ...' %(name), LOG.LOG_INFO)
-			rot = createRotation(0.5, 0.5, 0.5, 0.5)
-		sketchObj.Placement.Rotation = rot
+			rotAxis  = createVector(1.0, 0.0, 0.0)
+
+		origin = getOrigin(placementNode)
+
+		try:
+			rotation = createRotation(rotAxis, rotAngle)
+			sketchObj.Placement = FreeCAD.Placement(origin, rotation)
+		except Exception as e:
+			logError('Error in Placement(%s, Rotation(%s, %s): %s' %(origin, rotAxis, rotAngle, e))
+		logMessage('        added 2D-Sketch \'%s\' (%g/%g/%g) ...' %(name, getX(origin), getY(origin), getZ(origin)), LOG.LOG_INFO)
 
 		child = sketchNode.first
 		while (child):
@@ -902,27 +953,37 @@ class FreeCADImporter:
 		return
 
 	def Create_FxPad(self, padNode, sketchNode, name):
-		sketchName = getNodeName(sketchNode)
 		properties = padNode.getVariable('properties')
-		x          = getPropertyValue(properties, 0x02, 'x')
-		y          = getPropertyValue(properties, 0x02, 'y')
-		z          = getPropertyValue(properties, 0x02, 'z')
-		reversed   = getPropertyValue(properties, 0x03, 'value')
-		length1    = getPropertyValue(properties, 0x04, 'values')
-		midplane   = getPropertyValue(properties, 0x07, 'value')
+		direction  = getListNode(properties, 0x02)               # The direction of the extrusion
+		reversed   = getListNode(properties, 0x03).get('value')  # If the extrusion direction is inverted
+		dimLength1 = getListNode(properties, 0x04)               # The length of the extrusion in direction 1
+		dimAngle   = getListNode(properties, 0x05).node          # The taper outward angle  (doesn't work properly in FreeCAD)
+		midplane   = getListNode(properties, 0x07).get('value')
+		solid      = getListNode(properties, 0x1A) is not None
+		dimLength2 = getListNode(properties, 0x1B)               # The length of the extrusion in direction 2
 		pad = None
-		if (length1):
+		if (dimLength1):
+			dimLength1 = dimLength1.node
+			sketchName = getNodeName(sketchNode)
 			sketch = sketchNode.getSketchEntity()
-			len1 = length1[0] * 10.0
+			len1 = dimLength1.getValue()
+			if (isinstance(len1, Length)):
+				len1 = len1.getMM()
+			else:
+				len1 = len1 * 10.0
+			x          = direction.get('x') * len1
+			y          = direction.get('y') * len1
+			z          = direction.get('z') * len1
+			taperAngle = dimAngle.getValue()
 
-			# extrusion = self.doc.addObject("Part::Extrusion", name)
-			# extrusion.Base = sketch
-			# extrusion.Dir = (x * len1, y * len1, z * len1)
-			# extrusion.Solid = properties[0x1A] is not None
-			# extrusion.TaperAngle = (0)
-			# extrusion.ViewObject.ShapeColor = sketch.ViewObject.ShapeColor
-			# extrusion.ViewObject.LineColor  = sketch.ViewObject.LineColor
-			# extrusion.ViewObject.PointColor = sketch.ViewObject.PointColor
+			# pad = self.doc.addObject("Part::Extrusion", name)
+			# pad.Base = sketch
+			# pad.Dir = (x, y, z)
+			# pad.Solid = solid
+			# pad.TaperAngle = taperAngle.getGRAD()
+			# pad.ViewObject.ShapeColor = sketch.ViewObject.ShapeColor
+			# pad.ViewObject.LineColor  = sketch.ViewObject.LineColor
+			# pad.ViewObject.PointColor = sketch.ViewObject.PointColor
 
 			pad = self.doc.addObject("PartDesign::Pad", name)
 			pad.Sketch = sketch
@@ -930,19 +991,21 @@ class FreeCADImporter:
 			pad.Reversed = reversed
 			pad.Midplane = midplane
 			pad.Length = len1
+			# Workaround with taperAngle: Add draft on outward face.
 
-			length2  = getPropertyValue(properties, 0x1B, 'values')
-			if (length2 is None):
+			if (dimLength2):
+				dimLength2 = dimLength2.node
+				len2 = dimLength2.getValue()
+				logMessage('        creating pad \'%s\' based on \'%s\' (rev=%s, sym=%s, len=%s, len2=%s) ...' %(name, sketchName, reversed, midplane, len1, len2), LOG.LOG_INFO)
+				pad.Type = 4
+				pad.Length2 = len2.getMM()
+			else:
 				logMessage('        creating pad \'%s\' based on \'%s\' (rev=%s, sym=%s, len=%s) ...' %(name, sketchName, reversed, midplane, len1), LOG.LOG_INFO)
 				pad.Type = 0
 				pad.Length2 = 0.0
-			else:
-				len2 = length2[0] * 10.0
-				logMessage('        creating pad \'%s\' based on \'%s\' (rev=%s, sym=%s, len=%s, len2=%s) ...' %(name, sketchName, reversed, midplane, len1, len2), LOG.LOG_INFO)
-				pad.Type = 4
-				pad.Length2 = len2
 
 			padNode.setSketchEntity(-1, pad)
+
 		return pad
 
 	def Create_FxRevolution(self, revolutionNode, sketchNode, name):
@@ -988,7 +1051,7 @@ class FreeCADImporter:
 				alpha.x += beta.x
 
 			revolution.Angle = alpha.x
-			revolution.Solid = properties[0x11] is not None
+			revolution.Solid = getListNode(properties, 0x11) is not None
 			revolution.ViewObject.ShapeColor = sketch.ViewObject.ShapeColor
 			revolution.ViewObject.LineColor  = sketch.ViewObject.LineColor
 			revolution.ViewObject.PointColor = sketch.ViewObject.PointColor
@@ -997,9 +1060,12 @@ class FreeCADImporter:
 			revolutionNode.setSketchEntity(-1, revolution)
 		return revolution
 
-	def Create_FxExtrusion(self, extrusionNode, label):
-		name = label.getName()
-		refSketch = label.getVariable('lst0')
+	def Create_FxExtrusion(self, extrusionNode):
+		label = extrusionNode.getVariable('label').node
+		name = label.name
+		refSketch = label.get('lst0')
+
+		logMessage('    adding Create_FxExtrusion \'%s\' ...' %(name), LOG.LOG_INFO)
 
 		if (refSketch):
 			refSketch = refSketch[0]
@@ -1008,7 +1074,7 @@ class FreeCADImporter:
 				self.CreateObject(sketchNode)
 
 			properties = extrusionNode.getVariable('properties')
-			typ = properties[0x02].node
+			typ = getListNode(properties, 0x02)
 			obj3D = None
 			if (typ):
 				if (typ.typeName == 'Direction'):
@@ -1055,7 +1121,6 @@ class FreeCADImporter:
 	def Create_FxBoolean(self, booleanNode):             return
 	def Create_FxBoundaryPatch(self, boundaryPatchNode): return
 	def Create_FxDrill(self, drillTypeNode):             return
-	def Create_FxExtrusion(self, extrusionNode):         return
 	def Create_FxLoft(self, loftNode):                   return
 	def Create_FxShell(self, shellNode):                 return
 	def Create_FxSplit(self, splitNode):                 return
@@ -1135,7 +1200,7 @@ class FreeCADImporter:
 			zn = xa*yb - ya*xb
 
 			an = calcAngle3D(xc, yc, zc, xn, yn, zn)
-			circle.Placement = App.Placement(createVector(xc, yc, zc), createRotation(xn, yn, zn, an))
+			circle.Placement = FreeCAD.Placement(createVector(xc, yc, zc), createRotation(createVector(xn, yn, zn), an))
 			if ((a is None) and (b is None)):
 				logMessage('        ... added 3D-Circle M=(%g/%g/%g) R=%g ...' %(xc, yc, zc, r), LOG.LOG_INFO)
 				circle.Angle0 =   0.0
@@ -1232,7 +1297,7 @@ class FreeCADImporter:
 		z = 0.0
 		plane.Length = l
 		plane.Width = w
-		plane.Placement = App.Placement(createVector(x, y, z), createRotation(0, 0, 1, 45))
+		plane.Placement = FreeCAD.Placement(createVector(x, y, z), createRotation(createVector(0, 0, 1), 45))
 		if (self.root):
 			self.root.addObject(plane)
 

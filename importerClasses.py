@@ -12,7 +12,7 @@ from math          import pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.1.2'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -504,7 +504,7 @@ class DataNode():
 		self.next = None
 		if (data):
 			data.handled = False
-			data.sketchIndex = -1
+			data.sketchIndex = None
 			if (isRef == False):
 				data.node = self
 
@@ -528,6 +528,9 @@ class DataNode():
 		if (self.data):
 			if (self.data.name):
 				return self.data.name
+		ref = self.getVariable('label')
+		if (ref):
+			return ref.node.name
 		return ''
 
 	def getTypeName(self):
@@ -547,7 +550,7 @@ class DataNode():
 	def getSketchIndex(self):
 		if (self.data):
 			return self.data.sketchIndex
-		return -1
+		return None
 
 	def setSketchEntity(self, index, entity):
 		if (self.data):
@@ -607,14 +610,9 @@ class DataNode():
 		return None
 
 	def getRefText(self):
-		ref = self.getVariable('label')
-		if (ref):
-			name = ref.node.name
-		else:
-			name = self.getName()
+		name = self.getName()
 		if ((name) and (len(name) > 0)):
 			return '(%04X): %s \'%s\'' %(self.getIndex(), self.getTypeName(), name)
-		
 		return '(%04X): %s' %(self.getIndex(), self.getTypeName())
 
 	def __str__(self):
@@ -685,6 +683,12 @@ class FeatureNode(DataNode):
 		if (typ):
 			return typ.node.typeName
 		return self.data.typeName
+
+	def getSubTypeName(self):
+		typ = self.getVariable('properties')[1]
+		if (typ):
+			return typ.node.typeName
+		return None
 
 class ValueNode(DataNode):
 	def __init__(self, data, isRef):
@@ -787,3 +791,16 @@ class ViewObject():
 		pass
 	def show(self):
 		pass
+
+class ModelerTxnMgr():
+	def __init(self):
+		self.ref_1 = None
+		self.ref_2 = None
+		self.lst   = []
+		self.u8_0  = 0
+		self.u32_0 = 0
+		self.u8_1  = 0
+		self.s32_0 = 0
+
+	def __str__(self):
+		return 'ref1=%s' %(self.ref_1)
