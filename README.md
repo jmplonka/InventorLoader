@@ -43,8 +43,13 @@ That allows it to embed Excel workboos e.g.
 	- 2D sketch constraints and dimensions
 
 - 0.3: Started working on FxFeatures.
-	- Added placement to sketches. Sometimes Placements have to "Orientation" references, so that a correct placement is not possible
+	- Added placement to sketches. <s>Sometimes Placements have to "Orientation"
+	  references, so that a correct placement is not possible</s>
 	- Added pad feature. Maybe this will be chagned to Part instead of PartDesign.
+
+- 0.4: Added table for parameters.
+	- Added handling of expressions for parameters
+	- fixed missing placement for 2D-sketches
 
 ## Next steps:
 - Features like Pockets, Revolutions, etc.
