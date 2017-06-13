@@ -15,7 +15,7 @@ from math            import sqrt, sin, cos, acos, atan2, degrees, radians
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.3'
+__version__     = '0.1.4'
 __status__      = 'In-Development'
 
 def ignoreBranch(node):
@@ -44,20 +44,22 @@ def isConstructionMode(node):
 				return True
 	return False
 
-def calcAngle2D(p1, ref2):
+def calcAngle2D(p1Node, ref2):
 	p2 = None
-	if (p1):
+	if (p1Node):
 		if (ref2):
 			p2 = ref2.node
 			if (p2 is not None):
-				x1 = getX(p1.data)
-				y1 = getY(p1.data)
+				x1 = getX(p1Node.data)
+				y1 = getY(p1Node.data)
 				x2 = getX(p2)
 				y2 = getY(p2)
 
 				dx = (x2 - x1)
 				dy = (y2 - y1)
 				angle = atan2(dy, dx)
+				if (angle < 0):
+					angle += radians(360.0)
 				return Angle(angle)
 	return None
 
@@ -273,6 +275,46 @@ def calcPointKey(pointData):
 	assert (pointData.typeName == 'Point2D'), 'point data is not Point2D <> %s' %(pointData.typeName)
 	return '%g_%g' %(getX(pointData), getY(pointData))
 
+def getCirclePoints(circleNode):
+	pointRefs   = circleNode.getVariable('points')
+	centerRef   = circleNode.getVariable('refCenter')
+	x_old       = None
+	y_old       = None
+	map         = {}
+	j           = 0
+	points      = []
+	angleOffset = None
+
+	while (j < len(pointRefs)):
+		pointRef = pointRefs[j]
+		if (pointRef):
+			angle = calcAngle2D(centerRef.getBranchNode(), pointRef)
+			if (angleOffset is None):
+				angleOffset = angle.x
+			angle.x -= angleOffset
+			if (not angle.x in map):
+				map[angle.x] = pointRef
+		j += 1
+
+	if (len(map) > 0):
+		keys = map.keys()
+		keys.sort()
+		while (keys[0] != 0.0):
+			key = keys[0]
+			keys.append(key)
+			del keys[0]
+		print 'keys = %s' %(', '.join('%g' %(f + angleOffset) for f in keys))
+		for key in keys:
+			pointRef = map[key]
+			x_new = pointRef.getVariable('x')
+			y_new = pointRef.getVariable('y')
+			if ((x_new != x_old) or (y_new != y_old)):
+				points.append(pointRef)
+				x_old = x_new
+				y_old = y_new
+
+	return points
+
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
 	FX_EXTRUDE_CUT          = 0x0002
@@ -413,6 +455,15 @@ class FreeCADImporter:
 				indexX = self.addConstraint(sketchObj, constraintX, key)
 				indexY = self.addConstraint(sketchObj, constraintY, key)
 		return
+
+	def getCirclePointRefs(self, sketchObj, pointRef, circleIndex):
+		count = 0
+		entities = pointRef.getVariable('entities')
+		for entityRef in entities:
+			if (entityRef.index != circleIndex):
+				if (self.checkSketchIndex(sketchObj, entityRef.getBranchNode()) >= 0):
+					count += 1
+		return count
 
 ########################
 	def addSketch2D_Constraint_Fix2D(self, constraintNode, sketchObj):
@@ -747,25 +798,30 @@ class FreeCADImporter:
 		x = getX(centerData)
 		y = getY(centerData)
 		r = circleNode.getVariable('r') * 10.0
-		points = circleNode.getVariable('points')
+		points = getCirclePoints(circleNode)
 		mode = isConstructionMode(circleNode)
 
 		part = Part.Circle(createVector(x, y, 0), createVector(0, 0, 1), r)
-		a = calcAngle2D(centerData.node, points[0])
-		b = calcAngle2D(centerData.node, points[1])
-		if ((a is None) and (b is None)):
+		if (len(points) == 0):
 			logMessage('        ... added Circle M=(%g/%g) R=%g ...' %(x, y, r), LOG.LOG_INFO)
+			addSketch2D(sketchObj, part, mode, circleNode)
 		else:
-			radA = 0;
-			radB = 0;
-			if (a is not None):
-				radA = radians(a.x)
-			if (b is not None):
-				radB = radians(b.x)
-
-			logMessage('        ... added Arc-Circle M=(%g/%g) R=%g alpha=%s beta=%s ...' %(x, y, r, a, b), LOG.LOG_INFO)
-			part = Part.ArcOfCircle(part, radA, radB)
-		addSketch2D(sketchObj, part, mode, circleNode)
+			j = 1
+			draw = True
+			while (j < len(points)):
+				point1Ref = points[j - 1]
+				point2Ref = points[j]
+				if (draw):
+					a = calcAngle2D(centerData.node, point1Ref)
+					b = calcAngle2D(centerData.node, point2Ref)
+					radA = radians(a.x)
+					radB = radians(b.x)
+					arc = Part.ArcOfCircle(part, radA, radB)
+					logMessage('        ... added Arc-Circle M=(%g/%g) R=%gmm, from %s to %s ...' %(x, y, r, a, b), LOG.LOG_INFO)
+					addSketch2D(sketchObj, arc, mode, circleNode)
+				if (self.getCirclePointRefs(sketchObj, point2Ref, circleNode.getIndex()) > 0):
+					draw = not draw
+				j += 1
 		return
 
 	def addSketch2D_Ellipse2D(self, ellipseNode, sketchObj):
@@ -790,7 +846,7 @@ class FreeCADImporter:
 		if ((a is None) and (b is None)):
 			logMessage('        ... added 2D-Ellipse  c=(%g/%g) a=(%g/%g) b=(%g/%g) ...' %(c_x, c_y, a_x, a_y, b_x, b_y), LOG.LOG_INFO)
 		else:
-			logMessage('        ... added 2D-Arc-Ellipse  c=(%g/%g) a=(%g/%g) b=(%g/%g) alpha=%s beta=%s ...' %(c_x, c_y, a_x, a_y, b_x, b_y, a, b), LOG.LOG_INFO)
+			logMessage('        ... added 2D-Arc-Ellipse  c=(%g/%g) a=(%g/%g) b=(%g/%g) from %s to %s ...' %(c_x, c_y, a_x, a_y, b_x, b_y, a, b), LOG.LOG_INFO)
 
 		vecA = createVector(a_x, a_y, 0.0)
 		vecB = createVector(b_x, b_y, 0.0)
@@ -940,6 +996,7 @@ class FreeCADImporter:
 		if (index is not None):
 			key = 'Diameter_%s' %(index)
 			if (not key in self.mapConstraints):
+				#TODO: add a 2D-construction-line, pin both ends to the circle, pin circle's center on this 2D-line and add dimension constraint to 2D-construction-line
 				radius = circle.getSketchEntity().Radius
 				constraint = Sketcher.Constraint('Radius',  index, radius)
 				dimension = getDimension(dimensionNode, 'refParameter')
@@ -1779,18 +1836,19 @@ class FreeCADImporter:
 		logMessage('    adding parameters table...', LOG.LOG_INFO)
 		r = 1
 		for key in parameters:
-			value = parameters[key].getBranchNode()
-			if (value.getTypeName() == 'Parameter'):
-				key = '%s' %(key)
-				angle = value.getValue()
-			else:
-				angle = value
 			table.set('A%s' %(r), '%s' %(key))
-			# TODO: don't display only the raw angle - insert the formula for depending parameters
-			table.set('B%s' %(r), '%s' %(angle))
+
+			valueNode = parameters[key].getBranchNode()
+			valueNode.setVariable('alias', 'T_Parameters.%s_' %(key))
+			if (valueNode.getTypeName() == 'Parameter'):
+				key = '%s' %(key)
+				value = valueNode.getValue()
+				table.set('B%s' %(r), '%s' %(value.toStandard()))
+			else:
+				value = valueNode
+				table.set('B%s' %(r), '%s' %(value))
 			table.setAlias('B%s' %(r), '%s_' %(key))
-			value.setVariable('alias', 'T_Parameters.%s_' %(key))
-			logMessage('        A%s=\'%s\'; B%s=%s' %(r, key, r, angle), LOG.LOG_INFO)
+			logMessage('        A%s=\'%s\'; B%s=%s' %(r, key, r, value), LOG.LOG_INFO)
 			r += 1
 		return
 

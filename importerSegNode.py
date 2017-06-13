@@ -826,5 +826,16 @@ class NodeRef():
 			return self.node.typeName
 		return None
 
+	def getVariable(self, name):
+		if (self.node):
+			return self.node.get(name)
+		return None
+
+	@property
+	def index(self):
+		if (self.node):
+			return self.node.index
+		return -1
+
 	def __str__(self):
 		return '[%04X,%X]' %(self.index, self.mask)

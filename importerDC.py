@@ -14,7 +14,7 @@ from importerTransformation import Transformation
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.3'
+__version__     = '0.1.4'
 __status__      = 'In-Development'
 
 class DCReader(SegmentReader):
@@ -1358,6 +1358,19 @@ class DCReader(SegmentReader):
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadSInt32(i, 's32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'refGroup')
+		if (getFileVersion() > 2012):
+			i = node.ReadList6(i, AbstractNode._TYP_MAP_X_REF_FLOAT64_, 'lst0')
+			i = node.ReadList6(i, AbstractNode._TYP_MAP_X_REF_KEY_, 'lst1')
+		else:
+			node.content += ' lst0={} lst1={}'
+			i = self.skipBlockSize(i)
+			i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadCrossRef(i, 'refPoint1')
+		i = node.ReadCrossRef(i, 'refPoint2')
+		i = self.skipBlockSize(i)
 		return i
 
 	def Read_64DE16F3(self, node):

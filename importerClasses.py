@@ -12,7 +12,7 @@ from math          import degrees, radians
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.3'
+__version__     = '0.1.4'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -467,6 +467,9 @@ class Length():
 	def getMM(self):
 		return self.x / 0.1
 
+	def toStandard(self):
+		return '%g mm' %(self.x / 0.1)
+
 	def __str__(self):
 		return '%g %s' %(self.x / self.factor, self.unit)
 
@@ -480,8 +483,11 @@ class Angle():
 	def getGRAD(self):
 		return self.x
 
+	def toStandard(self):
+		return '%g\xC2\xB0' %(self.getGRAD())
+
 	def __str__(self):
-		return '%g\xC2\xB0' %(self.x)
+		return '%g\xC2\xB0' %(self.getGRAD())
 
 class DataNode():
 	def __init__(self, data, isRef):
