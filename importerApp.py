@@ -14,7 +14,7 @@ from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.0'
+__version__     = '0.1.1'
 __status__      = 'In-Development'
 
 class AppReader(SegmentReader):
@@ -332,7 +332,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = node.ReadLen32Text16(i)
 		# i = node.ReadUInt16A(i, 2, 'a0')
-		i = node.ReadCrossRef(i)
+		i = node.ReadCrossRef(i, 'ref_1')
 		# i = node.ReadUInt16A(i, 3, 'a0')
 		# i = self.skipBlockSize(i)
 		# i = node.ReadLen32Text16(i, 'txt_0')
@@ -357,7 +357,7 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_6EAE8DFD(self, node):
-		node.typeName = 'Dimension'
+		node.typeName = 'Parameter'
 		i = node.Read_Header0()
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16A(i, 7, 'a0')

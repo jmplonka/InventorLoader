@@ -13,7 +13,7 @@ from struct import unpack
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.1.2'
 __status__      = 'In-Development'
 
 _dumpLineLength = 0x20
@@ -556,10 +556,10 @@ def logMessage(msg, level=LOG.LOG_DEBUG):
 			return
 	if ((level == LOG.LOG_WARNING) or (level == LOG.LOG_ERROR)):
 		print >> sys.stderr, msg
-		sys.stderr.flush()
+#		sys.stderr.flush()
 	else:
 		print >> sys.stdout, msg
-		sys.stdout.flush()
+#		sys.stdout.flush()
 
 def getDumpLineLength():
 	global _dumpLineLength

@@ -8,13 +8,13 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 
 import re
 import traceback
-from importerClasses   import DataNode, FeatureNode, DimensionNode, ValueNode, NodeRef, Angle
-from importerSegNode   import BinaryNode, isList
+from importerClasses   import *
+from importerSegNode   import BinaryNode, isList, NodeRef
 from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.2'
+__version__     = '0.1.3'
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
@@ -148,12 +148,32 @@ def dumpRemainingDataB(file, data, offset):
 def buildBranchRef(parent, file, nodes, node, level, ref):
 	branch = None
 	if (node.printable):
-		if (node.typeName == 'Dimension'):
-			branch = DimensionNode(node, True)
+		if (node.typeName == 'Parameter'):
+			branch = ParameterNode(node, True)
 		elif (node.typeName == 'Feature'):
 			branch = FeatureNode(node, True)
 		elif (node.typeName == 'ValueByte'):
 			branch = ValueNode(node, True)
+		elif (node.typeName == 'ValueSInt32'):
+			branch = ValueNode(node, True)
+		elif (node.typeName == 'ValueUInt32'):
+			branch = ValueNode(node, True)
+		elif (node.typeName == 'Point2D'):
+			branch = Point2DNode(node, True)
+		elif (node.typeName == 'Point3D'):
+			branch = Point3DNode(node, True)
+		elif (node.typeName == 'Line2D'):
+			branch = Line2DNode(node, True)
+		elif (node.typeName == 'Circle2D'):
+			branch = Circle2DNode(node, True)
+		elif (node.typeName == 'Radius2D'):
+			branch = Radius2DNode(node, True)
+		elif (node.typeName == 'Constraint_Coincident2D'):
+			branch = ConstraintCoincident2DNode(node, True)
+		elif (node.typeName == 'Dimension_Distance2D'):
+			branch = DimensionDistance2DNode(node, True)
+		elif (node.typeName == 'Dimension_Angle'):
+			branch = DimensionAngleNode(node, True)
 		else:
 			branch = DataNode(node, True)
 		parent.append(branch)
@@ -170,13 +190,15 @@ def buildBranchRef(parent, file, nodes, node, level, ref):
 def buildBranch(parent, file, nodes, node, level = 0):
 	branch = None
 	if (node.printable):
-		if (node.typeName == 'Dimension'):
-			branch = DimensionNode(node, False)
+		if (node.typeName == 'Parameter'):
+			branch = ParameterNode(node, False)
 		elif (node.typeName == 'Feature'):
 			branch = FeatureNode(node, False)
 		elif (node.typeName == 'ValueByte'):
 			branch = ValueNode(node, False)
 		elif (node.typeName == 'ValueSInt32'):
+			branch = ValueNode(node, False)
+		elif (node.typeName == 'ValueUInt32'):
 			branch = ValueNode(node, False)
 		else:
 			branch = DataNode(node, False)
@@ -215,7 +237,7 @@ def buildTree(file, seg):
 						radius.node = node
 						child.set('refRadius', radius)
 			else:
-				logError('>E0010: (%04X): %s - Index out of range (%X>%X) for' %(node.index, node.typeName, ref.index, l))
+				logError('>E0010: (%04X): %s - Index out of range (%X>%X)!' %(node.index, node.typeName, ref.index, l))
 
 		ref = node.parentIndex
 		node.parent = None
@@ -333,8 +355,9 @@ class SegmentReader(object):
 			readType = getattr(self, 'Read_%s' %(node.typeName))
 			i = readType(node)
 		except AttributeError as e:
-			logError("ERROR: %s.Read_%s: %s"  %(self.__class__.__name__, node.typeName, e))
-		except:
+			logError('ERROR: %s.Read_%s: %s' %(self.__class__.__name__, node.typeName, e))
+		except Exception as e:
+			logError('ERROR> (%04X): %s - %s' %(node.index, node.typeName, e))
 			logError('>E: ' + traceback.format_exc())
 
 		try:

@@ -9,12 +9,12 @@ TODO:
 '''
 
 import traceback
-from importerClasses import Header0, NodeRef, Angle, GraphicsFont, ModelerTxnMgr
+from importerClasses import Header0, Angle, GraphicsFont, ModelerTxnMgr
 from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.2'
+__version__     = '0.1.3'
 __status__      = 'In-Development'
 
 def isList(data, code):
@@ -95,6 +95,7 @@ class AbstractNode():
 		self.segment      = None
 		self.sketchIndex  = None
 		self.sketchEntity = None
+		self.valid        = True
 
 	def set(self, name, value):
 		'''
@@ -260,7 +261,7 @@ class AbstractNode():
 			self.name = x
 		return i
 
-	def ReadNodeRef(self, offset, name, type, dump = True):
+	def ReadNodeRef(self, offset, name, type, dump = False):
 		u16_0, i = getUInt16(self.data, offset)
 		u16_1, i = getUInt16(self.data, i)
 		ref = NodeRef(u16_0, u16_1, type)
@@ -282,10 +283,10 @@ class AbstractNode():
 			self.content  += ' %s=%s' %(name, ref)
 		return i
 
-	def ReadChildRef(self, offset, name = 'ref', dump = True):
+	def ReadChildRef(self, offset, name = 'ref', dump = False):
 		return self.ReadNodeRef(offset, name, NodeRef.TYPE_CHILD, dump)
 
-	def ReadCrossRef(self, offset, name = 'xref', dump = True, number = -1):
+	def ReadCrossRef(self, offset, name = 'xref', number = -1, dump = False):
 		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CROSS, dump)
 		ref = self.get(name)
 		if (ref):
@@ -332,7 +333,7 @@ class AbstractNode():
 						val = self.get('tmp')
 						str = ''
 					elif (t == AbstractNode._TYP_NODE_X_REF_):
-						i = self.ReadCrossRef(i, 'tmp', True, j)
+						i = self.ReadCrossRef(i, 'tmp', j, False)
 						val = self.get('tmp')
 						str = ''
 					elif (t == AbstractNode._TYP_1D_UINT32_):
@@ -508,9 +509,9 @@ class AbstractNode():
 					val = self.get('tmp')
 					str = ''
 				elif (t == AbstractNode._TYP_NODE_X_REF_):
-					i = self.ReadCrossRef(i, 'tmp', False, j)
+					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
-					str = ''# '%s' %(IntArr2Str(val, 4))
+					str = ''
 				elif (t == AbstractNode._TYP_STRING16_):
 					val, i = getLen32Text8(self.data, i)
 					str = '\"%s\"' %(val)
@@ -546,7 +547,7 @@ class AbstractNode():
 			j = 0
 			while (j < cnt):
 				if (typ == AbstractNode._TYP_NODE_X_REF_):
-					i = self.ReadCrossRef(i, 'tmp', False, j)
+					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 				elif (typ == AbstractNode._TYP_1D_UINT32_):
 					val, i = getUInt32(self.data, i)
@@ -575,16 +576,16 @@ class AbstractNode():
 					self.content += '%s[%04X: (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_KEY_X_REF_):
 					key, i = getUInt32(self.data, i)
-					i = self.ReadCrossRef(i, 'tmp', False, j)
+					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%04X: (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_X_REF_KEY_):
-					i = self.ReadCrossRef(i, 'tmp', False, j)
+					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getUInt32(self.data, i)
 					self.content += '%s[%04X: (%s)]' %(sep, key.index, val)
 				elif (typ == AbstractNode._TYP_MAP_X_REF_FLOAT64_):
-					i = self.ReadCrossRef(i, 'tmp', False, j)
+					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getFloat64(self.data, i)
 					self.content += '%s[%04X: %s]' %(sep, key.index, val)
@@ -595,7 +596,7 @@ class AbstractNode():
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT8_X_REF_):
 					key, i = getLen32Text8(self.data, i)
-					i = self.ReadCrossRef(i, 'tmp', False, j)
+					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT16_REF_):
@@ -606,7 +607,7 @@ class AbstractNode():
 				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_):
 					key = len(lst)
 					val = ModelerTxnMgr()
-					i = self.ReadCrossRef(i, 'tmp', False, j)
+					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val.ref_1 = self.get('tmp')
 					val.u32_0, i = getUInt32(self.data, i)
 					i =  self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'tmp')
@@ -622,7 +623,7 @@ class AbstractNode():
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT16_X_REF_):
 					key, i = getLen32Text16(self.data, i)
-					i = self.ReadCrossRef(i, 'tmp', False, j)
+					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				j += 1
@@ -698,7 +699,7 @@ class AbstractNode():
 		ref   = self.get(refName)
 		value = ref.node
 
-		if (value.typeName == 'DimensionValue'):
+		if (value.typeName == 'ParameterValue'):
 			ref   = value.get('refType')
 			typ   = ref.node
 
@@ -721,19 +722,19 @@ class AbstractNode():
 			return value.getUnitName()
 		if (value.typeName == 'F8A77A0D'):
 			return value.getUnitName()
-		if (value.typeName == 'DimensionValueRef'):
+		if (value.typeName == 'ParameterValueRef'):
 			return value.getUnitName()
-		if (value.typeName == 'DimensionValueDimensionRef'):
-			return value.get('refDimension').node.getUnitName()
-		if (value.typeName == 'DimensionValueDimensionRef1'):
+		if (value.typeName == 'ParameterValueParameterRef'):
+			return value.get('refParameter').node.getUnitName()
+		if (value.typeName == 'ParameterValueParameterRef1'):
 			unitName = value.getUnitName()
-			if (unitName == 'DimensionTypeFactor3D'):
+			if (unitName == 'ParameterTypeFactor3D'):
 				unitName = value.getUnitName('refFactor')
 			return unitName
-		if (value.typeName == 'DimensionValueDimensionRef2'):
+		if (value.typeName == 'ParameterValueParameterRef2'):
 			return value.getUnitName()
 		else:
-			logError('ERROR: Unknwon dimension value \'%s\' for (%04X): %s \'%s\'!' %(value.typeName, self.index, self.typeName, self.name))
+			logError('ERROR: Unknwon parameter value \'%s\' for (%04X): %s \'%s\'!' %(value.typeName, self.index, self.typeName, self.name))
 		return ''
 
 	def __str__(self):
@@ -790,3 +791,40 @@ class NotebookNode(AbstractNode):
 class ResultNode(AbstractNode):
 	def __init__(self):
 		AbstractNode.__init__(self)
+
+class NodeRef():
+	TYPE_PARENT = 1
+	TYPE_CHILD  = 2
+	TYPE_CROSS  = 3
+
+	def __init__(self, n, m, refType):
+		self.index  = n + ((m & 0x7FFF) << 16)
+		self.mask   = (m & 0x8000) >> 15
+		self.type   = refType
+		self.number = 0
+		self.node   = None
+
+	@property
+	def node(self):
+		# Do something if you want
+		return self.node
+
+	@node.setter
+	def node(self, node):
+		# Do something if you want
+		self.node = node
+		if (node):
+			assert isinstance(node, AbstractNode), 'Node reference is not a AbstractNode (%s)!' %(node.__class__.__name__)
+
+	def getBranchNode(self):
+		if (self.node):
+			return self.node.node
+		return None
+
+	def getTypeName(self):
+		if (self.node):
+			return self.node.typeName
+		return None
+
+	def __str__(self):
+		return '[%04X,%X]' %(self.index, self.mask)

@@ -8,11 +8,11 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 
 import traceback
 from importerUtils import IntArr2Str, FloatArr2Str, logMessage, logError, getInventorFile, getUInt16, getUInt16A
-from math          import pi
+from math          import degrees, radians
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.2'
+__version__     = '0.1.3'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -264,15 +264,15 @@ class RSeStorageSectionB():
 class RSeMetaData():
 	AM_APP       = 'AmAppSegment'
 	PM_APP       = 'PmAppSegment'
-	AM_B_REP     = 'AmBRepSegment'
+	AM_B_REP     = 'AmBREPSegment'
 	PM_B_REP     = 'PmBRepSegment'
 	AM_BROWSER   = 'AmBrowserSegment'
 	PM_BROWSER   = 'PmBrowserSegment'
-	AM_D_C       = 'AmDCSegment'
+	AM_D_C       = 'AmDcSegment'
 	PM_D_C       = 'PmDCSegment'
 	AM_GRAPHICS  = 'AmGraphicsSegment'
 	PM_GRAPHICS  = 'PmGraphicsSegment'
-	AM_RESULT    = 'AmResultSegment'
+	AM_RESULT    = 'AmRxSegment'
 	PM_RESULT    = 'PmResultSegment'
 	DESIGN_VIEW  = 'DesignViewSegment'
 	EE_DATA      = 'EeDataSegment'
@@ -472,18 +472,10 @@ class Length():
 
 class Angle():
 	def __init__(self, w):
-		self.x = Angle.rad2grad(w)
-
-	@staticmethod
-	def rad2grad(rad):
-		return rad * 180.0 / pi
-
-	@staticmethod
-	def grad2rad(grad):
-		return grad * pi / 180
+		self.x = degrees(w)
 
 	def getRAD(self):
-		return Angle.grad2rad(self.x)
+		return radians(self.x)
 
 	def getGRAD(self):
 		return self.x
@@ -604,6 +596,10 @@ class DataNode():
 			return self.data.get(name)
 		return None
 
+	def setVariable(self, name, value):
+		if (self.data):
+			self.data.set(name, value)
+
 	def getSegment(self):
 		if (self.data):
 			return self.data.segment
@@ -615,13 +611,21 @@ class DataNode():
 			return '(%04X): %s \'%s\'' %(self.getIndex(), self.getTypeName(), name)
 		return '(%04X): %s' %(self.getIndex(), self.getTypeName())
 
+	def setValid(self, valid):
+		if (self.data):
+			self.data.valid = valid
+	def isValid(self):
+		if (self.data):
+			return self.data.valid
+		return False
+
 	def __str__(self):
 		node = self.data
 		if (node and (node.name is None)):
 			return '(%04X): %s%s' %(node.index, node.typeName, node.content)
 		return '(%04X): %s \'%s\'%s' %(node.index, node.typeName, node.name, node.content)
 
-class DimensionNode(DataNode):
+class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
@@ -651,17 +655,17 @@ class DimensionNode(DataNode):
 	def getValue(self):
 		x = self.getValueRaw()
 		type = self.getUnitName()
-		if (type == 'DimensionUnitRAD'):
+		if (type == 'ParameterUnitRAD'):
 			return Angle(x)
-		if (type == 'DimensionUnitCM'):
+		if (type == 'ParameterUnitCM'):
 			return Length(x)
-		if (type == 'DimensionUnitINCH'):
+		if (type == 'ParameterUnitINCH'):
 			return Length(x, 25.4, 'inch')
-		if (type == 'DimensionTypeFactor3D'):
+		if (type == 'ParameterTypeFactor3D'):
 			return x
 		return x
 
-class DimensionValue():
+class ParameterValue():
 	def __init__(self, value):
 		self.value = value
 
@@ -672,16 +676,21 @@ class DimensionValue():
 		return ''
 
 	def getTypeName(self):
-		return 'Dimension'
+		return 'Parameter'
 
 class FeatureNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getTypeName(self):
-		typ = self.getVariable('properties')[0]
-		if (typ):
-			return typ.node.typeName
+		properties = self.getVariable('properties')
+		if (properties):
+			typ = properties[0]
+			if (typ is None):
+				typ = properties[1]
+			if (typ):
+				if (typ.node):
+					return typ.node.typeName
 		return self.data.typeName
 
 	def getSubTypeName(self):
@@ -695,7 +704,86 @@ class ValueNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		return '(%04X): %s=%X' %(self.getIndex(), self.getTypeName(), self.getVariable('value'))
+		value = self.data.properties['value']
+		if (value is not None):
+			return '(%04X): %s=%X' %(self.getIndex(), self.getTypeName(), value)
+		else:
+			logError('ERROR: (%04X): %s has no value defined!' %(self.getIndex(), self.getTypeName()))
+			return '(%04X): %s' %(self.getIndex(), self.getTypeName())
+
+class Point2DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		return '(%04X): %s - x=%g, y=%g' %(self.getIndex(), self.getTypeName(), self.getVariable('x'), self.getVariable('y'))
+
+class Point3DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		return '(%04X): %s - x=%g, y=%g, z=%g' %(self.getIndex(), self.getTypeName(), self.getVariable('x'), self.getVariable('y'), self.getVariable('z'))
+
+class Line2DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		p = self.getVariable('points')
+		return '(%04X): %s - (%04X), (%04X)' %(self.getIndex(), self.getTypeName(), p[0].index, p[1].index)
+
+class Circle2DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		c = self.getVariable('refCenter').node
+		r = self.getVariable('r')
+		p = self.getVariable('points')
+		points = []
+		for i in p:
+			if (i):
+				points.append('(%04X)' %(i.index))
+		return '(%04X): %s - (%04X), r=%g, %s' %(self.getIndex(), self.getTypeName(), c.index, r, ', '.join(points))
+
+class Radius2DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		o = self.getVariable('refObject').node
+		c = self.getVariable('refCenter').node
+		return '(%04X): %s - o=(%04X): %s, c=(%04X)' %(self.getIndex(), self.getTypeName(), o.index, o.typeName, c.index)
+
+class ConstraintCoincident2DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		o = self.getVariable('refObject').node
+		p = self.getVariable('refPoint').node
+		return '(%04X): %s - o=(%04X): %s, p=(%04X): %s' %(self.getIndex(), self.getTypeName(), o.index, o.typeName, p.index, p.typeName)
+
+class DimensionAngleNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		d = self.getVariable('refParameter').node
+		l1 = self.getVariable('refLine1').node
+		l2 = self.getVariable('refLine2').node
+		return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.getIndex(), self.getTypeName(), d.name, l1.index, l1.typeName, l2.index, l2.typeName)
+
+class DimensionDistance2DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		d = self.getVariable('refParameter').node
+		o1 = self.getVariable('refEntity1').node
+		o2 = self.getVariable('refEntity2').node
+		return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.getIndex(), self.getTypeName(), d.name , o1.index, o1.typeName, o2.index, o2.typeName)
 
 class B32BF6AC():
 	def __init__(self, m, x):
@@ -711,7 +799,7 @@ class Header0():
 		self.x = x
 
 	def __str__(self):
-		return 'm=%X x=%X' %(self.m, self.x)
+		return 'm=%X x=%04X' %(self.m, self.x)
 
 class _32RRR2():
 	def __init__(self, i, f, n):
@@ -730,26 +818,6 @@ class _32RA():
 
 	def __str__(self):
 		return 'i=%X f=%X n=%X' %(self.i, self.f, self.n)
-
-class NodeRef():
-	TYPE_PARENT = 1
-	TYPE_CHILD  = 2
-	TYPE_CROSS  = 3
-
-	def __init__(self, n, m, refType):
-		self.index  = n + ((m & 0x7FFF) << 16)
-		self.mask   = (m & 0x8000) >> 15
-		self.type   = refType
-		self.number = 0
-		self.node   = None
-
-	def getBranchNode(self):
-		if (self.node):
-			return self.node.node
-		return None
-
-	def __str__(self):
-		return '[%04X,%X]' %(self.index, self.mask)
 
 class BRepChunk():
 	def __init__(self, key, val):
