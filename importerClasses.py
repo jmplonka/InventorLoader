@@ -12,7 +12,7 @@ from math          import degrees, radians
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.4'
+__version__     = '0.1.5'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -458,9 +458,13 @@ class GraphicsFont():
 	def __str__(self):
 		return '(%d) %s (%s) %r %r %r %r' %(self.number, self.name, FloatArr2Str(self.f), self.ukn1, self.ukn2, self.ukn3, self.ukn4)
 
-class Length():
-	def __init__(self, x, factor = 0.1, unit = 'mm'):
+class AbstractValue():
+	def __init__(self, x):
 		self.x = x
+
+class Length(AbstractValue):
+	def __init__(self, x, factor = 0.1, unit = 'mm'):
+		AbstractValue.__init__(self, x)
 		self.factor = factor
 		self.unit = unit
 
@@ -473,9 +477,9 @@ class Length():
 	def __str__(self):
 		return '%g %s' %(self.x / self.factor, self.unit)
 
-class Angle():
+class Angle(AbstractValue):
 	def __init__(self, w):
-		self.x = degrees(w)
+		AbstractValue.__init__(self, degrees(w))
 
 	def getRAD(self):
 		return radians(self.x)

@@ -9,13 +9,13 @@ import Sketcher
 import FreeCAD
 import traceback
 from importerUtils   import logMessage, logWarning, logError, LOG, IFF, IntArr2Str, FloatArr2Str
-from importerClasses import RSeMetaData, Angle, Length, ParameterNode, ParameterValue, FeatureNode
+from importerClasses import RSeMetaData, Angle, Length, ParameterNode, ParameterValue, FeatureNode, AbstractValue
 from importerSegNode import AbstractNode
 from math            import sqrt, sin, cos, acos, atan2, degrees, radians
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.4'
+__version__     = '0.1.5'
 __status__      = 'In-Development'
 
 def ignoreBranch(node):
@@ -1079,15 +1079,16 @@ class FreeCADImporter:
 	def addSketch3D_E8D30910(self, node, sketchObj): return
 
 	def Create_Sketch2D_Node(self, sketchObj, node):
-		name  = node.getTypeName()
-		index = node.getIndex()
-		try:
-			addSketchObj = getattr(self, 'addSketch2D_%s' %(name))
-			addSketchObj(node, sketchObj)
-		except Exception as e:
-			logError('ERROR: (%04X): %s - %s' %(index, name, e))
-			logError('>E: ' + traceback.format_exc())
-		node.setHandled(True)
+		if (node.isHandled() == False):
+			node.setHandled(True)
+			name  = node.getTypeName()
+			index = node.getIndex()
+			try:
+				addSketchObj = getattr(self, 'addSketch2D_%s' %(name))
+				addSketchObj(node, sketchObj)
+			except Exception as e:
+				logError('ERROR: (%04X): %s - %s' %(index, name, e))
+				logError('>E: ' + traceback.format_exc())
 		return
 
 	def addSketch2D_PostCreateCoincidences(self, sketchObj):
@@ -1843,7 +1844,10 @@ class FreeCADImporter:
 			if (valueNode.getTypeName() == 'Parameter'):
 				key = '%s' %(key)
 				value = valueNode.getValue()
-				table.set('B%s' %(r), '%s' %(value.toStandard()))
+				if (isinstance(value, AbstractValue)):
+					table.set('B%s' %(r), '%s' %(value.toStandard()))
+				else:
+					table.set('B%s' %(r), '%s' %(value))
 			else:
 				value = valueNode
 				table.set('B%s' %(r), '%s' %(value))
