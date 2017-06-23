@@ -9,13 +9,13 @@ import Sketcher
 import FreeCAD
 import traceback
 from importerUtils   import logMessage, logWarning, logError, LOG, IFF, IntArr2Str, FloatArr2Str
-from importerClasses import RSeMetaData, Angle, Length, ParameterNode, ParameterValue, FeatureNode
+from importerClasses import RSeMetaData, Angle, Length, ParameterNode, FeatureNode, AbstractValue
 from importerSegNode import AbstractNode
-from math            import sqrt, sin, cos, acos, atan2, degrees, radians
+from math            import sqrt, sin, cos, acos, atan2, degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.4'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 def ignoreBranch(node):
@@ -60,7 +60,7 @@ def calcAngle2D(p1Node, ref2):
 				angle = atan2(dy, dx)
 				if (angle < 0):
 					angle += radians(360.0)
-				return Angle(angle)
+				return Angle(angle, pi/180.0, '\xC2\xB0')
 	return None
 
 def calcAngle3D(x1, y1, z1, x2, y2, z2):
@@ -71,7 +71,7 @@ def calcAngle3D(x1, y1, z1, x2, y2, z2):
 		angle = acos(s/l1/l2)
 	else:
 		angle = radians(90.0)
-	return Angle(angle)
+	return Angle(angle, pi/180.0, '\xC2\xB0')
 
 def getX(pData):
 	return pData.get('x') * 10.0
@@ -303,7 +303,6 @@ def getCirclePoints(circleNode):
 			key = keys[0]
 			keys.append(key)
 			del keys[0]
-		print 'keys = %s' %(', '.join('%g' %(f + angleOffset) for f in keys))
 		for key in keys:
 			pointRef = map[key]
 			x_new = pointRef.getVariable('x')
@@ -330,7 +329,7 @@ class FreeCADImporter:
 	def checkSketchIndex(self, sketchObj, entityNode):
 		if (entityNode.isHandled() == False):
 			self.Create_Sketch2D_Node(sketchObj, entityNode)
-			if (entityNode.getSketchIndex() is None):
+			if (entityNode.getSketchIndex() is None and entityNode.isValid()):
 				logError('        ... Failed to create (%04X): %s' %(entityNode.getIndex(), entityNode.getTypeName()))
 		if (entityNode.isValid()):
 			return  entityNode.getSketchIndex()
@@ -764,7 +763,7 @@ class FreeCADImporter:
 		points = lineNode.getVariable('points')
 		mode = isConstructionMode(lineNode)
 		if (self.createLine2D(sketchObj, points[0], points[1], mode, lineNode) == False):
-			logMessage('        ... can\'t add Line length = 0.0!', LOG.LOG_INFO)
+			logMessage('        ... can\'t add Line with length = 0.0!', LOG.LOG_INFO)
 			self.invalidateLine2D(lineNode)
 		else:
 			logMessage('        ... added 2D line %s' %(lineNode.getSketchIndex()), LOG.LOG_INFO)
@@ -799,7 +798,7 @@ class FreeCADImporter:
 		y = getY(centerData)
 		r = circleNode.getVariable('r') * 10.0
 		points = getCirclePoints(circleNode)
-		mode = isConstructionMode(circleNode)
+		mode = (circleNode.next.getTypeName() == '64DE16F3')
 
 		part = Part.Circle(createVector(x, y, 0), createVector(0, 0, 1), r)
 		if (len(points) == 0):
@@ -1079,15 +1078,16 @@ class FreeCADImporter:
 	def addSketch3D_E8D30910(self, node, sketchObj): return
 
 	def Create_Sketch2D_Node(self, sketchObj, node):
-		name  = node.getTypeName()
-		index = node.getIndex()
-		try:
-			addSketchObj = getattr(self, 'addSketch2D_%s' %(name))
-			addSketchObj(node, sketchObj)
-		except Exception as e:
-			logError('ERROR: (%04X): %s - %s' %(index, name, e))
-			logError('>E: ' + traceback.format_exc())
-		node.setHandled(True)
+		if (node.isHandled() == False):
+			node.setHandled(True)
+			name  = node.getTypeName()
+			index = node.getIndex()
+			try:
+				addSketchObj = getattr(self, 'addSketch2D_%s' %(name))
+				addSketchObj(node, sketchObj)
+			except Exception as e:
+				logError('ERROR: (%04X): %s - %s' %(index, name, e))
+				logError('>E: ' + traceback.format_exc())
 		return
 
 	def addSketch2D_PostCreateCoincidences(self, sketchObj):
@@ -1276,12 +1276,12 @@ class FreeCADImporter:
 		lAxis = sqrt(dx*dx + dy*dy + dz*dz)
 		val5 = getPropertyValue(properties, 0x5, 'u16_0')
 		midplane =  IFF(val5 == 2, 1, 0)
-		angle1Ref   = getPropertyValue(properties, 0x4, 'values')
+		angle1Ref   = getPropertyValue(properties, 0x4, 'valueNominal')
 
 		revolution = None
 		if (angle1Ref):
 			sketch = sketchNode.getSketchEntity()
-			alpha = Angle(angle1Ref[0])
+			alpha = Angle(angle1Ref, pi/180.0, '\xC2\xB0')
 
 			#revolution = self.doc.addObject('PartDesign::Revolution', name)
 			#revolution.Sketch = sketch
@@ -1292,11 +1292,11 @@ class FreeCADImporter:
 			revolution.Axis = (dx/lAxis, dy/lAxis, dz/lAxis)
 			revolution.Base = (x1, y1, z1)
 
-			angle2Ref   = getPropertyValue(properties, 0x12, 'values')
+			angle2Ref   = getPropertyValue(properties, 0x12, 'valueNominal')
 			if (angle2Ref is None):
 				logMessage('        adding revolution \'%s\' (%s)-(%s) based on \'%s\' (rev=%s, sym=%s, alpha=%s) ...' %(name, revolution.Base, revolution.Axis, sketchName, reversed, midplane, alpha), LOG.LOG_INFO)
 			else:
-				beta = Angle(angle2Ref[0])
+				beta = Angle(angle2Ref, pi/180.0, '\xC2\xB0')
 				midplane = True
 				logMessage('        adding revolution \'%s\' based on \'%s\' (rev=%s, sym=%s, alpha=%s, beta=%s) #BUGGY#...' %(name, sketchName, reversed, midplane, alpha, beta), LOG.LOG_INFO)
 				alpha.x += beta.x
@@ -1597,7 +1597,7 @@ class FreeCADImporter:
 	def Create_Sketch2DPlacementPlane(self, placementNode):        return ignoreBranch(surfaceNode)
 	def Create_Sketch2DPlacement(self, placementNode):             return ignoreBranch(placementNode)
 	def Create_Text2D(self, textNode):                             return notSupportedNode(textNode)
-	def Create_ValueByte(self, valueNode):                         return ignoreBranch(valueNode)
+	def Create_ParameterBoolean(self, valueNode):                  return ignoreBranch(valueNode)
 
 	def Create_92637D29(self, node):
 		# Revolution.Extends1
@@ -1830,26 +1830,80 @@ class FreeCADImporter:
 					return seg
 		return None
 
+	def addParameterTableTolerance(self, table, r, tolerance):
+		if (tolerance):
+			table.set('D%d' %(r), tolerance)
+			return '; D%d=\'%s\'' %(r, tolerance)
+		return ''
+
+	def addParameterTableComment(self, table, r, commentRef):
+		if (commentRef):
+			table.set('E%d' %(r), commentRef.getName())
+			return '; E%d=\'%s\'' %(r, commentRef.getName())
+		return ''
+
 	def createParameterTable(self, partNode):
-		parameters = partNode.getVariable('parameters')
+		parameterRefs = partNode.getVariable('parameters')
 		table = self.doc.addObject('Spreadsheet::Sheet', 'T_Parameters')
 		logMessage('    adding parameters table...', LOG.LOG_INFO)
-		r = 1
-		for key in parameters:
-			table.set('A%s' %(r), '%s' %(key))
+		table.set('A1', 'Parameter')
+		table.set('B1', 'Value')
+		table.set('C1', 'Fromula')
+		table.set('D1', 'Tolerance')
+		table.set('E1', 'Comment')
+		r = 2
+		keys = parameterRefs.keys()
+		keys.sort(key=str.lower)
+		for key in keys:
+			mdlValue = ''
+			tlrValue = ''
+			remValue = ''
 
-			valueNode = parameters[key].getBranchNode()
+			valueNode = parameterRefs[key].getBranchNode()
 			valueNode.setVariable('alias', 'T_Parameters.%s_' %(key))
-			if (valueNode.getTypeName() == 'Parameter'):
+			typeName = valueNode.getTypeName()
+			if (typeName == 'Parameter'):
 				key = '%s' %(key)
-				value = valueNode.getValue()
-				table.set('B%s' %(r), '%s' %(value.toStandard()))
-			else:
+				value = valueNode.getFormula(False)
+				nominalValue = valueNode.getVariable('valueNominal')
+				nominalFactor = valueNode.data.getUnitFactor()
+				nominalOffset = valueNode.data.getUnitOffset()
+				nominalUnit  = valueNode.data.getUnitName()
+				if (len(nominalUnit) > 0): nominalUnit = ' ' + nominalUnit
+
+				#formula = '%s%s' %((nominalValue / nominalFactor)  - nominalOffset, nominalUnit)
+				formula = valueNode.getFormula(True)
+				table.set('A%d' %(r), '%s' %(key))
+				table.set('B%d' %(r), '%s' %(value))
+				table.set('C%d' %(r), '%s' %(formula))
+				mdlValue = '; C%s=%s' %(r, formula)
+				tlrValue = self.addParameterTableTolerance(table, r, valueNode.getVariable('tolerance'))
+				remValue = self.addParameterTableComment(table, r, valueNode.getVariable('label'))
+			elif (typeName == 'ParameterText'):
+				key = '%s' %(key)
+				value = valueNode.getVariable('value')
+				table.set('A%d' %(r), '%s' %(key))
+				table.set('B%d' %(r), '\'%s' %(value))
+				remValue = self.addParameterTableComment(table, r, valueNode.getVariable('label'))
+			elif (typeName == 'ParameterBoolean'):
+				key = '%s' %(key)
+				value = valueNode.getVariable('value')
+				table.set('A%d' %(r), '%s' %(key))
+				table.set('B%d' %(r), '%s' %(value))
+				remValue = self.addParameterTableComment(table, r, valueNode.getVariable('label'))
+			elif (typeName != 'RDxVar'):
 				value = valueNode
-				table.set('B%s' %(r), '%s' %(value))
-			table.setAlias('B%s' %(r), '%s_' %(key))
-			logMessage('        A%s=\'%s\'; B%s=%s' %(r, key, r, value), LOG.LOG_INFO)
-			r += 1
+				table.set('A%d' %(r), '%s' %(key))
+				table.set('B%d' %(r), '%s' %(value))
+				remValue = self.addParameterTableComment(table, r, valueNode.getVariable('label'))
+			if (typeName != 'RDxVar'):
+				try:
+					aliasValue = '%s_' %(key)
+					table.setAlias('B%d' %(r), aliasValue)
+				except Exception as e:
+					logError('    >ERROR: Can\'t set alias name for B%d - invalid name \'%s\'!' %(r, aliasValue))
+				logMessage('        A%d=\'%s\'; B%d=%s%s%s%s' %(r, key, r, value, mdlValue, tlrValue, remValue), LOG.LOG_INFO)
+				r += 1
 		return
 
 	def importModel(self, model):

@@ -7,12 +7,12 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import traceback
-from importerUtils import IntArr2Str, FloatArr2Str, logMessage, logError, getInventorFile, getUInt16, getUInt16A
-from math          import degrees, radians
+from importerUtils import IntArr2Str, FloatArr2Str, logMessage, logWarning, logError, getInventorFile, getUInt16, getUInt16A
+from math          import degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.4'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -21,7 +21,7 @@ def writeThumbnail(data):
 	with open(filename, 'wb') as thumbnail:
 		# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
 		thumbnail.write(data[0x10:])
-	filename = folder + '/_.txt'
+	filename = folder + '/_.log'
 	with open(filename, 'wb') as thumbnail:
 		# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
 		arr, i = getUInt16A(data, 0, 8)
@@ -458,36 +458,95 @@ class GraphicsFont():
 	def __str__(self):
 		return '(%d) %s (%s) %r %r %r %r' %(self.number, self.name, FloatArr2Str(self.f), self.ukn1, self.ukn2, self.ukn3, self.ukn4)
 
-class Length():
-	def __init__(self, x, factor = 0.1, unit = 'mm'):
-		self.x = x
+class AbstractValue():
+	def __init__(self, x, factor, offset, unit):
+		self.x      = x
 		self.factor = factor
-		self.unit = unit
+		self.offset = offset
+		self.unit   = unit
 
-	def getMM(self):
-		return self.x / 0.1
+	def __str__(self): return '%g%s' %(self.x / self.factor - self.offset, self.unit)
+	def toStandard(self):  return self.__str__
 
-	def toStandard(self):
-		return '%g mm' %(self.x / 0.1)
+class Length(AbstractValue):
+	def __init__(self, x, factor = 0.1, unit = 'mm'):
+		AbstractValue.__init__(self, x, factor, 0.0, unit)
 
-	def __str__(self):
-		return '%g %s' %(self.x / self.factor, self.unit)
+	def getMM(self):      return self.x / 0.1
+	def toStandard(self): return '%g mm' %(self.x / 0.1)
 
-class Angle():
-	def __init__(self, w):
-		self.x = degrees(w)
+class Angle(AbstractValue):
+	def __init__(self, a, factor, unit):
+		AbstractValue.__init__(self, a, factor, 0.0, unit)
 
-	def getRAD(self):
-		return radians(self.x)
+	def getRAD(self):     return self.x
+	def getGRAD(self):    return degrees(self.x)
+	def toStandard(self): return '%g\xC2\xB0' %(self.getGRAD())
 
-	def getGRAD(self):
-		return self.x
+class Mass(AbstractValue):
+	def __init__(self, m, factor, unit):
+		AbstractValue.__init__(self, m, factor, 0.0, unit)
 
-	def toStandard(self):
-		return '%g\xC2\xB0' %(self.getGRAD())
+	def getGram(self):    return self.x
+	def toStandard(self): return '%ggr' %(self.getGram())
 
-	def __str__(self):
-		return '%g\xC2\xB0' %(self.getGRAD())
+class Time(AbstractValue):
+	def __init__(self, t, factor, unit):
+		AbstractValue.__init__(self, t, factor, 0.0, unit)
+
+class Temperature(AbstractValue):
+	def __init__(self, t, factor, offset, unit):
+		AbstractValue.__init__(self, t, factor, offset, unit)
+
+	def toStandard(self): return '%g K' %(self.x)
+
+class Velocity(AbstractValue):
+	def __init__(self, v, factor, unit):
+		AbstractValue.__init__(self, v, factor, 0.0, unit)
+
+class Area(AbstractValue):
+	def __init__(self, a, factor, unit):
+		AbstractValue.__init__(self, a, factor, 0.0, unit)
+
+class Volume(AbstractValue):
+	def __init__(self, v, factor, unit):
+		AbstractValue.__init__(self, v, factor, 0.0, unit)
+
+class Force(AbstractValue):
+	def __init__(self, F, factor, unit):
+		AbstractValue.__init__(self, F, factor, 0.0, unit)
+
+class Pressure(AbstractValue):
+	def __init__(self, p, factor, unit):
+		AbstractValue.__init__(self, p, factor, 0.0, unit)
+
+class Power(AbstractValue):
+	def __init__(self, p, factor, unit):
+		AbstractValue.__init__(self, p, factor, 0.0, unit)
+
+class Work(AbstractValue):
+	def __init__(self, w, factor, unit):
+		AbstractValue.__init__(self, w, factor, 0.0, unit)
+
+class Electrical(AbstractValue):
+	def __init__(self, l, factor, unit):
+		AbstractValue.__init__(self, l, factor, 0.0, unit)
+
+class Luminosity(AbstractValue):
+	def __init__(self, l, unit):
+		AbstractValue.__init__(self, l, 1.0, 0.0, unit)
+
+class Substance(AbstractValue):
+	def __init__(self, s, unit):
+		AbstractValue.__init__(self, s, 1.0, 0.0, unit)
+
+class Scalar(AbstractValue):
+	def __init__(self, s):
+		AbstractValue.__init__(self, s, 1.0, 0.0, '')
+
+class Derived(AbstractValue):
+	def __init__(self, s, unit):
+		AbstractValue.__init__(self, s, 1.0, 0.0, unit)
 
 class DataNode():
 	def __init__(self, data, isRef):
@@ -625,6 +684,16 @@ class DataNode():
 			return self.data.valid
 		return False
 
+	def getUnitName(self):
+		if (self.data):
+			return self.data.getUnitName()
+		return ''
+
+	def getDerivedUnitName(self):
+		if (self.data):
+			return self.data.getDerivedUnitName()
+		return ''
+
 	def __str__(self):
 		node = self.data
 		if (node and (node.name is None)):
@@ -634,18 +703,10 @@ class DataNode():
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
+		self.asText = False
 
 	def getValueRaw(self):
-		return self.getVariable('values')[0]
-
-	def getUnitName(self):
-		if (self.data):
-			try:
-				return self.data.getUnitName()
-			except Exception as e:
-				logError('ERROR: Can\'t find unit for (%04X): %s \'%s\'!' %(self.getIndex(), self.getTypeName(), self.getName()))
-				logError('>E: ' + traceback.format_exc())
-		return ''
+		return self.getVariable('valueNominal')
 
 	def getRefText(self):
 		x = self.getValue()
@@ -654,21 +715,223 @@ class ParameterNode(DataNode):
 				return '(%04X): %s \'%s\'=%s' %(self.getIndex(), self.getTypeName(), self.getName(), x)
 			if (isinstance(x, Length)):
 				return '(%04X): %s \'%s\'=%s' %(self.getIndex(), self.getTypeName(), self.getName(), x)
-			return '(%04X): %s \'%s\'=%s!!!' %(self.getIndex(), self.getTypeName(), self.getName(), x)
+			return '(%04X): %s \'%s\'=%s' %(self.getIndex(), self.getTypeName(), self.getName(), x)
 		except Exception as e:
 			return '(%04X): %s \'%s\'=%s - %s' %(self.getIndex(), self.getTypeName(), self.getName(), x, e)
 
+	def getParameterFormula(self, parameterData, withUnits):
+		subFormula = ''
+		tapeName   = parameterData.typeName
+
+		if (tapeName == 'ParameterValue'):
+			type   = parameterData.get('type')
+			unitName = ''
+			if (self.asText or withUnits):
+				unitName = parameterData.getUnitName()
+				if (len(unitName) > 0): unitName = ' ' + unitName
+			if (type == 0xFFFF):
+				subFormula = unitName
+			else:
+				value  = parameterData.get('value')
+				offset = parameterData.getUnitOffset()
+				factor = parameterData.getUnitFactor()
+				if (type == 0x0000): # Integer value!
+					subFormula = '%d%s' %(round((value / factor) - offset, 0), unitName)
+				else: # floating point value!
+					subFormula = '%g%s' %((value / factor) - offset, unitName)
+		elif (tapeName == 'ParameterUnaryMinus'):
+			subFormula = '-' + self.getParameterFormula(parameterData.get('refValue').node, withUnits)
+		elif (tapeName == 'ParameterConstant'):
+			unitName = ''
+			if (self.asText or withUnits):
+				unitName = parameterData.getUnitName()
+				if (len(unitName) > 0): unitName = ' ' + unitName
+			subFormula = '%s%s' %(parameterData.name, unitName)
+		elif (tapeName == 'ParameterRef'):
+			if (self.asText):
+				subFormula = parameterData.get('refParameter').node.name
+			else:
+				subFormula = '%s_' %(parameterData.get('refParameter').node.name)
+		elif (tapeName == 'ParameterFunction'):
+			function          = parameterData.name
+			functionSupported = (function not in FunctionsNotSupported)
+			if (self.asText or functionSupported):
+				operandRefs = parameterData.get('operands')
+				j = 0
+				sep = '('
+				n = len(operandRefs)
+				subFormula = function
+				# WORKAROUND:
+				# There seems to be a bug in the 'tanh' function regarding units! => ignore units!
+				ignoreUnits = (parameterData.name == 'tanh')
+				if (n > 0):
+					while (j < n):
+						operand = self.getParameterFormula(operandRefs[j].node, withUnits and not ignoreUnits)
+						j += 1
+						subFormula += (sep + operand)
+						sep = ';'
+				else:
+					subFormula += sep
+				subFormula += ')'
+
+			else:
+				# Modulo operation not supported by FreeCAD
+				raise UserWarning('Function \'%s\' not supported' %function)
+		elif (tapeName == 'ParameterOperationPowerIdent'):
+			operand1 = self.getParameterFormula(parameterData.get('refOperand1').node, withUnits)
+			subFormula = operand1
+		elif (tapeName.startswith('ParameterOperation')):
+			operation = parameterData.name
+			if (self.asText or (operation != '%')):
+				operand1 = self.getParameterFormula(parameterData.get('refOperand1').node, withUnits)
+				operand2 = self.getParameterFormula(parameterData.get('refOperand2').node, withUnits)
+				subFormula = '(%s %s %s)' %(operand1, operation, operand2)
+			else:
+				# Modulo operation not supported by FreeCAD
+				raise UserWarning('Modulo operator not supported')
+		else:
+			logError('>>>> ERROR don\'t now how to build formula for %s!' %(name))
+
+		return subFormula
+
+	def getFormula(self, asText):
+		data = self.data
+		self.asText = asText
+		if (data):
+			if (asText):
+				return '\'' + self.getParameterFormula(data.get('refValue').node, True)
+			try:
+				return '=' + self.getParameterFormula(data.get('refValue').node, True)
+			except BaseException as be:
+				# replace by nominal value and unit!
+				value = self.getValue()
+				logWarning('    >WARNING: %s - replacing by nominal value %s!' %(be, value) )
+				return '=%s' %(value)
+		return ''
+
 	def getValue(self):
 		x = self.getValueRaw()
+		#unitRef = self.getVariable('refUnit')
+		#type = unitRef.getVariable('type')
+
 		type = self.getUnitName()
-		if (type == 'ParameterUnitRAD'):
-			return Angle(x)
-		if (type == 'ParameterUnitCM'):
-			return Length(x)
-		if (type == 'ParameterUnitINCH'):
-			return Length(x, 25.4, 'inch')
-		if (type == 'ParameterTypeFactor3D'):
-			return x
+		# Length
+		if (type == 'km')       : return Length(x,  100000.00000, type)
+		if (type == 'm')        : return Length(x,     100.00000, type)
+		if (type == 'dm')       : return Length(x,      10.00000, type)
+		if (type == 'cm')       : return Length(x,       1.00000, type)
+		if (type == 'mm')       : return Length(x,       0.10000, type)
+		if (type == '\xC2\xB5m'): return Length(x,       0.00100, type)
+		if (type == 'in')       : return Length(x,       2.54000, type)
+		if (type == 'ft')       : return Length(x,      30.48000, type)
+		if (type == 'sm')       : return Length(x,  185324.52180, type)
+		if (type == 'mil')      : return Length(x,       0.00254, type)
+		# Mass
+		if (type == 'kg')       : return Mass(x,       1.0000000, type)
+		if (type == 'g')        : return Mass(x,       0.0010000, type)
+		if (type == 'slug')     : return Mass(x,      14.5939000, type)
+		if (type == 'lb')       : return Mass(x,       0.4535920, type)
+		if (type == 'oz')       : return Mass(x,       0.0283495, type)
+		# Time
+		if (type == 's')        : return Time(x,       1.0000000, type)
+		if (type == 'min')      : return Time(x,      60.0000000, type)
+		if (type == 'h')        : return Time(x,    3600.0000000, type)
+		# Temperatur
+		if (type == 'K')        : return Temperature(x,     1.0,   0.00, type)
+		if (type == '\xC2\xB0C'): return Temperature(x,     1.0, 273.15, type)
+		if (type == '\xC2\xB0F'): return Temperature(x, 5.0/9.0, 523.67, type)
+		# Angularity
+		if (type == 'rad')      : return Angle(x, 1.0     , type)
+		if (type == '\xC2\xB0') : return Angle(x, pi/180.0, type)
+		if (type == 'gon')      : return Angle(x, pi/200.0, type)
+		# Velocity
+		if (type == 'm/s')      : return Velocity(x, 100.0     , type)
+		# Area
+		if (type == 'mm^2')     : return Area(x, 1.0           , type)
+		# Volume
+		if (type == 'l')        : return Volume(x, 1.0         , type)
+		# Force
+		if (type == 'N')        : return Force(x, 1.0          , type)
+		if (type == 'dyn')      : return Force(x, 1.0          , type)
+		if (type == 'ozf')      : return Force(x, 0.278013851  , type)
+		# Pressure
+		if (type == 'psi')      : return Pressure(x,    6890.0 , type)
+		if (type == 'ksi')      : return Pressure(x, 6890000.0 , type)
+		# Work
+		if (type == 'J')        : return Work(x,         1.0   , type)
+		if (type == 'erg')      : return Work(x,         1.0   , type)
+		if (type == 'Cal')      : return Work(x,         4.184 , type)
+		# Electrical
+		if (type == 'A')        : return Electrical(x,   1.0   , type)
+		# Luminosity
+		if (type == 'cd')       : return Luminosity(x, type)
+		# Substance
+		if (type == 'mol')      : return Substance(x, type)
+		# without Unit
+		if (type == '')         : return Scalar(x) # parameter has no unit
+		derivedUnit = self.getDerivedUnitName()
+		if (derivedUnit is not None):
+			# Length
+			# Mass
+			# Temperatur
+			# Angularity
+			if (derivedUnit == 'sr')       : return Angle(x   ,   1.0, type)
+			# Velocity
+			if (derivedUnit == 'f/s')      : return Velocity(x,   1.0, type)
+			if (derivedUnit == 'mil/h')    : return Velocity(x,   1.0, type)
+			if (derivedUnit == '1/min')    : return Velocity(x,   1.0, type)
+			# Area
+			if (derivedUnit == 'circ.mil') : return Area(x,       1.0, type)
+			# Volume
+			if (derivedUnit == 'gal')      : return Volume(x,     1.0, type)
+			# Force
+			if (derivedUnit == 'lbf')      : return Force(x,      1.0, type)
+			# Pressure
+			if (derivedUnit == 'Pa')       : return Pressure(x,   1.0, type)
+			# Power
+			if (derivedUnit == 'W')        : return Power(x,      1.0, type)
+			if (derivedUnit == 'hp')       : return Power(x,      1.0, type)
+			# Work
+			if (derivedUnit == 'BTU')      : return Work(x,       1.0, type)
+			# Electrical
+			if (derivedUnit == 'V')        : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'ohm')      : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'C')        : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'F')        : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'y')        : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'Gs')       : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'H')        : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'Hz')       : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'maxwell')  : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'mho')      : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'Oe')       : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'S')        : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'T')        : return Electrical(x, 1.0, type)
+			if (derivedUnit == 'Wb')       : return Electrical(x, 1.0, type)
+			# Luminosity
+			if (derivedUnit == 'lx')       : return Luminosity(x, type)
+			if (derivedUnit == 'lm')       : return Luminosity(x, type)
+			logError('>>>WARNING: found unsuppored derived unit - [%s] using [%s] instead!' %(derivedUnit, type))
+		else:
+			logError('>>>WARNING: unknown unit (%04X): \'%s\' - [%s]' %(self.getIndex(), self.getTypeName(), type))
+		return Derived(x, type)
+
+class ParameterTextNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getValueRaw(self):
+		return self.getVariable('value')
+
+	def getUnitName(self):
+		return ''
+
+	def getRefText(self):
+		x = self.getValue()
+		return '(%04X): %s \'%s\'=\'%s\'' %(self.getIndex(), self.getTypeName(), self.getName(), x)
+
+	def getValue(self):
+		x = self.getValueRaw()
 		return x
 
 class ParameterValue():
@@ -710,9 +973,17 @@ class ValueNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		value = self.data.properties['value']
+		if ('value' in self.data.properties):
+			value = self.data.properties['value']
+		else:
+			value = None
+		name  = self.data.name
+		if (name is None):
+			name = ''
+		else:
+			name = ' %s' %(name)
 		if (value is not None):
-			return '(%04X): %s=%X' %(self.getIndex(), self.getTypeName(), value)
+			return '(%04X): %s%s=%X' %(self.getIndex(), self.getTypeName(), name, value)
 		else:
 			logError('ERROR: (%04X): %s has no value defined!' %(self.getIndex(), self.getTypeName()))
 			return '(%04X): %s' %(self.getIndex(), self.getTypeName())
@@ -878,3 +1149,37 @@ class ModelerTxnMgr():
 
 	def __str__(self):
 		return 'ref1=%s' %(self.ref_1)
+
+class Enum(tuple): __getattr__ = tuple.index
+
+Tolerances = Enum(['NOMINAL', 'LOWER', 'UPPER', 'MEDIAN'])
+
+Functions  = Enum([''        , \
+                   'cos'     , \
+                   'sin'     , \
+                   'tan'     , \
+                   'acos'    , \
+                   'asin'    , \
+                   'atan'    , \
+                   'cosh'    , \
+                   'sinh'    , \
+                   'tanh'    , \
+                   'sqrt'    , \
+                   'exp'     , \
+                   'pow'     , \
+                   'log'     , \
+                   'log10'   , \
+                   'floor'   , \
+                   'ceil'    , \
+                   'round'   , \
+                   'abs'     , \
+                   'sign'    , \
+                   'max'     , \
+                   'min'     , \
+                   'random'  , \
+                   'acosh'   , \
+                   'asinh'   , \
+                   'atanh'   , \
+                   'isolate'])
+
+FunctionsNotSupported = ['sign', 'random', 'acosh', 'asinh', 'atanh', 'isolate']

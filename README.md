@@ -51,7 +51,16 @@ That allows it to embed Excel workboos e.g.
 	- Added handling of expressions for parameters
 	- fixed missing placement for 2D-sketches
 
-## Next steps:
+- 0.5: Completed parameter management.
+	Parameter table now contains the name, value, formula, tolerance and comment of each parameter
+	- Added parameter unit handling
+	- Added parameter formulas handling
+	- Added parameter operations handling (e.g. '+', '-', '*' and '/')
+	Even if operations or functions are not supported by FreeCAD (e.g. modulo operator, signum or random function),
+	they will be replaced by their nominal value and unit.
+
+## Next steps in unsorted order:
 - Features like Pockets, Revolutions, etc.
 - Features like Fillet, Champher, Draft, etc.
-- Features like boolean operations, mirrors, etc.
+- Features like boolean operations (union, difference, intersection, section)
+- Features like mirrors, patterns (linear, polar, multitransform)

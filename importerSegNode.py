@@ -11,10 +11,11 @@ TODO:
 import traceback
 from importerClasses import Header0, Angle, GraphicsFont, ModelerTxnMgr
 from importerUtils   import *
+from math            import log10
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.3'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 def isList(data, code):
@@ -227,9 +228,26 @@ class AbstractNode():
 		i = self.reader.skipBlockSize(i)
 		return i
 
+	def ReadBoolean(self, offset, name):
+		x, i = getUInt8(self.data, offset)
+		x = (x != 0)
+		self.set(name, x)
+		self.content += ' %s=%s' %(name, x)
+		return i
+
+	def ReadEnum16(self, offset, name, enum):
+		index, i = getUInt16(self.data, offset)
+		e = enum[index]
+		if (name == 'name'):
+			self.name = e
+		else:
+			self.set(name, e)
+			self.content += ' %s=%s' %(name, e)
+		return i
+
 	def ReadAngle(self, offset, name):
 		x, i = getFloat64(self.data, offset)
-		x = Angle(x)
+		x = Angle(x, pi/180.0, '\xC2\xB0')
 		self.set(name, x)
 		self.content += ' %s=%s' %(name, x)
 		return i
@@ -283,8 +301,12 @@ class AbstractNode():
 			self.content  += ' %s=%s' %(name, ref)
 		return i
 
-	def ReadChildRef(self, offset, name = 'ref', dump = False):
-		return self.ReadNodeRef(offset, name, NodeRef.TYPE_CHILD, dump)
+	def ReadChildRef(self, offset, name = 'ref', number = -1, dump = False):
+		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CHILD, dump)
+		ref = self.get(name)
+		if (ref):
+			ref.number = number
+		return i
 
 	def ReadCrossRef(self, offset, name = 'xref', number = -1, dump = False):
 		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CROSS, dump)
@@ -329,13 +351,16 @@ class AbstractNode():
 				while (j < cnt):
 					str = ''
 					if (t == AbstractNode._TYP_NODE_REF_):
-						i = self.ReadChildRef(i, 'tmp')
+						i = self.ReadChildRef(i, 'tmp', j, False)
 						val = self.get('tmp')
 						str = ''
 					elif (t == AbstractNode._TYP_NODE_X_REF_):
 						i = self.ReadCrossRef(i, 'tmp', j, False)
 						val = self.get('tmp')
 						str = ''
+					elif (t == AbstractNode._TYP_STRING16_):
+						val, i = getLen32Text16(self.data, i)
+						str = '\"%s\"' %(val)
 					elif (t == AbstractNode._TYP_1D_UINT32_):
 						val, i = getUInt32(self.data, i)
 						str = '%04X' %(val)
@@ -505,7 +530,7 @@ class AbstractNode():
 			j = 0
 			while (j < cnt):
 				if (t == AbstractNode._TYP_NODE_REF_):
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					str = ''
 				elif (t == AbstractNode._TYP_NODE_X_REF_):
@@ -513,7 +538,7 @@ class AbstractNode():
 					val = self.get('tmp')
 					str = ''
 				elif (t == AbstractNode._TYP_STRING16_):
-					val, i = getLen32Text8(self.data, i)
+					val, i = getLen32Text16(self.data, i)
 					str = '\"%s\"' %(val)
 				elif (t == AbstractNode._TYP_2D_SINT32_):
 					val, i = getSInt32A(self.data, i, 2)
@@ -546,13 +571,13 @@ class AbstractNode():
 			arr16, i = getUInt16A(self.data, i, 2)
 			j = 0
 			while (j < cnt):
-				if (typ == AbstractNode._TYP_NODE_X_REF_):
+				if (typ == AbstractNode._TYP_1D_UINT32_):
+					val, i = getUInt32(self.data, i)
+				elif (typ == AbstractNode._TYP_NODE_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
-				elif (typ == AbstractNode._TYP_1D_UINT32_):
-					val, i = getUInt32(self.data, i)
 				else:
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 				j += 1
 				tmp = self.get('tmp')
 				lst.append(tmp)
@@ -571,7 +596,7 @@ class AbstractNode():
 			while (j < cnt):
 				if (typ == AbstractNode._TYP_MAP_KEY_REF_):
 					key, i = getUInt32(self.data, i)
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%04X: (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_KEY_X_REF_):
@@ -591,7 +616,7 @@ class AbstractNode():
 					self.content += '%s[%04X: %s]' %(sep, key.index, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT8_REF_):
 					key, i = getLen32Text8(self.data, i)
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT8_X_REF_):
@@ -601,7 +626,7 @@ class AbstractNode():
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT16_REF_):
 					key, i = getLen32Text16(self.data, i)
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_):
@@ -623,6 +648,7 @@ class AbstractNode():
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT16_X_REF_):
 					key, i = getLen32Text16(self.data, i)
+					key = translate(key)
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
@@ -687,7 +713,7 @@ class AbstractNode():
 
 		hdr = Header0(u32_0, u16_0)
 		self.set('hdr', hdr)
-		self.content += ' hdr={%s}' %(hdr)
+		#self.content += ' hdr={%s}' %(hdr)
 
 		return i
 
@@ -695,47 +721,139 @@ class AbstractNode():
 		self.typeID = UUID(uid)
 		self.typeName = '%08X' %(self.typeID.time_low)
 
-	def getUnitName(self, refName = 'refValue'):
-		ref   = self.get(refName)
-		value = ref.node
+	def getUnitOffset(self):
+		unit = self.get('refUnit')
+		numerators = unit.getVariable('numerators')
+		if (numerators):
+			offset = numerators[0].getVariable('UnitOffset')
+			if (offset is not None):
+				return offset
+		return 0.0
 
-		if (value.typeName == 'ParameterValue'):
-			ref   = value.get('refType')
-			typ   = ref.node
+	def getUnitFactors(self, units):
+		factor = 1.0
+		j      = 0
+		n      = len(units)
 
-			i = 0
-			lstUnits = typ.get('lst0')
-			unitName = ''
-			while (i < len(lstUnits)):
-				ref   = lstUnits[i]
-				unit  = ref.node
-				if (unit.get('UNIT')):
-					unitName = unit.typeName
-				i += 1
+		while (j < n):
+			unit = units[j].node
+
+			#unitSupported    = unit.get('UnitSupportet')
+			#if (not unitSupported):
+			#	return 1.0
+
+			magniture  = unit.get('magnitude')
+			unitFactor = unit.get('UnitFactor')
+			if (unitFactor is None):
+				logError('>ERROR: (%04X): %s has no UnitFactor defined!' %(unit.index, unit.typeName))
+			factor *= magniture * unitFactor
+			j += 1
+
+		return factor
+
+	def getUnitFactor(self):
+		unit = self.get('refUnit')
+
+		typ   = unit.node
+
+		numerators = self.getUnitFactors(typ.get('numerators'))
+		denominators = self.getUnitFactors(typ.get('denominators'))
+		factor = numerators / denominators
+
+		unit = typ.get('refDerived')
+		if (unit):
+			typ = unit.node
+
+			numerators = self.getUnitFactors(typ.get('numerators'))
+			denominators = self.getUnitFactors(typ.get('denominators'))
+			factor = factor * numerators / denominators
+		return factor
+
+	def getUnitFormula(self, units):
+		formula = ''
+		sep     = ''
+		j       = 0
+		n       = len(units)
+
+		lastUnit     = 'XXXXX' # choos any unit that is not defined!
+		unitExponent = 1       # by default (e.g.): m^1 => m
+
+		while (j < n):
+			unit = units[j].node
+			j += 1
+			subformula = unit.get('Unit')
+
+			if (len(subformula) > 0):
+				factor = log10(unit.get('magnitude'))
+				if   (factor ==  18): factor = 'E'        # Exa
+				elif (factor ==  15): factor = 'P'        # Peta
+				elif (factor ==  12): factor = 'T'        # Tera
+				elif (factor ==   9): factor = 'G'        # Giga
+				elif (factor ==   6): factor = 'M'        # Mega
+				elif (factor ==   3): factor = 'k'        # Kilo
+				elif (factor ==   2): factor = 'h'        # Hecto
+				elif (factor ==   1): factor = 'da'       # Deca
+				elif (factor ==   0): factor = ''           
+				elif (factor ==  -1): factor = 'd'        # Deci
+				elif (factor ==  -2): factor = 'c'        # Centi
+				elif (factor ==  -3): factor = 'm'        # Milli
+				elif (factor ==  -6): factor = '\xC2\xB5' # Micro
+				elif (factor ==  -9): factor = 'n'        # Nano
+				elif (factor == -12): factor = 'p'        # Pico
+				elif (factor == -15): factor = 'f'        # Femto
+				elif (factor == -18): factor = 'a'        # Atto
+				subformula = factor + subformula
+				if (subformula == lastUnit):
+					unitExponent += 1
+				else:
+					if(lastUnit != 'XXXXX'):
+						if (unitExponent > 1):
+							formula = '%s%s%s^%d' %(formula, sep, lastUnit, unitExponent)
+							unitExponent = 1
+						else:
+							formula = '%s%s%s' %(formula, sep, lastUnit)
+						sep =' '
+					lastUnit = subformula
+		if (j > 0):
+			if (unitExponent > 1):
+				formula = '%s%s%s^%d' %(formula, sep, subformula, unitExponent)
+			else:
+				formula = '%s%s%s' %(formula, sep, subformula)
+		return formula
+
+	def getUnitName(self):
+		'''
+		TODO:
+		Derived units are not supported in FreeCAD.
+		Add a new derived unit! But how?
+		Meanwhile the derived units are ignored!
+		'''
+		unitData = self.get('refUnit').node
+
+#		derivedRef = unitData.get('refDerived')
+#		if (derivedRef):
+#			unitData = derivedRef.node
+
+		unitName     = self.getUnitFormula(unitData.get('numerators'))
+		denominators = self.getUnitFormula(unitData.get('denominators'))
+		if (len(denominators) > 0):
+			unitName += '/' + denominators
+
+		return unitName
+
+	def getDerivedUnitName(self):
+		unitData = self.get('refUnit').node
+		derivedRef = unitData.get('refDerived')
+		if (derivedRef):
+			unitData = derivedRef.node
+
+			unitName     = self.getUnitFormula(unitData.get('numerators'))
+			denominators = self.getUnitFormula(unitData.get('denominators'))
+			if (len(denominators) > 0):
+				unitName += '/' + denominators
+
 			return unitName
-
-		if (value.typeName == 'F8A77A03'):
-			return value.getUnitName()
-		if (value.typeName == 'F8A77A06'):
-			return value.getUnitName()
-		if (value.typeName == 'F8A77A07'):
-			return value.getUnitName()
-		if (value.typeName == 'F8A77A0D'):
-			return value.getUnitName()
-		if (value.typeName == 'ParameterValueRef'):
-			return value.getUnitName()
-		if (value.typeName == 'ParameterValueParameterRef'):
-			return value.get('refParameter').node.getUnitName()
-		if (value.typeName == 'ParameterValueParameterRef1'):
-			unitName = value.getUnitName()
-			if (unitName == 'ParameterTypeFactor3D'):
-				unitName = value.getUnitName('refFactor')
-			return unitName
-		if (value.typeName == 'ParameterValueParameterRef2'):
-			return value.getUnitName()
-		else:
-			logError('ERROR: Unknwon parameter value \'%s\' for (%04X): %s \'%s\'!' %(value.typeName, self.index, self.typeName, self.name))
-		return ''
+		return None
 
 	def __str__(self):
 		if (self.name is None):
@@ -781,7 +899,7 @@ class FBAttributeNode(AbstractNode):
 class GraphicsNode(AbstractNode):
 	def __init__(self):
 		AbstractNode.__init__(self)
-		self.key = 0
+		self.key    = 0
 		self.keyRef = 0
 
 class NotebookNode(AbstractNode):
@@ -806,12 +924,10 @@ class NodeRef():
 
 	@property
 	def node(self):
-		# Do something if you want
 		return self.node
 
 	@node.setter
 	def node(self, node):
-		# Do something if you want
 		self.node = node
 		if (node):
 			assert isinstance(node, AbstractNode), 'Node reference is not a AbstractNode (%s)!' %(node.__class__.__name__)
@@ -819,6 +935,11 @@ class NodeRef():
 	def getBranchNode(self):
 		if (self.node):
 			return self.node.node
+		return None
+
+	def getName(self):
+		if (self.node):
+			return self.node.name
 		return None
 
 	def getTypeName(self):

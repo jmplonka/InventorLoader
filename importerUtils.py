@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 
 '''
 importerUtils.py:
@@ -13,7 +13,7 @@ from struct import unpack
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.2'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 _dumpLineLength = 0x20
@@ -382,7 +382,7 @@ def getDateTime(data, offset):
 def getText8(data, offset, l):
 	i = offset
 	end = i + l
-	txt = data[i: end].decode('UTF-8').encode('cp1252')
+	txt = data[i: end].decode('UTF-8') #.encode('cp1252')
 
 	if (txt[-1:] == '\0'):
 		txt = txt[:-1]
@@ -405,7 +405,7 @@ def getLen32Text8(data, offset):
 def getLen32Text16(data, offset):
 	l, i = getUInt32(data, offset)
 	end = i + 2 * l
-	txt = data[i: end].decode('UTF-16LE').encode('cp1252')
+	txt = data[i: end].decode('UTF-16LE').encode('UTF-8')#.encode('cp1252')
 
 	if (txt[-1:] == '\0'):
 		txt = txt[:-1]
@@ -610,6 +610,16 @@ def getInventorFile():
 def setInventorFile(file):
 	global _inventor_file
 	_inventor_file = file
+
+def translate(str):
+	res = str.replace('Ä', 'Ae')
+	res = res.replace('ä', 'ae')
+	res = res.replace('Ö', 'Oe')
+	res = res.replace('ö', 'oe')
+	res = res.replace('Ü', 'Ue')
+	res = res.replace('ü', 'ue')
+	res = res.replace('ß', 'ss')
+	return res
 
 class CDumpStream():
 	def __init__(self):

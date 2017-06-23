@@ -14,7 +14,7 @@ from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.3'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
@@ -150,9 +150,11 @@ def buildBranchRef(parent, file, nodes, node, level, ref):
 	if (node.printable):
 		if (node.typeName == 'Parameter'):
 			branch = ParameterNode(node, True)
+		elif (node.typeName == 'ParameterText'):
+			branch = ParameterTextNode(node, True)
 		elif (node.typeName == 'Feature'):
 			branch = FeatureNode(node, True)
-		elif (node.typeName == 'ValueByte'):
+		elif (node.typeName == 'ParameterBoolean'):
 			branch = ValueNode(node, True)
 		elif (node.typeName == 'ValueSInt32'):
 			branch = ValueNode(node, True)
@@ -178,23 +180,22 @@ def buildBranchRef(parent, file, nodes, node, level, ref):
 			branch = DataNode(node, True)
 		parent.append(branch)
 
+		num = ''
 		if (ref.number >= 0):
 			num = '[%02X] ' %(ref.number)
-		else:
-			num = ''
 
 		file.write('%s-> %s%s\n' %(level * '\t', num, branch.getRefText()))
 
 	return branch
 
-def buildBranch(parent, file, nodes, node, level = 0):
+def buildBranch(parent, file, nodes, node, level, ref):
 	branch = None
 	if (node.printable):
 		if (node.typeName == 'Parameter'):
 			branch = ParameterNode(node, False)
 		elif (node.typeName == 'Feature'):
 			branch = FeatureNode(node, False)
-		elif (node.typeName == 'ValueByte'):
+		elif (node.typeName == 'ParameterBoolean'):
 			branch = ValueNode(node, False)
 		elif (node.typeName == 'ValueSInt32'):
 			branch = ValueNode(node, False)
@@ -204,16 +205,19 @@ def buildBranch(parent, file, nodes, node, level = 0):
 			branch = DataNode(node, False)
 		parent.append(branch)
 
-		file.write('%s%s\n' %(level * '\t', branch))
+		num = ''
+		if ((ref is not None) and (ref.number >= 0)):
+			num = '[%02X] ' %(ref.number)
+		file.write('%s%s%s\n' %(level * '\t', num, branch))
 
-		for ref in node.childIndexes:
-			if (ref.index in nodes):
-				child = nodes[ref.index]
-				ref.node = child
-				if (ref.type == NodeRef.TYPE_CHILD):
-					buildBranch(branch, file, nodes, child, level + 1)
-				elif (ref.type == NodeRef.TYPE_CROSS):
-					buildBranchRef(branch, file, nodes, child, level + 1, ref)
+		for childRef in node.childIndexes:
+			if (childRef.index in nodes):
+				child = nodes[childRef.index]
+				childRef.node = child
+				if (childRef.type == NodeRef.TYPE_CHILD):
+					buildBranch(branch, file, nodes, child, level + 1, childRef)
+				elif (childRef.type == NodeRef.TYPE_CROSS):
+					buildBranchRef(branch, file, nodes, child, level + 1, childRef)
 
 	return branch
 
@@ -248,11 +252,7 @@ def buildTree(file, seg):
 	for idx1 in nodes:
 		node = nodes[idx1]
 		if (node.hasParent == False):
-			ref = node.parent
-			if (ref):
-				parent = nodes[ref.index]
-#				logError('>E0011: Parent %s.%08X(%04X) set but not referenced: %s.%08X(%04X)' %(parent.__class__.__name__, parent.typeID.time_low, parent.index, node.__class__.__name__, node.typeID.time_low, node.index))
-			buildBranch(tree, file, nodes, node)
+			buildBranch(tree, file, nodes, node, 0, None)
 	return tree
 
 def Read_F645595C_chunk(offset, node):
