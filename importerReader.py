@@ -32,7 +32,7 @@ from importerUtils       import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 # Indicator that everything is ready for the import
@@ -332,7 +332,7 @@ def ReadWorkbook(doc, data, name, stream):
 
 	xls = copy(wbk)
 	xls.save(filename)
-	# logMessage('>>>INFO - found workook: stored as %r!' %(filename), Log.LOG_INFO)
+	# logMessage('>>>INFO - found workook: stored as %r!' %(filename), LOG.LOG_INFO)
 	return len(data)
 
 def ReadRSeSegment(data, offset, idx, count):
@@ -808,8 +808,7 @@ def ReadRSeMetaDataSectionSizeArray(data, offset):
 	size, i = getUInt32(data, offset)
 	return i
 
-def ReadRSeMetaDataBlocksSize(value, data, offset, newFile):
-	newFile.write('Section 1: (BinaryData block-sizes)\n')
+def ReadRSeMetaDataBlocksSize(value, data, offset):
 	cnt, i = getUInt32(data, offset)
 	j = 0
 	while (j < cnt):
@@ -819,22 +818,20 @@ def ReadRSeMetaDataBlocksSize(value, data, offset, newFile):
 		sec.length = (u32 & 0x7FFFFFFF)
 		sec.flags = ((u32 & 0x80000000) > 0)
 
-		newFile.write('\t%02X: %s\n' %(j, sec))
 		value.sec1.append(sec)
 
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 
 	return i
 
-def ReadRSeMetaDataSection2(value, data, offset, newFile):
-	newFile.write('Section 2:\n')
+def ReadRSeMetaDataSection2(value, data, offset):
 	cnt, i = getUInt32(data, offset)
 	j = 0
 	while (j < cnt):
 		j += 1
 		sec = RSeStorageSection2(value)
 		if (value.ver == 3):
-			sec.revisionRef, i = getUUID(data, i, '%s.Sec2[%X].uidRef' % (value.name, n))
+			sec.revisionRef, i = getUUID(data, i, '%s.Sec2[%X].uidRef' % (value.name, j))
 			sec.flag, i = getUInt32(data, i)
 			sec.val, i = getUInt16(data, i)
 			sec.arr, i = getUInt16A(data, i, 5)
@@ -849,21 +846,18 @@ def ReadRSeMetaDataSection2(value, data, offset, newFile):
 			sec.revisionRef = getRevisionRef(idx)
 			sec.flag, i = getUInt32(data, i)
 			sec.val, i = getUInt16(data, i)
-		newFile.write('\t%02X: %s\n' %(j, sec))
 		value.sec2.append(sec)
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeMetaDataSection3(value, data, offset, newFile):
+def ReadRSeMetaDataSection3(value, data, offset):
 	cnt, i = getUInt32(data, offset)
-	newFile.write('Section 3:\n')
 	j = 0
 	while (j < cnt):
 		j += 1
 		sec = RSeStorageSection3(value)
 		sec.uid, i = getUUID(data, i, '%s.Sec3[%X].uidRef' % (value.name, j))
 		sec.arr, i = getUInt16A(data, i, 6)
-		newFile.write('\t%02X: %s\n' %(j, sec))
 		value.sec3.append(sec)
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
@@ -874,9 +868,7 @@ def ReadRSeMetaDataSection4Data(data, offset):
 	val.val, i = getUInt32(data, i)
 	return val, i
 
-def ReadRSeMetaDataBlocksType(value, data, offset, newFile):
-	newFile.write('Section 4: (BinaryData blocks-node-types)\n')
-
+def ReadRSeMetaDataBlocksType(value, data, offset):
 	cnt, i = getUInt32(data, offset)
 	j = 0
 	while (j < cnt):
@@ -887,35 +879,22 @@ def ReadRSeMetaDataBlocksType(value, data, offset, newFile):
 		sec.arr.append(val)
 		val, i = ReadRSeMetaDataSection4Data(data, i)
 		sec.arr.append(val)
-		newFile.write('\t%02X: %s\n' %(j, sec))
 		value.sec4[j] = sec
 		j += 1
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 
 	return i
 
-def ReadRSeMetaDataSection5(value, data, offset, newFile, size):
-	newFile.write('Section 5:\n')
+def ReadRSeMetaDataSection5(value, data, offset, size):
 	#index section 4
 	sec = RSeStorageSection5(value)
 	sec.indexSec4, i = getUInt16A(data, offset, size / 2)
-
-	n = 0
-	m = len(sec.indexSec4)
-	w = 0x10
-	while (n < m):
-		if (m-n >= w):
-			newFile.write('\t%04X: %s\n' % (n, IntArr2Str(sec.indexSec4[n:n+w], 4)))
-		else:
-			newFile.write('\t%04X: %s\n' % (n, IntArr2Str(sec.indexSec4[n:m], 4)))
-		n += w
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeMetaDataSection6(value, data, offset, newFile, size, cnt):
+def ReadRSeMetaDataSection6(value, data, offset, size, cnt):
 	sec = RSeStorageSection6(value)
 
-	newFile.write('Section 6:\n')
 	i = offset
 	# ???
 	# arr32, i = getUInt32A(data, i, 2)
@@ -956,15 +935,11 @@ def ReadRSeMetaDataSection6(value, data, offset, newFile, size, cnt):
 	#	sec.arr1.insert(0, RSeStorageSection4Data1(uid, u32))
 	#
 	#setDumpLineLength(0x20)
-	#newFile.write(HexAsciiDump(data[i:j], 0, False))
-	#newFile.write('\t%s\n' %(','.join(['%s' % (a) for a in sec.arr1])))
-	#newFile.write('\t%s\n' %(','.join(['[%s]' % (IntArr2Str(a, 4)) for a in sec.arr2])))
 
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeMetaDataSection7(value, data, offset, newFile, size, cnt):
-	newFile.write('Section 7:\n')
+def ReadRSeMetaDataSection7(value, data, offset, size, cnt):
 	i = offset
 	j = 0
 	while (j<cnt):
@@ -987,13 +962,11 @@ def ReadRSeMetaDataSection7(value, data, offset, newFile, size, cnt):
 		if (seg is not None):
 			sec.segName = seg.name
 
-		newFile.write('\t%02X: %s\n' %(j, sec))
 		value.sec7.append(sec)
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeMetaDataSection8(value, data, offset, newFile, size, cnt):
-	newFile.write('Section 8:\n')
+def ReadRSeMetaDataSection8(value, data, offset, size, cnt):
 	i = offset
 	j = 0
 	while (j < cnt):
@@ -1001,13 +974,11 @@ def ReadRSeMetaDataSection8(value, data, offset, newFile, size, cnt):
 		sec = RSeStorageSection8(value)
 		sec.dbRevisionInfoRef, i = getUUID(data, i, '%s.Sec8[%X].dbRevisionInfoRef' % (value.name, j))
 		sec.arr, i = getUInt16A(data, i, 2)
-		newFile.write('\t%02X: %s\n' %(j, sec))
 		value.sec8.append(sec)
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeMetaDataSection9(value, data, offset, newFile, size, cnt):
-	newFile.write('Section 9:\n')
+def ReadRSeMetaDataSection9(value, data, offset, size, cnt):
 	i = offset
 	j = 0
 	while (j<cnt):
@@ -1015,36 +986,31 @@ def ReadRSeMetaDataSection9(value, data, offset, newFile, size, cnt):
 		sec = RSeStorageSection9(value)
 		sec.uid, i = getUUID(data, i, '%s.Sec9[%X].uidRef' % (value.name, j))
 		sec.arr, i = getUInt8A(data, i, 3)
-		newFile.write('\t%02X: %s\n' %(j, sec))
 		value.sec9.append(sec)
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeMetaDataSectionA(value, data, offset, newFile, size, cnt):
+def ReadRSeMetaDataSectionA(value, data, offset, size, cnt):
 	'''
 	Same values as in RSeSegmentType
 	'''
-	# newFile.write('Section 10:\n')
 	i = offset
 	j = 0
 	while (j<cnt):
 		j += 1
 		sec = RSeStorageSectionA(value)
 		sec.arr, i = getUInt16A(data, i, 4)
-		# newFile.write('\t%02X: %s\n' %(j, sec))
 		value.secA.append(sec)
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
 	return i
 
-def ReadRSeMetaDataSectionB(value, data, offset, newFile, size, cnt):
-	newFile.write('Section 11:\n')
+def ReadRSeMetaDataSectionB(value, data, offset, size, cnt):
 	i = offset
 	j = 0
 	while (j<cnt):
 		j += 1
 		sec = RSeStorageSectionB(value)
 		sec.arr, i = getUInt16A(data, i, 2)
-		newFile.write('\t%02X: %s\n' %(j, sec))
 		value.secB.append(sec)
 	return i
 
@@ -1069,6 +1035,8 @@ def getReader(seg):
 	elif (RSeMetaData.isBrowser(seg)):
 		pass
 		# reader = BrowserReader()
+	elif (RSeMetaData.isDefault(seg)):
+		pass
 	elif (RSeMetaData.isDC(seg)):
 		reader = DCReader()
 	elif (RSeMetaData.isGraphics(seg)):
@@ -1094,7 +1062,6 @@ def getReader(seg):
 		# reader = NotebookReader()
 	else:
 		logWarning('>W: %s will be read, but not considered!' %(seg.name))
-		reader = SegmentReader(False)
 	return reader
 
 def ReadRSeMetaDataB(dataB, seg):
@@ -1102,13 +1069,12 @@ def ReadRSeMetaDataB(dataB, seg):
 	if (reader):
 		folder = getInventorFile()[0:-4]
 
-		filename = '%s\\%sB.txt' %(folder, seg.name)
+		filename = '%s\\%sB.log' %(folder, seg.name)
 		newFile = open (filename, 'wb')
 
 		i = 0
 		uid, i = getUUID(dataB, i, '%sB.uid' %(seg.name))
 		n, i = getUInt16(dataB, i)
-		newFile.write('%04X: %s\n' %(n, uid))
 		z = zlib.decompressobj()
 		data = z.decompress(dataB[i:])
 
@@ -1151,14 +1117,6 @@ def ReadRSeMetaDataM(dataM, name):
 		value.val2    = 0
 		value.dat2, i = getLen32Text8(dataM, i)
 
-	newFile = open ('%s\\%sM.txt' %(folder, value.name), 'wb')
-	newFile.write('%8X, %8X\n' %(value.val1, value.val2))
-	newFile.write('\t%s\n' %(value.txt1))
-	newFile.write('\t[%s]\n' %(IntArr2Str(value.arr1, 4)))
-	newFile.write('\t[%s]\n' %(IntArr2Str(value.arr2, 4)))
-	#newFile.write('\t%s\n' %(value.dat1))
-	#newFile.write('\t%s\n' %(value.dat2))
-
 	# dataM[i] should always be '\0x01' !!!
 	x01, i = getUInt8(dataM, i)
 
@@ -1167,18 +1125,13 @@ def ReadRSeMetaDataM(dataM, name):
 	bak = getDumpLineLength()
 	setDumpLineLength(0x30)
 
-	# newFileRaw = open ('%s\\%sM.bin' %(folder, value.name), 'wb')
-	# newFileRaw.write(data)
-	# newFileRaw.close()
-
 	i = 0
 	value.arr3, i = getUInt16A(data, i, 7)
-	newFile.write('\t[%s]\n' %(IntArr2Str(value.arr3, 4)))
 
-	i = ReadRSeMetaDataBlocksSize(value, data, i, newFile)
-	i = ReadRSeMetaDataSection2(value, data, i, newFile)
-	i = ReadRSeMetaDataSection3(value, data, i, newFile)
-	i = ReadRSeMetaDataBlocksType(value, data, i, newFile)
+	i = ReadRSeMetaDataBlocksSize(value, data, i)
+	i = ReadRSeMetaDataSection2(value, data, i)
+	i = ReadRSeMetaDataSection3(value, data, i)
+	i = ReadRSeMetaDataBlocksType(value, data, i)
 
 	l = 0x48
 	i = len(data) - l - 0x18
@@ -1191,22 +1144,19 @@ def ReadRSeMetaDataM(dataM, name):
 				n = 0
 				setDumpLineLength(l / c)
 				if (k==6):
-					ReadRSeMetaDataSection6(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSection6(value, data, j, l, c)
 				elif (k==7):
-					ReadRSeMetaDataSection7(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSection7(value, data, j, l, c)
 				elif (k==8):
-					ReadRSeMetaDataSection8(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSection8(value, data, j, l, c)
 				elif (k==9):
-					ReadRSeMetaDataSection9(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSection9(value, data, j, l, c)
 				elif (k==10):
-					ReadRSeMetaDataSectionA(value, data, j, newFile, l, c)
+					ReadRSeMetaDataSectionA(value, data, j, l, c)
 				elif (k==11):
-					ReadRSeMetaDataSectionB(value, data, j, newFile, l, c)
-				else:
-					newFile.write('Section %X:\n' %(k))
-					newFile.write(HexAsciiDump(data[j:j+l], j, True))
+					ReadRSeMetaDataSectionB(value, data, j, l, c)
 			else:
-				ReadRSeMetaDataSection5(value, data, j, newFile, l)
+				ReadRSeMetaDataSection5(value, data, j, l)
 		l = s - 4
 		i -= (s + 4)
 		k -= 1
@@ -1214,8 +1164,6 @@ def ReadRSeMetaDataM(dataM, name):
 	value.uid2, i = getUUID(data, len(data)-0x10, '%s.uid2' % (value.name))
 	#if (value.uid2.bytes != uuid.UUID('9744e6a4-11d1-8dd8-0008-2998bedddc09').bytes:
 	# logError('>>>ERROR - STREAM CORRUPTED')
-	newFile.write('\t%s\n' %(value.uid2))
-	newFile.close()
 	setDumpLineLength(bak)
 	model.RSeStorageData[value.name] = value
 	logMessage('\t>>> SEE %s\\%sM.txt <<<' % (folder, value.name), LOG.LOG_DEBUG)
@@ -1281,7 +1229,7 @@ def ReadRSeEmbeddingsContentsText16(data, offset):
 	len, i = getUInt8A(data, offset, 4)
 	end = i + len[3]*2
 	buf = data[i: end]
-	txt = buf.decode('UTF-16LE') #.encode('cp1252')
+	txt = buf.decode('UTF-16LE').encode('UTF-8')
 	return txt, end
 
 def ReadRSeEmbeddingsContents(data):

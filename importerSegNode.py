@@ -11,10 +11,11 @@ TODO:
 import traceback
 from importerClasses import Header0, Angle, GraphicsFont, ModelerTxnMgr
 from importerUtils   import *
+from math            import log10
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.3'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 def isList(data, code):
@@ -29,55 +30,59 @@ def CheckList(data, offset, type):
 	return i
 
 class AbstractNode():
-	_TYP_GUESS_             = 0x0000
-	_TYP_2D_UINT16_         = 0x0001
-	_TYP_2D_SINT16_         = 0x0002
-	_TYP_2D_UINT32_         = 0x0003
-	_TYP_2D_SINT32_         = 0x0004
-	_TYP_2D_FLOAT32_        = 0x0005
-	_TYP_2D_FLOAT64_        = 0x0006
-	_TYP_3D_UINT16_         = 0x0007
-	_TYP_3D_SINT16_         = 0x0008
-	_TYP_3D_UINT32_         = 0x0009
-	_TYP_3D_SINT32_         = 0x000A
-	_TYP_3D_FLOAT32_        = 0x000B
-	_TYP_3D_FLOAT64_        = 0x000C
-	_TYP_1D_UINT32_         = 0x000D
-	_TYP_1D_CHAR_           = 0x000E
-	_TYP_1D_FLOAT32_        = 0x000F
+	_TYP_GUESS_                = 0x0000
+	_TYP_2D_UINT16_            = 0x0001
+	_TYP_2D_SINT16_            = 0x0002
+	_TYP_2D_SINT32_            = 0x0003
+	_TYP_2D_FLOAT32_           = 0x0004
+	_TYP_2D_FLOAT64_           = 0x0005
+	_TYP_3D_UINT16_            = 0x0006
+	_TYP_3D_SINT16_            = 0x0007
+	_TYP_3D_SINT32_            = 0x0008
+	_TYP_UINT32A_              = 0x0009
+	_TYP_3D_FLOAT32_           = 0x000B
+	_TYP_3D_FLOAT64_           = 0x000C
+	_TYP_1D_UINT32_            = 0x000D
+	_TYP_1D_CHAR_              = 0x000E
+	_TYP_1D_FLOAT32_           = 0x000F
 
-	_TYP_FONT_              = 0x0011
-	_TYP_2D_F64_U32_4D_U8_  = 0x0012
-	_TYP_NODE_REF_          = 0x0013
-	_TYP_STRING16_          = 0x0014
-	_TYP_RESULT_ITEM4_      = 0x0015
-	_TYP_NODE_X_REF_        = 0x0016
+	_TYP_FONT_                 = 0x0011
+	_TYP_2D_F64_U32_4D_U8_     = 0x0012
+	_TYP_NODE_REF_             = 0x0013
+	_TYP_STRING16_             = 0x0014
+	_TYP_RESULT_ITEM4_         = 0x0015
+	_TYP_NODE_X_REF_           = 0x0016
 
-	_TYP_LIST_GUESS_        = 0x8000
-	_TYP_LIST_2D_UINT16_    = 0x8001
-	_TYP_LIST_2D_SINT16_    = 0x8002
-	_TYP_LIST_2D_UINT32_    = 0x8003
-	_TYP_LIST_2D_SINT32_    = 0x8004
-	_TYP_LIST_2D_FLOAT32_   = 0x8005
-	_TYP_LIST_2D_FLOAT64_   = 0x8006
-	_TYP_LIST_3D_UINT16_    = 0x8007
-	_TYP_LIST_3D_SINT16_    = 0x8008
-	_TYP_LIST_3D_UINT32_    = 0x8009
-	_TYP_LIST_3D_SINT32_    = 0x800A
-	_TYP_LIST_3D_FLOAT32_   = 0x800B
-	_TYP_LIST_3D_FLOAT64_   = 0x800C
-	_TYP_LIST_FONT_         = 0x8011
+	_TYP_LIST_GUESS_           = 0x8000
+	_TYP_LIST_2D_UINT16_       = 0x8001
+	_TYP_LIST_2D_SINT16_       = 0x8002
+	_TYP_LIST_2D_UINT32_       = 0x8003
+	_TYP_LIST_2D_SINT32_       = 0x8004
+	_TYP_LIST_2D_FLOAT32_      = 0x8005
+	_TYP_LIST_2D_FLOAT64_      = 0x8006
+	_TYP_LIST_3D_UINT16_       = 0x8007
+	_TYP_LIST_3D_SINT16_       = 0x8008
+	_TYP_LIST_3D_UINT32_       = 0x8009
+	_TYP_LIST_3D_SINT32_       = 0x800A
+	_TYP_LIST_3D_FLOAT32_      = 0x800B
+	_TYP_LIST_3D_FLOAT64_      = 0x800C
+	_TYP_LIST_FONT_            = 0x8011
 
-	_TYP_MAP_KEY_REF_       = 0x7001
-	_TYP_MAP_KEY_X_REF_     = 0x7002
-	_TYP_MAP_TEXT8_REF_     = 0x7003
-	_TYP_MAP_TEXT8_X_REF_   = 0x7004
-	_TYP_MAP_TEXT16_REF_    = 0x7005
-	_TYP_MAP_TEXT16_X_REF_  = 0x7006
-	_TYP_MAP_X_REF_KEY_     = 0x7007
-	_TYP_MAP_X_REF_FLOAT64_ = 0x7008
+	_TYP_MAP_KEY_KEY_          = 0x7001
+	_TYP_MAP_KEY_REF_          = 0x7002
+	_TYP_MAP_KEY_X_REF_        = 0x7003
+	_TYP_MAP_TEXT8_REF_        = 0x7004
+	_TYP_MAP_TEXT8_X_REF_      = 0x7005
+	_TYP_MAP_TEXT16_REF_       = 0x7006
+	_TYP_MAP_TEXT16_X_REF_     = 0x7007
+	_TYP_MAP_X_REF_KEY_        = 0x7008
+	_TYP_MAP_X_REF_FLOAT64_    = 0x7009
+	_TYP_MAP_X_REF_X_REF_      = 0x700A
+	_TYP_MAP_X_REF_LIST2_XREF_ = 0x700B
+	_TYP_MAP_UUID_UINT32_      = 0x700C
+	_TYP_MAP_U16_U16_          = 0x700D
 
-	_TYP_MAP_MDL_TXN_MGR_    = 0x6000
+	_TYP_MAP_MDL_TXN_MGR_      = 0x6000
 
 	def __init__(self):
 		self.typeID       = None
@@ -87,7 +92,6 @@ class AbstractNode():
 		self.hasParent    = False
 		self.content      = ''
 		self.childIndexes = []
-		self.printable    = True
 		self.properties   = {}
 		self.size         = 0
 		self.visible      = False
@@ -227,9 +231,26 @@ class AbstractNode():
 		i = self.reader.skipBlockSize(i)
 		return i
 
+	def ReadBoolean(self, offset, name):
+		x, i = getUInt8(self.data, offset)
+		x = (x != 0)
+		self.set(name, x)
+		self.content += ' %s=%s' %(name, x)
+		return i
+
+	def ReadEnum16(self, offset, name, enum):
+		index, i = getUInt16(self.data, offset)
+		e = enum[index]
+		if (name == 'name'):
+			self.name = e
+		else:
+			self.set(name, e)
+			self.content += ' %s=%s' %(name, e)
+		return i
+
 	def ReadAngle(self, offset, name):
 		x, i = getFloat64(self.data, offset)
-		x = Angle(x)
+		x = Angle(x, pi/180.0, '\xC2\xB0')
 		self.set(name, x)
 		self.content += ' %s=%s' %(name, x)
 		return i
@@ -261,7 +282,7 @@ class AbstractNode():
 			self.name = x
 		return i
 
-	def ReadNodeRef(self, offset, name, type, dump = False):
+	def ReadNodeRef(self, offset, name, type, number = -1, dump = False):
 		u16_0, i = getUInt16(self.data, offset)
 		u16_1, i = getUInt16(self.data, i)
 		ref = NodeRef(u16_0, u16_1, type)
@@ -269,8 +290,9 @@ class AbstractNode():
 		self.set(name, None)
 
 		if (ref.index > 0):
+			ref.number = number
 			if (ref.index == self.index):
-				logError('ERROR:> found self-ref \'%s\' for %s' %(name, self.typeName))
+				logError('ERROR: Found self-ref \'%s\' for (%04X): %s' %(name, self.index, self.typeName))
 			else:
 				if (type == NodeRef.TYPE_PARENT):
 					self.parentIndex = ref
@@ -283,20 +305,25 @@ class AbstractNode():
 			self.content  += ' %s=%s' %(name, ref)
 		return i
 
-	def ReadChildRef(self, offset, name = 'ref', dump = False):
-		return self.ReadNodeRef(offset, name, NodeRef.TYPE_CHILD, dump)
-
-	def ReadCrossRef(self, offset, name = 'xref', number = -1, dump = False):
-		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CROSS, dump)
+	def ReadChildRef(self, offset, name = 'ref', number = -1, dump = True):
+		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CHILD, number, dump)
+		## vvvvv DONT COPY TO LIVE VERSION vvvvv ###
 		ref = self.get(name)
 		if (ref):
-			ref.number = number
+			if (self.index > ref.index):
+				#logError('    >FATAL: child \'%s\' (%04X) is smaller - (%04X): %s!' %(name, ref.index, self.index, self.typeName))
+				ref.type = NodeRef.TYPE_CROSS
+		## ^^^^^ DONT COPY TO LIVE VERSION ^^^^^ ###
+		return i
+
+	def ReadCrossRef(self, offset, name = 'xref', number = -1, dump = True):
+		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CROSS, number, dump)
 		return i
 
 	def ReadParentRef(self, offset):
-		return self.ReadNodeRef(offset, 'parent', NodeRef.TYPE_PARENT, False)
+		return self.ReadNodeRef(offset, 'parent', NodeRef.TYPE_PARENT, -1, False)
 
-	def ReadMetaData_02(self, offset, typ):
+	def ReadMetaData_02(self, offset, typ, arraySize = 1):
 		sep = ''
 		skipBlockSize = (getFileVersion() < 2011)
 		cnt, i = getUInt32(self.data, offset)
@@ -329,13 +356,16 @@ class AbstractNode():
 				while (j < cnt):
 					str = ''
 					if (t == AbstractNode._TYP_NODE_REF_):
-						i = self.ReadChildRef(i, 'tmp')
+						i = self.ReadChildRef(i, 'tmp', j, False)
 						val = self.get('tmp')
 						str = ''
 					elif (t == AbstractNode._TYP_NODE_X_REF_):
 						i = self.ReadCrossRef(i, 'tmp', j, False)
 						val = self.get('tmp')
 						str = ''
+					elif (t == AbstractNode._TYP_STRING16_):
+						val, i = getLen32Text16(self.data, i)
+						str = '\"%s\"' %(val)
 					elif (t == AbstractNode._TYP_1D_UINT32_):
 						val, i = getUInt32(self.data, i)
 						str = '%04X' %(val)
@@ -354,8 +384,8 @@ class AbstractNode():
 						if (skipBlockSize):
 							i += 4
 						str = '(%s)' %(IntArr2Str(val, 4))
-					elif (t == AbstractNode._TYP_2D_UINT32_):
-						val, i = getUInt32A(self.data, i, 2)
+					elif (t == AbstractNode._TYP_UINT32A_):
+						val, i = getUInt32A(self.data, i, arraySize)
 						str = '(%s)' %(IntArr2Str(val, 8))
 					elif (t == AbstractNode._TYP_2D_SINT32_):
 						val, i = getSInt32A(self.data, i, 2)
@@ -380,11 +410,6 @@ class AbstractNode():
 						if (skipBlockSize):
 							i += 4
 						str = '(%s)' %(IntArr2Str(val, 4))
-					elif (t == AbstractNode._TYP_3D_UINT32_):
-						val, i = getUInt32A(self.data, i, 3)
-						if (skipBlockSize):
-							i += 4
-						str = '(%s)' %(IntArr2Str(val, 8))
 					elif (t == AbstractNode._TYP_3D_SINT32_):
 						val, i = getSInt32A(self.data, i, 3)
 						if (skipBlockSize):
@@ -425,16 +450,16 @@ class AbstractNode():
 						i = self.ReadList2(i, AbstractNode._TYP_GUESS_, 'lst_tmp')
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_2D_UINT16_ ):
+					elif (t == AbstractNode._TYP_LIST_2D_UINT16_):
 						i = self.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst_tmp')
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_2D_SINT16_ ):
+					elif (t == AbstractNode._TYP_LIST_2D_SINT16_):
 						i = self.ReadList2(i, AbstractNode._TYP_2D_SINT16_, 'lst_tmp')
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
 					elif (t == AbstractNode._TYP_LIST_2D_UINT32_ ):
-						i = self.ReadList2(i, AbstractNode._TYP_2D_UINT32_, 'lst_tmp')
+						i = self.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst_tmp', 2)
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
 					elif (t == AbstractNode._TYP_LIST_2D_SINT32_ ):
@@ -449,19 +474,19 @@ class AbstractNode():
 						i = self.ReadList2(i, AbstractNode._TYP_2D_FLOAT64_, 'lst_tmp')
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_UINT16_ ):
+					elif (t == AbstractNode._TYP_LIST_3D_UINT16_):
 						i = self.ReadList2(i, AbstractNode._TYP_3D_UINT16_, 'lst_tmp')
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_SINT16_ ):
+					elif (t == AbstractNode._TYP_LIST_3D_SINT16_):
 						i = self.ReadList2(i, AbstractNode._TYP_3D_SINT16_, 'lst_tmp')
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_UINT32_ ):
-						i = self.ReadList2(i, AbstractNode._TYP_3D_UINT32_, 'lst_tmp')
+					elif (t == AbstractNode._TYP_LIST_3D_UINT32_):
+						i = self.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst_tmp', 3)
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_SINT32_ ):
+					elif (t == AbstractNode._TYP_LIST_3D_SINT32_):
 						i = self.ReadList2(i, AbstractNode._TYP_3D_SINT32_, 'lst_tmp')
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
@@ -489,7 +514,7 @@ class AbstractNode():
 			self.delete('tmp')
 		return lst, i
 
-	def ReadMetaData_04(self, offset, typ):
+	def ReadMetaData_04(self, offset, typ, arraySize = 0):
 		lst = []
 		skipBlockSize = (getFileVersion() < 2011)
 
@@ -505,7 +530,7 @@ class AbstractNode():
 			j = 0
 			while (j < cnt):
 				if (t == AbstractNode._TYP_NODE_REF_):
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					str = ''
 				elif (t == AbstractNode._TYP_NODE_X_REF_):
@@ -513,13 +538,13 @@ class AbstractNode():
 					val = self.get('tmp')
 					str = ''
 				elif (t == AbstractNode._TYP_STRING16_):
-					val, i = getLen32Text8(self.data, i)
+					val, i = getLen32Text16(self.data, i)
 					str = '\"%s\"' %(val)
 				elif (t == AbstractNode._TYP_2D_SINT32_):
 					val, i = getSInt32A(self.data, i, 2)
 					str = '[%s]' %(IntArr2Str(val, 8))
-				elif (t == AbstractNode._TYP_2D_UINT32_):
-					val, i = getUInt32A(self.data, i, 2)
+				elif (t == AbstractNode._TYP_UINT32A_):
+					val, i = getUInt32A(self.data, i, arraySize)
 					if (skipBlockSize):
 						i += 4
 					str = '[%s]' %(IntArr2Str(val, 8))
@@ -546,13 +571,13 @@ class AbstractNode():
 			arr16, i = getUInt16A(self.data, i, 2)
 			j = 0
 			while (j < cnt):
-				if (typ == AbstractNode._TYP_NODE_X_REF_):
+				if (typ == AbstractNode._TYP_1D_UINT32_):
+					val, i = getUInt32(self.data, i)
+				elif (typ == AbstractNode._TYP_NODE_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
-				elif (typ == AbstractNode._TYP_1D_UINT32_):
-					val, i = getUInt32(self.data, i)
 				else:
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 				j += 1
 				tmp = self.get('tmp')
 				lst.append(tmp)
@@ -569,9 +594,17 @@ class AbstractNode():
 			arr32, i = getUInt32A(self.data, i, 2)
 			j = 0
 			while (j < cnt):
-				if (typ == AbstractNode._TYP_MAP_KEY_REF_):
+				if (typ == AbstractNode._TYP_MAP_KEY_KEY_):
 					key, i = getUInt32(self.data, i)
-					i = self.ReadChildRef(i, 'tmp')
+					val, i = getUInt32(self.data, i)
+					self.content += '%s[%04X:%04X]' %(sep, key, val)
+				elif (typ == AbstractNode._TYP_MAP_U16_U16_):
+					key, i = getUInt16(self.data, i)
+					val, i = getUInt16(self.data, i)
+					self.content += '%s[%03X:%03X]' %(sep, key, val)
+				elif (typ == AbstractNode._TYP_MAP_KEY_REF_):
+					key, i = getUInt32(self.data, i)
+					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%04X: (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_KEY_X_REF_):
@@ -583,15 +616,32 @@ class AbstractNode():
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getUInt32(self.data, i)
-					self.content += '%s[%04X: (%s)]' %(sep, key.index, val)
+					self.content += '%s[%04X: (%X)]' %(sep, key.index, val)
+				elif (typ == AbstractNode._TYP_MAP_X_REF_X_REF_):
+					i = self.ReadCrossRef(i, 'tmp', j, False)
+					key = self.get('tmp')
+					i = self.ReadCrossRef(i, 'tmp', j, False)
+					val = self.get('tmp')
+					self.content += '%s[%04X: %04X]' %(sep, key.index, val.index)
+				elif (typ == AbstractNode._TYP_MAP_X_REF_LIST2_XREF_):
+					c = self.content
+					i = self.ReadCrossRef(i, 'tmp', j, False)
+					key = self.get('tmp')
+					i = self.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'tmp')
+					val = self.get('tmp')
+					self.content = c + '%s[%04X: (%s)]' %(sep, key.index, '),('.join(['%04X' %(h.index) for h in val]))
 				elif (typ == AbstractNode._TYP_MAP_X_REF_FLOAT64_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getFloat64(self.data, i)
 					self.content += '%s[%04X: %s]' %(sep, key.index, val)
+				elif (typ == AbstractNode._TYP_MAP_UUID_UINT32_):
+					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
+					val, i = getUInt32(self.data, i)
+					self.content += '%s[%s: %s]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT8_REF_):
 					key, i = getLen32Text8(self.data, i)
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT8_X_REF_):
@@ -601,7 +651,7 @@ class AbstractNode():
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT16_REF_):
 					key, i = getLen32Text16(self.data, i)
-					i = self.ReadChildRef(i, 'tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_):
@@ -623,6 +673,7 @@ class AbstractNode():
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT16_X_REF_):
 					key, i = getLen32Text16(self.data, i)
+					key = translate(key)
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
@@ -632,10 +683,10 @@ class AbstractNode():
 			self.delete('tmp')
 		return lst, i
 
-	def ReadList2(self, offset, typ, name):
+	def ReadList2(self, offset, typ, name, arraySize = 1):
 		i = CheckList(self.data, offset, 0x0002)
 		self.content += ' %s={' %(name)
-		lst, i = self.ReadMetaData_02(i, typ)
+		lst, i = self.ReadMetaData_02(i, typ, arraySize)
 		self.content += '}'
 		self.set(name, lst)
 		return i
@@ -648,10 +699,10 @@ class AbstractNode():
 		self.set(name, lst)
 		return i
 
-	def ReadList4(self, offset, typ, name = 'lst4'):
+	def ReadList4(self, offset, typ, name = 'lst4', arraySize = 1):
 		i = CheckList(self.data, offset, 0x0004)
 		self.content += ' %s={' %(name)
-		lst, i = self.ReadMetaData_04(i, typ)
+		lst, i = self.ReadMetaData_04(i, typ, arraySize)
 		self.content += '}'
 		self.set(name, lst)
 		return i
@@ -687,7 +738,7 @@ class AbstractNode():
 
 		hdr = Header0(u32_0, u16_0)
 		self.set('hdr', hdr)
-		self.content += ' hdr={%s}' %(hdr)
+		#self.content += ' hdr={%s}' %(hdr)
 
 		return i
 
@@ -695,47 +746,139 @@ class AbstractNode():
 		self.typeID = UUID(uid)
 		self.typeName = '%08X' %(self.typeID.time_low)
 
-	def getUnitName(self, refName = 'refValue'):
-		ref   = self.get(refName)
-		value = ref.node
+	def getUnitOffset(self):
+		unit = self.get('refUnit')
+		numerators = unit.getVariable('numerators')
+		if (numerators):
+			offset = numerators[0].getVariable('UnitOffset')
+			if (offset is not None):
+				return offset
+		return 0.0
 
-		if (value.typeName == 'ParameterValue'):
-			ref   = value.get('refType')
-			typ   = ref.node
+	def getUnitFactors(self, units):
+		factor = 1.0
+		j      = 0
+		n      = len(units)
 
-			i = 0
-			lstUnits = typ.get('lst0')
-			unitName = ''
-			while (i < len(lstUnits)):
-				ref   = lstUnits[i]
-				unit  = ref.node
-				if (unit.get('UNIT')):
-					unitName = unit.typeName
-				i += 1
+		while (j < n):
+			unit = units[j].node
+
+			#unitSupported    = unit.get('UnitSupportet')
+			#if (not unitSupported):
+			#	return 1.0
+
+			magniture  = unit.get('magnitude')
+			unitFactor = unit.get('UnitFactor')
+			if (unitFactor is None):
+				logError('>ERROR: (%04X): %s has no UnitFactor defined!' %(unit.index, unit.typeName))
+			factor *= magniture * unitFactor
+			j += 1
+
+		return factor
+
+	def getUnitFactor(self):
+		unit = self.get('refUnit')
+
+		typ   = unit.node
+
+		numerators = self.getUnitFactors(typ.get('numerators'))
+		denominators = self.getUnitFactors(typ.get('denominators'))
+		factor = numerators / denominators
+
+		unit = typ.get('refDerived')
+		if (unit):
+			typ = unit.node
+
+			numerators = self.getUnitFactors(typ.get('numerators'))
+			denominators = self.getUnitFactors(typ.get('denominators'))
+			factor = factor * numerators / denominators
+		return factor
+
+	def getUnitFormula(self, units):
+		formula = ''
+		sep     = ''
+		j       = 0
+		n       = len(units)
+
+		lastUnit     = 'XXXXX' # choos any unit that is not defined!
+		unitExponent = 1       # by default (e.g.): m^1 => m
+
+		while (j < n):
+			unit = units[j].node
+			j += 1
+			subformula = unit.get('Unit')
+
+			if (len(subformula) > 0):
+				factor = log10(unit.get('magnitude'))
+				if   (factor ==  18): factor = 'E'        # Exa
+				elif (factor ==  15): factor = 'P'        # Peta
+				elif (factor ==  12): factor = 'T'        # Tera
+				elif (factor ==   9): factor = 'G'        # Giga
+				elif (factor ==   6): factor = 'M'        # Mega
+				elif (factor ==   3): factor = 'k'        # Kilo
+				elif (factor ==   2): factor = 'h'        # Hecto
+				elif (factor ==   1): factor = 'da'       # Deca
+				elif (factor ==   0): factor = ''
+				elif (factor ==  -1): factor = 'd'        # Deci
+				elif (factor ==  -2): factor = 'c'        # Centi
+				elif (factor ==  -3): factor = 'm'        # Milli
+				elif (factor ==  -6): factor = '\xC2\xB5' # Micro
+				elif (factor ==  -9): factor = 'n'        # Nano
+				elif (factor == -12): factor = 'p'        # Pico
+				elif (factor == -15): factor = 'f'        # Femto
+				elif (factor == -18): factor = 'a'        # Atto
+				subformula = factor + subformula
+				if (subformula == lastUnit):
+					unitExponent += 1
+				else:
+					if(lastUnit != 'XXXXX'):
+						if (unitExponent > 1):
+							formula = '%s%s%s^%d' %(formula, sep, lastUnit, unitExponent)
+							unitExponent = 1
+						else:
+							formula = '%s%s%s' %(formula, sep, lastUnit)
+						sep =' '
+					lastUnit = subformula
+		if (j > 0):
+			if (unitExponent > 1):
+				formula = '%s%s%s^%d' %(formula, sep, subformula, unitExponent)
+			else:
+				formula = '%s%s%s' %(formula, sep, subformula)
+		return formula
+
+	def getUnitName(self):
+		'''
+		TODO:
+		Derived units are not supported in FreeCAD.
+		Add a new derived unit! But how?
+		Meanwhile the derived units are ignored!
+		'''
+		unitData = self.get('refUnit').node
+
+#		derivedRef = unitData.get('refDerived')
+#		if (derivedRef):
+#			unitData = derivedRef.node
+
+		unitName     = self.getUnitFormula(unitData.get('numerators'))
+		denominators = self.getUnitFormula(unitData.get('denominators'))
+		if (len(denominators) > 0):
+			unitName += '/' + denominators
+
+		return unitName
+
+	def getDerivedUnitName(self):
+		unitData = self.get('refUnit').node
+		derivedRef = unitData.get('refDerived')
+		if (derivedRef):
+			unitData = derivedRef.node
+
+			unitName     = self.getUnitFormula(unitData.get('numerators'))
+			denominators = self.getUnitFormula(unitData.get('denominators'))
+			if (len(denominators) > 0):
+				unitName += '/' + denominators
+
 			return unitName
-
-		if (value.typeName == 'F8A77A03'):
-			return value.getUnitName()
-		if (value.typeName == 'F8A77A06'):
-			return value.getUnitName()
-		if (value.typeName == 'F8A77A07'):
-			return value.getUnitName()
-		if (value.typeName == 'F8A77A0D'):
-			return value.getUnitName()
-		if (value.typeName == 'ParameterValueRef'):
-			return value.getUnitName()
-		if (value.typeName == 'ParameterValueParameterRef'):
-			return value.get('refParameter').node.getUnitName()
-		if (value.typeName == 'ParameterValueParameterRef1'):
-			unitName = value.getUnitName()
-			if (unitName == 'ParameterTypeFactor3D'):
-				unitName = value.getUnitName('refFactor')
-			return unitName
-		if (value.typeName == 'ParameterValueParameterRef2'):
-			return value.getUnitName()
-		else:
-			logError('ERROR: Unknwon parameter value \'%s\' for (%04X): %s \'%s\'!' %(value.typeName, self.index, self.typeName, self.name))
-		return ''
+		return None
 
 	def __str__(self):
 		if (self.name is None):
@@ -781,7 +924,7 @@ class FBAttributeNode(AbstractNode):
 class GraphicsNode(AbstractNode):
 	def __init__(self):
 		AbstractNode.__init__(self)
-		self.key = 0
+		self.key    = 0
 		self.keyRef = 0
 
 class NotebookNode(AbstractNode):
@@ -806,12 +949,10 @@ class NodeRef():
 
 	@property
 	def node(self):
-		# Do something if you want
 		return self.node
 
 	@node.setter
 	def node(self, node):
-		# Do something if you want
 		self.node = node
 		if (node):
 			assert isinstance(node, AbstractNode), 'Node reference is not a AbstractNode (%s)!' %(node.__class__.__name__)
@@ -819,6 +960,11 @@ class NodeRef():
 	def getBranchNode(self):
 		if (self.node):
 			return self.node.node
+		return None
+
+	def getName(self):
+		if (self.node):
+			return self.node.name
 		return None
 
 	def getTypeName(self):

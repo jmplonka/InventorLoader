@@ -14,7 +14,7 @@ from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.3'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
@@ -147,73 +147,79 @@ def dumpRemainingDataB(file, data, offset):
 
 def buildBranchRef(parent, file, nodes, node, level, ref):
 	branch = None
-	if (node.printable):
-		if (node.typeName == 'Parameter'):
-			branch = ParameterNode(node, True)
-		elif (node.typeName == 'Feature'):
-			branch = FeatureNode(node, True)
-		elif (node.typeName == 'ValueByte'):
-			branch = ValueNode(node, True)
-		elif (node.typeName == 'ValueSInt32'):
-			branch = ValueNode(node, True)
-		elif (node.typeName == 'ValueUInt32'):
-			branch = ValueNode(node, True)
-		elif (node.typeName == 'Point2D'):
-			branch = Point2DNode(node, True)
-		elif (node.typeName == 'Point3D'):
-			branch = Point3DNode(node, True)
-		elif (node.typeName == 'Line2D'):
-			branch = Line2DNode(node, True)
-		elif (node.typeName == 'Circle2D'):
-			branch = Circle2DNode(node, True)
-		elif (node.typeName == 'Radius2D'):
-			branch = Radius2DNode(node, True)
-		elif (node.typeName == 'Constraint_Coincident2D'):
-			branch = ConstraintCoincident2DNode(node, True)
-		elif (node.typeName == 'Dimension_Distance2D'):
-			branch = DimensionDistance2DNode(node, True)
-		elif (node.typeName == 'Dimension_Angle'):
-			branch = DimensionAngleNode(node, True)
-		else:
-			branch = DataNode(node, True)
-		parent.append(branch)
+	if (node.typeName == 'Parameter'):
+		branch = ParameterNode(node, True)
+	elif (node.typeName == 'ParameterText'):
+		branch = ParameterTextNode(node, True)
+	elif (node.typeName == 'Feature'):
+		branch = FeatureNode(node, True)
+	elif (node.typeName == 'ParameterBoolean'):
+		branch = ValueNode(node, True)
+	elif (node.typeName == 'ValueSInt32'):
+		branch = ValueNode(node, True)
+	elif (node.typeName == 'ValueUInt32'):
+		branch = ValueNode(node, True)
+	elif (node.typeName == 'Point2D'):
+		branch = Point2DNode(node, True)
+	elif (node.typeName == 'Point3D'):
+		branch = Point3DNode(node, True)
+	elif (node.typeName == 'Line2D'):
+		branch = Line2DNode(node, True)
+	elif (node.typeName == 'Circle2D'):
+		branch = Circle2DNode(node, True)
+	elif (node.typeName == 'Geometric_Radius2D'):
+		branch = GeometricRadius2DNode(node, True)
+	elif (node.typeName == 'Geometric_Coincident2D'):
+		branch = GeometricCoincident2DNode(node, True)
+	elif (node.typeName == 'Dimension_Distance2D'):
+		branch = DimensionDistance2DNode(node, True)
+	elif (node.typeName == 'Dimension_Angle2D'):
+		branch = DimensionAngleNode(node, True)
+	else:
+		branch = DataNode(node, True)
+	parent.append(branch)
 
-		if (ref.number >= 0):
-			num = '[%02X] ' %(ref.number)
-		else:
-			num = ''
+	num = ''
+	if (ref.number >= 0):
+		num = '[%02X] ' %(ref.number)
 
-		file.write('%s-> %s%s\n' %(level * '\t', num, branch.getRefText()))
+	file.write('%s-> %s%s\n' %(level * '\t', num, branch.getRefText()))
 
 	return branch
 
-def buildBranch(parent, file, nodes, node, level = 0):
+def buildBranch(parent, file, nodes, node, level, ref):
 	branch = None
-	if (node.printable):
-		if (node.typeName == 'Parameter'):
-			branch = ParameterNode(node, False)
-		elif (node.typeName == 'Feature'):
-			branch = FeatureNode(node, False)
-		elif (node.typeName == 'ValueByte'):
-			branch = ValueNode(node, False)
-		elif (node.typeName == 'ValueSInt32'):
-			branch = ValueNode(node, False)
-		elif (node.typeName == 'ValueUInt32'):
-			branch = ValueNode(node, False)
-		else:
-			branch = DataNode(node, False)
-		parent.append(branch)
+	if (node.typeName == 'Parameter'):
+		branch = ParameterNode(node, False)
+	elif (node.typeName == 'Feature'):
+		branch = FeatureNode(node, False)
+	elif (node.typeName == 'ParameterBoolean'):
+		branch = ValueNode(node, False)
+	elif (node.typeName == 'ValueSInt32'):
+		branch = ValueNode(node, False)
+	elif (node.typeName == 'ValueUInt32'):
+		branch = ValueNode(node, False)
+	else:
+		branch = DataNode(node, False)
+	parent.append(branch)
 
-		file.write('%s%s\n' %(level * '\t', branch))
+	num = ''
+	if ((ref is not None) and (ref.number >= 0)):
+		num = '[%02X] ' %(ref.number)
+	file.write('%s%s%s\n' %(level * '\t', num, branch))
 
-		for ref in node.childIndexes:
-			if (ref.index in nodes):
-				child = nodes[ref.index]
-				ref.node = child
-				if (ref.type == NodeRef.TYPE_CHILD):
-					buildBranch(branch, file, nodes, child, level + 1)
-				elif (ref.type == NodeRef.TYPE_CROSS):
-					buildBranchRef(branch, file, nodes, child, level + 1, ref)
+	for childRef in node.childIndexes:
+		if (childRef.index in nodes):
+			child = nodes[childRef.index]
+			childRef.node = child
+			if (childRef.type == NodeRef.TYPE_CHILD):
+				## vvvvv DONT COPY TO LIVE VERSION vvvvv ###
+				if ((node.typeName == 'Unit') and not (child.typeName.startswith('Unit'))):
+					logError('>>>ERROR: found Parameter unit \'%s\' with no name!' %(child.typeName))
+				## ^^^^^ DONT COPY TO LIVE VERSION ^^^^^ ###
+				buildBranch(branch, file, nodes, child, level + 1, childRef)
+			elif (childRef.type == NodeRef.TYPE_CROSS):
+				buildBranchRef(branch, file, nodes, child, level + 1, childRef)
 
 	return branch
 
@@ -224,7 +230,7 @@ def buildTree(file, seg):
 
 	for idx1 in nodes:
 		node = nodes[idx1]
-		isRadius2D = node.typeName == 'Radius2D'
+		isRadius2D = node.typeName == 'Dimension_Radius2D'
 		for ref in node.childIndexes:
 			if (ref.index in nodes):
 				child = nodes[ref.index]
@@ -248,11 +254,7 @@ def buildTree(file, seg):
 	for idx1 in nodes:
 		node = nodes[idx1]
 		if (node.hasParent == False):
-			ref = node.parent
-			if (ref):
-				parent = nodes[ref.index]
-#				logError('>E0011: Parent %s.%08X(%04X) set but not referenced: %s.%08X(%04X)' %(parent.__class__.__name__, parent.typeID.time_low, parent.index, node.__class__.__name__, node.typeID.time_low, node.index))
-			buildBranch(tree, file, nodes, node)
+			buildBranch(tree, file, nodes, node, 0, None)
 	return tree
 
 def Read_F645595C_chunk(offset, node):
@@ -301,6 +303,7 @@ class SegmentReader(object):
 		self.nodeCounter = 0
 		self.analyseLists = analyseLists
 		self.fmt_old = (getFileVersion() < 2011)
+		self.nodeDict = {}
 
 	def createNewNode(self):
 		return BinaryNode()
@@ -406,13 +409,13 @@ class SegmentReader(object):
 		return i
 
 	def dumpRawData(self, seg, data):
-		folder = getInventorFile()[0:-4]
-
-		filename = '%s\\%sB.bin' %(folder, seg.name)
+		filename = '%s\\%sB.bin' %(getInventorFile()[0:-4], seg.name)
 		newFileRaw = open (filename, 'wb')
 		newFileRaw.write(data)
 		newFileRaw.close()
+		return
 
+	def dumpNodeDict(self):
 		return
 
 	def ReadSegmentData(self, file, data, seg):
@@ -438,18 +441,22 @@ class SegmentReader(object):
 					start = i - 4
 					node = self.ReadBlock(file, data, i, l, seg)
 					i += node.size
+					t = '%08X' % (node.typeID.time_low)
+					if (not t in self.nodeDict):
+						count = 1
+					else:
+						count = self.nodeDict[t] + 1
+					self.nodeDict[t] = count
 					u32_0, i = getUInt32(data, i)
 					assert (u32_0 == l), '%s: BLOCK[%X] - incorrect block size %X != %X found for offset %X for %s!' %(self.__class__.__name__, node.index, l, u32_0, start, node.typeName)
 					i += hdrSize
 			showTree = True
 
 		finally:
-			if (i < len(data)):
-				file.write('\n>>> FOOTER <<<\n')
-				dumpRemainingDataB(file, data, i)
-
 			if (showTree):
 				tree = buildTree(file, seg)
 				seg.tree = tree
+
+				self.dumpNodeDict()
 
 		return

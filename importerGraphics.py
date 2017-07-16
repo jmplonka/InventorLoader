@@ -16,7 +16,7 @@ from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.2'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 class GraphicsReader(SegmentReader):
@@ -529,7 +529,7 @@ class GraphicsReader(SegmentReader):
 
 	def Read_03E3D90B(self, node):
 		i = self.Read_HeaderParent(node)
-		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT32_, 'lst0')
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
@@ -553,9 +553,6 @@ class GraphicsReader(SegmentReader):
 		node.typeName = 'KeyRef'
 		i = self.Read_HeaderParent(node)
 		i = node.ReadUInt32(i, 'key')
-
-		node.printable = False
-
 		return i
 
 	def Read_0DE8E459(self, node):
@@ -685,7 +682,6 @@ class GraphicsReader(SegmentReader):
 #		i  = node.ReadList2(i, AbstractNode._TYP_2D_SINT32_, 'lst0')
 #		i = node.ReadSInt32(i, 'u32_0')
 #		i = node.ReadUInt8(i, 'u8_0')
-		node.printable = False
 		i = len(node.data)
 
 		return i
@@ -754,9 +750,6 @@ class GraphicsReader(SegmentReader):
 	def Read_48EB8607(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
-
-		node.printable = (len(node.get('lst0')) > 0)
-
 		return i
 
 	def Read_48EB8608(self, node):
@@ -782,9 +775,6 @@ class GraphicsReader(SegmentReader):
 		node.typeName = 'KeyRef'
 		i = self.Read_HeaderParent(node)
 		i = node.ReadUInt32(i, 'key')
-
-		node.printable = False
-
 		return i
 
 	def Read_4B57DC55(self, node):
@@ -864,9 +854,7 @@ class GraphicsReader(SegmentReader):
 #		i = node.ReadFloat64A(i, 3, 'a3')
 #		i = self.skipBlockSize(i)
 #		i = node.ReadUInt32A(i, 3, 'a4')
-		node.printable = False
 		i = len(node.data)
-
 		return i
 
 	def Read_591E9565(self, node):
@@ -882,9 +870,6 @@ class GraphicsReader(SegmentReader):
 		node.typeName = 'KeyRef'
 		i = self.Read_HeaderParent(node)
 		i = node.ReadUInt32(i, 'key')
-
-		node.printable = False
-
 		return i
 
 	def Read_5EDE1890(self, node):
@@ -954,7 +939,6 @@ class GraphicsReader(SegmentReader):
 #		i = self.Read_TypedFloat(i, node)
 #		i = node.ReadList2(i, AbstractNode._TYP_LIST_3D_FLOAT64_, 'lst0')
 #		i = node.ReadFloat64A(i, 6, 'a0')
-		node.printable = False
 		i = len(node.data)
 		return i
 
@@ -1110,7 +1094,6 @@ class GraphicsReader(SegmentReader):
 	def Read_9795E56A(self, node):
 #		i = node.ReadUInt32(0, 'u32')
 #		i = node.ReadFloat64A(i, 3, 'a0')
-		node.printable = False
 		i = len(node.data)
 		return i
 
@@ -1593,9 +1576,6 @@ class GraphicsReader(SegmentReader):
 	def Read_B9274CE3(self, node):
 		i = self.Read_HeaderParent(node)
 		i = node.ReadUInt32(i, 'key')
-
-		node.printable = False
-
 		return i
 
 	def Read_BBC99377(self, node):
@@ -1655,9 +1635,6 @@ class GraphicsReader(SegmentReader):
 		i = self.Read_HeaderParent(node)
 		i = node.ReadUInt32(i, 'key')
 		i = node.ReadUInt8(i, 'u8_0')
-
-		node.printable = False
-
 		return i
 
 	def Read_C0014C89(self, node):
@@ -1828,9 +1805,7 @@ class GraphicsReader(SegmentReader):
 #		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst5')
 # 		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst6')
 # 		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst7')
-		node.printable = False
 		i = len(node.data)
-
 		return i
 
 	def Read_DA58AA0E(self, node):
@@ -1903,7 +1878,6 @@ class GraphicsReader(SegmentReader):
 	def Read_EF1E3BE5(self, node):
 		i = node.Read_Header0()
 		i = node.ReadList2(i, AbstractNode._TYP_FONT_, 'lst0')
-		node.printable = len(node.get('lst0'))
 		return i
 
 	def Read_F6ADCC68(self, node):

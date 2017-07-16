@@ -15,7 +15,7 @@ from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 class ResultReader(SegmentReader):
@@ -81,7 +81,7 @@ class ResultReader(SegmentReader):
 		#
 		# i = self.skipBlockSize(i)
 
-		# lst3,  i = node.ReadList4(i, AbstractNode._TYP_2D_UINT32_)
+		# lst3,  i = node.ReadList4(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
 		# l3 = len(lst3)
 		#
 		# if (l3 > 0):
@@ -96,7 +96,7 @@ class ResultReader(SegmentReader):
 		# 	u8_1 = 0
 		#
 		# if (getFileVersion() > 2011):
-		# 	dummy, i = node.ReadList4(i, AbstractNode._TYP_2D_UINT32_)
+		# 	dummy, i = node.ReadList4(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
 		# i = self.skipBlockSize(i)
 		#
 		# if (l4 > 0):

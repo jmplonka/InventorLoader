@@ -9,13 +9,13 @@ import Sketcher
 import FreeCAD
 import traceback
 from importerUtils   import logMessage, logWarning, logError, LOG, IFF, IntArr2Str, FloatArr2Str
-from importerClasses import RSeMetaData, Angle, Length, ParameterNode, ParameterValue, FeatureNode, AbstractValue
+from importerClasses import RSeMetaData, Angle, Length, ParameterNode, FeatureNode, AbstractValue
 from importerSegNode import AbstractNode
-from math            import sqrt, sin, cos, acos, atan2, degrees, radians
+from math            import sqrt, sin, cos, acos, atan2, degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.5'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 def ignoreBranch(node):
@@ -60,7 +60,7 @@ def calcAngle2D(p1Node, ref2):
 				angle = atan2(dy, dx)
 				if (angle < 0):
 					angle += radians(360.0)
-				return Angle(angle)
+				return Angle(angle, pi/180.0, '\xC2\xB0')
 	return None
 
 def calcAngle3D(x1, y1, z1, x2, y2, z2):
@@ -71,7 +71,7 @@ def calcAngle3D(x1, y1, z1, x2, y2, z2):
 		angle = acos(s/l1/l2)
 	else:
 		angle = radians(90.0)
-	return Angle(angle)
+	return Angle(angle, pi/180.0, '\xC2\xB0')
 
 def getX(pData):
 	return pData.get('x') * 10.0
@@ -303,7 +303,6 @@ def getCirclePoints(circleNode):
 			key = keys[0]
 			keys.append(key)
 			del keys[0]
-		print 'keys = %s' %(', '.join('%g' %(f + angleOffset) for f in keys))
 		for key in keys:
 			pointRef = map[key]
 			x_new = pointRef.getVariable('x')
@@ -328,12 +327,13 @@ class FreeCADImporter:
 		self.pointDict      = None
 
 	def checkSketchIndex(self, sketchObj, entityNode):
-		if (entityNode.isHandled() == False):
-			self.Create_Sketch2D_Node(sketchObj, entityNode)
-			if (entityNode.getSketchIndex() is None):
-				logError('        ... Failed to create (%04X): %s' %(entityNode.getIndex(), entityNode.getTypeName()))
-		if (entityNode.isValid()):
-			return  entityNode.getSketchIndex()
+		if (entityNode):
+			if (entityNode.isHandled() == False):
+				self.Create_Sketch2D_Node(sketchObj, entityNode)
+				if (entityNode.getSketchIndex() is None and entityNode.isValid()):
+					logError('        ... Failed to create (%04X): %s' %(entityNode.getIndex(), entityNode.getTypeName()))
+			if (entityNode.isValid()):
+				return  entityNode.getSketchIndex()
 		return None
 
 	def addConstraint(self, sketchObj, constraint, key):
@@ -466,7 +466,7 @@ class FreeCADImporter:
 		return count
 
 ########################
-	def addSketch2D_Constraint_Fix2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_Fix2D(self, constraintNode, sketchObj):
 		'''
 		A fix constraint doesn't exists in FreeCAD.
 		Workaround: two distance constraints (X and Y)
@@ -493,11 +493,11 @@ class FreeCADImporter:
 				logMessage('        ... added 2D fix constraint to \'%s-*UNKNOWN*\'' %(movData.sketchIndex), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Constraint_PolygonCenter2D(self, constraintNode, sketchObj):
-		# handled together with addSketch2D_Constraint_PolygonEdge2D
+	def addSketch2D_Geometric_PolygonCenter2D(self, constraintNode, sketchObj):
+		# handled together with addSketch2D_Geometric_PolygonEdge2D
 		return ignoreBranch(constraintNode)
 
-	def addSketch2D_Constraint_PolygonEdge2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_PolygonEdge2D(self, constraintNode, sketchObj):
 		ref1 = constraintNode.getVariable('ref_1')
 		ref2 = constraintNode.getVariable('ref_2')
 		if ((ref1) and (ref1.getTypeName() == 'Line2D') and (ref2) and (ref2.getTypeName() == 'Line2D')):
@@ -532,7 +532,7 @@ class FreeCADImporter:
 
 		return
 
-	def addSketch2D_Constraint_Coincident2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_Coincident2D(self, constraintNode, sketchObj):
 		# As FreeCAD can't handle line with zero length the constraints will
 		# be handled after all entities have been created.
 		return
@@ -573,10 +573,10 @@ class FreeCADImporter:
 #						logMessage('        ... added 2D coincident constraint between Point %s and %s %s' %(index2, moving.getTypeName()[0:-2], index1), LOG.LOG_INFO)
 #						return
 #			else:
-#				logError('        ... (%04X) Constraint_Coincident2D: between %s (%04X) and %s (%04X) failed!!!' %(constraintNode.getIndex(), point.getTypeName(), point.getIndex(), moving.getTypeName(), moving.getIndex()))
+#				logError('        ... (%04X) Geometric_Coincident2D: between %s (%04X) and %s (%04X) failed!!!' %(constraintNode.getIndex(), point.getTypeName(), point.getIndex(), moving.getTypeName(), moving.getIndex()))
 		return
 
-	def addSketch2D_Constraint_SymmetryPoint2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_SymmetryPoint2D(self, constraintNode, sketchObj):
 		pointRef    = self.getRefPoint(constraintNode)
 		idxSymmetry =  self.checkSketchIndex(sketchObj, pointRef.getBranchNode())
 
@@ -592,7 +592,7 @@ class FreeCADImporter:
 				logMessage('        ... added 2D symmetric constraint between Point %s and %s %s' %(idxSymmetry, moving.getTypeName()[0:-2], indexLine), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Constraint_SymmetryLine2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_SymmetryLine2D(self, constraintNode, sketchObj):
 		symmetry    = getNode(constraintNode, 'refLineSym')
 		idxSymmetry =  self.checkSketchIndex(sketchObj, symmetry)
 
@@ -610,7 +610,7 @@ class FreeCADImporter:
 				logMessage('        ... added 2D symmetric constraint between lines %s, %s and %s' %(idxSymmetry, indexLine1, indexLine2), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Constraint_Parallel2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_Parallel2D(self, constraintNode, sketchObj):
 		'''
 		idx1: The index of the sketch object, that will not change by applying the constraint
 		idx2: The index of the sketch object, that will change by applying the constraint
@@ -626,7 +626,7 @@ class FreeCADImporter:
 				logMessage('        ... added 2D parallel constraint between lines %s and %s' %(index1, index2), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Constraint_Perpendicular2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_Perpendicular2D(self, constraintNode, sketchObj):
 		'''
 		idx1: The index of the sketch object, that will not change by applying the constraint
 		idxMov: The index of the sketch object, that will change by applying the constraint
@@ -642,7 +642,7 @@ class FreeCADImporter:
 				logMessage('        ... added 2D perpendicular constraint between lines %s and %s' %(index1, index2), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Constraint_Colinear2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_Collinear2D(self, constraintNode, sketchObj):
 		'''
 		idx1: The index of the sketch object, that will not change by applying the constraint
 		idx2: The index of the sketch object, that will change by applying the constraint
@@ -652,15 +652,15 @@ class FreeCADImporter:
 		index1 = self.checkSketchIndex(sketchObj, line1)
 		index2 = self.checkSketchIndex(sketchObj, line2)
 		if ((index1 is not None) and (index2 is not None)):
-			key = 'Colinear_%s_%s' %(index1, index2)
+			key = 'Collinear_%s_%s' %(index1, index2)
 			#if (not key in self.mapConstraints):
 			#	constraint = Sketcher.Constraint('Tangent', index1, index2)
 			#	index = self.addConstraint(sketchObj, constraint, key)
 			#	constraintNode.setSketchEntity(index, constraint)
-			#	logMessage('        ... added 2D colinear constraint between %s %s and %s %s' %(line1.getTypeName(), index1, line2.getTypeName(), index2), LOG.LOG_INFO)
+			#	logMessage('        ... added 2D collinear constraint between %s %s and %s %s' %(line1.getTypeName(), index1, line2.getTypeName(), index2), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Constraint_Tangential2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_Tangential2D(self, constraintNode, sketchObj):
 		'''
 		idx1: The index of the sketch object, that will not change by applying the constraint
 		idx2: The index of the sketch object, that will change by applying the constraint
@@ -679,7 +679,7 @@ class FreeCADImporter:
 #				logMessage('        ... added 2D tangential constraint between %s %s and %s %s' %(line1.getTypeName(), index1, line2.getTypeName(), index2), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Constraint_Vertical2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_Vertical2D(self, constraintNode, sketchObj):
 		'''
 		index: The index of the sketch object, that will change by applying the constraint
 		'''
@@ -693,7 +693,7 @@ class FreeCADImporter:
 				logMessage('        ... added 2D vertical constraint to line %s' %(index), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Constraint_Horizontal2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_Horizontal2D(self, constraintNode, sketchObj):
 		'''
 		index: The index of the sketch object, that will change by applying the constraint
 		'''
@@ -707,9 +707,24 @@ class FreeCADImporter:
 				logMessage('        ... added 2D horizontal constraint to line %s' %(index), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Coincident_Circle2D(self, constraintNode, sketchObj):
+	def addSketch2D_Geometric_EqualLength2D(self, constraintNode, sketchObj):
 		'''
-		Create a circle coincident constraint
+		Create a  equal legnth constraint
+		'''
+		index1 = self.getGeometryIndex(sketchObj, constraintNode, 'refLine1')
+		index2 = self.getGeometryIndex(sketchObj, constraintNode, 'refLine2')
+		if ((index1 is not None) and (index2 is not None)):
+			key = 'Equal_%s_%s' %(index1, index2)
+			if (not key in self.mapConstraints):
+				constraint = Sketcher.Constraint('Equal', index1, index2)
+				index = self.addConstraint(sketchObj, constraint, key)
+				constraintNode.setSketchEntity(index, constraint)
+				logMessage('        ... added 2D length constraint between line %s and %s' %(index1, index2), LOG.LOG_INFO)
+		return
+
+	def addSketch2D_Geometric_EqualRadius2D(self, constraintNode, sketchObj):
+		'''
+		Create a  equal radius constraint
 		'''
 		index1 = self.getGeometryIndex(sketchObj, constraintNode, 'refCircle1')
 		index2 = self.getGeometryIndex(sketchObj, constraintNode, 'refCircle2')
@@ -729,10 +744,18 @@ class FreeCADImporter:
 			pointNode.setSketchEntity(-1, sketchObj.getPoint(-1, 1))
 		else:
 			pointNode.setSketchEntity(-2, None)
-		#	mode = isConstructionMode(pointNode)
-		#	part = Part.Point(createVector(x, y, 0))
-		#	addSketch2D(sketchObj, part, mode, pointNode)
-		#	logMessage('        ... added Point (%g/%g) = %s' %(x, y, pointNode.getSketchIndex()), LOG.LOG_INFO)
+		return
+
+	def addSketch3D_Point3D(self, pointNode, sketchObj):
+		if (len(pointNode.getVariable('entities')) == 0):
+			x = pointNode.getVariable('x')
+			y = pointNode.getVariable('y')
+			z = pointNode.getVariable('z')
+			logMessage('        ... added 3D-Point (%g/%g/%g) ...' %(x, y, z), LOG.LOG_INFO)
+			draft = Draft.makePoint(x, y, z)
+			if (sketchObj):
+				index = sketchObj.addObject(draft)
+				pointNode.setSketchEntity(index, draft)
 		return
 
 	def invalidateLine2D(self, lineNode):
@@ -764,7 +787,7 @@ class FreeCADImporter:
 		points = lineNode.getVariable('points')
 		mode = isConstructionMode(lineNode)
 		if (self.createLine2D(sketchObj, points[0], points[1], mode, lineNode) == False):
-			logMessage('        ... can\'t add Line length = 0.0!', LOG.LOG_INFO)
+			logMessage('        ... can\'t add Line with length = 0.0!', LOG.LOG_INFO)
 			self.invalidateLine2D(lineNode)
 		else:
 			logMessage('        ... added 2D line %s' %(lineNode.getSketchIndex()), LOG.LOG_INFO)
@@ -799,7 +822,7 @@ class FreeCADImporter:
 		y = getY(centerData)
 		r = circleNode.getVariable('r') * 10.0
 		points = getCirclePoints(circleNode)
-		mode = isConstructionMode(circleNode)
+		mode = (circleNode.next.getTypeName() == '64DE16F3')
 
 		part = Part.Circle(createVector(x, y, 0), createVector(0, 0, 1), r)
 		if (len(points) == 0):
@@ -861,16 +884,31 @@ class FreeCADImporter:
 
 	def addSketch2D_Text2D(self, textNode, sketchObj): return notSupportedNode(textNode)
 
-	def addSketch2D_Direction(self, directionNode, sketchObj):           return ignoreBranch(directionNode)
-	def addSketch2D_Frame2D(self, frameNode, sketchObj):                 return ignoreBranch(frameNode)
-	def addSketch2D_Transformation(self, transformationNode, sketchObj): return ignoreBranch(transformationNode)
-	def addSketch2D_Radius2D(self, radiusNode, sketchObj):               return ignoreBranch(radiusNode)
-	def addSketch2D_Spline2D_Point(self, infoNode, sketchObj):           return ignoreBranch(infoNode)
-	def addSketch2D_String(self, stringNode, sketchObj):                 return ignoreBranch(stringNode)
+	def addSketch2D_Direction(self, directionNode, sketchObj):             return ignoreBranch(directionNode)
+	def addSketch2D_Geometric_TextBox2D(self, frameNode, sketchObj):         return ignoreBranch(frameNode)
+	def addSketch2D_Geometric_Radius2D(self, radiusNode, sketchObj):       return ignoreBranch(radiusNode)
+	def addSketch2D_Geometric_SplineFitPoint2D(self, infoNode, sketchObj): return ignoreBranch(infoNode)
+	def addSketch2D_Geometric_Offset2D(self, node, sketchObj):
+		'''
+		Create an offset constraint.
+		'''
+		return
+	def addSketch2D_Geometric_HorizontalAlign2D(self, node, sketchObj):
+		'''
+		Create an horizontal align constraint.
+		'''
+		return
+	def addSketch2D_Geometric_Vertical2Align2D(self, node, sketchObj):
+		'''
+		Create an vertical align constraint.
+		'''
+		return
+	def addSketch2D_Transformation(self, transformationNode, sketchObj):   return ignoreBranch(transformationNode)
+	def addSketch2D_String(self, stringNode, sketchObj):                   return ignoreBranch(stringNode)
 
 	def addSketch2D_Arc2D(self, arcNode, sketchObj): return
 
-	def addSketch2D_Dimension_Horizonzal_Distance2D(self, dimensionNode, sketchObj):
+	def addSketch2D_Dimension_Horizontal_Distance2D(self, dimensionNode, sketchObj):
 		'''
 		Create a horizontal dimension constraint
 		'''
@@ -1005,7 +1043,13 @@ class FreeCADImporter:
 				logMessage('        ... added 2D diameter \'%s\' = %s (r = %s mm)' %(constraint.Name, dimension.getValue(), radius), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_Dimension_Angle(self,  dimensionNode, sketchObj):
+	def addSketch2D_Dimension_3PointAngle2D(self, node, sketchObj):
+		'''
+		Create an angle constraint between the three points.
+		'''
+		return
+
+	def addSketch2D_Dimension_Angle2D(self,  dimensionNode, sketchObj):
 		'''
 		Create a angle constraint
 		'''
@@ -1051,32 +1095,29 @@ class FreeCADImporter:
 				logMessage('        ... added 2D dimension angle \'%s\' = %s' %(constraint.Name, dimension.getValue()), LOG.LOG_INFO)
 		return
 
-	def addSketch2D_317B7346(self, node, sketchObj): return
-	def addSketch2D_3E55D947(self, node, sketchObj): return
-	def addSketch2D_3F4FA55F(self, node, sketchObj): return
-	def addSketch2D_4E4B14BC(self, node, sketchObj): return
-	def addSketch2D_5D8C859D(self, node, sketchObj): return
-	def addSketch2D_64DA5250(self, node, sketchObj): return
-	def addSketch2D_8F55A3C0(self, node, sketchObj): return
-	def addSketch2D_8FEC335F(self, node, sketchObj): return
-	def addSketch2D_A644E76A(self, node, sketchObj): return
-	def addSketch2D_BF3B5C84(self, node, sketchObj): return
-	def addSketch2D_C681C2E0(self, node, sketchObj):
-		# Some kind of parallel / symmetric constraint
-		#    *--------|-----*
-		# ____________|_________
-		#             |
-		#    *--------|-----*
-
-		l1 = node.getVariable('refLine1')
-		l2 = node.getVariable('refLine2')
+	def addSketch2D_Dimension_OffsetSpline2D(self, node, sketchObj):
+		'''
+		Create distnace contraint for an offset spline.
+		'''
 		return
 
+	def addSketch2D_OffsetSpline2D(self, node, sketchObj):
+		'''
+		Create an offset spline.
+		'''
+		return
+	def addSketch2D_SplineHandle2D(self, splineHandleNode, sketchObj):
+		'''
+		Create a spline handle.
+		'''
+		return
+
+	def addSketch2D_317B7346(self, node, sketchObj): return
+	def addSketch2D_5D8C859D(self, node, sketchObj): return
+	def addSketch2D_8FEC335F(self, node, sketchObj): return
 	def addSketch2D_DC93DB08(self, node, sketchObj): return
-	def addSketch3D_0B86AD43(self, node, sketchObj): return
-	def addSketch3D_10B6ADEF(self, node, sketchObj): return
+
 	def addSketch3D_6A3EEA31(self, node, sketchObj): return
-	def addSketch3D_E8D30910(self, node, sketchObj): return
 
 	def Create_Sketch2D_Node(self, sketchObj, node):
 		if (node.isHandled() == False):
@@ -1124,7 +1165,7 @@ class FreeCADImporter:
 		logMessage('        adding 2D-Sketch \'%s\'...' %(name), LOG.LOG_INFO)
 
 		# Clean up Points
-		lst = sketchNode.getVariable('lst0')
+		lst = sketchNode.getVariable('entities')
 		self.pointDict = {}
 		for ref in lst:
 			if (ref.node.typeName == 'Point2D'):
@@ -1277,12 +1318,12 @@ class FreeCADImporter:
 		lAxis = sqrt(dx*dx + dy*dy + dz*dz)
 		val5 = getPropertyValue(properties, 0x5, 'u16_0')
 		midplane =  IFF(val5 == 2, 1, 0)
-		angle1Ref   = getPropertyValue(properties, 0x4, 'values')
+		angle1Ref   = getPropertyValue(properties, 0x4, 'valueNominal')
 
 		revolution = None
 		if (angle1Ref):
 			sketch = sketchNode.getSketchEntity()
-			alpha = Angle(angle1Ref[0])
+			alpha = Angle(angle1Ref, pi/180.0, '\xC2\xB0')
 
 			#revolution = self.doc.addObject('PartDesign::Revolution', name)
 			#revolution.Sketch = sketch
@@ -1293,11 +1334,11 @@ class FreeCADImporter:
 			revolution.Axis = (dx/lAxis, dy/lAxis, dz/lAxis)
 			revolution.Base = (x1, y1, z1)
 
-			angle2Ref   = getPropertyValue(properties, 0x12, 'values')
+			angle2Ref   = getPropertyValue(properties, 0x12, 'valueNominal')
 			if (angle2Ref is None):
 				logMessage('        adding revolution \'%s\' (%s)-(%s) based on \'%s\' (rev=%s, sym=%s, alpha=%s) ...' %(name, revolution.Base, revolution.Axis, sketchName, reversed, midplane, alpha), LOG.LOG_INFO)
 			else:
-				beta = Angle(angle2Ref[0])
+				beta = Angle(angle2Ref, pi/180.0, '\xC2\xB0')
 				midplane = True
 				logMessage('        adding revolution \'%s\' based on \'%s\' (rev=%s, sym=%s, alpha=%s, beta=%s) #BUGGY#...' %(name, sketchName, reversed, midplane, alpha, beta), LOG.LOG_INFO)
 				alpha.x += beta.x
@@ -1384,7 +1425,7 @@ class FreeCADImporter:
 		#fillet.ViewObject.PointColor = source.ViewObject.PointColor
 		return
 
-	def Create_FxPhase(self, phaseNode):
+	def Create_FxChamfer(self, phaseNode):
 		#source = phaseNode.getSketchEntity()
 		#fillet = self.doc.addObject('Part::Phase', name)
 		#fillet.Base = source
@@ -1397,31 +1438,31 @@ class FreeCADImporter:
 		#fillet.ViewObject.PointColor = source.ViewObject.PointColor
 		return
 
-	def Create_FxBoolean(self, booleanNode):             return
-	def Create_FxBoundaryPatch(self, boundaryPatchNode): return
-	def Create_FxDrill(self, drillNode):                 return
-	def Create_FxLoft(self, loftNode):                   return
-	def Create_FxShell(self, shellNode):                 return
-	def Create_FxSplit(self, splitNode):                 return
-	def Create_FxThicken(self, thickenNode):             return
-	def Create_FxThread(self, threadNode):
-		# https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
+	def Create_FxBoundaryPatch(self, boundaryPatchNode):     return
+	def Create_FxCircularPattern(self, patternNode):         return
+	def Create_FxCoil(self, coilNode):                       return
+	def Create_FxDecal(self, decalNode):                     return
+	def Create_FxDirectEdit(self, directEditNode):           return
+	def Create_FxDrill(self, drillNode):                     return
+	def Create_FxEmboss(self, embossNode):                   return
+	def Create_FxExtend(self, extendNode):                   return
+	def Create_FxLoft(self, loftNode):                       return
+	def Create_FxMirror(self, mirrorNode):                   return
+	def Create_FxNonParametricBase(self, nonParametricNode): return
+	def Create_FxRectangularPattern(self, patternNode):      return
+	def Create_FxRevolve(self, revolveNode):                 return
+	def Create_FxRib(self, ribNode):                         return
+	def Create_FxSculpt(self, sculptNode):                   return
+	def Create_FxShell(self, shellNode):                     return
+	def Create_FxSplit(self, splitNode):                     return
+	def Create_FxSweep(self, sweepNode):                     return
+	def Create_FxThicken(self, thickenNode):                 return
+	def Create_FxThread(self, threadNode): # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
 		return notSupportedNode(threadNode)
-	def Create_FxTrim(self, trimNode):                   return
-	def Create_SolidBody(self, solidBodyNode):           return
-	def Create_Feature(self, solidBodyNode):             return
+	def Create_FxTrim(self, trimNode):                       return
 
-	def addSketch3D_Point3D(self, pointNode, sketchObj):
-		if ((len(pointNode.getVariable('refs')) == 0) and (len(pointNode.getVariable('lst1')) == 0)):
-			x = pointNode.getVariable('x') * 10.0
-			y = pointNode.getVariable('y') * 10.0
-			z = pointNode.getVariable('z') * 10.0
-			logMessage('        ... added 3D-Point (%g/%g/%g) ...' %(x, y, z), LOG.LOG_INFO)
-			draft = Draft.makePoint(x, y, z)
-			if (sketchObj):
-				index = sketchObj.addObject(draft)
-				pointNode.setSketchEntity(index, draft)
-		return
+	def Create_SolidBody(self, solidBodyNode): return
+	def Create_Feature(self, featureNode):     return
 
 	def addSketch3D_Line3D(self, lineNode, sketchObj):
 #		x1 = lineNode.getVariable('x1') * 10.0
@@ -1440,62 +1481,6 @@ class FreeCADImporter:
 #			lineNode.setSketchEntity(index, draft)
 		return
 
-	def addSketch3D_Radius3D(self, circleNode, sketchObj):
-		name = getNodeName(circleNode)
-		lst0 = circleNode.getVariable('lst0')
-		center = lst0[0].getBranchNode()
-		if (center.getTypeName() == 'Circle3D'):
-			#TODO: add concentric constraint
-			center = getNode(center, 'refCenter')
-		type = lst0[1].getBranchNode()
-		xc = center.getVariable('x') * 10.0
-		yc = center.getVariable('y') * 10.0
-		zc = center.getVariable('z') * 10.0
-		if (type.getTypeName() == 'Circle3D'):
-			circle = type
-			# r = circle.getVariable('r') * 10.0
-			points = circle.getVariable('points')
-			x1 = getPropertyValue(points, 1, 'x')
-			y1 = getPropertyValue(points, 1, 'y')
-			z1 = getPropertyValue(points, 1, 'z')
-			x2 = getPropertyValue(points, 0, 'x')
-			y2 = getPropertyValue(points, 0, 'y')
-			z2 = getPropertyValue(points, 0, 'z')
-			r = sqrt(((xc - x1) * (xc - x1)) + ((yc - y1) * (yc - y1)) + ((zc - z1) * (zc - z1)))
-			a = calcAngle3D(xc, yc, zc, x1, y1, z1)
-			b = calcAngle3D(xc, yc, zc, x2, y2, z2)
-			circle = self.doc.addObject('Part::Circle', name)
-			circle.Radius = r
-			# Plane : C + r(P1-C) + s (P2-C)
-			# N = R x S
-			xa = x1 - xc
-			ya = y1 - yc
-			za = z1 - zc
-			xb = x2 - xc
-			yb = y2 - yc
-			zb = z2 - zc
-			xn = ya*zb - za*yb
-			yn = za*xb - xa*zb
-			zn = xa*yb - ya*xb
-
-			an = calcAngle3D(xc, yc, zc, xn, yn, zn)
-			circle.Placement = FreeCAD.Placement(createVector(xc, yc, zc), createRotation(createVector(xn, yn, zn), an))
-			if ((a is None) and (b is None)):
-				logMessage('        ... added 3D-Circle M=(%g/%g/%g) R=%g ...' %(xc, yc, zc, r), LOG.LOG_INFO)
-				circle.Angle0 =   0.0
-				circle.Angle1 = 360.0
-			else:
-				circle.Angle0 = a.x
-				circle.Angle1 = b.x
-				logMessage('        ... added 3D-Arc-Circle M=(%g/%g/%g) R=%g alpha=%s beta=%s ...' %(xc, yc, zc, r, a, b), LOG.LOG_INFO)
-			if (sketchObj):
-				index = sketchObj.addObject(circle)
-				circleNode.setSketchEntity(index, circle)
-		elif (type.getTypeName() == 'Ellipse3D'):
-			pass
-		else:
-			logWarning('>W1231: ... unknown 3D-Circle \'%s\' M=(%g/%g/%g)!' %(type.getTypeName(), xc, yc, zc))
-		return
 
 	def addSketch3D_Spline3D_Curve(self, splineNode, sketchObj):
 		points = []
@@ -1513,20 +1498,26 @@ class FreeCADImporter:
 			splineNode.setSketchEntity(index, draft)
 		return
 
-	def addSketch3D_Plane(self, lineNode, sketchObj):             return
-	def addSketch3D_SpiralCurve(self, spiralNode, sketchObj):     return
-	def addSketch3D_Spline3D_Bezier(self, splineNode, sketchObj): return
 	def addSketch3D_Bezier3D(self, branchNode, sketchObj):        return
+	def addSketch3D_Circle3D(self, circleNode, sketchObj):        return
+	def addSketch3D_Plane(self, lineNode, sketchObj):             return
+	def addSketch3D_Spline3D_Fixed(self, splineNode, sketchObj):  return
+	def addSketch3D_Spline3D_Bezier(self, splineNode, sketchObj): return
+	def addSketch3D_Spiral3D_Curve(self, spiralNode, sketchObj):  return
 
-	def addSketch3D_Circle3D(self, radiusNode, sketchObj):                       return ignoreBranch(radiusNode)
+	def addSketch3D_Dimension_Length3D(self, dimensionNode, sketchObj):          return notSupportedNode(dimensionNode)
 
-	def addSketch3D_Constraint_Coincident3D(self, constraintNode, sketchObj):    return notSupportedNode(constraintNode)
-	def addSketch3D_Constraint_Colinear3D(self, constraintNode, sketchObj):      return notSupportedNode(constraintNode)
-	def addSketch3D_Constraint_Horizontal3D(self, constraintNode, sketchObj):    return notSupportedNode(constraintNode)
-	def addSketch3D_Constraint_Parallel3D(self, constraintNode, sketchObj):      return notSupportedNode(constraintNode)
-	def addSketch3D_Constraint_Perpendicular3D(self, constraintNode, sketchObj): return notSupportedNode(constraintNode)
-	def addSketch3D_Constraint_Tangential3D(self, constraintNode, sketchObj):    return notSupportedNode(constraintNode)
-	def addSketch3D_Constraint_Vertical3D(self, constraintNode, sketchObj):      return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Bend3D(self, constraintNode, sketchObj):           return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Coincident3D(self, constraintNode, sketchObj):     return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Collinear3D(self, constraintNode, sketchObj):      return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Helical3D(self, constraintNode, sketchObj):        return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Horizontal3D(self, constraintNode, sketchObj):     return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Smooth3D(self, constraintNode, sketchObj):         return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Parallel3D(self, constraintNode, sketchObj):       return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Perpendicular3D(self, constraintNode, sketchObj):  return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Radius3D(self, constraintNode, sketchObj):         return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Tangential3D(self, constraintNode, sketchObj):     return notSupportedNode(constraintNode)
+	def addSketch3D_Geometric_Vertical3D(self, constraintNode, sketchObj):       return notSupportedNode(constraintNode)
 
 	def Create_Sketch3D(self, sketchNode):
 		name = getNodeName(sketchNode)
@@ -1535,18 +1526,17 @@ class FreeCADImporter:
 		if (self.root):
 			self.root.addObject(sketchObj)
 
-		child = sketchNode.first
-		while (child):
-			if (child.isRef):
-				if (child.isHandled() == False):
-					try:
-						addSketchObj = getattr(self, 'addSketch3D_%s' %(child.getTypeName()))
-						addSketchObj(child, sketchObj)
-					except AttributeError as e:
-						logError('Warning: Don\'t know how to add %s to 3D sketch - %s'  %(child.getTypeName(), e))
-						# pass
-					except:
-						logError('>E: ' + traceback.format_exc())
+		for ref in sketchNode.getVariable('entities'):
+			child = ref.getBranchNode()
+			if (child.isHandled() == False):
+				try:
+					addSketchObj = getattr(self, 'addSketch3D_%s' %(child.getTypeName()))
+					addSketchObj(child, sketchObj)
+				except AttributeError as e:
+					logError('Warning: Don\'t know how to add %s to 3D sketch - %s'  %(child.getTypeName(), e))
+					# pass
+				except:
+					logError('>E: ' + traceback.format_exc())
 			child.setHandled(True)
 			child = child.next
 		sketchNode.setSketchEntity(-1, sketchObj)
@@ -1584,12 +1574,11 @@ class FreeCADImporter:
 #		return
 
 	def Create_Body(self, bodyNode):                               return ignoreBranch(bodyNode)
-	def Create_RDxBody(self, bodyNode):                            return ignoreBranch(bodyNode)
 	def Create_Circle3D(self, radiusNode):                         return ignoreBranch(radiusNode)
-	def Create_Constraint_Coincident3D(self, constraintNode):      return ignoreBranch(constraintNode)
-	def Create_Constraint_Colinear3D(self, constraintNode):        return ignoreBranch(constraintNode)
-	def Create_Constraint_Perpendicular3D(self, constraintNode):   return ignoreBranch(constraintNode)
-	def Create_Stop(self, stopNode):                               return ignoreBranch(stopNode)
+	def Create_Geometric_Coincident3D(self, constraintNode):       return ignoreBranch(constraintNode)
+	def Create_Geometric_Collinear3D(self, constraintNode):        return ignoreBranch(constraintNode)
+	def Create_Geometric_Perpendicular3D(self, constraintNode):    return ignoreBranch(constraintNode)
+	def Create_EndOfFeatures(self, stopNode):                      return ignoreBranch(stopNode)
 	def Create_Group2D(self, groupNode):                           return ignoreBranch(groupNode)
 	def Create_Group3D(self, groupNode):                           return ignoreBranch(groupNode)
 	def Create_Point3D(self, pointNode):                           return ignoreBranch(pointNode)
@@ -1597,32 +1586,28 @@ class FreeCADImporter:
 	def Create_RevolutionTransformation(self, transformationNode): return ignoreBranch(transformationNode)
 	def Create_Sketch2DPlacementPlane(self, placementNode):        return ignoreBranch(surfaceNode)
 	def Create_Sketch2DPlacement(self, placementNode):             return ignoreBranch(placementNode)
+	def Create_SurfaceBody(self, surfaceBodyNode):                 return ignoreBranch(surfaceBodyNode)
 	def Create_Text2D(self, textNode):                             return notSupportedNode(textNode)
-	def Create_ValueByte(self, valueNode):                         return ignoreBranch(valueNode)
+	def Create_ParameterBoolean(self, valueNode):                  return ignoreBranch(valueNode)
 
 	def Create_92637D29(self, node):
 		# Revolution.Extends1
 		return ignoreBranch(node)
 
-	def Create_C7A06AC2(self, node):
-		#Revolution.Extends2
-		return ignoreBranch(node)
 
-	def Create_Bezier3D(self, node):                     return
-	def Create_DeselTable(self, deselTableNode):         return
-	def Create_Dimension(self, dimensionNode):           return
-	def Create_Direction(self, directionNode):           return
-	def Create_MirrorPattern(self, patternNode):         return
-	def Create_Label(self, labelNode):                   return
-	def Create_Transformation(self, transformationNode): return
-	def Create_RectangularPattern(self, patternNode):    return
-	def Create_SpiralCurve(self, curveNode):             return
-	def Create_Spline3D_Bezier(self, bezierNode):        return
+	def Create_Bezier3D(self, node):                      return
+	def Create_DerivedPart(self, derivedPartNode):        return
+	def Create_DeselTable(self, deselTableNode):          return
+	def Create_Dimension(self, dimensionNode):            return
+	def Create_Direction(self, directionNode):            return
+	def Create_Label(self, labelNode):                    return
+	def Create_Transformation(self, transformationNode):  return
+	def Create_Spline3D_Bezier(self, bezierNode):         return
+	def Create_UserCoordinateSystem(self, usrCrdSysNode): return
 
 	def Create_029DAD70(self, node): return
 	def Create_03AA812C(self, node): return
 	def Create_04D026D2(self, node): return
-	def Create_06977131(self, node): return
 	def Create_06DCEFA9(self, node): return
 	def Create_07910C0A(self, node): return
 	def Create_07910C0B(self, node): return
@@ -1647,10 +1632,8 @@ class FreeCADImporter:
 	def Create_1B48E9DA(self, node): return
 	def Create_1DEE2CF3(self, node): return
 	def Create_1EF28758(self, node): return
-	def Create_1F6D59F6(self, node): return
 	def Create_20976662(self, node): return
 	def Create_2148C03C(self, node): return
-	def Create_255D7ED7(self, node): return
 	def Create_27E9A56F(self, node): return
 	def Create_2801D6C6(self, node): return
 	def Create_2B48CE72(self, node): return
@@ -1660,7 +1643,6 @@ class FreeCADImporter:
 	def Create_3170E5B0(self, node): return
 	def Create_31F02EED(self, node): return
 	def Create_339807AC(self, node): return
-	def Create_34FAB548(self, node): return
 	def Create_38C2654E(self, node): return
 	def Create_38C74735(self, node): return
 	def Create_39A41830(self, node): return
@@ -1675,16 +1657,17 @@ class FreeCADImporter:
 	def Create_424EB7D7(self, node): return
 	def Create_46D500AA(self, node): return
 	def Create_4AC78A71(self, node): return
-	def Create_4ACA204D(self, node): return
 	def Create_4B3150E8(self, node): return
 	def Create_4E86F047(self, node): return
-	def Create_4FB10CB8(self, node): return
+	def Create_4E86F048(self, node): return
+	def Create_4E86F04A(self, node): return
 	def Create_4FD0DC2A(self, node): return
 	def Create_528A064A(self, node): return
 	def Create_55279EE0(self, node): return
 	def Create_578432A6(self, node): return
 	def Create_5838B762(self, node): return
 	def Create_5838B763(self, node): return
+	def Create_5B10BF5B(self, node): return
 	def Create_5B8EC461(self, node): return
 	def Create_5CB011E2(self, node): return
 	def Create_5D807360(self, node): return
@@ -1709,7 +1692,6 @@ class FreeCADImporter:
 	def Create_7DA7F733(self, node): return
 	def Create_7DAA0032(self, node): return
 	def Create_7F4A3E30(self, node): return
-	def Create_7F936BAA(self, node): return
 	def Create_831EBCE9(self, node): return
 	def Create_83D31932(self, node): return
 	def Create_86173E3F(self, node): return
@@ -1735,7 +1717,6 @@ class FreeCADImporter:
 	def Create_9C8C1297(self, node): return
 	def Create_9DA736B0(self, node): return
 	def Create_A244457B(self, node): return
-	def Create_A29C84B7(self, node): return
 	def Create_A31E29E0(self, node): return
 	def Create_A3B0404C(self, node): return
 	def Create_A477243B(self, node): return
@@ -1759,7 +1740,6 @@ class FreeCADImporter:
 	def Create_BF8B8868(self, node): return
 	def Create_C1887310(self, node): return
 	def Create_C6E21E1A(self, node): return
-	def Create_CA02411F(self, node): return
 	def Create_CA674C90(self, node): return
 	def Create_CB6C0A56(self, node): return
 	def Create_CCD87CBA(self, node): return
@@ -1768,8 +1748,8 @@ class FreeCADImporter:
 	def Create_D2D440C0(self, node): return
 	def Create_D2DA2CF0(self, node): return
 	def Create_D524C30A(self, node): return
-	def Create_D5DAAA83(self, node): return
 	def Create_D61732C1(self, node): return
+	def Create_D739EDBB(self, node): return
 	def Create_D80CE357(self, node): return
 	def Create_D83EF271(self, node): return
 	def Create_D8A9C970(self, node): return
@@ -1831,29 +1811,80 @@ class FreeCADImporter:
 					return seg
 		return None
 
+	def addParameterTableTolerance(self, table, r, tolerance):
+		if (tolerance):
+			table.set('D%d' %(r), tolerance)
+			return '; D%d=\'%s\'' %(r, tolerance)
+		return ''
+
+	def addParameterTableComment(self, table, r, commentRef):
+		if (commentRef):
+			table.set('E%d' %(r), commentRef.getName())
+			return '; E%d=\'%s\'' %(r, commentRef.getName())
+		return ''
+
 	def createParameterTable(self, partNode):
-		parameters = partNode.getVariable('parameters')
+		parameterRefs = partNode.getVariable('parameters')
 		table = self.doc.addObject('Spreadsheet::Sheet', 'T_Parameters')
 		logMessage('    adding parameters table...', LOG.LOG_INFO)
-		r = 1
-		for key in parameters:
-			table.set('A%s' %(r), '%s' %(key))
+		table.set('A1', 'Parameter')
+		table.set('B1', 'Value')
+		table.set('C1', 'Fromula')
+		table.set('D1', 'Tolerance')
+		table.set('E1', 'Comment')
+		r = 2
+		keys = parameterRefs.keys()
+		keys.sort(key=str.lower)
+		for key in keys:
+			mdlValue = ''
+			tlrValue = ''
+			remValue = ''
 
-			valueNode = parameters[key].getBranchNode()
+			valueNode = parameterRefs[key].getBranchNode()
 			valueNode.setVariable('alias', 'T_Parameters.%s_' %(key))
-			if (valueNode.getTypeName() == 'Parameter'):
+			typeName = valueNode.getTypeName()
+			if (typeName == 'Parameter'):
 				key = '%s' %(key)
-				value = valueNode.getValue()
-				if (isinstance(value, AbstractValue)):
-					table.set('B%s' %(r), '%s' %(value.toStandard()))
-				else:
-					table.set('B%s' %(r), '%s' %(value))
-			else:
+				value = valueNode.getFormula(False)
+				nominalValue = valueNode.getVariable('valueNominal')
+				nominalFactor = valueNode.data.getUnitFactor()
+				nominalOffset = valueNode.data.getUnitOffset()
+				nominalUnit  = valueNode.data.getUnitName()
+				if (len(nominalUnit) > 0): nominalUnit = ' ' + nominalUnit
+
+				#formula = '%s%s' %((nominalValue / nominalFactor)  - nominalOffset, nominalUnit)
+				formula = valueNode.getFormula(True)
+				table.set('A%d' %(r), '%s' %(key))
+				table.set('B%d' %(r), '%s' %(value))
+				table.set('C%d' %(r), '%s' %(formula))
+				mdlValue = '; C%s=%s' %(r, formula)
+				tlrValue = self.addParameterTableTolerance(table, r, valueNode.getVariable('tolerance'))
+				remValue = self.addParameterTableComment(table, r, valueNode.getVariable('label'))
+			elif (typeName == 'ParameterText'):
+				key = '%s' %(key)
+				value = valueNode.getVariable('value')
+				table.set('A%d' %(r), '%s' %(key))
+				table.set('B%d' %(r), '\'%s' %(value))
+				remValue = self.addParameterTableComment(table, r, valueNode.getVariable('label'))
+			elif (typeName == 'ParameterBoolean'):
+				key = '%s' %(key)
+				value = valueNode.getVariable('value')
+				table.set('A%d' %(r), '%s' %(key))
+				table.set('B%d' %(r), '%s' %(value))
+				remValue = self.addParameterTableComment(table, r, valueNode.getVariable('label'))
+			elif (typeName != 'RDxVar'):
 				value = valueNode
-				table.set('B%s' %(r), '%s' %(value))
-			table.setAlias('B%s' %(r), '%s_' %(key))
-			logMessage('        A%s=\'%s\'; B%s=%s' %(r, key, r, value), LOG.LOG_INFO)
-			r += 1
+				table.set('A%d' %(r), '%s' %(key))
+				table.set('B%d' %(r), '%s' %(value))
+				remValue = self.addParameterTableComment(table, r, valueNode.getVariable('label'))
+			if (typeName != 'RDxVar'):
+				try:
+					aliasValue = '%s_' %(key)
+					table.setAlias('B%d' %(r), aliasValue)
+				except Exception as e:
+					logError('    >ERROR: Can\'t set alias name for B%d - invalid name \'%s\'!' %(r, aliasValue))
+				logMessage('        A%d=\'%s\'; B%d=%s%s%s%s' %(r, key, r, value, mdlValue, tlrValue, remValue), LOG.LOG_INFO)
+				r += 1
 		return
 
 	def importModel(self, model):

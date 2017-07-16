@@ -14,7 +14,7 @@ from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.2.0'
 __status__      = 'In-Development'
 
 class AppReader(SegmentReader):
@@ -398,7 +398,6 @@ class AppReader(SegmentReader):
 		# i = self.skipBlockSize(i)
 		# i = self.skipBlockSize(i)
 		i = 0
-		node.printable = False
 		return i
 
 	def Read_9E11F9F6(self, node):
