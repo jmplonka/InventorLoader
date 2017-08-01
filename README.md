@@ -6,6 +6,7 @@ Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD. Until now only the
   - https://pypi.python.org/pypi/xlrd: for reading embedded Excel workbooks
   - http://pypi.python.org/pypi/xlutils: for preparing imported Excel workbooks to be stored
   - https://pypi.python.org/pypi/xlwt: for writing embedded Excel workbooks
+  - http://www.decalage.info/python/olefileio olefile for reading Microsoft OLE(2) files.
 
 ## Status:
 > Alpha!
@@ -24,7 +25,7 @@ That allows it to embed Excel workboos e.g.
 | RSeDb | Database | done | done | done |
 | RSeSegInfo | Content Structure | structure | structure | structure |
 | M... | Segment Structre info | started | started | started | started |
-| B... | Segment Data | sarted |  |  |
+| B... | Segment Data | done | started | started |
 | Workbook | Spreadsheet | done | done | done |
 
 ## History:
