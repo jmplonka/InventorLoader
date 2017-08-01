@@ -60,7 +60,10 @@ That allows it to embed Excel workboos e.g.
 	they will be replaced by their nominal value and unit.
 
 - 0.6: Only Code Review
-	Most sections found in LT samples are now decoded (structure)
+	Most sections found in LT samples are now decoded (structured)
+
+- 0.7: Preparation for supporting Featrues (except iFeature)
+	Most sections found in pro samples (2010..2018) are now decoded (structured)
 
 ## Next steps in unsorted order:
 - Features like Pockets, Revolutions, etc.

@@ -15,7 +15,7 @@ from math            import log10
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.0'
+__version__     = '0.2.1'
 __status__      = 'In-Development'
 
 def isList(data, code):
@@ -67,22 +67,27 @@ class AbstractNode():
 	_TYP_LIST_3D_FLOAT32_      = 0x800B
 	_TYP_LIST_3D_FLOAT64_      = 0x800C
 	_TYP_LIST_FONT_            = 0x8011
+	_TYP_LIST_X_REF_           = 0x8012
 
 	_TYP_MAP_KEY_KEY_          = 0x7001
 	_TYP_MAP_KEY_REF_          = 0x7002
 	_TYP_MAP_KEY_X_REF_        = 0x7003
-	_TYP_MAP_TEXT8_REF_        = 0x7004
-	_TYP_MAP_TEXT8_X_REF_      = 0x7005
-	_TYP_MAP_TEXT16_REF_       = 0x7006
-	_TYP_MAP_TEXT16_X_REF_     = 0x7007
-	_TYP_MAP_X_REF_KEY_        = 0x7008
-	_TYP_MAP_X_REF_FLOAT64_    = 0x7009
-	_TYP_MAP_X_REF_X_REF_      = 0x700A
-	_TYP_MAP_X_REF_LIST2_XREF_ = 0x700B
-	_TYP_MAP_UUID_UINT32_      = 0x700C
-	_TYP_MAP_U16_U16_          = 0x700D
+	_TYP_MAP_REF_REF_          = 0x7004
+	_TYP_MAP_TEXT8_REF_        = 0x7005
+	_TYP_MAP_TEXT8_X_REF_      = 0x7006
+	_TYP_MAP_TEXT16_REF_       = 0x7007
+	_TYP_MAP_TEXT16_X_REF_     = 0x7008
+	_TYP_MAP_X_REF_KEY_        = 0x7009
+	_TYP_MAP_X_REF_FLOAT64_    = 0x700A
+	_TYP_MAP_X_REF_2D_UINT32_  = 0x700B
+	_TYP_MAP_X_REF_X_REF_      = 0x700C
+	_TYP_MAP_X_REF_LIST2_XREF_ = 0x700D
+	_TYP_MAP_UUID_UINT32_      = 0x700E
+	_TYP_MAP_UUID_X_REF        = 0x700F
+	_TYP_MAP_U16_U16_          = 0x7010
 
-	_TYP_MAP_MDL_TXN_MGR_      = 0x6000
+	_TYP_MAP_MDL_TXN_MGR_1_    = 0x6001
+	_TYP_MAP_MDL_TXN_MGR_2_    = 0x6002
 
 	def __init__(self):
 		self.typeID       = None
@@ -502,6 +507,20 @@ class AbstractNode():
 						i = self.ReadList2(i, AbstractNode._TYP_FONT_, 'lst_tmp')
 						val = self.get('lst_tmp')
 						self.delete('lst_tmp')
+					elif (t == AbstractNode._TYP_LIST_X_REF_):
+						if (skipBlockSize):
+							i += 4
+						i = self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst_tmp')
+						i = self.ReadCrossRef(i, 'tmp')
+						val = [self.get('lst_tmp'), self.get('tmp')]
+						if (skipBlockSize):
+							i += 4
+						self.delete('lst_tmp')
+					elif (typ == AbstractNode._TYP_MAP_X_REF_KEY_):
+						i = self.ReadCrossRef(i, 'tmp', j, False)
+						key = self.get('tmp')
+						val, i = getUInt32(self.data, i)
+						self.content += '%s[%04X: (%X)]' %(sep, key.index, val)
 					else:
 						val, i = getUInt16A(self.data, i, 2)
 						str = '[%s]' %(IntArr2Str(val[0], 1))
@@ -612,11 +631,22 @@ class AbstractNode():
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%04X: (%s)]' %(sep, key, val)
+				elif (typ == AbstractNode._TYP_MAP_REF_REF_):
+					i = self.ReadChildRef(i, 'tmp', j, False)
+					key = self.get('tmp')
+					i = self.ReadChildRef(i, 'tmp', j, False)
+					val = self.get('tmp')
+					self.content += '%s[(%s): (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_X_REF_KEY_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getUInt32(self.data, i)
 					self.content += '%s[%04X: (%X)]' %(sep, key.index, val)
+				elif (typ == AbstractNode._TYP_MAP_X_REF_2D_UINT32_):
+					i = self.ReadCrossRef(i, 'tmp', j, False)
+					key = self.get('tmp')
+					val, i = getUInt32A(self.data, i, 2)
+					self.content += '%s[%04X: (%s)]' %(sep, key.index, IntArr2Str(val, 4))
 				elif (typ == AbstractNode._TYP_MAP_X_REF_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
@@ -639,6 +669,11 @@ class AbstractNode():
 					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
 					val, i = getUInt32(self.data, i)
 					self.content += '%s[%s: %s]' %(sep, key, val)
+				elif (typ == AbstractNode._TYP_MAP_UUID_X_REF):
+					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
+					i = self.ReadCrossRef(i, 'tmp', j, False)
+					val = self.get('tmp')
+					self.content += '%s[%s: %04X]' %(sep, key, val.index)
 				elif (typ == AbstractNode._TYP_MAP_TEXT8_REF_):
 					key, i = getLen32Text8(self.data, i)
 					i = self.ReadChildRef(i, 'tmp', j, False)
@@ -654,7 +689,7 @@ class AbstractNode():
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_):
+				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_1_):
 					key = len(lst)
 					val = ModelerTxnMgr()
 					i = self.ReadCrossRef(i, 'tmp', j, False)
@@ -667,6 +702,19 @@ class AbstractNode():
 						i += 4
 					val.u32_1, i = getUInt32(self.data, i)
 					val.u8_1, i  = getUInt8(self.data, i)
+					val.s32_0, i  = getSInt32(self.data, i)
+					if (skipBlockSize):
+						i += 8
+					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
+				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_2_):
+					key = len(lst)
+					val = ModelerTxnMgr()
+					i = self.ReadCrossRef(i, 'tmp', j, False)
+					val.ref_1 = self.get('tmp')
+					val.u32_0, i = getUInt32(self.data, i)
+					i =  self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'tmp')
+					val.lst = self.get('tmp')
+					val.u8_0, i  = getUInt8(self.data, i)
 					val.s32_0, i  = getSInt32(self.data, i)
 					if (skipBlockSize):
 						i += 8
@@ -747,12 +795,13 @@ class AbstractNode():
 		self.typeName = '%08X' %(self.typeID.time_low)
 
 	def getUnitOffset(self):
-		unit = self.get('refUnit')
-		numerators = unit.getVariable('numerators')
-		if (numerators):
-			offset = numerators[0].getVariable('UnitOffset')
-			if (offset is not None):
-				return offset
+		unitRef = self.get('refUnit')
+		if (unitRef):
+			numerators = unitRef.getVariable('numerators')
+			if (numerators):
+				offset = numerators[0].getVariable('UnitOffset')
+				if (offset is not None):
+					return offset
 		return 0.0
 
 	def getUnitFactors(self, units):
@@ -777,21 +826,20 @@ class AbstractNode():
 		return factor
 
 	def getUnitFactor(self):
-		unit = self.get('refUnit')
-
-		typ   = unit.node
-
-		numerators = self.getUnitFactors(typ.get('numerators'))
-		denominators = self.getUnitFactors(typ.get('denominators'))
-		factor = numerators / denominators
-
-		unit = typ.get('refDerived')
-		if (unit):
-			typ = unit.node
-
+		factor = 1.0
+		unitRef = self.get('refUnit')
+		if (unitRef):
+			typ   = unitRef.node
 			numerators = self.getUnitFactors(typ.get('numerators'))
 			denominators = self.getUnitFactors(typ.get('denominators'))
-			factor = factor * numerators / denominators
+			factor = numerators / denominators
+
+			derivedRef = typ.get('refDerived')
+			if (derivedRef):
+				typ = derivedRef.node
+				numerators = self.getUnitFactors(typ.get('numerators'))
+				denominators = self.getUnitFactors(typ.get('denominators'))
+				factor = factor * numerators / denominators
 		return factor
 
 	def getUnitFormula(self, units):
@@ -853,16 +901,19 @@ class AbstractNode():
 		Add a new derived unit! But how?
 		Meanwhile the derived units are ignored!
 		'''
-		unitData = self.get('refUnit').node
+		unitRef  = self.get('refUnit')
+		unitName = ''
+		if (unitRef):
+			unitData = unitRef.node
 
-#		derivedRef = unitData.get('refDerived')
-#		if (derivedRef):
-#			unitData = derivedRef.node
+#			derivedRef = unitData.get('refDerived')
+#			if (derivedRef):
+#				unitData = derivedRef.node
 
-		unitName     = self.getUnitFormula(unitData.get('numerators'))
-		denominators = self.getUnitFormula(unitData.get('denominators'))
-		if (len(denominators) > 0):
-			unitName += '/' + denominators
+			unitName     = self.getUnitFormula(unitData.get('numerators'))
+			denominators = self.getUnitFormula(unitData.get('denominators'))
+			if (len(denominators) > 0):
+				unitName += '/' + denominators
 
 		return unitName
 

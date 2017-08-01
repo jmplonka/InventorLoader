@@ -14,7 +14,7 @@ from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.0'
+__version__     = '0.2.1'
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
@@ -151,6 +151,8 @@ def buildBranchRef(parent, file, nodes, node, level, ref):
 		branch = ParameterNode(node, True)
 	elif (node.typeName == 'ParameterText'):
 		branch = ParameterTextNode(node, True)
+	elif (node.typeName == 'Enum'):
+		branch = EnumNode(node, True)
 	elif (node.typeName == 'Feature'):
 		branch = FeatureNode(node, True)
 	elif (node.typeName == 'ParameterBoolean'):
@@ -191,6 +193,10 @@ def buildBranch(parent, file, nodes, node, level, ref):
 	branch = None
 	if (node.typeName == 'Parameter'):
 		branch = ParameterNode(node, False)
+	elif (node.typeName == 'ParameterText'):
+		branch = ParameterTextNode(node, False)
+	elif (node.typeName == 'Enum'):
+		branch = EnumNode(node, True)
 	elif (node.typeName == 'Feature'):
 		branch = FeatureNode(node, False)
 	elif (node.typeName == 'ParameterBoolean'):
