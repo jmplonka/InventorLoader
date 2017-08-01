@@ -6311,7 +6311,7 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		i = node.ReadLen32Text16(i)
-		i = node.ReadChildRef(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt32(i, 'valueNominal')
 		i = node.ReadUInt32(i, 'valueModel')
 		return i
