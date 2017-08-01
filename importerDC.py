@@ -8148,7 +8148,7 @@ class DCReader(SegmentReader):
 		node.set('UnitSupportet', True)
 		return i
 
-	def Read_Unit(self, node, abreviation, unitName, offset, factor, supported = False):
+	def Read_Unit(self, node, abbreviation, unitName, offset, factor, supported = False):
 		'''
 		Reads the parameter's unit information
 		ToDo: Handle units not supported by FreeCAD
@@ -8164,7 +8164,7 @@ class DCReader(SegmentReader):
 		i = self.Read_5F9D0022(node)
 		i = self.skipBlockSize(i)
 		node.typeName = 'Unit' + unitName
-		node.set('Unit', abreviation)
+		node.set('Unit', abbreviation)
 		node.set('UnitOffset', offset)
 		node.set('UnitFactor', factor)
 		node.set('UnitSupportet', supported)

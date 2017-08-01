@@ -219,10 +219,10 @@ def buildBranch(parent, file, nodes, node, level, ref):
 			child = nodes[childRef.index]
 			childRef.node = child
 			if (childRef.type == NodeRef.TYPE_CHILD):
-				## vvvvv DONT COPY TO LIVE VERSION vvvvv ###
+				## vvvvv DON'T COPY TO LIVE VERSION vvvvv ###
 				if ((node.typeName == 'Unit') and not (child.typeName.startswith('Unit'))):
 					logError('>>>ERROR: found Parameter unit \'%s\' with no name!' %(child.typeName))
-				## ^^^^^ DONT COPY TO LIVE VERSION ^^^^^ ###
+				## ^^^^^ DON'T COPY TO LIVE VERSION ^^^^^ ###
 				buildBranch(branch, file, nodes, child, level + 1, childRef)
 			elif (childRef.type == NodeRef.TYPE_CROSS):
 				buildBranchRef(branch, file, nodes, child, level + 1, childRef)

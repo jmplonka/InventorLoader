@@ -312,13 +312,13 @@ class AbstractNode():
 
 	def ReadChildRef(self, offset, name = 'ref', number = -1, dump = True):
 		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CHILD, number, dump)
-		## vvvvv DONT COPY TO LIVE VERSION vvvvv ###
+		## vvvvv DON'T COPY TO LIVE VERSION vvvvv ###
 		ref = self.get(name)
 		if (ref):
 			if (self.index > ref.index):
 				#logError('    >FATAL: child \'%s\' (%04X) is smaller - (%04X): %s!' %(name, ref.index, self.index, self.typeName))
 				ref.type = NodeRef.TYPE_CROSS
-		## ^^^^^ DONT COPY TO LIVE VERSION ^^^^^ ###
+		## ^^^^^ DON'T COPY TO LIVE VERSION ^^^^^ ###
 		return i
 
 	def ReadCrossRef(self, offset, name = 'xref', number = -1, dump = True):
