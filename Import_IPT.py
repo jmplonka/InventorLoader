@@ -223,7 +223,7 @@ def insert(filename, docname, skip=[], only=[], root=None):
 def open(filename, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in a new document
-	In addtion to insert (import), the iProperties are as well added to the document.
+	In addition to insert (import), the iProperties are as well added to the document.
 	'''
 	if (canImport()):
 		logMessage('Reading: %s' %(filename), LOG.LOG_ALWAYS)
