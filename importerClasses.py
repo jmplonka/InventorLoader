@@ -7,12 +7,12 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import traceback
-from importerUtils import IntArr2Str, FloatArr2Str, logMessage, logWarning, logError, getInventorFile, getUInt16, getUInt16A
+from importerUtils import IntArr2Str, FloatArr2Str, logMessage, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
 from math          import degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.0'
+__version__     = '0.2.1'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -266,6 +266,7 @@ class RSeMetaData():
 	PM_APP       = 'PmAppSegment'
 	DL_APP       = 'DlAppSegment'
 	AM_B_REP     = 'AmBREPSegment'
+	MB_B_REP     = 'MbBrepSegment'
 	PM_B_REP     = 'PmBRepSegment'
 	AM_BROWSER   = 'AmBrowserSegment'
 	PM_BROWSER   = 'PmBrowserSegment'
@@ -277,6 +278,7 @@ class RSeMetaData():
 	DL_DIRECTORY = 'DlDirectorySegment'
 	DL_DOC       = 'DlDocDCSegment'
 	AM_GRAPHICS  = 'AmGraphicsSegment'
+	MB_GRAPHICS  = 'MbGraphicsSegment'
 	PM_GRAPHICS  = 'PmGraphicsSegment'
 	AM_RESULT    = 'AmRxSegment'
 	PM_RESULT    = 'PmResultSegment'
@@ -319,7 +321,7 @@ class RSeMetaData():
 
 	@staticmethod
 	def isBRep(seg):
-		return (seg) and ((seg.name == RSeMetaData.PM_B_REP) or (seg.name == RSeMetaData.AM_B_REP))
+		return (seg) and ((seg.name == RSeMetaData.PM_B_REP) or (seg.name == RSeMetaData.AM_B_REP) or (seg.name == RSeMetaData.MB_B_REP))
 
 	@staticmethod
 	def isBrowser(seg):
@@ -335,7 +337,7 @@ class RSeMetaData():
 
 	@staticmethod
 	def isGraphics(seg):
-		return (seg) and ((seg.name == RSeMetaData.PM_GRAPHICS) or (seg.name == RSeMetaData.AM_GRAPHICS))
+		return (seg) and ((seg.name == RSeMetaData.PM_GRAPHICS) or (seg.name == RSeMetaData.AM_GRAPHICS) or (seg.name == RSeMetaData.MB_GRAPHICS))
 
 	@staticmethod
 	def isResult(seg):
@@ -599,8 +601,11 @@ class DataNode():
 				return self.data.name
 		ref = self.getVariable('label')
 		if (ref):
+			if (ref.getTypeName() != 'Label'):
+				ref = ref.getVariable('label')
+		if (ref):
 			return ref.node.name
-		return ''
+		return None
 
 	def getTypeName(self):
 		if (self.data):
@@ -715,7 +720,8 @@ class DataNode():
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
-		self.asText = False
+		self.asText  = False
+		self.handled = False
 
 	def getValueRaw(self):
 		return self.getVariable('valueNominal')
@@ -742,7 +748,7 @@ class ParameterNode(DataNode):
 				unitName = parameterData.getUnitName()
 				if (len(unitName) > 0): unitName = ' ' + unitName
 			if (type == 0xFFFF):
-				subFormula = unitName
+				subFormula = '%g%s' %(parameterData.get('value'), unitName)
 			else:
 				value  = parameterData.get('value')
 				offset = parameterData.getUnitOffset()
@@ -810,15 +816,19 @@ class ParameterNode(DataNode):
 		data = self.data
 		self.asText = asText
 		if (data):
-			if (asText):
-				return '\'' + self.getParameterFormula(data.get('refValue').node, True)
-			try:
-				return '=' + self.getParameterFormula(data.get('refValue').node, True)
-			except BaseException as be:
-				# replace by nominal value and unit!
-				value = self.getValue()
-				logWarning('    >WARNING: %s - replacing by nominal value %s!' %(be, value) )
-				return '=%s' %(value)
+			refValue = data.get('refValue')
+			if (refValue):
+				if (asText):
+					return '\'' + self.getParameterFormula(refValue.node, True)
+				try:
+					return '=' + self.getParameterFormula(refValue.node, True)
+				except BaseException as be:
+					# replace by nominal value and unit!
+					value = self.getValue()
+					logWarning('    >WARNING: %s - replacing by nominal value %s!' %(be, value) )
+			else:
+				value = data.get('valueModel')
+			return '=%s' %(value)
 		return ''
 
 	def getValue(self):
@@ -923,14 +933,15 @@ class ParameterNode(DataNode):
 			# Luminosity
 			if (derivedUnit == 'lx')       : return Luminosity(x, type)
 			if (derivedUnit == 'lm')       : return Luminosity(x, type)
-			logError('>>>WARNING: found unsuppored derived unit - [%s] using [%s] instead!' %(derivedUnit, type))
+			logWarning('>>>WARNING: found unsuppored derived unit - [%s] using [%s] instead!' %(derivedUnit, type))
 		else:
-			logError('>>>WARNING: unknown unit (%04X): \'%s\' - [%s]' %(self.getIndex(), self.getTypeName(), type))
+			logWarning('>>>WARNING: unknown unit (%04X): \'%s\' - [%s]' %(self.getIndex(), self.getTypeName(), type))
 		return Derived(x, type)
 
 class ParameterTextNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
+		self.handled = False
 
 	def getValueRaw(self):
 		return self.getVariable('value')
@@ -959,46 +970,154 @@ class ParameterValue():
 	def getTypeName(self):
 		return 'Parameter'
 
+class EnumNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		name = self.getVariable('Enum')
+		values = self.getVariable('Values')
+		i = self.getVariable('value')
+		value = '%d' %(i)
+		if ((values) and (i < len(values))):
+			value = values[i]
+		return '(%04X): %s=%s' %(self.getIndex(), name, value)
+
+	def __str__(self):
+		node = self.data
+		name = self.getVariable('Enum')
+		return '(%04X): %s %s%s' %(node.index, node.typeName, name, node.content)
+
 class FeatureNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getTypeName(self):
+	def _getPropertyName(self, index):
 		properties = self.getVariable('properties')
 		if (properties):
-			typ0 = properties[0]
-			if (typ0):
-				if (typ0.node.typeName == 'FxExtrusion'):
-					typ1 = properties[1]
-					if (typ1):
-						if (typ1.node.typeName == 'FxBoundaryPatch'):
-							typ5 = properties[5]
-							if (typ5):
-								if (typ5.node.typeName == 'Parameter'):
-									if (properties[0x08] is None):
-										return 'FxExtrusion'
-									return 'FxEmboss'
-								return typ5.node.typeName
-							return typ1.node.typeName
-				elif ((typ0.node.typeName == 'FxBoundaryPatch') and (len(properties) >= 8)):
-					typ8 = properties[8]
-					if (typ8):
-						return typ8.node.typeName
-				return typ0.node.typeName
-		else:
-			logError(' >ERROR (%04X) has no properties!' %(self.data.index))
-
-		return self.data.typeName
+			if (index < len(properties)):
+				typ = properties[index]
+				if (typ):
+					return typ.node.typeName
+		return None
 
 	def getSubTypeName(self):
-		typ = self.getVariable('properties')[1]
-		if (typ):
-			return typ.node.typeName
-		return None
+		subTypeName = self.getVariable('Feature')
+		if (subTypeName): return subTypeName
+
+		p0 = self._getPropertyName(0)
+		p1 = self._getPropertyName(1)
+
+		if (p0 == 'FxChamfer'):
+			if (p1 == 'Parameter'):            return 'Bend'
+			if (p1 == 'FxThread'):             return 'Chamfer'
+			if (p1 == 'FxExtend'):             return 'Extend'
+			if (p1 is None):                   return 'CornerChamfer'
+		elif (p0 == 'PartFeatureOperation'):   return 'Coil'
+		elif (p0 == 'SurfaceBodies'):
+			if (p1 == 'SolidBody'):            return 'Combine'
+			if (p1 == 'SurfaceBodies'):        return 'CoreCavity'
+		elif (p0 == 'Enum'):
+			p2 = self._getPropertyName(2)
+			p3 = self._getPropertyName(3)
+			if (p1 == 'FxBoundaryPatch'):
+				p6 = self._getPropertyName(6)
+				if (p2 == 'Line3D'):           return 'Revolve'
+				if (p6 == '92637D29'):         return 'Extrude' #Map cut feature to extrusion!
+				if (p6 == 'Parameter'):        return 'Emboss'
+			if (p1 == 'FxThread'):             return 'Shell'
+			if (p1 == 'Parameter'):            return 'Hole'
+			if (p1 == 'ParameterBoolean'):
+				if (p3 == 'Enum'):            return 'Split'
+				if (p2 == 'ParameterBoolean'): return 'Fold'
+		elif (p0 == 'FxFilletConstant'):
+			p8 = self._getPropertyName(8)
+			if (p8 == 'ParameterBoolean'):     return 'CornerRound'
+			if (p8 == 'Enum'):                 return 'Fillet'
+		elif (p1 == 'FxFilletVariable'):       return 'Fillet'
+		elif (p0 == 'FxThread'):
+			if (p1 == 'Enum'):                 return 'MoveFace'
+			if (p1 == 'FxThread'):             return 'ReplaceFace'
+			if (p1 == 'ParameterBoolean'):
+				p3 = self._getPropertyName(3)
+				if (p3 == 'SurfaceBodies'):    return 'DeleteFace'
+				if (p3 == 'Parameter'):        return 'Thread'
+		elif (p0 == 'FxBoundaryPatch'):
+			if (p1 == 'A477243B'):             return 'Sweep'
+			if (p1 == 'FC203F47'):             return 'Sweep'
+			if (p1 == 'Direction'):            return 'Extrude'
+			if (p1 == 'FxBoundaryPatch'):      return 'Rib'
+			if (p1 == 'SurfaceBody'):          return 'BoundaryPatch'
+			p4 = self._getPropertyName(4)
+			if (p4 == 'SurfaceBody'):          return 'BoundaryPatch'
+		elif (p0 == 'Direction'):              return 'FaceDraft'
+		elif (p0 == 'CA02411F'):               return 'NonParametricBase'
+		elif (p0 == 'FC203F47'):               return 'Hem'
+		elif (p0 == 'SolidBody'):              return 'Knit'
+		elif (p0 == 'FxSculpt'):               return 'Sculpt'
+		elif (p0 == 'EA680672'):               return 'Trim'
+		elif (p0 == 'SurfaceBody'):            return 'Reference'
+		elif (p0 == '8677CE83'):               return 'Corner'
+		elif (p0 == 'AFD8A8E0'):               return 'Corner'
+		elif (p0 == '312F9E50'):               return 'Loft'
+		elif (p0 == 'Parameter'):              return 'Loft'
+		elif (p0 == 'FxThicken'):              return 'Thicken'
+		elif (p0 == 'Transformation'):
+			# FIXME: This only works for the intersection example (e.g. Shaft1.ipt has other proeprties)!!!!
+			return 'iFeature'
+		elif (p0 is None):
+			p10 = self._getPropertyName(10)
+			if (p1 == 'Enum'):                 return 'Thicken'
+			if (p1 == '8B2B8D96'):             return 'BoundaryPatch'
+			if (p1 == 'SurfaceBody'):          return 'BoundaryPatch'
+			if (p10 == 'D524C30A'):            return 'Fillet'
+
+		# Missing Features:
+		# - AliasFreeform
+		# - Boss
+		# - ContourRoll
+		# - CosmeticBend
+		# - DirectEdit
+		# - FaceOffset
+		# - Freeform
+		# - Grill
+		# - Lip
+		# - LoftedFlange
+		# - Mesh
+		# - MidSurface
+		# - Move
+		# - PresentationMesh
+		# - Refold
+		# - Rest
+		# - Rip
+		# - RuleFillet
+		# - RuledSurface
+		# - SketchDrivenPattern
+		# - SnapFit
+		# - Unfold
+		return '*UNKNOWN*'
+
+	def getRefText(self):
+		data = self.data
+		name = self.getName()
+		return '(%04X): Fx%s \'%s\'' %(data.index, self.getSubTypeName(), name)
+
+	def __str__(self):
+		data = self.data
+		name = self.getName()
+		properties = ''
+		for p in data.get('properties'):
+			properties += '\t'
+			if (p):
+				properties += p.getTypeName()
+#		logError('%d\tFEATURE\t%s\t%s%s' %(getFileVersion(), self.getSubTypeName(), name, properties))
+		return '(%04X): %s\t%s\t\'%s\'\tpropererties=%d\t%s' %(data.index, data.typeName, self.getSubTypeName(), name, len(data.get('properties')), data.content)
+
 
 class ValueNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
+		self.handled = False
 
 	def getRefText(self):
 		if ('value' in self.data.properties):
@@ -1021,14 +1140,14 @@ class Point2DNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		return '(%04X): %s - x=%g, y=%g' %(self.getIndex(), self.getTypeName(), self.getVariable('x'), self.getVariable('y'))
+		return '(%04X): %s - (%g/%g)' %(self.getIndex(), self.getTypeName(), self.getVariable('x'), self.getVariable('y'))
 
 class Point3DNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		return '(%04X): %s - x=%g, y=%g, z=%g' %(self.getIndex(), self.getTypeName(), self.getVariable('x'), self.getVariable('y'), self.getVariable('z'))
+		return '(%04X): %s - (%g/%g/%g)' %(self.getIndex(), self.getTypeName(), self.getVariable('x'), self.getVariable('y'), self.getVariable('z'))
 
 class Line2DNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1036,7 +1155,9 @@ class Line2DNode(DataNode):
 
 	def getRefText(self):
 		p = self.getVariable('points')
-		return '(%04X): %s - (%04X), (%04X)' %(self.getIndex(), self.getTypeName(), p[0].index, p[1].index)
+		p0 = p[0].node
+		p1 = p[1].node
+		return '(%04X): %s - (%g/%g) - (%g/%g)' %(self.getIndex(), self.getTypeName(), p0.get('x'), p0.get('y'), p1.get('x'), p1.get('y'))
 
 class Circle2DNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1046,11 +1167,11 @@ class Circle2DNode(DataNode):
 		c = self.getVariable('refCenter').node
 		r = self.getVariable('r')
 		p = self.getVariable('points')
-		points = []
+		points = ''
 		for i in p:
 			if (i):
-				points.append('(%04X)' %(i.index))
-		return '(%04X): %s - (%04X), r=%g, %s' %(self.getIndex(), self.getTypeName(), c.index, r, ', '.join(points))
+				points += ', (%g/%g)' %(i.node.get('x'), i.node.get('y'))
+		return '(%04X): %s - (%g/%g), r=%g%s' %(self.getIndex(), self.getTypeName(), c.get('x'), c.get('y'), r, points)
 
 class GeometricRadius2DNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1076,9 +1197,14 @@ class DimensionAngleNode(DataNode):
 
 	def getRefText(self):
 		d = self.getVariable('refParameter').node
-		l1 = self.getVariable('refLine1').node
-		l2 = self.getVariable('refLine2').node
-		return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.getIndex(), self.getTypeName(), d.name, l1.index, l1.typeName, l2.index, l2.typeName)
+		if (self.getTypeName() == 'Dimension_Angle2Line2D'):
+			l1 = self.getVariable('refLine1').node
+			l2 = self.getVariable('refLine2').node
+			return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.getIndex(), self.getTypeName(), d.name, l1.index, l1.typeName, l2.index, l2.typeName)
+		p1 = self.getVariable('refPoint1').node
+		p2 = self.getVariable('refPoint2').node
+		p3 = self.getVariable('refPoint3').node
+		return '(%04X): %s - d=\'%s\', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s' %(self.getIndex(), self.getTypeName(), d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
 
 class DimensionDistance2DNode(DataNode):
 	def __init__(self, data, isRef):
