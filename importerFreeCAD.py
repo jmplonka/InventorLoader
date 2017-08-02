@@ -41,15 +41,15 @@ SKIP_DIM_ANGLE_3_POINT       = 1 << 19 # Workaround required
 SKIP_DIM_RADIUS              = 1 << 20
 SKIP_DIM_DIAMETER            = 1 << 21 # Workaround required
 SKIP_DIM_DISTANCE            = 1 << 22
-SKIP_DIM_DISTANCE_HORIZONTAL = 1 << 23
-SKIP_DIM_DISTANCE_VERTICAL   = 1 << 24
+SKIP_DIM_DISTANCE_X          = 1 << 23
+SKIP_DIM_DISTANCE_Y          = 1 << 24
 SKIP_DIM_OFFSET_SPLINE       = 1 << 25 # not supported
 
 # x 10                2   2   1   1   0   0   0
 # x  1                4   0   6   2   8   4   0
 #SKIP_CONSTRAINS = 0b11111111111111111111111111
-#SKIP_CONSTRAINS  = 0b00000000000000000000000100 # Only geometric coincidens
-SKIP_CONSTRAINS  = 0b11111100110001111010110111 # no workarounds or unsupported constrains!
+#SKIP_CONSTRAINS = 0b00000000000000000000000100 # Only geometric coincidens
+SKIP_CONSTRAINS  = 0b11111100110001111010110111 # no workarounds, nor unsupported constrains!
 
 def ignoreBranch(node):
 	return None
@@ -358,8 +358,7 @@ def addCoincidentEntity(coincidens, entityRef):
 	if (entityRef.getTypeName() == 'Point2D'):
 		entities = entityRef.getVariable('entities')
 		for ref in entities:
-			#logError('DEBUG> %s: %s' %(ref, ref.getTypeName()))
-			addCoincidentEntity(coincidens, ref) 
+			addCoincidentEntity(coincidens, ref)
 	else:
 		entityData = entityRef.node
 		for entity in coincidens:
@@ -418,13 +417,6 @@ class FreeCADImporter:
 			return self.checkSketchIndex(sketchObj, target)
 		return None
 
-	def getRefPoint(self, node):
-		pointRef = node.getVariable('refPoint')
-		while (pointRef.getTypeName() == 'Circle2D'):
-			pointRef = pointRef.node.get('refCenter')
-		assert (pointRef.getTypeName() == 'Point2D') or (pointRef.getTypeName() == 'Spline2D'), 'Referenced Point: Point2D <> %s!' %(pointRef.getTypeName())
-		return pointRef
-
 	def addPoint2Dictionary(self, pointRef):
 		pointData = pointRef.node
 		key = calcPointKey(pointData)
@@ -435,13 +427,6 @@ class FreeCADImporter:
 			self.pointDataDict[key] = entities
 
 		return
-
-	def getPointEntities(self, data):
-		if (data):
-			key = calcPointKey(data)
-			if (key in self.pointDataDict):
-				return self.pointDataDict[key]
-		return None
 
 	def adjustIndexPos(self, data, index, pos, point):
 		if ((data.typeName == 'Circle2D') or (data.typeName == 'Ellipse2D')):
@@ -465,7 +450,7 @@ class FreeCADImporter:
 				logWarning('        ... can\'t create 2D \'coincident\' constraint between %s %s/%s and %s -  %s has no index!' %(fixName[0:-2], fixIndex, fixPos, movName[0:-2], movName[0:-2]))
 			else:
 				movPos   = findEntityVertex(movData, pointData)
-				
+
 				if (movPos < 0):
 					if (fixPos < 0):
 						logWarning('        ... 2D \'object on object\' coincident: between (%04X) %s and (%04X) %s failed - Feature not supported by FreeCAD!!!' %(fixIndex, fixName, movIndex, movName))
@@ -494,17 +479,25 @@ class FreeCADImporter:
 			index = pointNode.getSketchIndex()
 		return index
 
+	def getPointIndexPos(self, sketchObj, pointData):
+		key = calcPointKey(pointData)
+		if (key in self.pointDataDict):
+			entities = self.pointDataDict[key]
+		else:
+			entities = []
+		# the first element is a point!
+		if (len(entities) > 1):
+			entityData = entities[1]
+			index = self.checkSketchIndex(sketchObj, entityData.node)
+			pos   = findEntityVertex(entityData, pointData)
+		else:
+			index = self.addSketch2D_ConstructionPoint2D(pointData.node, sketchObj)
+			pos   = 1
+		return index, pos
+
 	def getSketchEntityInfo(self, sketchObj, entityData):
 		if (entityData.typeName == 'Point2D'):
-			entities = self.getPointEntities(entityData)
-			# the first element is a point!
-			if ((entities is not None) and (len(entities) > 1)):
-				refData  = entities[1]
-				entityIndex = self.checkSketchIndex(sketchObj, refData.node)
-				entityPos   = findEntityVertex(refData, entityData)
-			else:
-				entityIndex = self.addSketch2D_ConstructionPoint2D(entityData.node, sketchObj)
-				entityPos   = 1
+			entityIndex, entityPos = self.getPointIndexPos(sketchObj, entityData)
 		else:
 			entityIndex = self.checkSketchIndex(sketchObj, entityData.node)
 			entityPos   = -1
@@ -532,6 +525,51 @@ class FreeCADImporter:
 					count += 1
 		return count
 
+	def addDistanceConstraint(self, sketchObj, dimensionNode, skipMask, constraint, desc):
+		if (SKIP_CONSTRAINS & skipMask == 0): return
+		entity1Ref = dimensionNode.getVariable('refEntity1')
+		entity2Ref = dimensionNode.getVariable('refEntity2')
+		entity1Data = entity1Ref.node
+		entity2Data = entity2Ref.node
+		entity1Name = entity1Data.typeName[0:-2]
+		entity2Name = entity2Data.typeName[0:-2]
+		index1, pos1 = self.getSketchEntityInfo(sketchObj, entity1Data)
+		index2, pos2 = self.getSketchEntityInfo(sketchObj, entity2Data)
+
+		desc = IFF(len(desc)>0, '%s ' %(desc), '')
+
+		if (index1 is None):
+			logWarning('        ... skipped 2D %sdimension beween %s and %s - entity 1 (%04X) has no index!' %(desc, entity1Name, entity2Name, entity1Data.index))
+		elif (index2 is None):
+			logWarning('        ... skipped 2D %sdimension beween %s and %s - entity 2 (%04X) has no index!' %(desc, entity1Name, entity2Name, entity2Data.index))
+		else:
+			constraint = None
+			key = '%s_%s_%s' %(constraint, index1, index2)
+			if (not key in self.mapConstraints):
+				lengthMM = getLengthPoints(entity1Data, entity2Data)
+				if (pos1 < 0):
+					if (pos2 < 0):
+						# other distances are not supported by FreeCAD!
+						if ((entity1Ref.getTypeName() == 'Line2D') and (entity2Ref.getTypeName() == 'Line2D')):
+							# hope that both lines are parallel!!!
+							constraint = Sketcher.Constraint(constraint, index1, 1, index2, lengthMM)
+					else:
+						constraint = Sketcher.Constraint(constraint, index2, pos2, index1, lengthMM)
+				elif  (pos2 < 0):
+					constraint = Sketcher.Constraint(constraint, index1, pos1, index2, lengthMM)
+				else:
+					constraint = Sketcher.Constraint(constraint, index1, pos1, index2, pos2, lengthMM)
+
+				if (constraint):
+					dimension = getDimension(dimensionNode, 'refParameter')
+					index = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
+					dimensionNode.setSketchEntity(index, constraint)
+					length = Length(lengthMM, 1.0, 'mm')
+					logMessage('        ... added 2D %sdistance \'%s\' = %s' %(desc, constraint.Name, length), LOG.LOG_INFO)
+				else:
+					logWarning('        ... can\'t create dimension constraint between (%04X): %s and (%04X): %s - not supported by FreeCAD!' %(entity1Ref.index, entity1Name, entity2Ref.index, entity2Name))
+		return
+
 ########################
 	def addSketch2D_Geometric_Fix2D(self, constraintNode, sketchObj):
 		'''
@@ -539,32 +577,6 @@ class FreeCADImporter:
 		Workaround: two distance constraints (X and Y)
 		'''
 		if (SKIP_CONSTRAINS & SKIP_GEO_FIX == 0): return
-		pointNode   = getNode(constraintNode, 'refPoint')
-		movData = pointNode.data
-		if (pointNode.isValid()):
-			if (pointNode.getTypeName() == 'Line2D'):
-				p1Ref = pointNode.getVariable('points')[0]
-				p2Ref = pointNode.getVariable('points')[1]
-				self.fix2D(sketchObj, p1Ref.node)
-				self.fix2D(sketchObj, p2Ref.node)
-			else:
-				pointRef = self.getRefPoint(constraintNode)
-				if (pointRef.getTypeName() == 'Point2D'):
-					self.fix2D(sketchObj, pointRef.node)
-					entities = self.getPointEntities(pointRef.node)
-					if ((entities is not None) and (len(entities) > 1)):
-						movData = entities[1]
-				else:
-					logWarning('        ... skipped 2D fix contraint to \'%s-%s\' - %s not supported!' %(movData.sketchIndex, movData.sketchEntity.Name, pointRef.getTypeName()))
-					return
-			if (movData.sketchEntity):
-				try:
-					logMessage('        ... added 2D fix constraint to \'%s-%s\'' %(movData.sketchIndex, movData.sketchEntity.Name), LOG.LOG_INFO)
-				except:
-					logMessage('        ... added 2D fix constraint to \'%s-%s\'' %(movData.sketchIndex, movData.sketchEntity), LOG.LOG_INFO)
-			else:
-				logMessage('        ... added 2D fix constraint to \'%s-*UNKNOWN*\'' %(movData.sketchIndex), LOG.LOG_INFO)
-
 		return
 
 	def addSketch2D_Geometric_PolygonCenter2D(self, constraintNode, sketchObj):
@@ -622,24 +634,16 @@ class FreeCADImporter:
 
 	def addSketch2D_Geometric_SymmetryPoint2D(self, constraintNode, sketchObj):
 		if (SKIP_CONSTRAINS & SKIP_GEO_SYMMETRY_POINT == 0): return
-		pointRef    = self.getRefPoint(constraintNode)
-		key = calcPointKey(pointRef.node)
-		entities = self.pointDataDict[key]
-		if (len(entities) < 2):
-			symmetryIdx = self.addSketch2D_ConstructionPoint2D(pointData.node, sketchObj)
-			symmetryPos = 1
-		else:
-			pointData = entities[1]
-			symmetryIdx =  self.checkSketchIndex(sketchObj, entities[1])
-			symmetryPos = findEntityVertex(entities[1], pointData)
-			
+		pointRef = constraintNode.getVariable('refPoint')
+		symmetryIdx, symmetryPos = self.getPointIndexPos(sketchObj, pointRef.node)
+
 		moving = getNode(constraintNode, 'refObject')
 		lineIdx =  self.checkSketchIndex(sketchObj, moving)
 
 		if (lineIdx is None):
-			logWarning('        ... can\'t added 2D symmetric constraint between Point and %s - no line index for (%04X)!' %(moving.getTypeName()[0:-2], moving.index))
+			logWarning('        ... can\'t added 2D symmetric constraint between Point and %s - no line index for (%04X)!' %(moving.getTypeName()[0:-2], moving.getIndex()))
 		elif (symmetryIdx is None):
-			logWarning('        ... can\'t added 2D symmetric constraint between Point and %s - no point index for (%04X)!' %(moving.getTypeName()[0:-2], pointRef.index))
+			logWarning('        ... can\'t added 2D symmetric constraint between Point and %s - no point index for (%04X)!' %(moving.getTypeName()[0:-2], constraintNode.getVariable('refPoint').index))
 		else:
 			key = 'SymmetryPoint_%s_%s' %(lineIdx, symmetryIdx)
 			if (not key in self.mapConstraints):
@@ -703,7 +707,7 @@ class FreeCADImporter:
 		if (SKIP_CONSTRAINS & SKIP_GEO_PERPENDICULAR == 0): return
 		index1 = self.getGeometryIndex(sketchObj, constraintNode, 'refLine1')
 		index2 = self.getGeometryIndex(sketchObj, constraintNode, 'refLine2')
-		
+
 		if (index1 is None):
 			logMessage('        ... skipped 2D perpendicular constraint between lines - line 1 (%04X) has no index!' %(constraintNode.getVariable('refLine1').index))
 		elif (index2 is  None):
@@ -1035,104 +1039,21 @@ class FreeCADImporter:
 		'''
 		Create a horizontal dimension constraint
 		'''
-		if (SKIP_CONSTRAINS & SKIP_DIM_DISTANCE_HORIZONTAL == 0): return
-		entity1Ref  = dimensionNode.getVariable('refEntity1')
-		entity2Ref  = dimensionNode.getVariable('refEntity2')
-		entity1Data = entity1Ref.node
-		entity2Data = entity2Ref.node
-		index1, pos1 = self.getSketchEntityInfo(sketchObj, entity1Data)
-		index2, pos2 = self.getSketchEntityInfo(sketchObj, entity2Data)
-		if (index1 is None):
-			logWarning('        ... skipped 2D horizontal dimension \'%s\' = %s - entity 1 (%04) has no index!' %(constraint.Name, dimension.getValue(), entity1Data.index))
-		elif (index2 is None):
-			logWarning('        ... skipped 2D horizontal dimension \'%s\' = %s - entity 2 (%04) has no index!' %(constraint.Name, dimension.getValue(), entity2Data.index))
-		else:
-			key = 'DistanceX_%s_%s' %(index1, index2)
-			if (not key in self.mapConstraints):
-				dx = getDistanceX(entity1Data, entity2Data)
-				if (dx < 0):
-					constraint = Sketcher.Constraint('DistanceX', index2, 1, index1, 1, -dx)
-				else:
-					constraint = Sketcher.Constraint('DistanceX', index1, 1, index2, 1, dx)
-				dimension = getDimension(dimensionNode, 'refParameter')
-				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
-				dimensionNode.setSketchEntity(index, constraint)
-				logMessage('        ... added 2D horizontal dimension \'%s\' = %s' %(constraint.Name, dimension.getValue()), LOG.LOG_INFO)
+		self.addDistanceConstraint(sketchObj, dimensionNode, SKIP_DIM_DISTANCE_X, 'DistanceX', 'horizontal')
 		return
 
 	def addSketch2D_Dimension_Distance_Vertical2D(self, dimensionNode, sketchObj):
 		'''
 		Create a vertical dimension constraint
 		'''
-		if (SKIP_CONSTRAINS & SKIP_DIM_DISTANCE_VERTICAL == 0): return
-		entity1Ref  = dimensionNode.getVariable('refEntity1')
-		entity2Ref  = dimensionNode.getVariable('refEntity2')
-		entity1Data = entity1Ref.node
-		entity2Data = entity2Ref.node
-		index1, pos1 = self.getSketchEntityInfo(sketchObj, entity1Data)
-		index2, pos2 = self.getSketchEntityInfo(sketchObj, entity2Data)
-		if (index1 is None):
-			logWarning('        ... skipped 2D vertical dimension \'%s\' = %s - entity 1 (%04X) has no index!' %(constraint.Name, dimension.getValue(), entity1Data.index))
-		elif (index2 is None):
-			logWarning('        ... skipped 2D vertical dimension \'%s\' = %s - entity 2 (%04X) has no index!' %(constraint.Name, dimension.getValue(), entity2Data.index))
-		else:
-			key = 'DistanceX_%s_%s' %(index1, index2)
-			if (not key in self.mapConstraints):
-				dy = getDistanceY(entity1Data, entity2Data)
-				if (dy < 0):
-					constraint = Sketcher.Constraint('DistanceY', index2, pos2, index1, pos1, -dy)
-				else:
-					constraint = Sketcher.Constraint('DistanceY', index1, pos1, index2, pos2, dy)
-				dimension = getDimension(dimensionNode, 'refParameter')
-				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
-				dimensionNode.setSketchEntity(index, constraint)
-				logMessage('        ... added 2D vertical dimension \'%s\' = %s' %(constraint.Name, dimension.getValue()), LOG.LOG_INFO)
+		self.addDistanceConstraint(sketchObj, dimensionNode, SKIP_DIM_DISTANCE_Y, 'DistanceY', 'vertical')
 		return
 
 	def addSketch2D_Dimension_Distance2D(self, dimensionNode, sketchObj):
 		'''
 		Create a distance constraint
 		'''
-		if (SKIP_CONSTRAINS & SKIP_DIM_DISTANCE == 0): return
-		entity1Ref = dimensionNode.getVariable('refEntity1')
-		entity2Ref = dimensionNode.getVariable('refEntity2')
-		entity1Data = entity1Ref.node
-		entity2Data = entity2Ref.node
-		entity1Name = entity1Data.typeName[0:-2]
-		entity2Name = entity2Data.typeName[0:-2]
-		index1, pos1 = self.getSketchEntityInfo(sketchObj, entity1Data)
-		index2, pos2 = self.getSketchEntityInfo(sketchObj, entity2Data)
-
-		if (index1 is None):
-			logWarning('        ... skipped 2D dimension beween %s and %s - entity 1 (%04X) has no index!' %(entity1Name, entity2Name, entity1Data.index))
-		elif (index2 is None):
-			logWarning('        ... skipped 2D dimension beween %s and %s - entity 2 (%04X) has no index!' %(entity1Name, entity2Name, entity2Data.index))
-		else:
-			constraint = None
-			key = 'Distance_%s_%s' %(index1, index2)
-			if (not key in self.mapConstraints):
-				lengthMM = getLengthPoints(entity1Data, entity2Data)
-				if (entity1Name == 'Point'):
-					if (entity2Name == 'Point'):
-						constraint = Sketcher.Constraint('Distance', index2, pos2, index1, pos1, lengthMM)
-					elif (entity2Name == 'Line'):
-						constraint = Sketcher.Constraint('Distance', index1, pos1, index2, lengthMM)
-				elif (entity1Name == 'Line'):
-					if (entity2Name == 'Point'):
-						constraint = Sketcher.Constraint('Distance', index2, pos2, index1, lengthMM)
-					elif (entity2Name == 'Line'):
-						# hope that both lines are parallel!!!
-						constraint = Sketcher.Constraint('Distance', index1, 1, index2, lengthMM)
-				# other distances are not supported by FreeCAD!
-
-				if (constraint):
-					dimension = getDimension(dimensionNode, 'refParameter')
-					index = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
-					dimensionNode.setSketchEntity(index, constraint)
-					length = Length(lengthMM, 1.0, 'mm')
-					logMessage('        ... added 2D distance \'%s\' = %s' %(constraint.Name, length), LOG.LOG_INFO)
-				else:
-					logWarning('        ... can\'t create dimension constraint between (%04X): %s and (%04X): %s - not supported by FreeCAD!' %(entity1Ref.index, entity1Name, entity2Ref.index, entity2Name))
+		self.addDistanceConstraint(sketchObj, dimensionNode, SKIP_DIM_DISTANCE, 'Distance', '')
 		return
 
 	def addSketch2D_Dimension_Radius2D(self, dimensionNode, sketchObj):

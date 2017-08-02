@@ -5181,20 +5181,24 @@ class DCReader(SegmentReader):
 			if (node.get('a1')[3] > 0):
 				i = node.ReadUInt16(i, 'u16_2')
 				i = node.ReadParentRef(i)
-				i = node.ReadSInt32(i, 'u32_2')
+				i = node.ReadSInt32(i, 's32_0')
 				l, j = getSInt32(node.data, i)
 				if (l != -1):
-					node.typeName = 'Parameter'
 					i = node.ReadLen32Text16(i)
-					i = node.ReadChildRef(i, 'label')
-					i = node.ReadChildRef(i, 'refUnit')
-					i = node.ReadChildRef(i, 'refValue')
-					i = node.ReadFloat64(i, 'valueNominal')
-					i = node.ReadFloat64(i, 'valueModel')
-					i = node.ReadEnum16(i, 'tolerance', Tolerances)
-					i = node.ReadSInt16(i, 'u16_0')
+					if (len(node.name)>0):
+						node.typeName = 'Parameter'
+						i = node.ReadChildRef(i, 'label')
+						i = node.ReadChildRef(i, 'refUnit')
+						i = node.ReadChildRef(i, 'refValue')
+						i = node.ReadFloat64(i, 'valueNominal')
+						i = node.ReadFloat64(i, 'valueModel')
+						i = node.ReadEnum16(i, 'tolerance', Tolerances)
+						i = node.ReadSInt16(i, 'u16_0')
+					else:
+						i = node.ReadUInt32(i, 'u32_2')
+						i = node.ReadUInt8(i, 'u8_0')
 				else:
-					node.typeName = 'Sketch2D'
+					node.typeName = 'Group2D'
 					i = j
 					i = node.ReadSInt32(i, 'u32_3')
 					i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'constraints')
