@@ -14,7 +14,7 @@ from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.1'
+__version__     = '0.3.0'
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
@@ -145,70 +145,38 @@ def dumpRemainingDataB(file, data, offset):
 	file.write(HexAsciiDump(data[iOld:], iOld, False))
 	return
 
-def buildBranchRef(parent, file, nodes, node, level, ref):
-	branch = None
-	if (node.typeName == 'Parameter'):
-		branch = ParameterNode(node, True)
-	elif (node.typeName == 'ParameterText'):
-		branch = ParameterTextNode(node, True)
-	elif (node.typeName == 'Enum'):
-		branch = EnumNode(node, True)
-	elif (node.typeName == 'Feature'):
-		branch = FeatureNode(node, True)
-	elif (node.typeName == 'ParameterBoolean'):
-		branch = ValueNode(node, True)
-	elif (node.typeName == 'ValueSInt32'):
-		branch = ValueNode(node, True)
-	elif (node.typeName == 'ValueUInt32'):
-		branch = ValueNode(node, True)
-	elif (node.typeName == 'Point2D'):
-		branch = Point2DNode(node, True)
-	elif (node.typeName == 'Point3D'):
-		branch = Point3DNode(node, True)
-	elif (node.typeName == 'Line2D'):
-		branch = Line2DNode(node, True)
-	elif (node.typeName == 'Circle2D'):
-		branch = Circle2DNode(node, True)
-	elif (node.typeName == 'Geometric_Radius2D'):
-		branch = GeometricRadius2DNode(node, True)
-	elif (node.typeName == 'Geometric_Coincident2D'):
-		branch = GeometricCoincident2DNode(node, True)
-	elif (node.typeName == 'Dimension_Distance2D'):
-		branch = DimensionDistance2DNode(node, True)
-	elif (node.typeName == 'Dimension_Angle2Line2D'):
-		branch = DimensionAngleNode(node, True)
-	elif (node.typeName == 'Dimension_Angle3Point2D'):
-		branch = DimensionAngleNode(node, True)
-	else:
-		branch = DataNode(node, True)
+def getBranchNode(node, isRef):
+	if (node.typeName == 'Parameter'):               return ParameterNode(node, isRef)
+	if (node.typeName == 'ParameterText'):           return ParameterTextNode(node, isRef)
+	if (node.typeName == 'ParameterBoolean'):        return ValueNode(node, isRef)
+	if (node.typeName == 'Enum'):                    return EnumNode(node, isRef)
+	if (node.typeName == 'Feature'):                 return FeatureNode(node, isRef)
+	if (node.typeName == 'Point2D'):                 return PointNode(node, isRef)
+	if (node.typeName == 'Point3D'):                 return PointNode(node, isRef)
+	if (node.typeName == 'Line2D'):                  return LineNode(node, isRef)
+	if (node.typeName == 'Line3D'):                  return LineNode(node, isRef)
+	if (node.typeName == 'Circle2D'):                return CircleNode(node, isRef)
+	if (node.typeName == 'Circle3D'):                return CircleNode(node, isRef)
+	if (node.typeName == 'Geometric_Radius2D'):      return GeometricRadius2DNode(node, isRef)
+	if (node.typeName == 'Geometric_Coincident2D'):  return GeometricCoincident2DNode(node, isRef)
+	if (node.typeName == 'Dimension_Distance2D'):    return DimensionDistance2DNode(node, isRef)
+	if (node.typeName == 'Dimension_Angle2Line2D'):  return DimensionAngleNode(node, isRef)
+	if (node.typeName == 'Dimension_Angle3Point2D'): return DimensionAngleNode(node, isRef)
+	return DataNode(node, isRef)
+
+def buildBranchRef(parent, file, nodes, ref, level):
+	branch = getBranchNode(ref.node, True)
 	parent.append(branch)
 
 	num = ''
 	if (ref.number >= 0):
 		num = '[%02X] ' %(ref.number)
-
 	file.write('%s-> %s%s\n' %(level * '\t', num, branch.getRefText()))
 
-	return branch
+	return
 
 def buildBranch(parent, file, nodes, node, level, ref):
-	branch = None
-	if (node.typeName == 'Parameter'):
-		branch = ParameterNode(node, False)
-	elif (node.typeName == 'ParameterText'):
-		branch = ParameterTextNode(node, False)
-	elif (node.typeName == 'Enum'):
-		branch = EnumNode(node, True)
-	elif (node.typeName == 'Feature'):
-		branch = FeatureNode(node, False)
-	elif (node.typeName == 'ParameterBoolean'):
-		branch = ValueNode(node, False)
-	elif (node.typeName == 'ValueSInt32'):
-		branch = ValueNode(node, False)
-	elif (node.typeName == 'ValueUInt32'):
-		branch = ValueNode(node, False)
-	else:
-		branch = DataNode(node, False)
+	branch = getBranchNode(node, False)
 	parent.append(branch)
 
 	num = ''
@@ -218,14 +186,15 @@ def buildBranch(parent, file, nodes, node, level, ref):
 
 	for childRef in node.childIndexes:
 		if (childRef.index in nodes):
-			child = nodes[childRef.index]
-			childRef.node = child
+			childRef.node = nodes[childRef.index]
+		if(childRef.node is not None):
+			child = childRef.node
 			if (childRef.type == NodeRef.TYPE_CHILD):
-				buildBranch(branch, file, nodes, child, level + 1, childRef)
+				buildBranch(branch, file, nodes, childRef.node, level + 1, childRef)
 			elif (childRef.type == NodeRef.TYPE_CROSS):
-				buildBranchRef(branch, file, nodes, child, level + 1, childRef)
+				buildBranchRef(branch, file, nodes, childRef, level + 1)
 
-	return branch
+	return
 
 def buildTree(file, seg):
 	nodes = seg.elementNodes
@@ -246,7 +215,7 @@ def buildTree(file, seg):
 						radius = NodeRef(idx1, 0x8000, NodeRef.TYPE_CROSS)
 						radius.node = node
 						child.set('refRadius', radius)
-			else:
+			elif (ref.index > -1):
 				logError('>E0010: (%04X): %s - Index out of range (%X>%X)!' %(node.index, node.typeName, ref.index, l))
 
 		ref = node.parentIndex

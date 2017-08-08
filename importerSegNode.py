@@ -15,7 +15,7 @@ from math            import log10
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.1'
+__version__     = '0.3.0'
 __status__      = 'In-Development'
 
 def isList(data, code):
@@ -795,9 +795,9 @@ class AbstractNode():
 	def getUnitOffset(self):
 		unitRef = self.get('refUnit')
 		if (unitRef):
-			numerators = unitRef.getVariable('numerators')
+			numerators = unitRef.get('numerators')
 			if (numerators):
-				offset = numerators[0].getVariable('UnitOffset')
+				offset = numerators[0].get('UnitOffset')
 				if (offset is not None):
 					return offset
 		return 0.0
@@ -928,6 +928,13 @@ class AbstractNode():
 
 			return unitName
 		return None
+		
+	def getName(self):
+		if (self.name is None):
+			ref = self.get('label')
+			if (ref):
+				return ref.getName()
+		return self.name
 
 	def __str__(self):
 		if (self.name is None):
@@ -1008,24 +1015,10 @@ class NodeRef():
 		if (node):
 			assert isinstance(node, AbstractNode), 'Node reference is not a AbstractNode (%s)!' %(node.__class__.__name__)
 
-	def getBranchNode(self):
-		if (self.node):
-			return self.node.node
-		return None
-
-	def getName(self):
-		if (self.node):
-			return self.node.name
-		return None
-
-	def getTypeName(self):
+	@property
+	def typeName(self):
 		if (self.node):
 			return self.node.typeName
-		return None
-
-	def getVariable(self, name):
-		if (self.node):
-			return self.node.get(name)
 		return None
 
 	@property
@@ -1033,6 +1026,31 @@ class NodeRef():
 		if (self.node):
 			return self.node.index
 		return -1
+
+	def getBranchNode(self):
+		if (self.node):
+			return self.node.node
+		return None
+
+	def getName(self):
+		if (self.node):
+			return self.node.getName()
+		return None
+
+	def get(self, name):
+		if (self.node):
+			return self.node.get(name)
+		return None
+
+	def getSketchEntity(self):
+		if (self.node):
+			return self.node.sketchEntity
+		return None
+
+	def getSketchIndex(self):
+		if (self.node):
+			return self.node.sketchIndex
+		return None
 
 	def __str__(self):
 		return '[%04X,%X]' %(self.index, self.mask)

@@ -13,7 +13,7 @@ import math
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.3'
+__version__     = '0.3.0'
 __status__      = 'In-Development'
 
 class Transformation:
@@ -68,23 +68,23 @@ class Transformation:
 		return i
 
 	def getX(self):
-		return self.m[0][3]
+		return self.m[0][3] * 10.0
 
 	def getY(self):
-		return self.m[1][3]
+		return self.m[1][3] * 10.0
 
 	def getZ(self):
-		return self.m[2][3]
+		return self.m[2][3] * 10.0
 
 	def __str__(self):
 		v = self.m[0]
-		m1 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3])
+		m1 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3] * 10.0)
 		v = self.m[1]
-		m2 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3])
+		m2 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3] * 10.0)
 		v = self.m[2]
-		m3 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3])
+		m3 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3] * 10.0)
 		v = self.m[3]
-		m4 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3])
+		m4 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3] * 10.0)
 		m = '[%s, %s, %s, %s]' %(m1, m2, m3, m4)
 		j = 0
 		mask = '|'

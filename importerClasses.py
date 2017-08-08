@@ -12,7 +12,7 @@ from math          import degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.1'
+__version__     = '0.3.0'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -579,16 +579,23 @@ class DataNode():
 			if (isRef == False):
 				data.node = self
 
+	@property
+	def typeName(self):
+		if (self.data):
+			return self.data.typeName
+		return ''
+
+	@property
+	def index(self):
+		if (self.data):
+			return self.data.index
+		return -1
+
 	def size(self):
 		return len(self.children)
 
 	def isLeaf(self):
 		return self.size() == 0
-
-	def getIndex(self):
-		if (self.data):
-			return self.data.index
-		return -1
 
 	def getRef(self, ref):
 		if (ref):
@@ -597,20 +604,8 @@ class DataNode():
 
 	def getName(self):
 		if (self.data):
-			if (self.data.name):
-				return self.data.name
-		ref = self.getVariable('label')
-		if (ref):
-			if (ref.getTypeName() != 'Label'):
-				ref = ref.getVariable('label')
-		if (ref):
-			return ref.node.name
+			return self.data.getName()
 		return None
-
-	def getTypeName(self):
-		if (self.data):
-			return self.data.typeName
-		return ''
 
 	def isHandled(self):
 		if (self.data):
@@ -645,7 +640,7 @@ class DataNode():
 			self.first = node
 			node.previous = None
 		self.children.append(node)
-		self._map[node.getIndex()] = node
+		self._map[node.index] = node
 		node.next = None
 		node.parent = self
 
@@ -659,7 +654,7 @@ class DataNode():
 	def getFirstChild(self, key):
 		child = self.first
 		while (child):
-			if (child.getTypeName() == key):
+			if (child.typeName == key):
 				return child
 			child = child.next
 		return None
@@ -668,12 +663,12 @@ class DataNode():
 		lst = []
 		child = self.first
 		while (child):
-			if (child.getTypeName() == key):
+			if (child.typeName == key):
 				lst.append(child)
 			child = child.next
 		return lst
 
-	def getVariable(self, name):
+	def get(self, name):
 		if (self.data):
 			return self.data.get(name)
 		return None
@@ -690,8 +685,8 @@ class DataNode():
 	def getRefText(self):
 		name = self.getName()
 		if ((name) and (len(name) > 0)):
-			return '(%04X): %s \'%s\'' %(self.getIndex(), self.getTypeName(), name)
-		return '(%04X): %s' %(self.getIndex(), self.getTypeName())
+			return '(%04X): %s \'%s\'' %(self.index, self.typeName, name)
+		return '(%04X): %s' %(self.index, self.typeName)
 
 	def setValid(self, valid):
 		if (self.data):
@@ -724,18 +719,18 @@ class ParameterNode(DataNode):
 		self.handled = False
 
 	def getValueRaw(self):
-		return self.getVariable('valueNominal')
+		return self.get('valueNominal')
 
 	def getRefText(self):
 		x = self.getValue()
 		try:
 			if (isinstance(x, Angle)):
-				return '(%04X): %s \'%s\'=%s' %(self.getIndex(), self.getTypeName(), self.getName(), x)
+				return '(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.getName(), x)
 			if (isinstance(x, Length)):
-				return '(%04X): %s \'%s\'=%s' %(self.getIndex(), self.getTypeName(), self.getName(), x)
-			return '(%04X): %s \'%s\'=%s' %(self.getIndex(), self.getTypeName(), self.getName(), x)
+				return '(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.getName(), x)
+			return '(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.getName(), x)
 		except Exception as e:
-			return '(%04X): %s \'%s\'=%s - %s' %(self.getIndex(), self.getTypeName(), self.getName(), x, e)
+			return '(%04X): %s \'%s\'=%s - %s' %(self.index, self.typeName, self.getName(), x, e)
 
 	def getParameterFormula(self, parameterData, withUnits):
 		subFormula = ''
@@ -833,8 +828,8 @@ class ParameterNode(DataNode):
 
 	def getValue(self):
 		x = self.getValueRaw()
-		#unitRef = self.getVariable('refUnit')
-		#type = unitRef.getVariable('type')
+		#unitRef = self.get('refUnit')
+		#type = unitRef.get('type')
 
 		type = self.getUnitName()
 		# Length
@@ -935,7 +930,7 @@ class ParameterNode(DataNode):
 			if (derivedUnit == 'lm')       : return Luminosity(x, type)
 			logWarning('>>>WARNING: found unsuppored derived unit - [%s] using [%s] instead!' %(derivedUnit, type))
 		else:
-			logWarning('>>>WARNING: unknown unit (%04X): \'%s\' - [%s]' %(self.getIndex(), self.getTypeName(), type))
+			logWarning('>>>WARNING: unknown unit (%04X): \'%s\' - [%s]' %(self.index, self.typeName, type))
 		return Derived(x, type)
 
 class ParameterTextNode(DataNode):
@@ -944,14 +939,14 @@ class ParameterTextNode(DataNode):
 		self.handled = False
 
 	def getValueRaw(self):
-		return self.getVariable('value')
+		return self.get('value')
 
 	def getUnitName(self):
 		return ''
 
 	def getRefText(self):
 		x = self.getValue()
-		return '(%04X): %s \'%s\'=\'%s\'' %(self.getIndex(), self.getTypeName(), self.getName(), x)
+		return '(%04X): %s \'%s\'=\'%s\'' %(self.index, self.typeName, self.getName(), x)
 
 	def getValue(self):
 		x = self.getValueRaw()
@@ -974,18 +969,21 @@ class EnumNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getRefText(self):
-		name = self.getVariable('Enum')
-		values = self.getVariable('Values')
-		i = self.getVariable('value')
+	def getValueText(self):
+		values = self.get('Values')
+		i = self.get('value')
 		value = '%d' %(i)
 		if ((values) and (i < len(values))):
 			value = values[i]
-		return '(%04X): %s=%s' %(self.getIndex(), name, value)
+		return value
+
+	def getRefText(self):
+		name = self.get('Enum')
+		return '(%04X): %s=%s' %(self.index, name, self.getValueText())
 
 	def __str__(self):
 		node = self.data
-		name = self.getVariable('Enum')
+		name = self.get('Enum')
 		return '(%04X): %s %s%s' %(node.index, node.typeName, name, node.content)
 
 class FeatureNode(DataNode):
@@ -993,7 +991,7 @@ class FeatureNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def _getPropertyName(self, index):
-		properties = self.getVariable('properties')
+		properties = self.get('properties')
 		if (properties):
 			if (index < len(properties)):
 				typ = properties[index]
@@ -1002,18 +1000,18 @@ class FeatureNode(DataNode):
 		return None
 
 	def getSubTypeName(self):
-		subTypeName = self.getVariable('Feature')
+		subTypeName = self.get('Feature')
 		if (subTypeName): return subTypeName
 
 		p0 = self._getPropertyName(0)
 		p1 = self._getPropertyName(1)
 
-		if (p0 == 'FxChamfer'):
+		if (p0 == '90874D51'):
+			p4 = self._getPropertyName(4)
+			if (p4 == '7DAA0032'):             return 'Chamfer'
 			if (p1 == 'Parameter'):            return 'Bend'
-			if (p1 == 'FxThread'):             return 'Chamfer'
 			if (p1 == 'FxExtend'):             return 'Extend'
 			if (p1 is None):                   return 'CornerChamfer'
-		elif (p0 == 'PartFeatureOperation'):   return 'Coil'
 		elif (p0 == 'SurfaceBodies'):
 			if (p1 == 'SolidBody'):            return 'Combine'
 			if (p1 == 'SurfaceBodies'):        return 'CoreCavity'
@@ -1022,13 +1020,18 @@ class FeatureNode(DataNode):
 			p3 = self._getPropertyName(3)
 			if (p1 == 'FxBoundaryPatch'):
 				p6 = self._getPropertyName(6)
-				if (p2 == 'Line3D'):           return 'Revolve'
-				if (p6 == '92637D29'):         return 'Extrude' #Map cut feature to extrusion!
-				if (p6 == 'Parameter'):        return 'Emboss'
+				if (p2 == 'Line3D'):
+					if (p6 is None):           return 'Revolve'
+					if (p6 == '92637D29'):     return 'Extrude' #Map cut feature to extrusion!
+					return 'Coil'
+				elif (p2 == 'Direction'):
+					if (p6 == 'Parameter'):    return 'Emboss'
+					return 'Extrude'
+				return 'Coil'
 			if (p1 == 'FxThread'):             return 'Shell'
 			if (p1 == 'Parameter'):            return 'Hole'
 			if (p1 == 'ParameterBoolean'):
-				if (p3 == 'Enum'):            return 'Split'
+				if (p3 == 'Enum'):             return 'Split'
 				if (p2 == 'ParameterBoolean'): return 'Fold'
 		elif (p0 == 'FxFilletConstant'):
 			p8 = self._getPropertyName(8)
@@ -1063,6 +1066,7 @@ class FeatureNode(DataNode):
 		elif (p0 == 'Parameter'):              return 'Loft'
 		elif (p0 == 'FxThicken'):              return 'Thicken'
 		elif (p0 == 'Transformation'):
+			if (p1 == '8D6EF0BE'):             return 'PatternRectangular'
 			# FIXME: This only works for the intersection example (e.g. Shaft1.ipt has other proeprties)!!!!
 			return 'iFeature'
 		elif (p0 is None):
@@ -1095,7 +1099,7 @@ class FeatureNode(DataNode):
 		# - SketchDrivenPattern
 		# - SnapFit
 		# - Unfold
-		return '*UNKNOWN*'
+		return 'Unknown'
 
 	def getRefText(self):
 		data = self.data
@@ -1106,12 +1110,16 @@ class FeatureNode(DataNode):
 		data = self.data
 		name = self.getName()
 		properties = ''
-		for p in data.get('properties'):
-			properties += '\t'
-			if (p):
-				properties += p.getTypeName()
+		list = data.get('properties')
+		if (list is not None):
+			for p in list:
+				properties += '\t'
+				if (p):
+					properties += p.typeName
 #		logError('%d\tFEATURE\t%s\t%s%s' %(getFileVersion(), self.getSubTypeName(), name, properties))
-		return '(%04X): %s\t%s\t\'%s\'\tpropererties=%d\t%s' %(data.index, data.typeName, self.getSubTypeName(), name, len(data.get('properties')), data.content)
+			return '(%04X): %s\t%s\t\'%s\'\tpropererties=%d\t%s' %(data.index, data.typeName, self.getSubTypeName(), name, len(list), data.content)
+
+		return '(%04X): %s\t%s\t\'%s\'\tpropererties=None\t%s' %(data.index, data.typeName, self.getSubTypeName(), name, data.content)
 
 
 class ValueNode(DataNode):
@@ -1130,91 +1138,95 @@ class ValueNode(DataNode):
 		else:
 			name = ' %s' %(name)
 		if (value is not None):
-			return '(%04X): %s%s=%X' %(self.getIndex(), self.getTypeName(), name, value)
+			return '(%04X): %s%s=%X' %(self.index, self.typeName, name, value)
 		else:
-			logError('ERROR: (%04X): %s has no value defined!' %(self.getIndex(), self.getTypeName()))
-			return '(%04X): %s' %(self.getIndex(), self.getTypeName())
+			logError('ERROR: (%04X): %s has no value defined!' %(self.index, self.typeName))
+			return '(%04X): %s' %(self.index, self.typeName)
 
-class Point2DNode(DataNode):
+class PointNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		return '(%04X): %s - (%g/%g)' %(self.getIndex(), self.getTypeName(), self.getVariable('x'), self.getVariable('y'))
+		if (self.typeName[-2:] == '2D'):
+			return '(%04X): %s - (%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'))
+		return '(%04X): %s - (%g/%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
 
-class Point3DNode(DataNode):
+class LineNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		return '(%04X): %s - (%g/%g/%g)' %(self.getIndex(), self.getTypeName(), self.getVariable('x'), self.getVariable('y'), self.getVariable('z'))
+		p = self.get('points')
+		if (len(p)>1):
+			p0 = p[0].node
+			p1 = p[1].node
+			if (self.typeName[-2:] == '2D'):
+				return '(%04X): %s - (%g/%g) - (%g/%g)' %(self.index, self.typeName, p0.get('x'), p0.get('y'), p1.get('x'), p1.get('y'))
+			return '(%04X): %s - (%g/%g/%g) - (%g/%g/%g)' %(self.index, self.typeName, p0.get('x'), p0.get('y'), p0.get('z'), p1.get('x'), p1.get('y'), p1.get('z'))
+		return '(%04X): %s' %(self.index, self.typeName)
 
-class Line2DNode(DataNode):
+class CircleNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		p = self.getVariable('points')
-		p0 = p[0].node
-		p1 = p[1].node
-		return '(%04X): %s - (%g/%g) - (%g/%g)' %(self.getIndex(), self.getTypeName(), p0.get('x'), p0.get('y'), p1.get('x'), p1.get('y'))
-
-class Circle2DNode(DataNode):
-	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
-
-	def getRefText(self):
-		c = self.getVariable('refCenter').node
-		r = self.getVariable('r')
-		p = self.getVariable('points')
+		r = self.get('r')
+		p = self.get('points')
 		points = ''
 		for i in p:
 			if (i):
-				points += ', (%g/%g)' %(i.node.get('x'), i.node.get('y'))
-		return '(%04X): %s - (%g/%g), r=%g%s' %(self.getIndex(), self.getTypeName(), c.get('x'), c.get('y'), r, points)
+				if (self.typeName[-2:] == '2D'):
+					points += ', (%g/%g)' %(i.node.get('x'), i.node.get('y'))
+				else:
+					points += ', (%g/%g/%g)' %(i.node.get('x'), i.node.get('y'), i.node.get('z'))
+		if (self.typeName[-2:] == '2D'):
+			c = self.get('refCenter')
+			return '(%04X): %s - (%g/%g), r=%g%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points)
+		return '(%04X): %s - (%g/%g/%g), r=%g%s' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'), r, points)
 
 class GeometricRadius2DNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		o = self.getVariable('refObject').node
-		c = self.getVariable('refCenter').node
-		return '(%04X): %s - o=(%04X): %s, c=(%04X)' %(self.getIndex(), self.getTypeName(), o.index, o.typeName, c.index)
+		o = self.get('refObject').node
+		c = self.get('refCenter').node
+		return '(%04X): %s - o=(%04X): %s, c=(%04X)' %(self.index, self.typeName, o.index, o.typeName, c.index)
 
 class GeometricCoincident2DNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		o = self.getVariable('refObject').node
-		p = self.getVariable('refPoint').node
-		return '(%04X): %s - o=(%04X): %s, p=(%04X): %s' %(self.getIndex(), self.getTypeName(), o.index, o.typeName, p.index, p.typeName)
+		o = self.get('refObject').node
+		p = self.get('refPoint').node
+		return '(%04X): %s - o=(%04X): %s, p=(%04X): %s' %(self.index, self.typeName, o.index, o.typeName, p.index, p.typeName)
 
 class DimensionAngleNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		d = self.getVariable('refParameter').node
-		if (self.getTypeName() == 'Dimension_Angle2Line2D'):
-			l1 = self.getVariable('refLine1').node
-			l2 = self.getVariable('refLine2').node
-			return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.getIndex(), self.getTypeName(), d.name, l1.index, l1.typeName, l2.index, l2.typeName)
-		p1 = self.getVariable('refPoint1').node
-		p2 = self.getVariable('refPoint2').node
-		p3 = self.getVariable('refPoint3').node
-		return '(%04X): %s - d=\'%s\', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s' %(self.getIndex(), self.getTypeName(), d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
+		d = self.get('refParameter').node
+		if (self.typeName == 'Dimension_Angle2Line2D'):
+			l1 = self.get('refLine1').node
+			l2 = self.get('refLine2').node
+			return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name, l1.index, l1.typeName, l2.index, l2.typeName)
+		p1 = self.get('refPoint1').node
+		p2 = self.get('refPoint2').node
+		p3 = self.get('refPoint3').node
+		return '(%04X): %s - d=\'%s\', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s' %(self.index, self.typeName, d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
 
 class DimensionDistance2DNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self):
-		d = self.getVariable('refParameter').node
-		o1 = self.getVariable('refEntity1').node
-		o2 = self.getVariable('refEntity2').node
-		return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.getIndex(), self.getTypeName(), d.name , o1.index, o1.typeName, o2.index, o2.typeName)
+		d = self.get('refParameter').node
+		o1 = self.get('refEntity1').node
+		o2 = self.get('refEntity2').node
+		return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name , o1.index, o1.typeName, o2.index, o2.typeName)
 
 class B32BF6AC():
 	def __init__(self, m, x):
@@ -1283,9 +1295,10 @@ class BRepChunk():
 
 class ViewObject():
 	def __init__(self):
-		self.ShapeColor = None
-		self.LineColor  = None
-		self.PointColor = None
+		self.ShapeColor  = None
+		self.LineColor   = None
+		self.PointColor  = None
+		self.DisplayMode = None
 	def hide(self):
 		pass
 	def show(self):

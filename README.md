@@ -66,8 +66,12 @@ That allows it to embed Excel workboos e.g.
 - 0.7: Preparation for supporting Featrues (except iFeature)
 	Most sections found in pro samples (2010..2018) are now decoded (structured)
 
+- 0.8: Added Features
+	* FX-Revolve, FX-Extrude, FX-Loft
+	* FX-Combine
+	* Polar-Pattern, Rectangular-Pattern and Mirror-Pattern.
+
 ## Next steps in unsorted order:
-- Features like Pockets, Revolutions, etc.
+- Features like Grave, Thicken, etc.
 - Features like Fillet, Champher, Draft, etc.
-- Features like boolean operations (union, difference, intersection, section)
-- Features like mirrors, patterns (linear, polar, multitransform)
+- Prefferences page
