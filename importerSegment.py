@@ -14,7 +14,7 @@ from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.3.0'
+__version__     = '0.3.1'
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
@@ -152,6 +152,7 @@ def getBranchNode(node, isRef):
 	if (node.typeName == 'Enum'):                    return EnumNode(node, isRef)
 	if (node.typeName == 'Feature'):                 return FeatureNode(node, isRef)
 	if (node.typeName == 'Point2D'):                 return PointNode(node, isRef)
+	if (node.typeName == 'BlockPoint2D'):            return PointNode(node, isRef)
 	if (node.typeName == 'Point3D'):                 return PointNode(node, isRef)
 	if (node.typeName == 'Line2D'):                  return LineNode(node, isRef)
 	if (node.typeName == 'Line3D'):                  return LineNode(node, isRef)

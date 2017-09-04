@@ -673,7 +673,7 @@ class DataNode():
 			return self.data.get(name)
 		return None
 
-	def setVariable(self, name, value):
+	def set(self, name, value):
 		if (self.data):
 			self.data.set(name, value)
 
@@ -1106,8 +1106,6 @@ class FeatureNode(DataNode):
 		# - AliasFreeform
 		# - CosmeticBend
 		# - FaceOffset
-		# - Lip
-		# - FlangeLofted
 		# - Mesh
 		# - MidSurface
 		# - Move
@@ -1120,6 +1118,18 @@ class FeatureNode(DataNode):
 		data = self.data
 		name = self.getName()
 		return '(%04X): Fx%s \'%s\'' %(data.index, self.getSubTypeName(), name)
+
+	def getParticipants(self):
+		label = self.get('label')
+		if (label is None):
+			logError('ERR> (%04X): %s - has no required label attribute!' %(self.index, self.typeName))
+			return []
+		while (label.typeName != 'Label'):
+			dummy = label
+			label = label.get('label')
+			if (label is None):
+				logError('ERR> (%04X): %s - has no required label attribute!' %(dummy.index, dummy.typeName))
+		return label.get('lst0')
 
 	def __str__(self):
 		data = self.data
@@ -1164,7 +1174,10 @@ class PointNode(DataNode):
 
 	def getRefText(self):
 		if (self.typeName[-2:] == '2D'):
-			return '(%04X): %s - (%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'))
+			point = self
+			if (self.typeName == 'BlockPoint2D'):
+				point = self.get('refPoint')
+			return '(%04X): %s - (%g/%g)' %(self.index, self.typeName, point.get('x'), point.get('y'))
 		return '(%04X): %s - (%g/%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
 
 class LineNode(DataNode):
