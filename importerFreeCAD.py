@@ -11,7 +11,7 @@ import traceback
 from importerUtils   import logMessage, logWarning, logError, LOG, IFF, IntArr2Str, FloatArr2Str, getFileVersion
 from importerClasses import RSeMetaData, Angle, Length, ParameterNode, ParameterTextNode, ValueNode, FeatureNode, AbstractValue
 from importerSegNode import AbstractNode
-from math            import sqrt, sin, cos, acos, atan2, degrees, radians, pi
+from math            import sqrt, fabs, tan, acos, atan2, degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -400,12 +400,24 @@ def getNominalValue(node):
 #	return dir, distance
 
 def adjustViewObject(newGeo, baseGeo):
-	if ((FreeCAD.GuiUp) and (baseGeo is not None)):
-		baseGeo.ViewObject.hide()
-		newGeo.ViewObject.ShapeColor  = baseGeo.ViewObject.ShapeColor
-		newGeo.ViewObject.DisplayMode = baseGeo.ViewObject.DisplayMode
-		newGeo.ViewObject.LineColor   = baseGeo.ViewObject.LineColor
-		newGeo.ViewObject.PointColor  = baseGeo.ViewObject.PointColor
+	if (newGeo  is None): return
+	if (baseGeo is None): return
+	newGeo.ViewObject.DisplayMode  = baseGeo.ViewObject.DisplayMode
+	newGeo.ViewObject.DrawStyle    = baseGeo.ViewObject.DrawStyle
+	newGeo.ViewObject.Lighting     = baseGeo.ViewObject.Lighting
+	newGeo.ViewObject.LineColor    = baseGeo.ViewObject.LineColor
+	newGeo.ViewObject.LineWidth    = baseGeo.ViewObject.LineWidth
+	newGeo.ViewObject.PointColor   = baseGeo.ViewObject.PointColor
+	newGeo.ViewObject.PointSize    = baseGeo.ViewObject.PointSize
+	newGeo.ViewObject.ShapeColor   = baseGeo.ViewObject.ShapeColor
+	newGeo.ViewObject.Transparency = baseGeo.ViewObject.Transparency
+
+def correctPlacement(geo, placement, height):
+	geo.Placement = FreeCAD.Placement(placement)
+	p = geo.Placement.Base
+	a = geo.Placement.Rotation.Axis
+	geo.Placement.Base = createVector(p.x - height * a.x, p.y - height * a.y, p.z - height * a.z)
+	return
 
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
@@ -709,21 +721,6 @@ class FreeCADImporter:
 			logError('>E: ' + traceback.format_exc())
 		return node.getSketchEntity()
 
-	def createCone(self, name, diameter1, angle, diameter2):
-		R1 = diameter1.node.getValueRaw() / 2
-		R2 = diameter2.node.getValueRaw() / 2
-		conGeo = self.doc.addObject('Part::Cone', name)
-		conGeo.Radius1 = R1
-		conGeo.Radius2 = R2
-		conGeo.Height = (R1 - R2) / tan(angle.node.getValueRaw()/2)
-		return conGeo
-
-	def createCylinder(self, name, diameter, height):
-		cylGeo = self.doc.addObject('Part::Cylinder', name)
-		cylGeo.Radius = diameter.node.getValueRaw() / 2
-		cylGeo.Height = height.node.getValueRaw()
-		return cylGeo
-
 	def collectSection(self, fxNode, action): #
 		name          = fxNode.getName()
 		definitionRef = fxNode.get('label')
@@ -747,6 +744,48 @@ class FreeCADImporter:
 			else:
 				logWarning('        ... don\'t know how to %s (%04X): %s \'%s\' - IGNORED!' %(action, sectionRef.index, sectionRef.typeName, sectionRef.getName()))
 		return solid, sections
+
+	def createBoolean(self, className, name, baseGeo, tools):
+		booleanGeo = baseGeo
+		if ((baseGeo is not None) and (len(tools) > 0)):
+			booleanGeo = self.doc.addObject('Part::%s' %(className), name)
+			if (className == 'Cut'):
+				booleanGeo.Base = baseGeo
+				booleanGeo.Tool = tools[0]
+			else:
+				booleanGeo.Shapes = [baseGeo] + tools
+			adjustViewObject(booleanGeo, baseGeo)
+		return booleanGeo
+
+	def createCone(self, name, diameter2, angle, diameter1):
+		R1 = 0.0
+		R2 = 0.0
+		if (diameter1):
+			R1 = diameter1.node.getValueRaw() / 2 * 10.0
+		if (diameter2):
+			R2 = diameter2.node.getValueRaw() / 2 * 10.0
+		h  = fabs(R1 - R2) / tan(angle.node.getValue().getRAD() / 2)
+		conGeo = self.doc.addObject('Part::Cone', name)
+		conGeo.Radius1 = R1
+		conGeo.Radius2 = R2
+		conGeo.Height = h
+		return conGeo, h
+
+	def createCylinder(self, name, diameter, height, drillPoint):
+		r = diameter.node.getValueRaw() / 2 * 10.0
+		h1 = height.node.getValueRaw() * 10.0
+		cylGeo = self.doc.addObject('Part::Cylinder', name)
+		cylGeo.Radius = r
+		cylGeo.Height = h1
+
+		if (drillPoint):
+			angle = drillPoint.node.getValueRaw()
+			if (angle > 0):
+				conGeo, h2 = self.createCone(name + 'T', diameter, drillPoint, None)
+				conGeo.Placement.Base.z = -h2
+				return [cylGeo, conGeo], h1
+
+		return [cylGeo], h1
 
 ########################
 	def addSketch_Geometric_Fix2D(self, constraintNode, sketchObj):
@@ -1578,7 +1617,17 @@ class FreeCADImporter:
 				pad.Reversed = reversed
 				pad.Midplane = midplane
 				pad.Length = len1
+				pad.ViewObject.DisplayMode  = 'Flat Lines'
+				pad.ViewObject.DrawStyle    = 'Solid'
+				pad.ViewObject.Lighting     = 'Two side'
+				pad.ViewObject.LineColor    = (0.10, 0.10, 0.10)
+				pad.ViewObject.LineWidth    = 1.00
+				pad.ViewObject.PointColor   = (0.10, 0.10, 0.10)
+				pad.ViewObject.PointSize    = 1.00
+				pad.ViewObject.ShapeColor   = (0.80, 0.80, 0.80)
+				pad.ViewObject.Transparency = 10
 				pad.setExpression('Length', dimLenNode.get('alias'))
+				sketch.ViewObject.Visibility=False
 				# Workaround with taperAngle: Add draft on outward face!?!
 
 				if (dimLen2Ref):
@@ -1599,18 +1648,6 @@ class FreeCADImporter:
 		else:
 			logWarning('        Failed create new extrusion \'%s\' - (%04X): %s properties[04] is None!' %(name, padNode.index, padNode.typeName))
 		return pad
-
-	def createBoolean(self, className, name, baseGeo, tools):
-		booleanGeo = baseGeo
-		if ((baseGeo is not None) and (len(tools) > 0)):
-			booleanGeo = self.doc.addObject('Part::%s' %(className), name)
-			if (className == 'Cut'):
-				booleanGeo.Base = baseGeo
-				booleanGeo.Tool = tools[0]
-			else:
-				booleanGeo.Shapes = [baseGeo] + tools
-			adjustViewObject(booleanGeo, baseGeo)
-		return booleanGeo
 
 	def createFxPad_Operation(self, padNode, sketchNode, name, nameExtension, className):
 		properties = padNode.get('properties')
@@ -1726,7 +1763,6 @@ class FreeCADImporter:
 					self.addBody(extrudeNode, padGeo, 0x1A, 0x10)
 					if (self.root):
 						self.root.addObject(padGeo)
-					adjustViewObject(padGeo, sketchNode.getSketchEntity())
 
 	def Create_FxChamfer(self, chamferNode):
 		#baseGeo = ???
@@ -1987,50 +2023,76 @@ class FreeCADImporter:
 		#    = getListNode(properties, 0x07)	# <=> placement == "by Sketch"
 		transformation = getListNode(properties, 0x08)
 		termination    = getListNode(properties, 0x09)
+		# 0x0A ???
+		# 0x0B ???
+		# 0x0C ???
 		#    = getListNode(properties, 0x0D)    # <=> Plane
 		#    = getListNode(properties, 0x0E)    # <=> termination = "To"
 		#    = getListNode(properties, 0x0F)    # <=> termination = "To"
 		direction     = getListNode(properties, 0x10)
 		#    = getListNode(properties, 0x11)    # boolParam
+		# 0x12 ???
 		fxDimensions  = getListNode(properties, 0x13)
 		threadDiam    = getListNode(properties, 0x14)
 		#    = getListNode(properties, 0x15)	# <=> placement == "linear"
+		#    = getListNode(properties, 0x16)	#
+		# 0x17 ???
 		baseData      = getListNode(properties, 0x18)
 
 		if (holeType is not None):
-			holeGeo = None
-			cut = None
-			geo1 = self.createCylinder(name + '_l', holeDiam_1, holeDepth_1)
 			base = self.findBase(baseData.node.next)
+
 			if (base is None):
 				logError('        ... Can\'t find base!')
 			else:
+				placement = getPlacement(transformation)
+				holeGeo   = None
 				if (holeType.get('value') == FreeCADImporter.FX_HOLE_DRILLED):
-					holeGeo = self.createBoolean('Cut', name, base, [geo1])
+					logMessage('    adding drilled FxHole \'%s\' ...' %(name), LOG.LOG_INFO)
+					geos, h = self.createCylinder(name + '_l', holeDiam_1, holeDepth_1, pointAngle)
+					if (len(geos) > 1):
+						geo1 = self.createBoolean('MultiFuse', name + '_h', geos[0], geos[1:])
+						correctPlacement(geo1, placement, h)
+						holeGeo = self.createBoolean('Cut', name, base, [geo1])
+					else:
+						correctPlacement(geos[0], placement, h)
+						holeGeo = self.createBoolean('Cut', name, base, geos[0:1])
 					if (holeGeo is None):
 						logError('        ... Failed to create hole!')
 				else:
-					cut = self.createBoolean('Cut', name + '_c', base, [geo1])
+					geos, h1 = self.createCylinder(name + '_l', holeDiam_1, holeDepth_1, pointAngle)
 					if (holeType.get('value') == FreeCADImporter.FX_HOLE_SINK):
-						geo2 = self.createCone(name + '_2', holeDiam_2, holeAngle_2, holeDepth_1)
-						holeGeo = self.createBoolean('Cut', name, cut, [geo2])
+						logMessage('    adding counter sink FxHole \'%s\' ...' %(name), LOG.LOG_INFO)
+						geo2, h2 = self.createCone(name + '_2', holeDiam_2, holeAngle_2, holeDiam_1)
+						geo2.Placement.Base.z = h1
+						holeGeo = self.createBoolean('MultiFuse', name + '_h', geo2, geos)
+						correctPlacement(holeGeo, placement, h1 + h2)
+						holeGeo = self.createBoolean('Cut', name, base, [holeGeo])
 						if (holeGeo is None):
 							logError('        ... Failed to create counter sink hole!')
 					elif (holeType.get('value') == FreeCADImporter.FX_HOLE_BORED):
-						geo2 = self.createCylinder(name + '_2', holeDiam_2, holeDepth_2)
-						holeGeo = self.createBoolean('Cut', name, cut, [geo2])
+						logMessage('    adding counter bored FxHole \'%s\' ...' %(name), LOG.LOG_INFO)
+						geo2, h2 = self.createCylinder(name + '_2', holeDiam_2, holeDepth_2, None)
+						geo2[0].Placement.Base.z = h1 - h2
+						holeGeo = self.createBoolean('MultiFuse', name + '_h', geo2[0], geos)
+						correctPlacement(holeGeo, placement, h1 + h2)
+						holeGeo = self.createBoolean('Cut', name, base, [holeGeo])
 						if (holeGeo is None):
-							logError('        ... Failed to create counter bore hole!')
+							logError('        ... Failed to create counter bored hole!')
 					elif (holeType.get('value') == FreeCADImporter.FX_HOLE_SPOT):
-						geo2 = self.createCylinder(name + '_2', holeDiam_2, holeDepth_2)
-						holeGeo = self.createBoolean('Cut', name, cut, [geo2])
+						logMessage('    adding spot face FxHole \'%s\' ...' %(name), LOG.LOG_INFO)
+						geo2, h2 = self.createCylinder(name + '_2', holeDiam_2, holeDepth_2, None)
+						geo2[0].Placement.Base.z = h1 - h2
+						holeGeo = self.createBoolean('MultiFuse', name + '_h', geo2[0], geos)
+						correctPlacement(holeGeo, placement, h1 + h2)
+						holeGeo = self.createBoolean('Cut', name, base, [holeGeo])
 						if (holeGeo is None):
 							logError('        ... Failed to create spot face hole!')
 					else:
 						logError('ERROR> Unknown hole type %s!' %(holeType.get('value')))
 
-			if (holeGeo is not None):
-				self.addSolidBody(holeNode, holeGeo, properties[0x18])
+				if (holeGeo is not None):
+					self.addSolidBody(holeNode, holeGeo, properties[0x18])
 
 		return
 
