@@ -412,13 +412,6 @@ def adjustViewObject(newGeo, baseGeo):
 	newGeo.ViewObject.ShapeColor   = baseGeo.ViewObject.ShapeColor
 	newGeo.ViewObject.Transparency = baseGeo.ViewObject.Transparency
 
-def correctPlacement(geo, placement, height):
-	geo.Placement = FreeCAD.Placement(placement)
-	p = geo.Placement.Base
-	a = geo.Placement.Rotation.Axis
-	geo.Placement.Base = createVector(p.x - height * a.x, p.y - height * a.y, p.z - height * a.z)
-	return
-
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
 	FX_EXTRUDE_CUT          = 0x0002
@@ -769,6 +762,7 @@ class FreeCADImporter:
 		conGeo.Radius1 = R1
 		conGeo.Radius2 = R2
 		conGeo.Height = h
+		conGeo.Placement.Base.z = -h
 		return conGeo, h
 
 	def createCylinder(self, name, diameter, height, drillPoint):
@@ -777,12 +771,13 @@ class FreeCADImporter:
 		cylGeo = self.doc.addObject('Part::Cylinder', name)
 		cylGeo.Radius = r
 		cylGeo.Height = h1
-
+		cylGeo.Placement.Base.z = -h1
+		
 		if (drillPoint):
 			angle = drillPoint.node.getValueRaw()
 			if (angle > 0):
 				conGeo, h2 = self.createCone(name + 'T', diameter, drillPoint, None)
-				conGeo.Placement.Base.z = -h2
+				conGeo.Placement.Base.z -= h1
 				return [cylGeo, conGeo], h1
 
 		return [cylGeo], h1
@@ -1617,7 +1612,7 @@ class FreeCADImporter:
 				pad.Reversed = reversed
 				pad.Midplane = midplane
 				pad.Length = len1
-				pad.ViewObject.DisplayMode  = 'Flat Lines'
+				pad.ViewObject.DisplayMode  = 'Shaded' # Flat Lines, Shaded, Wireframe or Points
 				pad.ViewObject.DrawStyle    = 'Solid'
 				pad.ViewObject.Lighting     = 'Two side'
 				pad.ViewObject.LineColor    = (0.10, 0.10, 0.10)
@@ -1625,7 +1620,7 @@ class FreeCADImporter:
 				pad.ViewObject.PointColor   = (0.10, 0.10, 0.10)
 				pad.ViewObject.PointSize    = 1.00
 				pad.ViewObject.ShapeColor   = (0.80, 0.80, 0.80)
-				pad.ViewObject.Transparency = 10
+				pad.ViewObject.Transparency = 0
 				pad.setExpression('Length', dimLenNode.get('alias'))
 				sketch.ViewObject.Visibility=False
 				# Workaround with taperAngle: Add draft on outward face!?!
@@ -2052,10 +2047,10 @@ class FreeCADImporter:
 					geos, h = self.createCylinder(name + '_l', holeDiam_1, holeDepth_1, pointAngle)
 					if (len(geos) > 1):
 						geo1 = self.createBoolean('MultiFuse', name + '_h', geos[0], geos[1:])
-						correctPlacement(geo1, placement, h)
+						geo1.Placement = FreeCAD.Placement(placement)
 						holeGeo = self.createBoolean('Cut', name, base, [geo1])
 					else:
-						correctPlacement(geos[0], placement, h)
+						geos[0].Placement = FreeCAD.Placement(placement)
 						holeGeo = self.createBoolean('Cut', name, base, geos[0:1])
 					if (holeGeo is None):
 						logError('        ... Failed to create hole!')
@@ -2064,27 +2059,24 @@ class FreeCADImporter:
 					if (holeType.get('value') == FreeCADImporter.FX_HOLE_SINK):
 						logMessage('    adding counter sink FxHole \'%s\' ...' %(name), LOG.LOG_INFO)
 						geo2, h2 = self.createCone(name + '_2', holeDiam_2, holeAngle_2, holeDiam_1)
-						geo2.Placement.Base.z = h1
 						holeGeo = self.createBoolean('MultiFuse', name + '_h', geo2, geos)
-						correctPlacement(holeGeo, placement, h1 + h2)
+						holeGeo.Placement = FreeCAD.Placement(placement)
 						holeGeo = self.createBoolean('Cut', name, base, [holeGeo])
 						if (holeGeo is None):
 							logError('        ... Failed to create counter sink hole!')
 					elif (holeType.get('value') == FreeCADImporter.FX_HOLE_BORED):
 						logMessage('    adding counter bored FxHole \'%s\' ...' %(name), LOG.LOG_INFO)
 						geo2, h2 = self.createCylinder(name + '_2', holeDiam_2, holeDepth_2, None)
-						geo2[0].Placement.Base.z = h1 - h2
 						holeGeo = self.createBoolean('MultiFuse', name + '_h', geo2[0], geos)
-						correctPlacement(holeGeo, placement, h1 + h2)
+						holeGeo.Placement = FreeCAD.Placement(placement)
 						holeGeo = self.createBoolean('Cut', name, base, [holeGeo])
 						if (holeGeo is None):
 							logError('        ... Failed to create counter bored hole!')
 					elif (holeType.get('value') == FreeCADImporter.FX_HOLE_SPOT):
 						logMessage('    adding spot face FxHole \'%s\' ...' %(name), LOG.LOG_INFO)
 						geo2, h2 = self.createCylinder(name + '_2', holeDiam_2, holeDepth_2, None)
-						geo2[0].Placement.Base.z = h1 - h2
 						holeGeo = self.createBoolean('MultiFuse', name + '_h', geo2[0], geos)
-						correctPlacement(holeGeo, placement, h1 + h2)
+						holeGeo.Placement = FreeCAD.Placement(placement)
 						holeGeo = self.createBoolean('Cut', name, base, [holeGeo])
 						if (holeGeo is None):
 							logError('        ... Failed to create spot face hole!')
