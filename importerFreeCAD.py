@@ -772,7 +772,7 @@ class FreeCADImporter:
 		cylGeo.Radius = r
 		cylGeo.Height = h1
 		cylGeo.Placement.Base.z = -h1
-		
+
 		if (drillPoint):
 			angle = drillPoint.node.getValueRaw()
 			if (angle > 0):

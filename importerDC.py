@@ -5895,7 +5895,7 @@ class DCReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'ref_6')
 		i = node.ReadCrossRef(i, 'ref_7')
 		return i
-	
+
 	def Read_99684A5A(self, node):
 		i = self.ReadContentHeader(node)
 		if (getFileVersion() > 2010):
