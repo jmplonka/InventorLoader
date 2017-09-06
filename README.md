@@ -71,6 +71,9 @@ That allows it to embed Excel workboos e.g.
 	* FX-Combine
 	* Polar-Pattern, Rectangular-Pattern and Mirror-Pattern.
 
+- 0.8.1: Added Features
+	* FX-Hole
+
 ## Next steps in unsorted order:
 - Features like Grave, Thicken, etc.
 - Features like Fillet, Champher, Draft, etc.
