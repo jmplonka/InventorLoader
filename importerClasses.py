@@ -12,7 +12,7 @@ from math          import degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.3.1'
+__version__     = '0.3.2'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -1084,8 +1084,8 @@ class FeatureNode(DataNode):
 		elif (p0 == 'SurfaceBody'):            return 'Reference'
 		elif (p0 == '8677CE83'):               return 'Corner'
 		elif (p0 == 'AFD8A8E0'):               return 'Corner'
-		elif (p0 == '312F9E50'):               return 'Loft'
-		elif (p0 == 'Parameter'):              return 'Loft'
+		elif (p0 == 'LoftSections'):           return 'Loft'
+#		elif (p0 == 'Parameter'):              return 'Loft'
 		elif (p0 == 'FxThicken'):              return 'Thicken'
 		elif (p0 == 'Transformation'):
 			if (p1 == '8D6EF0BE'):             return 'PatternRectangular'

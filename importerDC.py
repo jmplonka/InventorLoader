@@ -16,7 +16,7 @@ import re
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.3.1'
+__version__     = '0.3.2'
 __status__      = 'In-Development'
 
 def _addEmpty(node, indexes, list):
@@ -1716,7 +1716,7 @@ class DCReader(SegmentReader):
 		i = self.ReadContentHeader(node)
 		return i
 
-	def Read_24BCB2F1(self, node): # ThreadFeature {F8957621-7E89-4CB8-AFCA-CE11A556E7A2}
+	def Read_24BCB2F1(self, node):
 		node.typeName = 'FxThread' # Gewinde
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
@@ -2049,7 +2049,7 @@ class DCReader(SegmentReader):
 			i = node.ReadList6(i, AbstractNode._TYP_MAP_TEXT8_X_REF_, 'lst0')
 			i = node.ReadUInt32(i, 'u32_2')
 			i = node.ReadUInt32(i, 'u32_3')
-			i = node.ReadUInt16(i, 'u16_2')
+			i = node.ReadUInt16(i, 'u16_3')
 			i = node.ReadChildRef(i, 'label')
 			i = node.ReadUInt32(i, 'flags')
 			i = node.ReadParentRef(i)
@@ -2113,6 +2113,13 @@ class DCReader(SegmentReader):
 						i = node.ReadList8(i, AbstractNode._TYP_NODE_X_REF_,'entities')
 						i = node.ReadCrossRef(i, 'refTransformation')
 						i = node.ReadCrossRef(i, 'refDirection')
+			elif (u16_2 == 0x0003):
+				node.typeName = 'Enum'
+				node.set('Enum', 'PartFeatureOperation')
+				node.set('Values', ['*UNDEFINED*', 'NewBody', 'Cut', 'Join', 'Intersection', 'Surface'])
+				node.set('type', u16_1)
+				node.set('value', 0)
+				# node.set('value', ????)
 			elif (u16_2 == 0x0080):
 				i = node.ReadUInt32(i, 'u32_2')
 				if (getFileVersion() > 2017):
@@ -2135,7 +2142,6 @@ class DCReader(SegmentReader):
 					i = node.ReadFloat64(i, 'n_x')
 					i = node.ReadFloat64(i, 'n_y')
 					i = node.ReadFloat64(i, 'n_z')
-
 			elif (u16_2 == 0xFFFF):
 				node.typeName = 'Sketch3D'
 				node.set('numEntities', 0)
@@ -2290,6 +2296,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_312F9E50(self, node):
+		node.typeName = 'LoftSections'
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
@@ -3190,6 +3197,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_4B3150E8(self, node):
+		node.typeName = 'LoftSection'
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
@@ -3201,7 +3209,7 @@ class DCReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'refCondition')
 		i = node.ReadCrossRef(i, 'refImpact')
 		i = node.ReadCrossRef(i, 'refAngle')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadCrossRef(i, 'refTangentPlane')
 		i = node.ReadList7(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadCrossRef(i, 'refDirectionReversed')
@@ -6227,10 +6235,14 @@ class DCReader(SegmentReader):
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'cld_0')
+		i = node.ReadChildRef(i, 'refWrapper')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
+		return i
+
+	def Read_FC203F47(self, node):
+		i = self.Read_A477243B(node)
 		return i
 
 	def Read_A5410F0A(self, node):
@@ -8406,7 +8418,7 @@ class DCReader(SegmentReader):
 
 	def Read_ED7D8445(self, node):
 		i = self.ReadChildHeader1(node)
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadCrossRef(i, 'refOwnedBy')
 		return i
 
 	def Read_EDAEAC7B(self, node):
@@ -8932,16 +8944,6 @@ class DCReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'refPolygonCenter1')
 		i = node.ReadCrossRef(i, 'refPolygonCenter2')
 		i = node.ReadUInt32A(i, 2, 'a1')
-		return i
-
-	def Read_FC203F47(self, node):
-		i = self.ReadContentHeader(node)
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'refWrapper')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
 		return i
 
 	def Read_FC86960C(self, node):

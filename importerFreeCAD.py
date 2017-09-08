@@ -15,7 +15,7 @@ from math            import sqrt, fabs, tan, acos, atan2, degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.3.1'
+__version__     = '0.3.2'
 __status__      = 'In-Development'
 
 SKIP_GEO_ALIGN_HORIZONTAL    = 1 <<  0
@@ -412,6 +412,21 @@ def adjustViewObject(newGeo, baseGeo):
 	newGeo.ViewObject.ShapeColor   = baseGeo.ViewObject.ShapeColor
 	newGeo.ViewObject.Transparency = baseGeo.ViewObject.Transparency
 
+def getSweepPath(node):
+	path = None
+	return path
+
+def getEdges(wire):
+	edges = []
+	if (wire is not None):
+		count = len(wire.Shape.Edges) + 1
+		i = 1
+		while (i < count):
+			edges.append('Edge%i' %(i))
+			i += 1
+
+	return edges
+
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
 	FX_EXTRUDE_CUT          = 0x0002
@@ -718,7 +733,6 @@ class FreeCADImporter:
 		name          = fxNode.getName()
 		definitionRef = fxNode.get('label')
 		sections      = []
-		solid         = (definitionRef.typeName == 'Label')
 		participants  = fxNode.getParticipants()
 
 		logMessage('    adding Fx%s \'%s\' for %d sections...' %(fxNode.getSubTypeName, name, len(participants)), LOG.LOG_INFO)
@@ -736,7 +750,7 @@ class FreeCADImporter:
 				sections.append(sketchNode.getSketchEntity())
 			else:
 				logWarning('        ... don\'t know how to %s (%04X): %s \'%s\' - IGNORED!' %(action, sectionRef.index, sectionRef.typeName, sectionRef.getName()))
-		return solid, sections
+		return sections
 
 	def createBoolean(self, className, name, baseGeo, tools):
 		booleanGeo = baseGeo
@@ -1759,39 +1773,6 @@ class FreeCADImporter:
 					if (self.root):
 						self.root.addObject(padGeo)
 
-	def Create_FxChamfer(self, chamferNode):
-		#baseGeo = ???
-		#chamferGeo = self.doc.addObject('Part::Chamfer', name)
-		#chamferGeo.Base = baseGeo
-		#edges = []
-		#edges.append(????)
-		#chamferGeo.Edges = edges
-		#del edges
-		#adjustViewObject(chamferGeo, baseGeo)
-		return
-
-	def Create_FxFilletConstant(self, filletNode):
-		#baseGeo = filletNode.getSketchEntity()
-		#filletGeo = self.doc.addObject('Part::Fillet', name)
-		#filletGeo.Base = baseGeo
-		#edges = []
-		#edges.append(???)
-		#filletGeo.Edges = edges
-		#del edges
-		#adjustViewObject(filletGeo, baseGeo)
-		return
-
-	def Create_FxFilletVariable(self, filletNode):
-		#baseGeo =
-		#filletGeo = self.doc.addObject('Part::Fillet', name)
-		#filletGeo.Base = baseGeo
-		#edges = []
-		#edges.append(???)
-		#filletGeo.Edges = edges
-		#del edges
-		#adjustViewObject(filletGeo, baseGeo)
-		return
-
 	def Create_FxPatternCircular(self, patternNode):
 		name       = patternNode.getName()
 		properties = patternNode.get('properties')
@@ -1933,40 +1914,6 @@ class FreeCADImporter:
 				self.addSolidBody(combineNode, cmbineGeo, bodyRef)
 		return
 
-	def Create_FxLoft(self, loftNode):
-		name          = loftNode.getName()
-		properties    = loftNode.get('properties')
-		lofTypeData   = getListNode(properties, 0x0A)
-
-		solid, sections = self.collectSection(loftNode, 'loft')
-
-		if (len(sections) > 0):
-			loftGeo          = self.doc.addObject('Part::Loft', name)
-			loftGeo.Sections = sections
-			loftGeo.Solid    = solid
-			loftGeo.Ruled    = False
-			loftGeo.Closed   = solid
-			self.addBody(loftNode, loftGeo, 0x0D, 0x06)
-		return
-
-	def Create_FxSweep(self, sweepNode):
-		name          = sweepNode.getName()
-		properties    = sweepNode.get('properties')
-		definitionRef = sweepNode.get('label')
-		solid         = (definitionRef.typeName == 'Label')
-
-		solid, sections = self.collectSection(sweepNode, 'sweep')
-
-		if (len(sections) > 0):
-			sweepGeo          = self.doc.addObject('Part::Sweep', name)
-			sweepGeo.Sections = sections
-			#sweepGeo.Spine    = (path, ["Edge1"])
-			sweepGeo.Solid    = solid
-			sweepGeo.Frenet   = False
-			self.addBody(sweepNode, sweepGeo, 0x0F, 0x06)
-
-		return
-
 	def Create_FxMirror(self, mirrorNode):
 		name          = mirrorNode.getName()
 		participants  = mirrorNode.get('participants')
@@ -2088,23 +2035,125 @@ class FreeCADImporter:
 
 		return
 
-	def Create_FxAliasFreeform(self, aliasFreeformNode):         return
-	def Create_FxBend(self, bendNode):                           return
-	def Create_FxBendCosmetic(self, bendNode):                   return
-	def Create_FxBoss(self, bossNode):
-		name = bossNode.getName()
-		properties = bossNode.get('properties')
-		# Sketch/dimension a circle on that face
-		# then Extrude that circle
-		# then create a hole in the center of that circle
+	def Create_FxChamfer(self, chamferNode):
+		name       = patternNode.getName()
+		properties    = sweepNode.get('properties')
+		#baseGeo = ???
+		#chamferGeo = self.doc.addObject('Part::Chamfer', name)
+		#chamferGeo.Base = baseGeo
+		#edges = []
+		#edges.append(????)
+		#chamferGeo.Edges = edges
+		#del edges
+		#adjustViewObject(chamferGeo, baseGeo)
 		return
-	def Create_FxBoundaryPatch(self, boundaryPatchNode):         return
-	def Create_FxClient(self, clientNode):                       return
+
+	def Create_FxFilletConstant(self, filletNode):
+		name       = patternNode.getName()
+		properties    = sweepNode.get('properties')
+		#baseGeo = ???
+		#filletGeo = self.doc.addObject('Part::Fillet', name)
+		#filletGeo.Base = baseGeo
+		#edges = []
+		#edges.append(???)
+		#filletGeo.Edges = edges
+		#del edges
+		#adjustViewObject(filletGeo, baseGeo)
+		return
+
+	def Create_FxFilletVariable(self, filletNode):
+		name       = patternNode.getName()
+		properties    = sweepNode.get('properties')
+		#baseGeo = ???
+		#filletGeo = self.doc.addObject('Part::Fillet', name)
+		#filletGeo.Base = baseGeo
+		#edges = []
+		#edges.append(???)
+		#filletGeo.Edges = edges
+		#del edges
+		#adjustViewObject(filletGeo, baseGeo)
+		return
+
+	def Create_FxClient(self, clientNode):
+		name    = clientNode.getName()
+		clients = clientNode.getParticipants()
+		logMessage('    adding client \'%s\' ...' %(name), LOG.LOG_INFO)
+		# create a subfolder
+		fx = createGroup(self.doc, name)
+		# add/move all objects to this folder
+		for client in clients:
+			if (client.getSketchEntity() is None):
+				self.CreateObject(client.getBranchNode())
+			if (client.getSketchEntity() is not None):
+				fx.addObject(client.getSketchEntity())
+		return
+
+	def Create_FxLoft(self, loftNode):
+		name          = loftNode.getName()
+		properties    = loftNode.get('properties')
+		sections1     = getListNode(properties, 0x00) # LoftSections
+		operation     = getListNode(properties, 0x01) # PartFeatureOperation=Surface
+		closed        = getListNode(properties, 0x02) # ParameterBoolean =0
+		#= getListNode(properties, 0x03) #
+		#= getListNode(properties, 0x04) #
+		#= getListNode(properties, 0x05) #
+		surface       = getListNode(properties, 0x06) #
+		sections2     = getListNode(properties, 0x07) # LoftSections
+		#= getListNode(properties, 0x08) #
+		ruled          = getListNode(properties, 0x09) # ParameterBoolean =0
+		lofType        = getListNode(properties, 0x0A) # LoftType=AreaLoft
+		#= getListNode(properties, 0x0B) # E558F428
+		#= getListNode(properties, 0x0C) # FeatureDimensions
+
+		sections = self.collectSection(loftNode, 'loft')
+
+		if (len(sections) > 0):
+			loftGeo          = self.doc.addObject('Part::Loft', name)
+			loftGeo.Sections = sections
+			loftGeo.Solid    = surface is None
+			loftGeo.Ruled    = ruled.get('value') != 0
+			loftGeo.Closed   = closed.get('value') != 0
+			self.addBody(loftNode, loftGeo, 0x0D, 0x06)
+		return
+
+	def Create_FxSweep(self, sweepNode):
+		name          = sweepNode.getName()
+		properties    = sweepNode.get('properties')
+		definitionRef = sweepNode.get('label')
+		solid         = (definitionRef.typeName == 'Label')
+		boundary      = getListNode(properties, 0x00)
+		#= getListNode(properties, 0x01) # FC203F47
+		fxOrientation = getListNode(properties, 0x02) # PartFeatureOperation=Cut
+		#= getListNode(properties, 0x03) # Parameter
+		#= getListNode(properties, 0x04) # ExtentType=Path
+		#= getListNode(properties, 0x05) # ???
+		#= getListNode(properties, 0x07) # FeatureDimensions
+		#= getListNode(properties, 0x08) # SweepType=Path
+		frenet        = getListNode(properties, 0x09) # SweepProfileOrientation=NormalToPath
+		scaling       = getListNode(properties, 0x0A) # SweepProfileScaling=XY
+		#= getListNode(properties, 0x0B): ???
+		#= getListNode(properties, 0x0C): ???
+		#= getListNode(properties, 0x0D): ???
+
+		sections = self.collectSection(sweepNode, 'sweep')
+		path = getSweepPath(sweepNode)
+		if (path):
+			edges = getEdges(path)
+
+			if (len(sections) > 0):
+				sweepGeo          = self.doc.addObject('Part::Sweep', name)
+				sweepGeo.Sections = sections
+				sweepGeo.Spine    = (path, edges)
+				sweepGeo.Solid    = solid
+				#sweepGeo.Frenet   = frenet.get(')
+				self.addBody(sweepNode, sweepGeo, 0x0F, 0x06)
+
+		return
+
+	def Create_FxBoss(self, bossNode):                           return # MultiFuse Geometry
+	def Create_FxBoundaryPatch(self, boundaryPatchNode):         return # Sketches, Edges
 	def Create_FxCoil(self, coilNode):                           return
-	def Create_FxContourRoll(self, contourRollNode):             return
 	def Create_FxCoreCavity(self, coreCavityNode):               return
-	def Create_FxCorner(self, cornerNode):                       return
-	def Create_FxCornerChamfer(self, cornerNode):                return
 	def Create_FxCornerRound(self, cornerNode):                  return
 	def Create_FxCut(self, cutNode):                             return
 	def Create_FxDecal(self, decalNode):                         return
@@ -2112,20 +2161,13 @@ class FreeCADImporter:
 	def Create_FxDirectEdit(self, directEditNode):               return
 	def Create_FxEmboss(self, embossNode):                       return
 	def Create_FxExtend(self, extendNode):                       return
-	def Create_FxFace(self, faceNode):                           return
 	def Create_FxFaceDraft(self, faceDraftNode):                 return
 	def Create_FxFaceOffset(self, faceOffsetNode):               return
 	def Create_FxFillet(self, filletNode):                       return
 	def Create_FxFilletRule(self, filletNode):                   return
-	def Create_FxFlange(self, flangeNode):                       return
-	def Create_FxFlangeContour(self, flangeNode):                return
-	def Create_FxFlangeLofted(self, flangeNode):                 return
-	def Create_FxFold(self, foldNode):                           return
 	def Create_FxFreeform(self, freeformNode):                   return
 	def Create_FxGrill(self, grillNode):                         return
-	def Create_FxHem(self, hemNode):                             return
 	def Create_FxiFeature(self, iFeatureNode):                   return
-	def Create_FxKnit(self, knitNode):                           return
 	def Create_FxLip(self, lipNode):                             return
 	def Create_FxMesh(self, meshNode):                           return
 	def Create_FxMidSurface(self, midSurfaceNode):               return
@@ -2134,22 +2176,42 @@ class FreeCADImporter:
 	def Create_FxNonParametricBase(self, nonParametricBaseNode): return
 	def Create_FxPatternSketchDriven(self, patternNode):         return
 	def Create_FxPresentationMesh(self, presentationMeshNode):   return
-	def Create_FxPunchTool(self, punchToolNode):                 return
 	def Create_FxReference(self, referenceNode):                 return
-	def Create_FxRefold(self, refoldNode):                       return
 	def Create_FxReplaceFace(self, replaceFaceNode):             return
 	def Create_FxRest(self, restNode):                           return
 	def Create_FxRib(self, ribNode):                             return
-	def Create_FxRip(self, ripNode):                             return
 	def Create_FxRuledSurface(self, ruledSurfaceNode):           return
 	def Create_FxSculpt(self, sculptNode):                       return
 	def Create_FxShell(self, shellNode):                         return
-	def Create_FxSnapFit(self, snapFitNode):                     return
-	def Create_FxSplit(self, splitNode):                         return
+	def Create_FxSnapFit(self, snapFitNode):                     return # Cut Geometry (Wedge - Cube)
 	def Create_FxThicken(self, thickenNode):                     return
 	def Create_FxThread(self, threadNode):                       return notSupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
 	def Create_FxTrim(self, trimNode):                           return
+
+	# Features requiring Nurbs
+	def Create_FxAliasFreeform(self, aliasFreeformNode):         return
+
+	# Features requiring BOPTools
+	def Create_FxSplit(self, splitNode):                         return
+
+	# Features requiring SheetMetal
+	def Create_FxBend(self, bendNode):                           return
+	def Create_FxBendCosmetic(self, bendNode):                   return
+	def Create_FxContourRoll(self, contourRollNode):             return
+	def Create_FxCorner(self, cornerNode):                       return
+	def Create_FxCornerChamfer(self, cornerNode):                return
+	def Create_FxFace(self, faceNode):                           return
+	def Create_FxFlange(self, flangeNode):                       return
+	def Create_FxFlangeContour(self, flangeNode):                return
+	def Create_FxFlangeLofted(self, flangeNode):                 return
+	def Create_FxFold(self, foldNode):                           return
+	def Create_FxHem(self, hemNode):                             return
+	def Create_FxKnit(self, knitNode):                           return
+	def Create_FxPunchTool(self, punchToolNode):                 return
+	def Create_FxRefold(self, refoldNode):                       return
+	def Create_FxRip(self, ripNode):                             return
 	def Create_FxUnfold(self, unfoldNode):                       return
+
 	def Create_FxUnknown(self, unknownNode):
 		logError('   Can\'t process unknown Feature \'%s\' - probably an unsupported iFeature!' %(unknownNode.getName()))
 		return
@@ -2220,17 +2282,19 @@ class FreeCADImporter:
 
 	def Create_Sketch3D(self, sketchNode):
 		# Workaround: Create a Part.Feature from wires => not editable afterwards :(
+		# or Part.Multifuse => change all addSketch_.*3D!!!
 		edges = []
-		# for each entity in entities:
-		#     edges.append(entityObj)
-		# Wire=Group.newObject('Part::Feature', 'Wire')
-		# # add objects with the shape
-		# W=Part.Wire(edges)
-		# sketchObj.Shape=W
 
 		name = sketchNode.getName()
 		logMessage('       adding 3D-Sketch \'%s\'...' %(name), LOG.LOG_INFO)
-		sketchObj = self.doc.addObject('Part::Feature', name)
+		if (name[0] == '3'):
+#			sketchObj = self.doc.addObject('Part::MultiFuse', '_' + name)
+			sketchObj = self.doc.addObject('Part::Feature', '_' + name)
+			sketchObj.Label = name
+		else:
+#			sketchObj = self.doc.addObject('Part::MultiFuse', name)
+			sketchObj = self.doc.addObject('Part::Feature', name)
+
 		if (self.root):
 			self.root.addObject(sketchObj)
 
@@ -2247,9 +2311,17 @@ class FreeCADImporter:
 					logError('>E: ' + traceback.format_exc())
 			child.setHandled(True)
 			child = child.next
+#		if (len(edges) > 1):
+#			sketchObj.Shapes = edges
+#			for edge in edges:
+#				edge.ViewObject.Visibility = False
+#			sketchNode.setSketchEntity(-1, sketchObj)
+#		elif (len(edges) == 1):
+#			sketchNode.setSketchEntity(-1, edges[0])
 		shape = Part.Shape(edges)
 		sketchObj.Shape = shape
 		sketchNode.setSketchEntity(-1, sketchObj)
+
 		return
 
 	def Create_BrowserFolder(self, originNode):
