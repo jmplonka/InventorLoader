@@ -71,7 +71,13 @@ That allows it to embed Excel workboos e.g.
 	* FX-Combine
 	* Polar-Pattern, Rectangular-Pattern and Mirror-Pattern.
 
-- 0.8.1: Added more Features
+- 0.8.1: Added Features
+	* FX-Hole
+
+- 0.8.2: Added Features
+	* FX-Client
+
+- 0.8.3: Added more Features
 	* FX-Sweep
 	* FX-Thicken
 	* Fixed encoding problems regarding filename and Sketch/Feature names
