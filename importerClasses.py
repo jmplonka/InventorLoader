@@ -12,11 +12,7 @@ from math          import degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-<<<<<<< master
-__version__     = '0.3.0'
-=======
 __version__     = '0.4.0'
->>>>>>> local
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -680,14 +676,8 @@ class DataNode():
 		if (self.data): return self.data.get(name)
 		return None
 
-<<<<<<< master
-	def setVariable(self, name, value):
-		if (self.data):
-			self.data.set(name, value)
-=======
 	def set(self, name, value):
 		if (self.data): self.data.set(name, value)
->>>>>>> local
 
 	def getSegment(self):
 		if (self.data): return self.data.segment
@@ -1001,8 +991,6 @@ class FeatureNode(DataNode):
 					return typ.typeName
 		return None
 
-<<<<<<< master
-=======
 	def _getPropertyEnumName(self, index):
 		properties = self.get('properties')
 		if (properties):
@@ -1012,18 +1000,15 @@ class FeatureNode(DataNode):
 					return typ.get('Enum')
 		return None
 
->>>>>>> local
 	def getSubTypeName(self):
 		subTypeName = self.get('Feature')
 		if (subTypeName): return subTypeName
 
 		p0 = self._getPropertyName(0)
 		p1 = self._getPropertyName(1)
+		p4 = self._getPropertyName(4)
 
-<<<<<<< master
-=======
 		if (p4 == '509FB5CC'):                      return 'Rip'
->>>>>>> local
 		if (p0 == '90874D51'):
 			p4 = self._getPropertyName(4)
 			if (p4 == '7DAA0032'):                  return 'Chamfer'
@@ -1031,10 +1016,6 @@ class FeatureNode(DataNode):
 			if (p1 == 'FxExtend'):                  return 'Extend'
 			if (p1 is None):                        return 'CornerChamfer'
 		elif (p0 == 'SurfaceBodies'):
-<<<<<<< master
-			if (p1 == 'SolidBody'):            return 'Combine'
-			if (p1 == 'SurfaceBodies'):        return 'CoreCavity'
-=======
 			if (p1 == 'SolidBody'):                 return 'Combine'
 			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'
 			if (p1 == 'SurfaceBodies'):             return 'CoreCavity'
@@ -1042,20 +1023,14 @@ class FeatureNode(DataNode):
 				p7 = self._getPropertyEnumName(7)
 				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
 				if (p7 == '4688EBA3_Enum'):         return 'Unfold'
->>>>>>> local
 		elif (p0 == 'Enum'):
 			p2 = self._getPropertyName(2)
 			p3 = self._getPropertyName(3)
 			if (p1 == 'FxBoundaryPatch'):
 				p6 = self._getPropertyName(6)
 				if (p2 == 'Line3D'):
-<<<<<<< master
-					if (p6 is None):           return 'Revolve'
-					if (p6 == '92637D29'):     return 'Extrude' #Map cut feature to extrusion!
-=======
 					if (p6 is None):                return 'Revolve'
 					if (p6 == 'ExtentType'):        return 'Extrude' #Map cut feature to extrusion!
->>>>>>> local
 					return 'Coil'
 				elif (p2 == 'Direction'):
 					p10 = self._getPropertyName(0x10)
@@ -1066,14 +1041,9 @@ class FeatureNode(DataNode):
 			if (p1 == 'FaceCollection'):            return 'Shell'
 			if (p1 == 'Parameter'):                 return 'Hole'
 			if (p1 == 'ParameterBoolean'):
-<<<<<<< master
-				if (p3 == 'Enum'):             return 'Split'
-				if (p2 == 'ParameterBoolean'): return 'Fold'
-=======
 				if (p3 == 'Enum'):                  return 'Split'
 				if (p2 == 'ParameterBoolean'):      return 'Fold'
 			if (p2 == 'ParameterBoolean'):          return 'SnapFit'
->>>>>>> local
 		elif (p0 == 'FxFilletConstant'):
 			p8 = self._getPropertyName(8)
 			if (p8 == 'ParameterBoolean'):          return 'CornerRound'
@@ -1087,27 +1057,6 @@ class FeatureNode(DataNode):
 				if (p3 == 'SurfaceBodies'):         return 'DeleteFace'
 				if (p3 == 'Parameter'):             return 'Thread'
 		elif (p0 == 'FxBoundaryPatch'):
-<<<<<<< master
-			if (p1 == 'A477243B'):             return 'Sweep'
-			if (p1 == 'FC203F47'):             return 'Sweep'
-			if (p1 == 'Direction'):            return 'Extrude'
-			if (p1 == 'FxBoundaryPatch'):      return 'Rib'
-			if (p1 == 'SurfaceBody'):          return 'BoundaryPatch'
-			p4 = self._getPropertyName(4)
-			if (p4 == 'SurfaceBody'):          return 'BoundaryPatch'
-		elif (p0 == 'Direction'):              return 'FaceDraft'
-		elif (p0 == 'CA02411F'):               return 'NonParametricBase'
-		elif (p0 == 'FC203F47'):               return 'Hem'
-		elif (p0 == 'SolidBody'):              return 'Knit'
-		elif (p0 == 'FxSculpt'):               return 'Sculpt'
-		elif (p0 == 'EA680672'):               return 'Trim'
-		elif (p0 == 'SurfaceBody'):            return 'Reference'
-		elif (p0 == '8677CE83'):               return 'Corner'
-		elif (p0 == 'AFD8A8E0'):               return 'Corner'
-		elif (p0 == '312F9E50'):               return 'Loft'
-		elif (p0 == 'Parameter'):              return 'Loft'
-		elif (p0 == 'FxThicken'):              return 'Thicken'
-=======
 			p2 = self._getPropertyName(2)
 			if (p2 == 'FxBoundaryPatch'):           return 'Grill'
 			if (p1 == 'ProfilePath'):               return 'Sweep'
@@ -1132,40 +1081,12 @@ class FeatureNode(DataNode):
 		elif (p0 == 'LoftSections'):                return 'Loft'
 #		elif (p0 == 'Parameter'):                   return 'Loft'
 		elif (p0 == 'SurfaceSelection'):            return 'Thicken'
->>>>>>> local
 		elif (p0 == 'Transformation'):
 			if (p1 == '8D6EF0BE'):                  return 'PatternRectangular'
 			# FIXME: This only works for the intersection example (e.g. Shaft1.ipt has other proeprties)!!!!
 			return 'iFeature'
 		elif (p0 is None):
 			p10 = self._getPropertyName(10)
-<<<<<<< master
-			if (p1 == 'Enum'):                 return 'Thicken'
-			if (p1 == '8B2B8D96'):             return 'BoundaryPatch'
-			if (p1 == 'SurfaceBody'):          return 'BoundaryPatch'
-			if (p10 == 'D524C30A'):            return 'Fillet'
-
-		# Missing Features:
-		# - AliasFreeform
-		# - Boss
-		# - ContourRoll
-		# - CosmeticBend
-		# - DirectEdit
-		# - FaceOffset
-		# - Freeform
-		# - Grill
-		# - Lip
-		# - LoftedFlange
-		# - Mesh
-		# - MidSurface
-		# - Move
-		# - PresentationMesh
-		# - Refold
-		# - Rest
-		# - Rip
-		# - RuleFillet
-		# - RuledSurface
-=======
 			if (p1 == 'Enum'):                      return 'Thicken'
 			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
 			if (p1 == '90874D51'):                  return 'Lip'
@@ -1182,14 +1103,23 @@ class FeatureNode(DataNode):
 		# - SurfaceRuled
 		# - Move
 		# - MeshPresentation
->>>>>>> local
 		# - SketchDrivenPattern
-		# - SnapFit
-		# - Unfold
 		return 'Unknown'
 
 	def getRefText(self): # return unicode
 		return u'(%04X): Fx%s \'%s\'' %(self.data.index, self.getSubTypeName(), self.name)
+
+	def getParticipants(self):
+		label = self.get('label')
+		if (label is None):
+			logError('ERR> (%04X): %s - has no required label attribute!' %(self.index, self.typeName))
+			return []
+		while (label.typeName != 'Label'):
+			dummy = label
+			label = label.get('label')
+			if (label is None):
+				logError('ERR> (%04X): %s - has no required label attribute!' %(dummy.index, dummy.typeName))
+		return label.get('lst0')
 
 	def __str__(self):
 		data = self.data
@@ -1236,24 +1166,16 @@ class PointNode(DataNode): # return unicoe
 
 	def getRefText(self): # return unicode
 		if (self.typeName[-2:] == '2D'):
-<<<<<<< master
-			return '(%04X): %s - (%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'))
-		return '(%04X): %s - (%g/%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
-=======
 			point = self
 			if (point.typeName == 'BlockPoint2D'):
 				point = self.get('refPoint')
 			return u'(%04X): %s - (%g/%g)' %(self.index, self.typeName, point.get('x'), point.get('y'))
 		return u'(%04X): %s - (%g/%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
->>>>>>> local
 
 class LineNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-<<<<<<< master
-	def getRefText(self):
-=======
 	def _getCoord(self, points, index, coordName):
 		p = points[index]
 		if (p):
@@ -1263,21 +1185,18 @@ class LineNode(DataNode):
 		return '#NA#'
 
 	def getRefText(self): # return unicoe
->>>>>>> local
 		p = self.get('points')
-		if (len(p)>1):
-			p0 = p[0].node
-			p1 = p[1].node
+		if (len(p) > 1):
+			x0 = self._getCoord(p, 0, 'x')
+			y0 = self._getCoord(p, 0, 'y')
+			z0 = self._getCoord(p, 0, 'z')
+			x1 = self._getCoord(p, 1, 'x')
+			y1 = self._getCoord(p, 1, 'y')
+			z1 = self._getCoord(p, 1, 'z')
 			if (self.typeName[-2:] == '2D'):
-<<<<<<< master
-				return '(%04X): %s - (%g/%g) - (%g/%g)' %(self.index, self.typeName, p0.get('x'), p0.get('y'), p1.get('x'), p1.get('y'))
-			return '(%04X): %s - (%g/%g/%g) - (%g/%g/%g)' %(self.index, self.typeName, p0.get('x'), p0.get('y'), p0.get('z'), p1.get('x'), p1.get('y'), p1.get('z'))
-		return '(%04X): %s' %(self.index, self.typeName)
-=======
 				return u'(%04X): %s - (%s/%s) - (%s/%s)' %(self.index, self.typeName, x0, y0, x1, y1)
 			return u'(%04X): %s - (%s/%s/%s) - (%s/%s/%s)' %(self.index, self.typeName, x0, y0, z0, x1, y1, z1)
 		return u'(%04X): %s' %(self.index, self.typeName)
->>>>>>> local
 
 class CircleNode(DataNode):
 	def __init__(self, data, isRef):

@@ -15,11 +15,7 @@ from math            import log10
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-<<<<<<< master
-__version__     = '0.3.0'
-=======
 __version__     = '0.4.0'
->>>>>>> local
 __status__      = 'In-Development'
 
 def isList(data, code):
@@ -917,7 +913,7 @@ class AbstractNode(AbstractData):
 
 				return unitName
 		return None
-		
+
 	def getName(self):
 		if (self.name is None):
 			label = self.get('label')
@@ -1059,10 +1055,6 @@ class NodeRef():
 		if (self._data): return self._data.segment
 		return None
 
-<<<<<<< master
-	def __str__(self):
-		return '[%04X,%X]' %(self.index, self.mask)
-=======
 	def setSketchEntity(self, index, entity):
 		if (self._data):
 			self._data.sketchIndex = index
@@ -1109,4 +1101,3 @@ class NodeRef():
 
 	def __str__(self): # return unicode
 		return u'[%04X,%X]' %(self.index, self.mask)
->>>>>>> local

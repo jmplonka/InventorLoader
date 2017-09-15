@@ -14,11 +14,7 @@ from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-<<<<<<< master
-__version__     = '0.3.0'
-=======
 __version__     = '0.4.0'
->>>>>>> local
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
@@ -151,26 +147,6 @@ def dumpRemainingDataB(file, data, offset):
 	file.write(HexAsciiDump(data[iOld:], iOld, False))
 	return
 
-<<<<<<< master
-def getBranchNode(node, isRef):
-	if (node.typeName == 'Parameter'):               return ParameterNode(node, isRef)
-	if (node.typeName == 'ParameterText'):           return ParameterTextNode(node, isRef)
-	if (node.typeName == 'ParameterBoolean'):        return ValueNode(node, isRef)
-	if (node.typeName == 'Enum'):                    return EnumNode(node, isRef)
-	if (node.typeName == 'Feature'):                 return FeatureNode(node, isRef)
-	if (node.typeName == 'Point2D'):                 return PointNode(node, isRef)
-	if (node.typeName == 'Point3D'):                 return PointNode(node, isRef)
-	if (node.typeName == 'Line2D'):                  return LineNode(node, isRef)
-	if (node.typeName == 'Line3D'):                  return LineNode(node, isRef)
-	if (node.typeName == 'Circle2D'):                return CircleNode(node, isRef)
-	if (node.typeName == 'Circle3D'):                return CircleNode(node, isRef)
-	if (node.typeName == 'Geometric_Radius2D'):      return GeometricRadius2DNode(node, isRef)
-	if (node.typeName == 'Geometric_Coincident2D'):  return GeometricCoincident2DNode(node, isRef)
-	if (node.typeName == 'Dimension_Distance2D'):    return DimensionDistance2DNode(node, isRef)
-	if (node.typeName == 'Dimension_Angle2Line2D'):  return DimensionAngleNode(node, isRef)
-	if (node.typeName == 'Dimension_Angle3Point2D'): return DimensionAngleNode(node, isRef)
-	return DataNode(node, isRef)
-=======
 def getBranchNode(data, isRef):
 	if (data.typeName == 'Parameter'):               return ParameterNode(data, isRef)
 	if (data.typeName == 'ParameterText'):           return ParameterTextNode(data, isRef)
@@ -192,7 +168,6 @@ def getBranchNode(data, isRef):
 	if (data.typeName == 'SurfaceBodies'):           return SurfaceBodiesNode(data, isRef)
 	if (data.typeName == 'SolidBody'):               return SurfaceBodiesNode(data, isRef)
 	return DataNode(data, isRef)
->>>>>>> local
 
 def buildBranchRef(parent, file, nodes, ref, level):
 	branch = getBranchNode(ref.data, True)

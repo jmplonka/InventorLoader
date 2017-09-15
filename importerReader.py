@@ -33,11 +33,7 @@ from importerUtils       import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-<<<<<<< master
-__version__     = '0.2.1'
-=======
 __version__     = '0.4.0'
->>>>>>> local
 __status__      = 'In-Development'
 
 # Indicator that everything is ready for the import
@@ -1077,6 +1073,7 @@ def ReadRSeMetaDataB(dataB, seg):
 		filename = '%s\\%sB.log' %(folder, seg.name)
 		newFile = codecs.open(filename, 'wb', 'utf8')
 
+		newFile.write('[%s]\n' %(getFileVersion()))
 		i = 0
 		uid, i = getUUID(dataB, i, '%sB.uid' %(seg.name))
 		n, i = getUInt16(dataB, i)
@@ -1099,7 +1096,7 @@ def ReadRSeMetaDataM(dataM, name):
 	value.txt1, i = getLen32Text8(dataM, i)
 	value.ver, i = getUInt16(dataM, i)
 	value.arr1, i = getUInt16A(dataM, i, 8)
-	if (value.arr1[1] != 0):
+	if (value.arr1[0] + value.arr1[1] + value.arr1[2] + value.arr1[3] + value.arr1[4] > 0):
 		value.name, i = getLen32Text16(dataM, i)
 		value.segRef, i = getUUID(dataM, i, '%s.segRef' %(value.name))
 		value.arr2, i = getUInt32A(dataM, i, 0x3)
@@ -1110,6 +1107,7 @@ def ReadRSeMetaDataM(dataM, name):
 		value.name = name
 		value.segRef = None
 		value.arr2 = []
+		return value, len(dataM)
 
 	if (value.ver < 0x07):
 		value.val1, i = getUInt32(dataM, i)
