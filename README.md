@@ -71,7 +71,12 @@ That allows it to embed Excel workboos e.g.
 	* FX-Combine
 	* Polar-Pattern, Rectangular-Pattern and Mirror-Pattern.
 
+- 0.8.1: Added more Features
+	* FX-Sweep
+	* FX-Thicken
+	* Fixed encoding problems regarding filename and Sketch/Feature names
+
 ## Next steps in unsorted order:
-- Features like Grave, Thicken, etc.
+- Features like Grave, etc.
 - Features like Fillet, Champher, Draft, etc.
 - Prefferences page
