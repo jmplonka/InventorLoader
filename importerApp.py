@@ -14,7 +14,7 @@ from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.0'
+__version__     = '0.4.0'
 __status__      = 'In-Development'
 
 class AppReader(SegmentReader):
@@ -696,10 +696,10 @@ class AppReader(SegmentReader):
 		return i
 
 	# override importerSegment.setNodeData
-	def setNodeData(self, node, data, seg):
+	def setNodeData(self, node, data):
 		offset = node.offset
 		nodeTypeID, i = getUInt8(data, offset - 4)
-		node.typeID = getNodeType(nodeTypeID, seg)
+		node.typeID = getNodeType(nodeTypeID, node.segment)
 		if (isinstance(node.typeID, UUID)):
 			node.typeName = '%08X' % (node.typeID.time_low)
 			i = offset + node.size

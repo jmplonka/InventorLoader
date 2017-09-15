@@ -17,7 +17,7 @@ from importerFreeCAD   import FreeCADImporter, createGroup
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.1'
+__version__     = '0.4.0'
 __status__      = 'In-Development'
 
 def ReadIgnorable(fname, data):
@@ -244,17 +244,18 @@ def open(filename, skip = [], only = [], root = None):
 if __name__ == '__main__':
 	if (len(sys.argv) > 1):
 		files = sys.argv[1:]
-		filename = files[0]
+		filename = files[0].decode(sys.getfilesystemencoding()) # make it UNICODE!
 		setInventorFile(filename)
-		if (olefile.isOleFile(getInventorFile())):
+		if (olefile.isOleFile(filename)):
 			if (len(files) == 1):
 				open(filename)
 			else:
+				# this is only for debuging purposes...
 				docname = os.path.splitext(os.path.basename(filename))[0]
 				docname = decode(docname, utf=True)
 				doc = FreeCAD.newDocument(docname)
 
-				ole = olefile.OleFileIO(getInventorFile())
+				ole = olefile.OleFileIO(filename)
 				setFileVersion(ole)
 				elements = ole.listdir(streams=True, storages=False)
 				counter = 1

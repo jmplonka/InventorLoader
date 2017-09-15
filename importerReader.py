@@ -15,6 +15,7 @@ import zlib
 import operator
 import glob
 import struct
+import codecs
 from importerClasses     import *
 from importerSegment     import SegmentReader
 from importerApp         import AppReader
@@ -32,7 +33,11 @@ from importerUtils       import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
+<<<<<<< master
 __version__     = '0.2.1'
+=======
+__version__     = '0.4.0'
+>>>>>>> local
 __status__      = 'In-Development'
 
 # Indicator that everything is ready for the import
@@ -1070,7 +1075,7 @@ def ReadRSeMetaDataB(dataB, seg):
 		folder = getInventorFile()[0:-4]
 
 		filename = '%s\\%sB.log' %(folder, seg.name)
-		newFile = open (filename, 'wb')
+		newFile = codecs.open(filename, 'wb', 'utf8')
 
 		i = 0
 		uid, i = getUUID(dataB, i, '%sB.uid' %(seg.name))

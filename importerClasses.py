@@ -12,7 +12,11 @@ from math          import degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
+<<<<<<< master
 __version__     = '0.3.0'
+=======
+__version__     = '0.4.0'
+>>>>>>> local
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -314,6 +318,8 @@ class RSeMetaData():
 		self.secB        = []
 		self.uid2        = None # should always be '9744e6a4-11d1-8dd8-0008-2998bedddc09'
 		self.nodes       = None
+		self.elementNodes = {}
+		self.indexNodes  = {}
 
 	@staticmethod
 	def isApp(seg):
@@ -383,16 +389,11 @@ class DbInterface():
 		self.value       = None
 
 	def __str__(self):
-		if (self.type   == 0x01):
-			typ = 'BOOL'
-		elif (self.type == 0x04):
-			typ = 'SINT'
-		elif (self.type == 0x10):
-			typ = 'UUID'
-		elif (self.type == 0x30):
-			typ = 'FLOAT[]'
-		elif (self.type == 0x54):
-			typ = 'MAP'
+		if (self.type   == 0x01): typ = 'BOOL'
+		elif (self.type == 0x04): typ = 'SINT'
+		elif (self.type == 0x10): typ = 'UUID'
+		elif (self.type == 0x30): typ = 'FLOAT[]'
+		elif (self.type == 0x54): typ = 'MAP'
 		else:
 			typ = '%4X' % self.type
 		return '%s=%s:\t%s\t%s' % (self.name, self.value, typ, self.uid)
@@ -479,7 +480,10 @@ class AbstractValue():
 		self.offset = offset
 		self.unit   = unit
 
-	def __str__(self): return '%g%s' %(self.x / self.factor - self.offset, self.unit)
+	def __str__(self): # return unicode
+		s = self.unit
+		s = '%g%s' %(self.x / self.factor - self.offset, s)
+		return s
 	def toStandard(self):  return self.__str__
 
 class Length(AbstractValue):
@@ -556,7 +560,7 @@ class Substance(AbstractValue):
 
 class Scalar(AbstractValue):
 	def __init__(self, s):
-		AbstractValue.__init__(self, s, 1.0, 0.0, '')
+		AbstractValue.__init__(self, s, 1.0, 0.0, u'')
 
 class Derived(AbstractValue):
 	def __init__(self, s, unit):
@@ -564,32 +568,54 @@ class Derived(AbstractValue):
 
 class DataNode():
 	def __init__(self, data, isRef):
-		self.children = []
-		self._map = {}
-		## data must bean instance of AbstractNode!
+		## data must bean instance of AbstractData!
+		if (data):
+			assert isinstance(data, AbstractData), 'Data is not a AbstractData (%s)!' %(data.__class__.__name__)
+			if (isRef == False): data.node = self
 		self.data = data
 		self.isRef = isRef
+		self.children = []
+		self._map = {}
+		self.parent = None
 		self.first = None
 		self.previous = None
-		self.parent = None
 		self.next = None
-		if (data):
-			data.handled = False
-			data.sketchIndex = None
-			if (isRef == False):
-				data.node = self
 
 	@property
 	def typeName(self):
-		if (self.data):
-			return self.data.typeName
+		if (self.data): return self.data.typeName
 		return ''
 
 	@property
 	def index(self):
-		if (self.data):
-			return self.data.index
+		if (self.data): return self.data.index
 		return -1
+
+	@property
+	def handled(self):
+		if (self.data): return self.data.handled
+		return False
+	@handled.setter
+	def handled(self, handled):
+		if (self.data): self.data.handled = handled
+
+	@property
+	def valid(self):
+		if (self.data): return self.data.valid
+		return False
+	@valid.setter
+	def valid(self, valid):
+		if (self.data): self.data.valid = valid
+
+	@property
+	def sketchEntity(self):
+		if (self.data): return self.data.sketchEntity
+		return None
+
+	@property
+	def segment(self):
+		if (self.data): return self.data.segment
+		return None
 
 	def size(self):
 		return len(self.children)
@@ -598,38 +624,23 @@ class DataNode():
 		return self.size() == 0
 
 	def getRef(self, ref):
-		if (ref):
-			return self.getChild(ref.index)
+		if (ref): return self.getChild(ref.index)
 		return None
 
-	def getName(self):
-		if (self.data):
-			return self.data.getName()
+	@property
+	def name(self):
+		if (self.data): return self.data.getName()
 		return None
 
-	def isHandled(self):
-		if (self.data):
-			return self.data.handled
-		return false
-
-	def setHandled(self, handled):
-		if (self.data):
-			self.data.handled = handled
-
-	def getSketchIndex(self):
-		if (self.data):
-			return self.data.sketchIndex
+	@property
+	def sketchIndex(self):
+		if (self.data): return self.data.sketchIndex
 		return None
 
 	def setSketchEntity(self, index, entity):
 		if (self.data):
 			self.data.sketchIndex = index
 			self.data.sketchEntity = entity
-
-	def getSketchEntity(self):
-		if (self.data):
-			return self.data.sketchEntity
-		return None
 
 	def append(self, node):
 		if (self.size() > 0):
@@ -647,15 +658,13 @@ class DataNode():
 		return node
 
 	def getChild(self, index):
-		if (index in self._map):
-			return self._map[index]
+		if (index in self._map): return self._map[index]
 		return None
 
 	def getFirstChild(self, key):
 		child = self.first
 		while (child):
-			if (child.typeName == key):
-				return child
+			if (child.typeName == key): return child
 			child = child.next
 		return None
 
@@ -663,74 +672,70 @@ class DataNode():
 		lst = []
 		child = self.first
 		while (child):
-			if (child.typeName == key):
-				lst.append(child)
+			if (child.typeName == key): lst.append(child)
 			child = child.next
 		return lst
 
 	def get(self, name):
-		if (self.data):
-			return self.data.get(name)
+		if (self.data): return self.data.get(name)
 		return None
 
+<<<<<<< master
 	def setVariable(self, name, value):
 		if (self.data):
 			self.data.set(name, value)
+=======
+	def set(self, name, value):
+		if (self.data): self.data.set(name, value)
+>>>>>>> local
 
 	def getSegment(self):
-		if (self.data):
-			return self.data.segment
+		if (self.data): return self.data.segment
 		return None
 
-	def getRefText(self):
-		name = self.getName()
+	def getRefText(self): # return unicode
+		name = self.name
 		if ((name) and (len(name) > 0)):
-			return '(%04X): %s \'%s\'' %(self.index, self.typeName, name)
-		return '(%04X): %s' %(self.index, self.typeName)
+			return u'(%04X): %s \'%s\'' %(self.index, self.typeName, name)
+		return u'(%04X): %s' %(self.index, self.typeName)
 
-	def setValid(self, valid):
-		if (self.data):
-			self.data.valid = valid
-	def isValid(self):
-		if (self.data):
-			return self.data.valid
-		return False
-
-	def getUnitName(self):
-		if (self.data):
-			return self.data.getUnitName()
-		return ''
+	def getUnitName(self): # return unicode
+		if (self.data): return self.data.getUnitName()
+		return u''
 
 	def getDerivedUnitName(self):
-		if (self.data):
-			return self.data.getDerivedUnitName()
-		return ''
+		if (self.data): return self.data.getDerivedUnitName()
+		return u''
 
 	def __str__(self):
 		node = self.data
-		if (node and (node.name is None)):
-			return '(%04X): %s%s' %(node.index, node.typeName, node.content)
-		return '(%04X): %s \'%s\'%s' %(node.index, node.typeName, node.name, node.content)
+		content = node.content
+		if (not isinstance(content, unicode)):
+			content = unicode(content)
+		name = node.name
+		if (name):
+			if (not isinstance(name, unicode)):
+				name = unicode(name)
+			return u'(%04X): %s \'%s\'%s' %(node.index, node.typeName, name, content)
+		return u'(%04X): %s%s' %(node.index, node.typeName, content)
 
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 		self.asText  = False
-		self.handled = False
 
 	def getValueRaw(self):
 		return self.get('valueNominal')
 
-	def getRefText(self):
+	def getRefText(self): # return unicode
 		x = self.getValue()
+		name = self.name
 		try:
-			if (isinstance(x, Angle)):
-				return '(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.getName(), x)
-			if (isinstance(x, Length)):
-				return '(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.getName(), x)
-			return '(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.getName(), x)
+			if (isinstance(x, Angle)):  return u'(%04X): %s \'%s\'=%s' %(self.index, self.typeName, name, x)
+			if (isinstance(x, Length)): return u'(%04X): %s \'%s\'=%s' %(self.index, self.typeName, name, x)
+			return u'(%04X): %s \'%s\'=%s' %(self.index, self.typeName, name, x)
 		except Exception as e:
-			return '(%04X): %s \'%s\'=%s - %s' %(self.index, self.typeName, self.getName(), x, e)
+			return u'(%04X): %s \'%s\'=%s - %s' %(self.index, self.typeName, name, x, e)
 
 	def getParameterFormula(self, parameterData, withUnits):
 		subFormula = ''
@@ -753,7 +758,7 @@ class ParameterNode(DataNode):
 				else: # floating point value!
 					subFormula = '%g%s' %((value / factor) - offset, unitName)
 		elif (typeName == 'ParameterUnaryMinus'):
-			subFormula = '-' + self.getParameterFormula(parameterData.get('refValue').node, withUnits)
+			subFormula = '-' + self.getParameterFormula(parameterData.get('refValue'), withUnits)
 		elif (typeName == 'ParameterConstant'):
 			unitName = ''
 			if (self.asText or withUnits):
@@ -762,9 +767,9 @@ class ParameterNode(DataNode):
 			subFormula = '%s%s' %(parameterData.name, unitName)
 		elif (typeName == 'ParameterRef'):
 			if (self.asText):
-				subFormula = parameterData.get('refParameter').node.name
+				subFormula = parameterData.get('refParameter').name
 			else:
-				subFormula = '%s_' %(parameterData.get('refParameter').node.name)
+				subFormula = '%s_' %(parameterData.get('refParameter').name)
 		elif (typeName == 'ParameterFunction'):
 			function          = parameterData.name
 			functionSupported = (function not in FunctionsNotSupported)
@@ -779,7 +784,7 @@ class ParameterNode(DataNode):
 				ignoreUnits = (parameterData.name == 'tanh')
 				if (n > 0):
 					while (j < n):
-						operand = self.getParameterFormula(operandRefs[j].node, withUnits and not ignoreUnits)
+						operand = self.getParameterFormula(operandRefs[j], withUnits and not ignoreUnits)
 						j += 1
 						subFormula += (sep + operand)
 						sep = ';'
@@ -791,19 +796,19 @@ class ParameterNode(DataNode):
 				# Modulo operation not supported by FreeCAD
 				raise UserWarning('Function \'%s\' not supported' %function)
 		elif (typeName == 'ParameterOperationPowerIdent'):
-			operand1 = self.getParameterFormula(parameterData.get('refOperand1').node, withUnits)
+			operand1 = self.getParameterFormula(parameterData.get('refOperand1'), withUnits)
 			subFormula = operand1
 		elif (typeName.startswith('ParameterOperation')):
 			operation = parameterData.name
 			if (self.asText or (operation != '%')):
-				operand1 = self.getParameterFormula(parameterData.get('refOperand1').node, withUnits)
-				operand2 = self.getParameterFormula(parameterData.get('refOperand2').node, withUnits)
+				operand1 = self.getParameterFormula(parameterData.get('refOperand1'), withUnits)
+				operand2 = self.getParameterFormula(parameterData.get('refOperand2'), withUnits)
 				subFormula = '(%s %s %s)' %(operand1, operation, operand2)
 			else:
 				# Modulo operation not supported by FreeCAD
 				raise UserWarning('Modulo operator not supported')
 		else:
-			logError('>>>> ERROR don\'t now how to build formula for %s: %s!' %(typeName, parameterData.node))
+			logError('>>>> ERROR don\'t now how to build formula for %s: %s!' %(typeName, parameterData))
 
 		return subFormula
 
@@ -814,17 +819,17 @@ class ParameterNode(DataNode):
 			refValue = data.get('refValue')
 			if (refValue):
 				if (asText):
-					return '\'' + self.getParameterFormula(refValue.node, True)
+					return u'\'' + self.getParameterFormula(refValue, True)
 				try:
-					return '=' + self.getParameterFormula(refValue.node, True)
+					return u'=' + self.getParameterFormula(refValue, True)
 				except BaseException as be:
 					# replace by nominal value and unit!
-					value = self.getValue()
+					value = unicode(self.getValue())
 					logWarning('    >WARNING: %s - replacing by nominal value %s!' %(be, value) )
 			else:
-				value = data.get('valueModel')
-			return '=%s' %(value)
-		return ''
+				value = unicode(data.get('valueModel'))
+			return u'=%s' %(value)
+		return u''
 
 	def getValue(self):
 		x = self.getValueRaw()
@@ -833,59 +838,59 @@ class ParameterNode(DataNode):
 
 		type = self.getUnitName()
 		# Length
-		if (type == 'km')       : return Length(x,  100000.00000, type)
-		if (type == 'm')        : return Length(x,     100.00000, type)
-		if (type == 'dm')       : return Length(x,      10.00000, type)
-		if (type == 'cm')       : return Length(x,       1.00000, type)
-		if (type == 'mm')       : return Length(x,       0.10000, type)
-		if (type == '\xC2\xB5m'): return Length(x,       0.00100, type)
-		if (type == 'in')       : return Length(x,       2.54000, type)
-		if (type == 'ft')       : return Length(x,      30.48000, type)
-		if (type == 'sm')       : return Length(x,  185324.52180, type)
-		if (type == 'mil')      : return Length(x,       0.00254, type)
+		if (type == 'km')    : return Length(x,  100000.00000, type)
+		if (type == 'm')     : return Length(x,     100.00000, type)
+		if (type == 'dm')    : return Length(x,      10.00000, type)
+		if (type == 'cm')    : return Length(x,       1.00000, type)
+		if (type == 'mm')    : return Length(x,       0.10000, type)
+		if (type == u'\xB5m'): return Length(x,       0.00100, type)
+		if (type == 'in')    : return Length(x,       2.54000, type)
+		if (type == 'ft')    : return Length(x,      30.48000, type)
+		if (type == 'sm')    : return Length(x,  185324.52180, type)
+		if (type == 'mil')   : return Length(x,       0.00254, type)
 		# Mass
-		if (type == 'kg')       : return Mass(x,       1.0000000, type)
-		if (type == 'g')        : return Mass(x,       0.0010000, type)
-		if (type == 'slug')     : return Mass(x,      14.5939000, type)
-		if (type == 'lb')       : return Mass(x,       0.4535920, type)
-		if (type == 'oz')       : return Mass(x,       0.0283495, type)
+		if (type == 'kg')    : return Mass(x,       1.0000000, type)
+		if (type == 'g')     : return Mass(x,       0.0010000, type)
+		if (type == 'slug')  : return Mass(x,      14.5939000, type)
+		if (type == 'lb')    : return Mass(x,       0.4535920, type)
+		if (type == 'oz')    : return Mass(x,       0.0283495, type)
 		# Time
-		if (type == 's')        : return Time(x,       1.0000000, type)
-		if (type == 'min')      : return Time(x,      60.0000000, type)
-		if (type == 'h')        : return Time(x,    3600.0000000, type)
+		if (type == 's')     : return Time(x,       1.0000000, type)
+		if (type == 'min')   : return Time(x,      60.0000000, type)
+		if (type == 'h')     : return Time(x,    3600.0000000, type)
 		# Temperatur
-		if (type == 'K')        : return Temperature(x,     1.0,   0.00, type)
-		if (type == '\xC2\xB0C'): return Temperature(x,     1.0, 273.15, type)
-		if (type == '\xC2\xB0F'): return Temperature(x, 5.0/9.0, 523.67, type)
+		if (type == 'K')     : return Temperature(x,     1.0,   0.00, type)
+		if (type == u'\xB0C'): return Temperature(x,     1.0, 273.15, type)
+		if (type == u'\xB0F'): return Temperature(x, 5.0/9.0, 523.67, type)
 		# Angularity
-		if (type == 'rad')      : return Angle(x, 1.0     , type)
-		if (type == '\xC2\xB0') : return Angle(x, pi/180.0, type)
-		if (type == 'gon')      : return Angle(x, pi/200.0, type)
+		if (type == 'rad')   : return Angle(x, 1.0     , type)
+		if (type == u'\xb0') : return Angle(x, pi/180.0, type)
+		if (type == 'gon')   : return Angle(x, pi/200.0, type)
 		# Velocity
-		if (type == 'm/s')      : return Velocity(x, 100.0     , type)
+		if (type == 'm/s')   : return Velocity(x, 100.0     , type)
 		# Area
-		if (type == 'mm^2')     : return Area(x, 1.0           , type)
+		if (type == 'mm^2')  : return Area(x, 1.0           , type)
 		# Volume
-		if (type == 'l')        : return Volume(x, 1.0         , type)
+		if (type == 'l')     : return Volume(x, 1.0         , type)
 		# Force
-		if (type == 'N')        : return Force(x, 1.0          , type)
-		if (type == 'dyn')      : return Force(x, 1.0          , type)
-		if (type == 'ozf')      : return Force(x, 0.278013851  , type)
+		if (type == 'N')     : return Force(x, 1.0          , type)
+		if (type == 'dyn')   : return Force(x, 1.0          , type)
+		if (type == 'ozf')   : return Force(x, 0.278013851  , type)
 		# Pressure
-		if (type == 'psi')      : return Pressure(x,    6890.0 , type)
-		if (type == 'ksi')      : return Pressure(x, 6890000.0 , type)
+		if (type == 'psi')   : return Pressure(x,    6890.0 , type)
+		if (type == 'ksi')   : return Pressure(x, 6890000.0 , type)
 		# Work
-		if (type == 'J')        : return Work(x,         1.0   , type)
-		if (type == 'erg')      : return Work(x,         1.0   , type)
-		if (type == 'Cal')      : return Work(x,         4.184 , type)
+		if (type == 'J')     : return Work(x,         1.0   , type)
+		if (type == 'erg')   : return Work(x,         1.0   , type)
+		if (type == 'Cal')   : return Work(x,         4.184 , type)
 		# Electrical
-		if (type == 'A')        : return Electrical(x,   1.0   , type)
+		if (type == 'A')     : return Electrical(x,   1.0   , type)
 		# Luminosity
-		if (type == 'cd')       : return Luminosity(x, type)
+		if (type == 'cd')    : return Luminosity(x, type)
 		# Substance
-		if (type == 'mol')      : return Substance(x, type)
+		if (type == 'mol')   : return Substance(x, type)
 		# without Unit
-		if (type == '')         : return Scalar(x) # parameter has no unit
+		if (type == '')      : return Scalar(x) # parameter has no unit
 		derivedUnit = self.getDerivedUnitName()
 		if (derivedUnit is not None):
 			# Length
@@ -936,17 +941,15 @@ class ParameterNode(DataNode):
 class ParameterTextNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
-		self.handled = False
 
 	def getValueRaw(self):
 		return self.get('value')
 
-	def getUnitName(self):
-		return ''
+	def getUnitName(self): # return unicode
+		return u''
 
-	def getRefText(self):
-		x = self.getValue()
-		return '(%04X): %s \'%s\'=\'%s\'' %(self.index, self.typeName, self.getName(), x)
+	def getRefText(self): # return unicode
+		return u'(%04X): %s \'%s\'=\'%s\'' %(self.index, self.typeName, self.name, self.getValue())
 
 	def getValue(self):
 		x = self.getValueRaw()
@@ -977,9 +980,8 @@ class EnumNode(DataNode):
 			value = values[i]
 		return value
 
-	def getRefText(self):
-		name = self.get('Enum')
-		return '(%04X): %s=%s' %(self.index, name, self.getValueText())
+	def getRefText(self): # return unicode
+		return u'(%04X): %s=%s' %(self.index, self.get('Enum'), self.getValueText())
 
 	def __str__(self):
 		node = self.data
@@ -996,9 +998,21 @@ class FeatureNode(DataNode):
 			if (index < len(properties)):
 				typ = properties[index]
 				if (typ):
-					return typ.node.typeName
+					return typ.typeName
 		return None
 
+<<<<<<< master
+=======
+	def _getPropertyEnumName(self, index):
+		properties = self.get('properties')
+		if (properties):
+			if (index < len(properties)):
+				typ = properties[index]
+				if (typ):
+					return typ.get('Enum')
+		return None
+
+>>>>>>> local
 	def getSubTypeName(self):
 		subTypeName = self.get('Feature')
 		if (subTypeName): return subTypeName
@@ -1006,46 +1020,74 @@ class FeatureNode(DataNode):
 		p0 = self._getPropertyName(0)
 		p1 = self._getPropertyName(1)
 
+<<<<<<< master
+=======
+		if (p4 == '509FB5CC'):                      return 'Rip'
+>>>>>>> local
 		if (p0 == '90874D51'):
 			p4 = self._getPropertyName(4)
-			if (p4 == '7DAA0032'):             return 'Chamfer'
-			if (p1 == 'Parameter'):            return 'Bend'
-			if (p1 == 'FxExtend'):             return 'Extend'
-			if (p1 is None):                   return 'CornerChamfer'
+			if (p4 == '7DAA0032'):                  return 'Chamfer'
+			if (p1 == 'Parameter'):                 return 'Bend'
+			if (p1 == 'FxExtend'):                  return 'Extend'
+			if (p1 is None):                        return 'CornerChamfer'
 		elif (p0 == 'SurfaceBodies'):
+<<<<<<< master
 			if (p1 == 'SolidBody'):            return 'Combine'
 			if (p1 == 'SurfaceBodies'):        return 'CoreCavity'
+=======
+			if (p1 == 'SolidBody'):                 return 'Combine'
+			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'
+			if (p1 == 'SurfaceBodies'):             return 'CoreCavity'
+			if (p1 == '509FB5CC'):
+				p7 = self._getPropertyEnumName(7)
+				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
+				if (p7 == '4688EBA3_Enum'):         return 'Unfold'
+>>>>>>> local
 		elif (p0 == 'Enum'):
 			p2 = self._getPropertyName(2)
 			p3 = self._getPropertyName(3)
 			if (p1 == 'FxBoundaryPatch'):
 				p6 = self._getPropertyName(6)
 				if (p2 == 'Line3D'):
+<<<<<<< master
 					if (p6 is None):           return 'Revolve'
 					if (p6 == '92637D29'):     return 'Extrude' #Map cut feature to extrusion!
+=======
+					if (p6 is None):                return 'Revolve'
+					if (p6 == 'ExtentType'):        return 'Extrude' #Map cut feature to extrusion!
+>>>>>>> local
 					return 'Coil'
 				elif (p2 == 'Direction'):
-					if (p6 == 'Parameter'):    return 'Emboss'
+					p10 = self._getPropertyName(0x10)
+					if (p6 == 'Parameter'):         return 'Emboss'
+					if (p10 == 'ParameterBoolean'): return 'Cut'
 					return 'Extrude'
 				return 'Coil'
-			if (p1 == 'FxThread'):             return 'Shell'
-			if (p1 == 'Parameter'):            return 'Hole'
+			if (p1 == 'FaceCollection'):            return 'Shell'
+			if (p1 == 'Parameter'):                 return 'Hole'
 			if (p1 == 'ParameterBoolean'):
+<<<<<<< master
 				if (p3 == 'Enum'):             return 'Split'
 				if (p2 == 'ParameterBoolean'): return 'Fold'
+=======
+				if (p3 == 'Enum'):                  return 'Split'
+				if (p2 == 'ParameterBoolean'):      return 'Fold'
+			if (p2 == 'ParameterBoolean'):          return 'SnapFit'
+>>>>>>> local
 		elif (p0 == 'FxFilletConstant'):
 			p8 = self._getPropertyName(8)
-			if (p8 == 'ParameterBoolean'):     return 'CornerRound'
-			if (p8 == 'Enum'):                 return 'Fillet'
-		elif (p1 == 'FxFilletVariable'):       return 'Fillet'
-		elif (p0 == 'FxThread'):
-			if (p1 == 'Enum'):                 return 'MoveFace'
-			if (p1 == 'FxThread'):             return 'ReplaceFace'
+			if (p8 == 'ParameterBoolean'):          return 'CornerRound'
+			if (p8 == 'Enum'):                      return 'Fillet'
+		elif (p1 == 'FxFilletVariable'):            return 'Fillet'
+		elif (p0 == 'FaceCollection'):
+			if (p1 == 'Enum'):                      return 'MoveFace'
+			if (p1 == 'FaceCollection'):            return 'ReplaceFace'
 			if (p1 == 'ParameterBoolean'):
 				p3 = self._getPropertyName(3)
-				if (p3 == 'SurfaceBodies'):    return 'DeleteFace'
-				if (p3 == 'Parameter'):        return 'Thread'
+				if (p3 == 'SurfaceBodies'):         return 'DeleteFace'
+				if (p3 == 'Parameter'):             return 'Thread'
 		elif (p0 == 'FxBoundaryPatch'):
+<<<<<<< master
 			if (p1 == 'A477243B'):             return 'Sweep'
 			if (p1 == 'FC203F47'):             return 'Sweep'
 			if (p1 == 'Direction'):            return 'Extrude'
@@ -1065,12 +1107,39 @@ class FeatureNode(DataNode):
 		elif (p0 == '312F9E50'):               return 'Loft'
 		elif (p0 == 'Parameter'):              return 'Loft'
 		elif (p0 == 'FxThicken'):              return 'Thicken'
+=======
+			p2 = self._getPropertyName(2)
+			if (p2 == 'FxBoundaryPatch'):           return 'Grill'
+			if (p1 == 'ProfilePath'):               return 'Sweep'
+			if (p1 == 'Direction'):                 return 'Extrude'
+			if (p1 == 'FxBoundaryPatch'):           return 'Rib'
+			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
+			if (p1 == 'Parameter'):                 return 'Rest'
+			p4 = self._getPropertyName(4)
+			if (p4 == 'SurfaceBody'):               return 'BoundaryPatch'
+		elif (p0 == 'Direction'):
+			if (p1 == '90874D51'):                  return 'Lip'
+			if (p1 == 'FaceCollection'):            return 'FaceDraft'
+		elif (p0 == 'CA02411F'):                    return 'NonParametricBase'
+		elif (p0 == 'EB9E49B0'):                    return 'Freeform'
+		elif (p0 == 'ProfilePath'):                 return 'Hem'
+		elif (p0 == 'SolidBody'):                   return 'Knit'
+		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
+		elif (p0 == 'EA680672'):                    return 'Trim'
+		elif (p0 == 'SurfaceBody'):                 return 'Reference'
+		elif (p0 == '8677CE83'):                    return 'Corner'
+		elif (p0 == 'AFD8A8E0'):                    return 'Corner'
+		elif (p0 == 'LoftSections'):                return 'Loft'
+#		elif (p0 == 'Parameter'):                   return 'Loft'
+		elif (p0 == 'SurfaceSelection'):            return 'Thicken'
+>>>>>>> local
 		elif (p0 == 'Transformation'):
-			if (p1 == '8D6EF0BE'):             return 'PatternRectangular'
+			if (p1 == '8D6EF0BE'):                  return 'PatternRectangular'
 			# FIXME: This only works for the intersection example (e.g. Shaft1.ipt has other proeprties)!!!!
 			return 'iFeature'
 		elif (p0 is None):
 			p10 = self._getPropertyName(10)
+<<<<<<< master
 			if (p1 == 'Enum'):                 return 'Thicken'
 			if (p1 == '8B2B8D96'):             return 'BoundaryPatch'
 			if (p1 == 'SurfaceBody'):          return 'BoundaryPatch'
@@ -1096,19 +1165,35 @@ class FeatureNode(DataNode):
 		# - Rip
 		# - RuleFillet
 		# - RuledSurface
+=======
+			if (p1 == 'Enum'):                      return 'Thicken'
+			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
+			if (p1 == '90874D51'):                  return 'Lip'
+			if (p1 == 'ProfilePath'):               return 'ContourRoll'
+			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
+			if (p10 == 'D524C30A'):                 return 'Fillet'
+		elif (p0 == 'D70E9DDA'):                    return 'Boss'
+		elif (p0 == 'ParameterBoolean'):            return 'FilletRule'
+
+		# Missing Features:
+		# - CosmeticWeld
+		# - FaceOffset
+		# - SurfaceMid
+		# - SurfaceRuled
+		# - Move
+		# - MeshPresentation
+>>>>>>> local
 		# - SketchDrivenPattern
 		# - SnapFit
 		# - Unfold
 		return 'Unknown'
 
-	def getRefText(self):
-		data = self.data
-		name = self.getName()
-		return '(%04X): Fx%s \'%s\'' %(data.index, self.getSubTypeName(), name)
+	def getRefText(self): # return unicode
+		return u'(%04X): Fx%s \'%s\'' %(self.data.index, self.getSubTypeName(), self.name)
 
 	def __str__(self):
 		data = self.data
-		name = self.getName()
+		name = self.name
 		properties = ''
 		list = data.get('properties')
 		if (list is not None):
@@ -1125,108 +1210,156 @@ class FeatureNode(DataNode):
 class ValueNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
-		self.handled = False
 
-	def getRefText(self):
+	def getRefText(self): # return unicode
 		if ('value' in self.data.properties):
 			value = self.data.properties['value']
 		else:
 			value = None
-		name  = self.data.name
-		if (name is None):
+		name = self.data.name
+		if (name is None or len(name) == 0):
 			name = ''
 		else:
-			name = ' %s' %(name)
+			name = ' ' + name
 		if (value is not None):
-			return '(%04X): %s%s=%X' %(self.index, self.typeName, name, value)
-		else:
-			logError('ERROR: (%04X): %s has no value defined!' %(self.index, self.typeName))
-			return '(%04X): %s' %(self.index, self.typeName)
+			if (type(value) is int):
+				return u'(%04X): %s%s=%X' %(self.index, self.typeName, name, value)
+			if (type(value) is float):
+				return u'(%04X): %s%s=%g' %(self.index, self.typeName, name, value)
+			return u'(%04X): %s%s=%s' %(self.index, self.typeName, name, value)
+		logError('ERROR: (%04X): %s has no value defined!' %(self.index, self.typeName))
+		return u'(%04X): %s' %(self.index, self.typeName)
 
-class PointNode(DataNode):
+class PointNode(DataNode): # return unicoe
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getRefText(self):
+	def getRefText(self): # return unicode
 		if (self.typeName[-2:] == '2D'):
+<<<<<<< master
 			return '(%04X): %s - (%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'))
 		return '(%04X): %s - (%g/%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
+=======
+			point = self
+			if (point.typeName == 'BlockPoint2D'):
+				point = self.get('refPoint')
+			return u'(%04X): %s - (%g/%g)' %(self.index, self.typeName, point.get('x'), point.get('y'))
+		return u'(%04X): %s - (%g/%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
+>>>>>>> local
 
 class LineNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
+<<<<<<< master
 	def getRefText(self):
+=======
+	def _getCoord(self, points, index, coordName):
+		p = points[index]
+		if (p):
+			c = p.get(coordName)
+			if (c is not None):
+				return '%g' %(c)
+		return '#NA#'
+
+	def getRefText(self): # return unicoe
+>>>>>>> local
 		p = self.get('points')
 		if (len(p)>1):
 			p0 = p[0].node
 			p1 = p[1].node
 			if (self.typeName[-2:] == '2D'):
+<<<<<<< master
 				return '(%04X): %s - (%g/%g) - (%g/%g)' %(self.index, self.typeName, p0.get('x'), p0.get('y'), p1.get('x'), p1.get('y'))
 			return '(%04X): %s - (%g/%g/%g) - (%g/%g/%g)' %(self.index, self.typeName, p0.get('x'), p0.get('y'), p0.get('z'), p1.get('x'), p1.get('y'), p1.get('z'))
 		return '(%04X): %s' %(self.index, self.typeName)
+=======
+				return u'(%04X): %s - (%s/%s) - (%s/%s)' %(self.index, self.typeName, x0, y0, x1, y1)
+			return u'(%04X): %s - (%s/%s/%s) - (%s/%s/%s)' %(self.index, self.typeName, x0, y0, z0, x1, y1, z1)
+		return u'(%04X): %s' %(self.index, self.typeName)
+>>>>>>> local
 
 class CircleNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getRefText(self):
+	def getRefText(self): # return unicode
 		r = self.get('r')
 		p = self.get('points')
 		points = ''
 		for i in p:
 			if (i):
 				if (self.typeName[-2:] == '2D'):
-					points += ', (%g/%g)' %(i.node.get('x'), i.node.get('y'))
+					try:
+						points += ', (%g/%g)' %(i.get('x'), i.get('y'))
+					except:
+						logError(u'ERROR> (%04X): %s - x=%s, y=%s, r=%s, points=%s' %(i.index, i.typeName, i.get('x'), i.get('y'), r, points))
 				else:
-					points += ', (%g/%g/%g)' %(i.node.get('x'), i.node.get('y'), i.node.get('z'))
+					points += ', (%g/%g/%g)' %(i.get('x'), i.get('y'), i.get('z'))
 		if (self.typeName[-2:] == '2D'):
 			c = self.get('refCenter')
-			return '(%04X): %s - (%g/%g), r=%g%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points)
-		return '(%04X): %s - (%g/%g/%g), r=%g%s' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'), r, points)
+			try:
+					u'(%04X): %s - (%g/%g), r=%g%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points)
+			except:
+				logError(u'ERROR> (%04X): %s - x=%s, y=%s, r=%s, points=%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points))
+			return u'(%04X): %s' %(self.index, self.typeName)
+		return u'(%04X): %s - (%g/%g/%g), r=%g%s' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'), r, points)
 
 class GeometricRadius2DNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getRefText(self):
-		o = self.get('refObject').node
-		c = self.get('refCenter').node
-		return '(%04X): %s - o=(%04X): %s, c=(%04X)' %(self.index, self.typeName, o.index, o.typeName, c.index)
+	def getRefText(self): # return unicode
+		o = self.get('refObject')
+		c = self.get('refCenter')
+		return u'(%04X): %s - o=(%04X): %s, c=(%04X)' %(self.index, self.typeName, o.index, o.typeName, c.index)
 
 class GeometricCoincident2DNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getRefText(self):
-		o = self.get('refObject').node
-		p = self.get('refPoint').node
-		return '(%04X): %s - o=(%04X): %s, p=(%04X): %s' %(self.index, self.typeName, o.index, o.typeName, p.index, p.typeName)
+	def getRefText(self): # return unicode
+		o = self.get('refObject')
+		p = self.get('refPoint')
+		return u'(%04X): %s - o=(%04X): %s, p=(%04X): %s' %(self.index, self.typeName, o.index, o.typeName, p.index, p.typeName)
 
 class DimensionAngleNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getRefText(self):
-		d = self.get('refParameter').node
+	def getRefText(self): # return unicode
+		d = self.get('refParameter')
 		if (self.typeName == 'Dimension_Angle2Line2D'):
-			l1 = self.get('refLine1').node
-			l2 = self.get('refLine2').node
-			return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name, l1.index, l1.typeName, l2.index, l2.typeName)
-		p1 = self.get('refPoint1').node
-		p2 = self.get('refPoint2').node
-		p3 = self.get('refPoint3').node
-		return '(%04X): %s - d=\'%s\', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s' %(self.index, self.typeName, d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
+			l1 = self.get('refLine1')
+			l2 = self.get('refLine2')
+			return u'(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name, l1.index, l1.typeName, l2.index, l2.typeName)
+		p1 = self.get('refPoint1')
+		p2 = self.get('refPoint2')
+		p3 = self.get('refPoint3')
+		return u'(%04X): %s - d=\'%s\', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s' %(self.index, self.typeName, d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
 
 class DimensionDistance2DNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getRefText(self):
-		d = self.get('refParameter').node
-		o1 = self.get('refEntity1').node
-		o2 = self.get('refEntity2').node
-		return '(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name , o1.index, o1.typeName, o2.index, o2.typeName)
+	def getRefText(self): # return unicode
+		d = self.get('refParameter')
+		o1 = self.get('refEntity1')
+		o2 = self.get('refEntity2')
+		return u'(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name , o1.index, o1.typeName, o2.index, o2.typeName)
+
+class SurfaceBodiesNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self): # return unicode
+		d = self.get('bodies')
+		sep = u''
+		names = u''
+		for body in d:
+			names += u'\'%s\'%s' %(body.name, sep)
+			sep = u','
+		return u'(%04X): %s %s' %(self.index, self.typeName, names)
 
 class B32BF6AC():
 	def __init__(self, m, x):
@@ -1293,19 +1426,8 @@ class BRepChunk():
 			return '\n'
 		return ''
 
-class ViewObject():
-	def __init__(self):
-		self.ShapeColor  = None
-		self.LineColor   = None
-		self.PointColor  = None
-		self.DisplayMode = None
-	def hide(self):
-		pass
-	def show(self):
-		pass
-
 class ModelerTxnMgr():
-	def __init(self):
+	def __init__(self):
 		self.ref_1 = None
 		self.ref_2 = None
 		self.lst   = []
@@ -1316,6 +1438,26 @@ class ModelerTxnMgr():
 
 	def __str__(self):
 		return 'ref1=%s' %(self.ref_1)
+
+class AbstractData():
+	def __init__(self):
+		self.typeID       = None
+		self.name         = None
+		self.index        = -1
+		self.parentIndex  = None
+		self.hasParent    = False
+		self.content      = ''
+		self.childIndexes = []
+		self.properties   = {}
+		self.size         = 0
+		self.visible      = False
+		self.construction = False
+		self.segment      = None
+		self.sketchEntity = None
+		self.sketchIndex  = None
+		self.sketchPos    = None
+		self.valid        = True
+		self.handled      = False
 
 class Enum(tuple): __getattr__ = tuple.index
 

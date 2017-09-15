@@ -9,13 +9,17 @@ TODO:
 '''
 
 import traceback
-from importerClasses import Header0, Angle, GraphicsFont, ModelerTxnMgr
+from importerClasses import AbstractData, Header0, Angle, GraphicsFont, ModelerTxnMgr
 from importerUtils   import *
 from math            import log10
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
+<<<<<<< master
 __version__     = '0.3.0'
+=======
+__version__     = '0.4.0'
+>>>>>>> local
 __status__      = 'In-Development'
 
 def isList(data, code):
@@ -29,7 +33,11 @@ def CheckList(data, offset, type):
 	assert (isList(lst, type)), 'Expected list %d - not [%s]' %(type, IntArr2Str(lst, 4))
 	return i
 
-class AbstractNode():
+def getIndex(ref):
+	if (ref is None): return u'None'
+	return u'%04X' %ref.index
+
+class AbstractNode(AbstractData):
 	_TYP_GUESS_                = 0x0000
 	_TYP_2D_UINT16_            = 0x0001
 	_TYP_2D_SINT16_            = 0x0002
@@ -90,21 +98,7 @@ class AbstractNode():
 	_TYP_MAP_MDL_TXN_MGR_2_    = 0x6002
 
 	def __init__(self):
-		self.typeID       = None
-		self.name         = None
-		self.index        = -1
-		self.parentIndex  = None
-		self.hasParent    = False
-		self.content      = ''
-		self.childIndexes = []
-		self.properties   = {}
-		self.size         = 0
-		self.visible      = False
-		self.construction = False
-		self.segment      = None
-		self.sketchIndex  = None
-		self.sketchEntity = None
-		self.valid        = True
+		AbstractData.__init__(self)
 
 	def set(self, name, value):
 		'''
@@ -255,7 +249,7 @@ class AbstractNode():
 
 	def ReadAngle(self, offset, name):
 		x, i = getFloat64(self.data, offset)
-		x = Angle(x, pi/180.0, '\xC2\xB0')
+		x = Angle(x, pi/180.0, u'\xb0')
 		self.set(name, x)
 		self.content += ' %s=%s' %(name, x)
 		return i
@@ -518,7 +512,7 @@ class AbstractNode():
 						i = self.ReadCrossRef(i, 'tmp', j, False)
 						key = self.get('tmp')
 						val, i = getUInt32(self.data, i)
-						self.content += '%s[%04X: (%X)]' %(sep, key.index, val)
+						self.content += '%s[%s: (%X)]' %(sep, getIndex(key), val)
 					else:
 						val, i = getUInt16A(self.data, i, 2)
 						str = '[%s]' %(IntArr2Str(val[0], 1))
@@ -639,30 +633,30 @@ class AbstractNode():
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getUInt32(self.data, i)
-					self.content += '%s[%04X: (%X)]' %(sep, key.index, val)
+					self.content += '%s[%s: (%X)]' %(sep, getIndex(key), val)
 				elif (typ == AbstractNode._TYP_MAP_X_REF_2D_UINT32_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getUInt32A(self.data, i, 2)
-					self.content += '%s[%04X: (%s)]' %(sep, key.index, IntArr2Str(val, 4))
+					self.content += '%s[%s: (%s)]' %(sep, getIndex(key), IntArr2Str(val, 4))
 				elif (typ == AbstractNode._TYP_MAP_X_REF_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
-					self.content += '%s[%04X: %04X]' %(sep, key.index, val.index)
+					self.content += '%s[%s: %s]' %(sep, getIndex(key), getIndex(val))
 				elif (typ == AbstractNode._TYP_MAP_X_REF_LIST2_XREF_):
 					c = self.content
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					i = self.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'tmp')
 					val = self.get('tmp')
-					self.content = c + '%s[%04X: (%s)]' %(sep, key.index, '),('.join(['%04X' %(h.index) for h in val]))
+					self.content = c + '%s[%s: (%s)]' %(sep, getIndex(key), '),('.join(['%s,' %(getIndex(h)) for h in val]))
 				elif (typ == AbstractNode._TYP_MAP_X_REF_FLOAT64_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getFloat64(self.data, i)
-					self.content += '%s[%04X: %s]' %(sep, key.index, val)
+					self.content += '%s[%s: %s]' %(sep, getIndex(key), val)
 				elif (typ == AbstractNode._TYP_MAP_UUID_UINT32_):
 					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
 					val, i = getUInt32(self.data, i)
@@ -671,7 +665,7 @@ class AbstractNode():
 					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
-					self.content += '%s[%s: %04X]' %(sep, key, val.index)
+					self.content += '%s[%s: %s]' %(sep, key, getIndex(val))
 				elif (typ == AbstractNode._TYP_MAP_TEXT8_REF_):
 					key, i = getLen32Text8(self.data, i)
 					i = self.ReadChildRef(i, 'tmp', j, False)
@@ -808,7 +802,7 @@ class AbstractNode():
 		n      = len(units)
 
 		while (j < n):
-			unit = units[j].node
+			unit = units[j]
 
 			#unitSupported    = unit.get('UnitSupportet')
 			#if (not unitSupported):
@@ -827,21 +821,19 @@ class AbstractNode():
 		factor = 1.0
 		unitRef = self.get('refUnit')
 		if (unitRef):
-			typ   = unitRef.node
-			numerators = self.getUnitFactors(typ.get('numerators'))
-			denominators = self.getUnitFactors(typ.get('denominators'))
+			numerators = self.getUnitFactors(unitRef.get('numerators'))
+			denominators = self.getUnitFactors(unitRef.get('denominators'))
 			factor = numerators / denominators
 
-			derivedRef = typ.get('refDerived')
+			derivedRef = unitRef.get('refDerived')
 			if (derivedRef):
-				typ = derivedRef.node
-				numerators = self.getUnitFactors(typ.get('numerators'))
-				denominators = self.getUnitFactors(typ.get('denominators'))
+				numerators = self.getUnitFactors(derivedRef.get('numerators'))
+				denominators = self.getUnitFactors(derivedRef.get('denominators'))
 				factor = factor * numerators / denominators
 		return factor
 
-	def getUnitFormula(self, units):
-		formula = ''
+	def getUnitFormula(self, units): # return unicode
+		formula = u''
 		sep     = ''
 		j       = 0
 		n       = len(units)
@@ -850,96 +842,93 @@ class AbstractNode():
 		unitExponent = 1       # by default (e.g.): m^1 => m
 
 		while (j < n):
-			unit = units[j].node
+			unit = units[j]
 			j += 1
 			subformula = unit.get('Unit')
 
 			if (len(subformula) > 0):
 				factor = log10(unit.get('magnitude'))
-				if   (factor ==  18): factor = 'E'        # Exa
-				elif (factor ==  15): factor = 'P'        # Peta
-				elif (factor ==  12): factor = 'T'        # Tera
-				elif (factor ==   9): factor = 'G'        # Giga
-				elif (factor ==   6): factor = 'M'        # Mega
-				elif (factor ==   3): factor = 'k'        # Kilo
-				elif (factor ==   2): factor = 'h'        # Hecto
-				elif (factor ==   1): factor = 'da'       # Deca
-				elif (factor ==   0): factor = ''
-				elif (factor ==  -1): factor = 'd'        # Deci
-				elif (factor ==  -2): factor = 'c'        # Centi
-				elif (factor ==  -3): factor = 'm'        # Milli
-				elif (factor ==  -6): factor = '\xC2\xB5' # Micro
-				elif (factor ==  -9): factor = 'n'        # Nano
-				elif (factor == -12): factor = 'p'        # Pico
-				elif (factor == -15): factor = 'f'        # Femto
-				elif (factor == -18): factor = 'a'        # Atto
+				if   (factor ==  18): factor = u'E'    # Exa
+				elif (factor ==  15): factor = u'P'    # Peta
+				elif (factor ==  12): factor = u'T'    # Tera
+				elif (factor ==   9): factor = u'G'    # Giga
+				elif (factor ==   6): factor = u'M'    # Mega
+				elif (factor ==   3): factor = u'k'    # Kilo
+				elif (factor ==   2): factor = u'h'    # Hecto
+				elif (factor ==   1): factor = u'da'   # Deca
+				elif (factor ==   0): factor = u''
+				elif (factor ==  -1): factor = u'd'    # Deci
+				elif (factor ==  -2): factor = u'c'    # Centi
+				elif (factor ==  -3): factor = u'm'    # Milli
+				elif (factor ==  -6): factor = u'\xB5' # Micro
+				elif (factor ==  -9): factor = u'n'    # Nano
+				elif (factor == -12): factor = u'p'    # Pico
+				elif (factor == -15): factor = u'f'    # Femto
+				elif (factor == -18): factor = u'a'    # Atto
 				subformula = factor + subformula
 				if (subformula == lastUnit):
 					unitExponent += 1
 				else:
 					if(lastUnit != 'XXXXX'):
 						if (unitExponent > 1):
-							formula = '%s%s%s^%d' %(formula, sep, lastUnit, unitExponent)
+							formula = u'%s%s%s^%d' %(formula, sep, lastUnit, unitExponent)
 							unitExponent = 1
 						else:
-							formula = '%s%s%s' %(formula, sep, lastUnit)
+							formula = u'%s%s%s' %(formula, sep, lastUnit)
 						sep =' '
 					lastUnit = subformula
 		if (j > 0):
 			if (unitExponent > 1):
-				formula = '%s%s%s^%d' %(formula, sep, subformula, unitExponent)
+				formula = u'%s%s%s^%d' %(formula, sep, subformula, unitExponent)
 			else:
-				formula = '%s%s%s' %(formula, sep, subformula)
+				formula = u'%s%s%s' %(formula, sep, subformula)
 		return formula
 
-	def getUnitName(self):
+	def getUnitName(self): # return unicode
 		'''
 		TODO:
 		Derived units are not supported in FreeCAD.
 		Add a new derived unit! But how?
 		Meanwhile the derived units are ignored!
 		'''
-		unitRef  = self.get('refUnit')
-		unitName = ''
-		if (unitRef):
-			unitData = unitRef.node
+		unit  = self.get('refUnit')
+		unitName = u''
+		if (unit):
+#			derived = unit.get('refDerived')
+#			if (derived):
+#				unit = derived
 
-#			derivedRef = unitData.get('refDerived')
-#			if (derivedRef):
-#				unitData = derivedRef.node
-
-			unitName     = self.getUnitFormula(unitData.get('numerators'))
-			denominators = self.getUnitFormula(unitData.get('denominators'))
+			unitName     = self.getUnitFormula(unit.get('numerators'))
+			denominators = self.getUnitFormula(unit.get('denominators'))
 			if (len(denominators) > 0):
 				unitName += '/' + denominators
 
 		return unitName
 
 	def getDerivedUnitName(self):
-		unitData = self.get('refUnit').node
-		derivedRef = unitData.get('refDerived')
-		if (derivedRef):
-			unitData = derivedRef.node
+		unit = self.get('refUnit')
+		if (unit):
+			derived = unit.get('refDerived')
+			if (derived):
+				unitName     = self.getUnitFormula(derived.get('numerators'))
+				denominators = self.getUnitFormula(derived.get('denominators'))
+				if (len(denominators) > 0):
+					unitName += '/' + denominators
 
-			unitName     = self.getUnitFormula(unitData.get('numerators'))
-			denominators = self.getUnitFormula(unitData.get('denominators'))
-			if (len(denominators) > 0):
-				unitName += '/' + denominators
-
-			return unitName
+				return unitName
 		return None
 		
 	def getName(self):
 		if (self.name is None):
-			ref = self.get('label')
-			if (ref):
-				return ref.getName()
+			label = self.get('label')
+			if (label):
+				return label.name
 		return self.name
 
-	def __str__(self):
+	def __str__(self): # return unicode
 		if (self.name is None):
-			return '(%04X): %s%s' %(self.index, self.typeID, self.content)
-		return '(%04X): %s \'%s\'%s' %(self.index, self.typeID, self.name, self.content)
+			return u'(%04X): %s%s' %(self.index, self.typeID, self.content.encode(sys.getdefaultencoding()))
+		return u'(%04X): %s \'%s\'%s' %(self.index, self.typeID, self.name, self.content.encode(sys.getdefaultencoding()))
 
 class AppNode(AbstractNode):
 	def __init__(self):
@@ -997,60 +986,127 @@ class NodeRef():
 	TYPE_CROSS  = 3
 
 	def __init__(self, n, m, refType):
-		self.index        = n + ((m & 0x7FFF) << 16)
-		self.mask         = (m & 0x8000) >> 15
-		self.type         = refType
-		self.number       = 0
-		self.node         = None
-		self.sketchPos    = -1
-		self.sketchIndex  = -1
+		self.index = n + ((m & 0x7FFF) << 16)
+		self.mask   = (m & 0x8000) >> 15
+		self.type   = refType
+		self.number = 0
+		self._data  = None
 
 	@property
-	def node(self):
-		return self.node
+	def data(self):
+		return self._data
 
-	@node.setter
-	def node(self, node):
-		self.node = node
-		if (node):
-			assert isinstance(node, AbstractNode), 'Node reference is not a AbstractNode (%s)!' %(node.__class__.__name__)
+	@data.setter
+	def data(self, data):
+		if (data): assert isinstance(data, AbstractNode), 'Data reference is not a AbstractNode (%s)!' %(data.__class__.__name__)
+		self._data = data
 
 	@property
 	def typeName(self):
-		if (self.node):
-			return self.node.typeName
+		if (self._data): return self._data.typeName
 		return None
 
 	@property
-	def index(self):
-		if (self.node):
-			return self.node.index
-		return -1
+	def handled(self):
+		if (self._data): return self._data.handled
+		return False
+	@handled.setter
+	def handled(self, handled):
+		if (self._data): self._data.handled = handled
 
-	def getBranchNode(self):
-		if (self.node):
-			return self.node.node
+	@property
+	def valid(self):
+		if (self._data): return self._data.valid
+		return False
+	@valid.setter
+	def valid(self, valid):
+		if (self._data): self._data.valid = valid
+
+	@property
+	def node(self):
+		if (self._data): return self._data.node
 		return None
 
-	def getName(self):
-		if (self.node):
-			return self.node.getName()
+	@property
+	def name(self):
+		if (self._data): return self._data.getName()
 		return None
 
 	def get(self, name):
-		if (self.node):
-			return self.node.get(name)
+		if (self._data): return self._data.get(name)
 		return None
 
-	def getSketchEntity(self):
-		if (self.node):
-			return self.node.sketchEntity
+	def set(self, name, value):
+		if (self._data): self._data.set(name, value)
+
+	@property
+	def sketchEntity(self):
+		if (self._data): return self._data.sketchEntity
 		return None
 
-	def getSketchIndex(self):
-		if (self.node):
-			return self.node.sketchIndex
+	@property
+	def sketchIndex(self):
+		if (self._data): return self._data.sketchIndex
 		return None
 
+	@property
+	def sketchPos(self):
+		if (self._data): return self._data.sketchPos
+		return None
+
+	@property
+	def segment(self):
+		if (self._data): return self._data.segment
+		return None
+
+<<<<<<< master
 	def __str__(self):
 		return '[%04X,%X]' %(self.index, self.mask)
+=======
+	def setSketchEntity(self, index, entity):
+		if (self._data):
+			self._data.sketchIndex = index
+			self._data.sketchEntity = entity
+
+	@property
+	def first(self):
+		node = self.node
+		if (node): return node.first
+		return None
+
+	@property
+	def next(self):
+		node = self.node
+		if (node): return node.next
+		return None
+
+	def getValue(self):
+		node = self.node
+		if (node): return node.getValue()
+		return None
+
+	def getSubTypeName(self):
+		node = self.node
+		if (node): return node.getSubTypeName()
+		return None
+
+	def getParticipants(self):
+		node = self.node
+		if (node): return node.getParticipants()
+		return None
+
+	def getUnitName(self): # return unicode
+		if (self._data): return self._data.getUnitName()
+		return u''
+
+	def getUnitOffset(self):
+		if (self._data): return self._data.getUnitOffset()
+		return 0.0
+
+	def getUnitFactor(self):
+		if (self._data): return self._data.getUnitFactor()
+		return 1.0
+
+	def __str__(self): # return unicode
+		return u'[%04X,%X]' %(self.index, self.mask)
+>>>>>>> local

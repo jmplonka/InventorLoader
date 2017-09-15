@@ -13,7 +13,7 @@ import math
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.3.0'
+__version__     = '0.4.0'
 __status__      = 'In-Development'
 
 class Transformation:
@@ -76,7 +76,7 @@ class Transformation:
 	def getZ(self):
 		return self.m[2][3] * 10.0
 
-	def __str__(self):
+	def __str__(self): # return unicode
 		v = self.m[0]
 		m1 = '[%s, %s, %s, %s]' %(v[0], v[1], v[2], v[3] * 10.0)
 		v = self.m[1]
@@ -105,7 +105,7 @@ class Transformation:
 			j += 1
 			if ((j % 4) == 0):
 				mask += '|'
-		return ' transformation={a0=%s m=[%s]}' %(mask, m)
+		return u' transformation={a0=%s m=[%s]}' %(mask, m)
 
 	def getBase(self):
 		x = self.m[0, 3]
