@@ -800,6 +800,13 @@ class DCReader(SegmentReader):
 			i = node.ReadUInt32(i, 'u32_2')
 		return i
 
+	def Read_065FFFB3(self, node):
+		i = self.ReadHeadersS32ss(node)
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'ref_2')
+		return i
+
 	def Read_06977131(self, node): # CircularPatternFeature {7BB0E824-4852-4F1B-B43C-7F729A3D7EB8}
 		properties, i = self.ReadHeaderPattern(node, 'PatternCircular')
 		for j in range(6, 12):
@@ -2177,9 +2184,11 @@ class DCReader(SegmentReader):
 					i = node.ReadFloat64(i, 'n_y')
 					i = node.ReadFloat64(i, 'n_z')
 			elif (u16_2 == 0xFFFF):
-				node.typeName = 'Sketch3D'
-				node.set('numEntities', 0)
-				node.set('entities', [])
+				pass
+#				if (node.get('label') is not None):
+#					node.typeName = 'Sketch3D'
+#					node.set('numEntities', 0)
+#					node.set('entities', [])
 #				i = node.ReadUInt32(i, 'numEntities')
 #				i = node.ReadList8(i, AbstractNode._TYP_NODE_X_REF_, 'entities')
 #				i = node.ReadUInt32A(i, 2, 'a1')
@@ -4399,6 +4408,14 @@ class DCReader(SegmentReader):
 		i = self.ReadEnumValue(node, 'PartFeatureOperation', ['*UNDEFINED*', 'NewBody', 'Cut', 'Join', 'Intersection', 'Surface'])
 		return i
 
+	def Read_72A7D774(self, node):
+		i = node.Read_Header0()
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadLen32Text8(i, 'txt0')
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
+		return i
+
 	def Read_72C97D63(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = self.skipBlockSize(i)
@@ -6238,11 +6255,50 @@ class DCReader(SegmentReader):
 
 	def Read_A3277869(self, node):
 		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'cld_0')
+		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt32(i, 'u32_1')
+		return i
+
+	def Read_A37B053C(self, node):
+		node.typeName = 'Feature'
+		node.set('Feature', 'PatternSketchDriven')
+		i = self.ReadContentHeader(node)
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst1')
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadCrossRef(i, 'ref_4')
+		i = node.ReadCrossRef(i, 'ref_5')
+		i = node.ReadCrossRef(i, 'ref_6')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadCrossRef(i, 'ref_7')
+		i = node.ReadCrossRef(i, 'ref_8')
+		i = node.ReadCrossRef(i, 'ref_9')
+		i = node.ReadCrossRef(i, 'ref_10')
+		i = node.ReadCrossRef(i, 'ref_11')
+		i = node.ReadCrossRef(i, 'ref_12')
+		i = node.ReadCrossRef(i, 'ref_13')
+		i = node.ReadCrossRef(i, 'ref_14')
+		i = node.ReadCrossRef(i, 'ref_15')
+		i = node.ReadCrossRef(i, 'ref_16')
+		i = node.ReadCrossRef(i, 'ref_17')
+		i = node.ReadCrossRef(i, 'ref_18')
+		i = node.ReadCrossRef(i, 'ref_19')
+		i = node.ReadCrossRef(i, 'ref_20')
+		i = node.ReadCrossRef(i, 'ref_21')
+		i = node.ReadCrossRef(i, 'ref_22')
+		i = node.ReadCrossRef(i, 'ref_23')
+		i = node.ReadCrossRef(i, 'ref_24')
+		i = node.ReadFloat64(i, 'x')
+		i = node.ReadFloat64(i, 'y')
+		i = node.ReadList2(i, AbstractNode._TYP_3D_FLOAT64_, 'coords')
+
 		return i
 
 	def Read_A3B0404C(self, node): # FeatureApproximationTypeEnum {C08F2078-986C-4043-A70B-643FA906968B}
@@ -7370,6 +7426,12 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
+	def Read_CC90BCDA(self, node):
+		i = self.ReadContentHeader(node)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'points')
+		i = node.ReadList2(i, AbstractNode._TYP_LIST_2D_SINT16_, 'lst0')
+		return i
+
 	def Read_CCC5085A(self, node):
 		i = node.Read_Header0()
 		i = node.ReadSInt32(i, 's32_0')
@@ -7399,6 +7461,18 @@ class DCReader(SegmentReader):
 		node.content = c +']'
 		node.set('lst3', lst)
 		node.delete('lst1')
+		return i
+
+	def Read_CCCB9A78(self, node):
+		i = node.Read_Header0()
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadCrossRef(i, 'refFx')
+		i = node.ReadParentRef(i)
+		i = node.ReadChildRef(i, 'ref_5')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadChildRef(i, 'ref_6')
+		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_CCD87CBA(self, node):
@@ -7609,7 +7683,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_CEFD3973(self, node):
-		i = self.ReadHeadersss2S16s(node)
+		i = self.ReadEnumValue(node, 'CEFD3973_Enum', [])
 		return i
 
 	def Read_CFB519C2(self, node):

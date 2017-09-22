@@ -71,20 +71,20 @@ That allows it to embed Excel workboos e.g.
 - 0.4.2: Only Code Review
 	Most sections found in LT samples are now decoded (structured)
 
-- 0.4: Preparation for supporting Featrues (except iFeature)
+- 0.5: Preparation for supporting Featrues (except iFeature)
 	Most sections found in pro samples (2010..2018) are now decoded (structured)
 
-- 0.4.1: continued working on Features
+- 0.5.1: continued working on Features
 	* added Revolve, Extrude, Loft and Combine
 	* added Polar-Pattern, Rectangular-Pattern and Mirror-Pattern.
 
-- 0.4.2: continued working on Features
+- 0.5.2: continued working on Features
 	* added Hole
 
-- 0.4.3: continued working on Features
+- 0.5.3: continued working on Features
 	* added Client
 
-- 0.4.4: continued working on Features
+- 0.5.4: continued working on Features
 	* added Sweep and Thicken
 	* Fixed encoding problems regarding filename and Sketch/Feature names
 

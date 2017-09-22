@@ -59,12 +59,12 @@ def ignoreBranch(node):
 	return None
 
 def notSupportedNode(node):
-	logWarning('        ... not supported (yet?) - sorry')
+	logWarning('        ... %s not supported (yet?) - sorry' %(node.typeName))
 	node.setSketchEntity(-1, None)
 	return None
 
 def notYetImplemented(node):
-	logWarning('        ... not implemented yet - sorry')
+	logWarning('        ... %s not implemented yet - sorry' %(node.typeName))
 	node.setSketchEntity(-1, None)
 	return None
 
@@ -75,7 +75,10 @@ def createRotation(axis, angle):
 	return FreeCAD.Rotation(axis, angle)
 
 def newObject(doc, className, name):
-	obj = doc.addObject(className, name.encode('utf8'))
+	if (INVALID_NAME.match(name)):
+		obj = doc.addObject(className, '_' + name.encode('utf8'))
+	else:
+		obj = doc.addObject(className, name.encode('utf8'))
 	if (obj):
 		obj.Label = name
 	return obj
@@ -561,7 +564,7 @@ class FreeCADImporter:
 		index = self.addConstraint(sketchObj, constraint, key)
 		name = dimension.name
 		if (len(name)):
-			constraint.Name = name
+			constraint.Name = str(name)
 			sketchObj.renameConstraint(index, name)
 			if (useExpression):
 				expression = dimension.get('alias')
@@ -797,8 +800,6 @@ class FreeCADImporter:
 	def CreateEntity(self, node, className):
 		name = node.name
 		if (len(name) == 0): name = node.typeName
-		if (INVALID_NAME.match(name)):
-			entity = newObject(self.doc, className, '_' + name)
 		entity = newObject(self.doc, className, name)
 		return entity
 
@@ -1127,11 +1128,29 @@ class FreeCADImporter:
 			x2 = getX(point2)
 			y2 = getY(point2)
 			z2 = getY(point2)
-			if(('%g'%x1 != '%g'%x2) or ('%g'%y1 != '%g'%y2) or ('%g'%z1 != '%g'%z2)):
-				part = Part.Line(createVector(x1, y1, z1), createVector(x2, y2, z1))
-				addSketch3D(edges, part, isConstructionMode(line), line)
-				return True
+		else:
+			x1 = getCoord(line, 'x')
+			y1 = getCoord(line, 'y')
+			z1 = getCoord(line, 'z')
+			x2 = getCoord(line, 'dirX') + x1
+			y2 = getCoord(line, 'dirY') + y1
+			z2 = getCoord(line, 'dirZ') + z1
+		if(('%g'%x1 != '%g'%x2) or ('%g'%y1 != '%g'%y2) or ('%g'%z1 != '%g'%z2)):
+			part = Part.Line(createVector(x1, y1, z1), createVector(x2, y2, z1))
+			addSketch3D(edges, part, isConstructionMode(line), line)
+			return True
 		return False
+
+	def createRevolve(self, name, angle, source, axis, base, solid):
+		revolution = newObject(self.doc, 'Part::Revolution', name)
+		revolution.Angle = angle
+		revolution.Source = source
+		revolution.Axis = axis
+		revolution.Base = base
+		revolution.Solid = solid
+		setDefaultViewObject(revolution)
+		source.ViewObject.Visibility = False
+		return revolution
 
 	def addSketch_Line2D(self, lineNode, sketchObj):
 		points = lineNode.get('points')
@@ -1185,6 +1204,33 @@ class FreeCADImporter:
 
 		return
 
+	def addSketch_Arc2D(self, arcNode, sketchObj):
+		center = arcNode.get('refCenter')
+		x = getX(center)
+		y = getY(center)
+		r = getCoord(arcNode, 'r')
+		points = getCirclePoints(arcNode)
+		mode = isConstructionMode(arcNode)
+
+		part = Part.Circle(createVector(x, y, 0), createVector(0, 0, 1), r)
+
+		# There shell be 3 points to draw a 2D arc.
+		point0 = points[0] # Start-Point
+		point1 = points[1] # End-Point
+		# the 3rd point defines the a point on the circle between start and end! -> scip, as it is a redundant information to calculate the radius!
+		a = calcAngle2D(center, point0)
+		b = calcAngle2D(center, point1)
+		radA = a.getRAD()
+		radB = b.getRAD()
+		arc = Part.ArcOfCircle(part, radA, radB)
+		logMessage('        ... added Arc-Circle M=(%g/%g) R=%gmm, from %s to %s ...' %(x, y, r, degrees(radA), degrees(radB)), LOG.LOG_INFO)
+		addSketch2D(sketchObj, arc, mode, arcNode)
+		point0.sketchPos = 1
+		point1.sketchPos = 2
+		point0.sketchIndex = arcNode.sketchIndex
+		point1.sketchIndex = point0.sketchIndex
+		return
+
 	def addSketch_Circle2D(self, circleNode, sketchObj):
 		center = circleNode.get('refCenter')
 		x = getX(center)
@@ -1210,8 +1256,8 @@ class FreeCADImporter:
 				if (draw):
 					a = calcAngle2D(center, point1)
 					b = calcAngle2D(center, point2)
-					radA = a.x
-					radB = b.x
+					radA = a.getRAD()
+					radB = b.getRAD()
 					arc = Part.ArcOfCircle(part, radA, radB)
 					logMessage('        ... added Arc-Circle M=(%g/%g) R=%gmm, from %s to %s ...' %(x, y, r, degrees(radA), degrees(radB)), LOG.LOG_INFO)
 					addSketch2D(sketchObj, arc, mode, circleNode)
@@ -1245,8 +1291,8 @@ class FreeCADImporter:
 		if (len(points) == 2):
 			angleStart = Angle(circleNode.get('startAngle'), pi/180.0, u'\xb0')
 			angleSweep = Angle(circleNode.get('sweepAngle'), pi/180.0, u'\xb0')
-			radA = angleStart.x
-			radB = angleSweep.x
+			radA = angleStart.getRAD()
+			radB = angleSweep.getRAD()
 			arc = Part.ArcOfCircle(part, radA, radB)
 			logMessage('        ... added Arc-Circle M=(%g/%g/%g) R=%gmm, from %s to %s ...' %(x, y, z, r, angleStart, angleSweep), LOG.LOG_INFO)
 			addSketch3D(edges, arc, isConstructionMode(circleNode), circleNode)
@@ -1275,8 +1321,18 @@ class FreeCADImporter:
 		vecA = createVector(a_x, a_y, 0.0)
 		vecB = createVector(b_x, b_y, 0.0)
 		vecC = createVector(c_x, c_y, 0.0)
-		part = Part.Ellipse(vecA, vecB, vecC)
+		
+		angle1 = atan2((a_y - c_y), (a_x - c_x))
+		if (angle1 < 0): angle1 += radians(360.0)
+		
+		angle2 = atan2((b_y - c_y), (b_x - c_x))
+		if (angle2 < 0): angle2 += radians(360.0)
 
+		if (angle1 > angle2):
+			part = Part.Ellipse(vecA, vecB, vecC)
+		else:
+			part = Part.Ellipse(vecB, vecA, vecC)
+		
 		a = ellipseNode.get('alpha')
 		b = ellipseNode.get('beta')
 		if ((a is None) and (b is None)):
@@ -1491,10 +1547,6 @@ class FreeCADImporter:
 		dimensionNode.setSketchEntity(-1, None)
 		return
 
-	def addSketch_Arc2D(self, arcNode, sketchObj):
-		arcNode.setSketchEntity(-1, None)
-		return
-
 	def addSketch_OffsetSpline2D(self, offsetSplineNode, sketchObj):
 		offsetSplineNode.setSketchEntity(-1, None)
 		return
@@ -1686,51 +1738,69 @@ class FreeCADImporter:
 		revolution = None
 
 		if (participants):
+			properties = revolveNode.get('properties')
 			refSketch  = participants[0]
 			sketch     = self.getEntity(refSketch)
 			sketchName = refSketch.name
-			properties = revolveNode.get('properties')
-			reversed = 0
-			val3 = getPropertyValue(properties, 0x3, 'u16_0')
-			x1 = getPropertyValue(properties, 0x2, 'x')
-			y1 = getPropertyValue(properties, 0x2, 'y')
-			z1 = getPropertyValue(properties, 0x2, 'z')
-			dx = getPropertyValue(properties, 0x2, 'dirX')
-			dy = getPropertyValue(properties, 0x2, 'dirY')
-			dz = getPropertyValue(properties, 0x2, 'dirZ')
-			lAxis = sqrt(dx*dx + dy*dy + dz*dz)
-			val5 = getPropertyValue(properties, 0x5, 'u16_0')
-			midplane =  IFF(val5 == 2, 1, 0)
-			angle1   = getPropertyValue(properties, 0x4, 'valueNominal')
+			operation  = getProperty(properties, 0x00) # PartFeatureOperation
+			#= getProperty(properties, 0x01) # FxBoundaryPatch
+			lineAxis   = getProperty(properties, 0x02) # Line3D
+			extend1    = getProperty(properties, 0x03) # ExtentType
+			angle1     = getProperty(properties, 0x04) # Parameter
+			direction  = getProperty(properties, 0x05) # PartFeatureExtentDirection
+			#= getProperty(properties, 0x06) # ???
+			#= getProperty(properties, 0x07) # FeatureDimensions
+			#= getProperty(properties, 0x09) # CEFD3973_Enum
+			#= getProperty(properties, 0x0A) # ParameterBoolean
+			#= getProperty(properties, 0x0B) # FxBoundaryPatch
+			#= getProperty(properties, 0x0C) # ParameterBoolean
+			#= getProperty(properties, 0x0D) # ???
+			#= getProperty(properties, 0x0E) # ???
+			#= getProperty(properties, 0x0F) # ???
+			isSurface  = getProperty(properties, 0x10) # ParameterBoolean
+			angle2     = getProperty(properties, 0x12) # Parameter
+			extend2    = getProperty(properties, 0x13) # ExtentType
 
-			if (angle1):
-				alpha = Angle(angle1, pi/180.0, u'\xb0')
+			x1         = getCoord(lineAxis, 'x')
+			y1         = getCoord(lineAxis, 'y')
+			z1         = getCoord(lineAxis, 'z')
+			dx         = getCoord(lineAxis, 'dirX')
+			dy         = getCoord(lineAxis, 'dirY')
+			dz         = getCoord(lineAxis, 'dirZ')
+			lAxis      = sqrt(dx*dx + dy*dy + dz*dz)
+			axis       = (dx/lAxis, dy/lAxis, dz/lAxis)
+			base       = (x1, y1, z1)
+			solid      = (isSurface.get('value') == False)
 
-				#revolution = self.CreateEntity(revolveNode, 'PartDesign::Revolution')
-				#revolution.Sketch = sketch
-				#revolution.Reversed = reversed
-
-				revolution = self.CreateEntity(revolveNode, 'Part::Revolution')
-				revolution.Source = sketch
-				revolution.Axis = (dx/lAxis, dy/lAxis, dz/lAxis)
-				revolution.Base = (x1 * 10, y1 * 10, z1 * 10)
-
-				angle2   = getPropertyValue(properties, 0x12, 'valueNominal')
+			if (extend1.get('value') == 1): # 'Direction' => AngleExtent
+				alpha = angle1.getValue().getGRAD()
 				if (angle2 is None):
-					logMessage('    ... based on \'%s\' (%s) (rev=%s, sym=%s, alpha=%s) ...' %(sketchName, revolution.Axis, reversed, midplane, alpha), LOG.LOG_INFO)
+					if (direction.get('value') == 0): # positive
+						logMessage('    ... based on \'%s\' (alpha=%s) ...' %(sketchName, angle1.getValue()), LOG.LOG_INFO)
+						revolution = self.createRevolve(revolveNode.name, alpha, sketch, axis, base, solid)
+					elif (direction.get('value') == 1): # negative
+						logMessage('    ... based on \'%s\' (alpha=%s, inverted) ...' %(sketchName, angle1.getValue()), LOG.LOG_INFO)
+						revolution = self.createRevolve(revolveNode.name, -alpha, sketch, axis, base, solid)
+					elif (direction.get('value') == 2): # symmetric
+						logMessage('    ... based on \'%s\' (alpha=%s, symmetric) ...' %(sketchName, angle1.getValue()), LOG.LOG_INFO)
+						revolution1 = self.createRevolve(revolveNode.name + '_1', alpha / 2.0, sketch, axis, base, solid)
+						revolution2 = self.createRevolve(revolveNode.name + '_2', -alpha / 2.0, sketch, axis, base, solid)
+						revolution = newObject(self.doc, 'Part::MultiFuse', revolveNode.name)
+						revolution.Shapes = [revolution1, revolution2]
+						adjustViewObject(revolution, revolution1)
 				else:
-					beta = Angle(angle2, pi/180.0, u'\xb0')
-					midplane = True
-					logMessage('    ... based on \'%s\' (%s) (rev=%s, sym=%s, alpha=%s, beta=%s) #BUGGY#...' %(sketchName, revolution.Axis, reversed, midplane, alpha, beta), LOG.LOG_INFO)
-					alpha.x += beta.x
+					logMessage('    ... based on \'%s\' (alpha=%s, beta=%s) ...' %(sketchName, angle1.getValue(), angle2.getValue()), LOG.LOG_INFO)
+					beta = angle2.getValue().getGRAD()
+					revolution1 = self.createRevolve(revolveNode.name + '_1', alpha, sketch, axis, base, solid)
+					revolution2 = self.createRevolve(revolveNode.name + '_2', -beta, sketch, axis, base, solid)
+					revolution = newObject(self.doc, 'Part::MultiFuse', revolveNode.name)
+					revolution.Shapes = [revolution1, revolution2]
+					adjustViewObject(revolution, revolution1)
+			elif (extend1.get('value') == 3): # 'Path' => FullSweepExtend
+				logMessage('    ... based on \'%s\' (full) ...' %(sketchName), LOG.LOG_INFO)
+				revolution = self.createRevolve(revolveNode.name, 360.0, sketch, axis, base, solid)
 
-				revolution.Angle = alpha.getGRAD()
-				revolution.Solid = getProperty(properties, 0x11) is not None
-				#revolution.Midplane = midplane
-				setDefaultViewObject(revolution)
-				sketch.ViewObject.Visibility = False
-
-				self.addBody(revolveNode, revolution, 0x11, 0x08)
+			self.addBody(revolveNode, revolution, 0x11, 0x08)
 		return revolution
 
 	def Create_FxExtrude(self, extrudeNode):
@@ -2067,21 +2137,34 @@ class FreeCADImporter:
 		sections2     = getProperty(properties, 0x07) # LoftSections
 		#= getProperty(properties, 0x08) #
 		ruled          = getProperty(properties, 0x09) # ParameterBoolean =0
-		lofType        = getProperty(properties, 0x0A) # LoftType=AreaLoft
+		loftType       = getProperty(properties, 0x0A) # LoftType=AreaLoft
 		#= getProperty(properties, 0x0B) # E558F428
 		#= getProperty(properties, 0x0C) # FeatureDimensions
 
 		sections = self.collectSections(loftNode, 'loft', [])
 
 		if (len(sections) > 0):
-			loftGeo          = self.CreateEntity(loftNode, 'Part::Loft')
-			loftGeo.Sections = sections
-			loftGeo.Solid    = surface is None
-			loftGeo.Ruled    = ruled.get('value') != 0
-			loftGeo.Closed   = closed.get('value') != 0
-			self.hide(sections)
-			setDefaultViewObject(loftGeo)
-			self.addBody(loftNode, loftGeo, 0x0D, 0x06)
+			if (loftType.get('value') == 1): # Centerline
+				# this is a sweep between two surfaces!
+				loftGeo          = self.CreateEntity(loftNode, 'Part::Sweep')
+				loftGeo.Sections = sections[0:1] + sections[2:]
+				loftGeo.Spine=(sections[1],["Edge1"])
+				loftGeo.Solid    = surface is None
+				loftGeo.Frenet=False
+				loftGeo.Transition = "Transformed"
+			else:
+				#if (loftType.get('value') == 0): # Rails
+				#elif (loftType.get('value') == 2): # AreaLoft
+				#elif (loftType.get('value') == 3): # RegularLoft
+		
+				loftGeo          = self.CreateEntity(loftNode, 'Part::Loft')
+				loftGeo.Sections = sections
+				loftGeo.Solid    = surface is None
+				loftGeo.Ruled    = ruled.get('value') != 0
+				loftGeo.Closed   = closed.get('value') != 0
+				self.hide(sections)
+				setDefaultViewObject(loftGeo)
+				self.addBody(loftNode, loftGeo, 0x0D, 0x06)
 		return
 
 	def Create_FxSweep(self, sweepNode):
@@ -2146,11 +2229,6 @@ class FreeCADImporter:
 		#= getProperty(properties, 0x11) # boolean parameter
 		#= getProperty(properties, 0x12) # ???
 
-		if (verticalSurface.get('value')):
-			surface         = getProperty(properties, 0x08) # SurfaceBody
-		else:
-			surface         = getProperty(properties, 0x0B) # surface
-
 		sourceGeos = {}
 		if (useInputSurface.get('value')):
 			inputSurface    = getProperty(properties, 0x05) # SurfaceBody => "Quilt"
@@ -2174,15 +2252,15 @@ class FreeCADImporter:
 			thickenGeo = self.CreateEntity(thickenNode, 'Part::Offset')
 			thickenGeo.Source = source
 			if (negativeDir.get('value')):
-				thickenGeo.Value = -getCoord(distance, 'valueNominal')
+				thickenGeo.Value = getCoord(distance, 'valueNominal')
 			else:
 				#TODO: symmetricDir - create a fusion of two thicken geometries
-				thickenGeo.Value = getCoord(distance, 'valueNominal')
+				thickenGeo.Value = -getCoord(distance, 'valueNominal')
 			thickenGeo.Mode = 'Skin'          # {Skin, Pipe, RectoVerso}
 			thickenGeo.Join = 'Intersection'  # {Arc, Tangent, Intersection}
 			thickenGeo.Intersection = False
 			thickenGeo.SelfIntersection = False
-			thickenGeo.Fill = (surface is None)
+			thickenGeo.Fill = solid is not None
 			adjustViewObject(thickenGeo, source)
 			if (verticalSurface.get('value') == True):
 				self.addBody(thickenNode, thickenGeo, 0x0F, 0x08)
@@ -2368,22 +2446,7 @@ class FreeCADImporter:
 	def Create_Line3D(self, lineNode):
 		self.addSketch_Line3D(lineNode, None)
 
-	def Create_Plane(self, planeNode):
-		return notSupportedNode(planeNode)
-#		plane = self.CreateEntity(planeNodem, 'Part::Plane')
-#		l = 10.0
-#		w = 10.0
-#		x = 0.0
-#		y = 0.0
-#		z = 0.0
-#		plane.Length = l
-#		plane.Width = w
-#		plane.Placement = FreeCAD.Placement(createVector(x, y, z), createRotation(createVector(0, 0, 1), 45))
-#		if (self.root):
-#			self.root.addObject(plane)
-#
-#		return
-
+	def Create_Plane(self, planeNode):                             return ignoreBranch(planeNode)
 	def Create_Body(self, bodyNode):                               return ignoreBranch(bodyNode)
 	def Create_Circle3D(self, radiusNode):                         return ignoreBranch(radiusNode)
 	def Create_EndOfFeatures(self, stopNode):                      return ignoreBranch(stopNode)

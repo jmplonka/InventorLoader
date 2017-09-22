@@ -158,6 +158,7 @@ def getBranchNode(data, isRef):
 	if (data.typeName == 'Point3D'):                 return PointNode(data, isRef)
 	if (data.typeName == 'Line2D'):                  return LineNode(data, isRef)
 	if (data.typeName == 'Line3D'):                  return LineNode(data, isRef)
+	if (data.typeName == 'Arc2D'):                   return CircleNode(data, isRef)
 	if (data.typeName == 'Circle2D'):                return CircleNode(data, isRef)
 	if (data.typeName == 'Circle3D'):                return CircleNode(data, isRef)
 	if (data.typeName == 'Geometric_Radius2D'):      return GeometricRadius2DNode(data, isRef)

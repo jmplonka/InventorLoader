@@ -1008,7 +1008,7 @@ class FeatureNode(DataNode):
 		p1 = self._getPropertyName(1)
 		p4 = self._getPropertyName(4)
 
-		if (p4 == '509FB5CC'):                      return 'Rip'
+		if (p4 == 'Face'):                          return 'Rip'
 		if (p0 == '90874D51'):
 			p4 = self._getPropertyName(4)
 			if (p4 == '7DAA0032'):                  return 'Chamfer'
@@ -1019,7 +1019,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'SolidBody'):                 return 'Combine'
 			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'
 			if (p1 == 'SurfaceBodies'):             return 'CoreCavity'
-			if (p1 == '509FB5CC'):
+			if (p1 == 'Face'):
 				p7 = self._getPropertyEnumName(7)
 				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
 				if (p7 == '4688EBA3_Enum'):         return 'Unfold'
@@ -1097,13 +1097,12 @@ class FeatureNode(DataNode):
 		elif (p0 == 'ParameterBoolean'):            return 'FilletRule'
 
 		# Missing Features:
-		# - CosmeticWeld
-		# - FaceOffset
-		# - SurfaceMid
+		# - (Cosmetic-)Weld - only IAM files???
+		# - SurfaceMid -> FEM!
 		# - SurfaceRuled
-		# - Move
+		# - PatternMove -> PatternRectangular
 		# - MeshPresentation
-		# - SketchDrivenPattern
+		# - FaceOffset -> same as thicken but without solid fill!
 		return 'Unknown'
 
 	def getRefText(self): # return unicode
@@ -1189,13 +1188,24 @@ class LineNode(DataNode):
 		if (len(p) > 1):
 			x0 = self._getCoord(p, 0, 'x')
 			y0 = self._getCoord(p, 0, 'y')
-			z0 = self._getCoord(p, 0, 'z')
 			x1 = self._getCoord(p, 1, 'x')
 			y1 = self._getCoord(p, 1, 'y')
-			z1 = self._getCoord(p, 1, 'z')
 			if (self.typeName[-2:] == '2D'):
 				return u'(%04X): %s - (%s/%s) - (%s/%s)' %(self.index, self.typeName, x0, y0, x1, y1)
+			z0 = self._getCoord(p, 0, 'z')
+			z1 = self._getCoord(p, 1, 'z')
 			return u'(%04X): %s - (%s/%s/%s) - (%s/%s/%s)' %(self.index, self.typeName, x0, y0, z0, x1, y1, z1)
+		else:
+			x0 = self.get('x')
+			y0 = self.get('y')
+			x1 = self.get('dirX') + x0
+			y1 = self.get('dirY') + y0
+			if (self.typeName[-2:] == '2D'):
+				return u'(%04X): %s - (%s/%s) - (%s/%s)' %(self.index, self.typeName, x0, y0, x1, y1)
+			z0 = self.get('z')
+			z1 = self.get('dirZ') + z0
+			return u'(%04X): %s - (%s/%s/%s) - (%s/%s/%s)' %(self.index, self.typeName, x0, y0, z0, x1, y1, z1)
+
 		return u'(%04X): %s' %(self.index, self.typeName)
 
 class CircleNode(DataNode):

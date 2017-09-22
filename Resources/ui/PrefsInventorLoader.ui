@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PartGui::PrefsInventorLoader</class>
+ <widget class="QWidget" name="PartGui::PrefsInventorLoader">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>296</width>
+    <height>296</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>IPT</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_5">
+   <item>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>Import</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_6">
+      <item>
+       <widget class="QTabWidget" name="tabWidget">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="tabSketches">
+         <attribute name="title">
+          <string>Sketches</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <widget class="QToolBox" name="toolBox">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <widget class="QWidget" name="pagConstraints">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>234</width>
+               <height>147</height>
+              </rect>
+             </property>
+             <attribute name="label">
+              <string>Constraints</string>
+             </attribute>
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <item>
+               <widget class="QGroupBox" name="grpGeometric">
+                <property name="title">
+                 <string>Geometric</string>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_2">
+                 <item>
+                  <widget class="QScrollArea" name="scrollArea">
+                   <property name="widgetResizable">
+                    <bool>true</bool>
+                   </property>
+                   <widget class="QWidget" name="scrollAreaWidgetContents">
+                    <property name="geometry">
+                     <rect>
+                      <x>0</x>
+                      <y>0</y>
+                      <width>256</width>
+                      <height>252</height>
+                     </rect>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout">
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="cbxGeoAlignHorizontal">
+                       <property name="text">
+                        <string>align horizontal</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Align_Horizontal.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Align_Horizontal.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QCheckBox" name="cbxGeoAlignVertical">
+                       <property name="text">
+                        <string>align vertical</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Align_Vertical.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Align_Vertical.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QCheckBox" name="cbxGeoCoincident">
+                       <property name="text">
+                        <string>coincident</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_PointOnPoint.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_PointOnPoint.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="1">
+                      <widget class="QCheckBox" name="cbxGeoColinear">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
+                       <property name="text">
+                        <string>colinear</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_PointOnObject.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_PointOnObject.svg</iconset>
+                       </property>
+                       <property name="checkable">
+                        <bool>true</bool>
+                       </property>
+                       <property name="checked">
+                        <bool>false</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QCheckBox" name="cbxGeoEqualLength">
+                       <property name="text">
+                        <string>equal length</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_EqualLength.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_EqualLength.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="1">
+                      <widget class="QCheckBox" name="cbxGeoEqualRadius">
+                       <property name="text">
+                        <string>equal radius</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Concentric.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Concentric.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QCheckBox" name="cbxGeoFix">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
+                       <property name="text">
+                        <string>fix</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Fix.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Fix.svg</iconset>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="1">
+                      <widget class="QCheckBox" name="cbxGeoHorizontal">
+                       <property name="text">
+                        <string>horizontal</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Horizontal.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Horizontal.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="0">
+                      <widget class="QCheckBox" name="cbxGeoVertical">
+                       <property name="text">
+                        <string>vertical</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Vertical.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Vertical.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="1">
+                      <widget class="QCheckBox" name="cbxGeoParallel">
+                       <property name="text">
+                        <string>parallel</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Parallel.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Parallel.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="5" column="0">
+                      <widget class="QCheckBox" name="cbxGeoPerpendicular">
+                       <property name="text">
+                        <string>perpendicular</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Perpendicular.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Perpendicular.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="5" column="1">
+                      <widget class="QCheckBox" name="cbxGeoTangential">
+                       <property name="text">
+                        <string>tangential</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Tangent.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Tangent.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="6" column="0">
+                      <widget class="QCheckBox" name="cbxGeoOffset">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
+                       <property name="text">
+                        <string>offset</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Offset.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Offset.svg</iconset>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="6" column="1">
+                      <widget class="QCheckBox" name="cbxGeoPolygon">
+                       <property name="text">
+                        <string>polygon</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Polygon.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Polygon.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="7" column="0">
+                      <widget class="QCheckBox" name="cbxGeoRadius">
+                       <property name="text">
+                        <string>radius</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Radius.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Radius.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="7" column="1">
+                      <widget class="QCheckBox" name="cbxGeoSplineFitpoint">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
+                       <property name="text">
+                        <string>spline fit point</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SplineFitPoint.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SplineFitPoint.svg</iconset>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="8" column="0">
+                      <widget class="QCheckBox" name="cbxGeoSymmetryLine">
+                       <property name="text">
+                        <string>symmetry line</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SymmetricLine.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SymmetricLine.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>false</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="8" column="1">
+                      <widget class="QCheckBox" name="cbxGeoSymmetryPoint">
+                       <property name="text">
+                        <string>symmetry point</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SymmetricPoint.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SymmetricPoint.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>false</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="9" column="0">
+                      <spacer name="verticalSpacer">
+                       <property name="orientation">
+                        <enum>Qt::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>0</width>
+                         <height>0</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </widget>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="grpDimension">
+                <property name="title">
+                 <string>Geometric</string>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_4">
+                 <item>
+                  <widget class="QScrollArea" name="scrollArea">
+                   <property name="widgetResizable">
+                    <bool>true</bool>
+                   </property>
+                   <widget class="QWidget" name="scrollAreaWidgetContents">
+                    <property name="geometry">
+                     <rect>
+                      <x>0</x>
+                      <y>0</y>
+                      <width>173</width>
+                      <height>226</height>
+                     </rect>
+                    </property>
+                    <layout class="QVBoxLayout" name="verticalLayout_3">
+                     <item>
+                      <widget class="QCheckBox" name="cbxDimAngle2Line">
+                       <property name="text">
+                        <string>angle between 2 lines</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_InternalAngleLine.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_InternalAngleLine.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>false</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="cbxDimAngle3Point">
+                       <property name="text">
+                        <string>angle between 3 points</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_InternalAnglePoint.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_InternalAnglePoint.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>false</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="cbxDimRadius">
+                       <property name="text">
+                        <string>radius</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Radius.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Radius.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="cbxDimDiameter">
+                       <property name="text">
+                        <string>diameter</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Diameter.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Diameter.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="cbxDimDistance">
+                       <property name="text">
+                        <string>distance</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Length.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Length.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="cbxDimDistanceX">
+                       <property name="text">
+                        <string>distance X</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_HorizontalDistance.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_HorizontalDistance.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="cbxDimDistanceY">
+                       <property name="text">
+                        <string>distance Y</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_VerticalDistance.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_VerticalDistance.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="cbxDimOffsetSpline">
+                       <property name="text">
+                        <string>offset spline</string>
+                       </property>
+                       <property name="icon">
+                        <iconset>
+                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Length_Driven.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Length_Driven.svg</iconset>
+                       </property>
+                       <property name="checked">
+                        <bool>false</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <spacer name="verticalSpacer_2">
+                       <property name="orientation">
+                        <enum>Qt::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>0</width>
+                         <height>0</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </widget>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="pagOthers">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>651</width>
+               <height>147</height>
+              </rect>
+             </property>
+             <attribute name="label">
+              <string>Others</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout_8">
+              <item>
+               <spacer name="verticalSpacer_4">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tabOthers">
+         <attribute name="title">
+          <string>Others</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_7">
+          <item>
+           <spacer name="verticalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
