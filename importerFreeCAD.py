@@ -112,9 +112,6 @@ def notYetImplemented(node):
 def createVector(x, y, z):
 	return FreeCAD.Vector(x, y, z)
 
-def createRotation(axis, angle):
-	return FreeCAD.Rotation(axis, angle)
-
 def newObject(doc, className, name):
 	if (INVALID_NAME.match(name)):
 		obj = doc.addObject(className, '_' + name.encode('utf8'))
@@ -1206,13 +1203,14 @@ class FreeCADImporter:
 			return True
 		return False
 
-	def createRevolve(self, name, angle, source, axis, base, solid):
+	def createRevolve(self, name, alpha, beta, source, axis, base, solid):
 		revolution = newObject(self.doc, 'Part::Revolution', name)
-		revolution.Angle = angle
+		revolution.Angle = alpha + beta
 		revolution.Source = source
 		revolution.Axis = axis
 		revolution.Base = base
 		revolution.Solid = solid
+		revolution.Placement.Rotation = FreeCAD.Rotation(axis, -beta)
 		setDefaultViewObject(revolution)
 		source.ViewObject.Visibility = False
 		return revolution
@@ -1387,15 +1385,9 @@ class FreeCADImporter:
 		vecB = createVector(b_x, b_y, 0.0)
 		vecC = createVector(c_x, c_y, 0.0)
 
-		angle1 = atan2((a_y - c_y), (a_x - c_x))
-		if (angle1 < 0): angle1 += radians(360.0)
-
-		angle2 = atan2((b_y - c_y), (b_x - c_x))
-		if (angle2 < 0): angle2 += radians(360.0)
-
-		if (angle1 > angle2):
+		try:
 			part = Part.Ellipse(vecA, vecB, vecC)
-		else:
+		except:
 			part = Part.Ellipse(vecB, vecA, vecC)
 
 		a = ellipseNode.get('alpha')
@@ -1721,13 +1713,14 @@ class FreeCADImporter:
 				len1 = len1.getMM()
 			else:
 				len1 = len1 * 10.0
-
-			x          = direction.get('x') * direction.get('x') * len1
-			y          = direction.get('y') * direction.get('y') * len1
-			z          = direction.get('z') * direction.get('z') * len1
+			if (reversed): len1 = -len1
+			if (midplane): len1 = len1 / 2.0
+			x          = direction.get('x') * len1
+			y          = direction.get('y') * len1
+			z          = direction.get('z') * len1
 			taperAngle = dimAngle.getValue()
 
-			if (dimLength2):
+			if ((dimLength2 is not None) | (midplane)):
 				name1 = name + u'_1'
 			else:
 				name1 = name
@@ -1736,9 +1729,14 @@ class FreeCADImporter:
 			pad1.Dir = (x, y, z)
 			pad1.Solid = solid is not None
 			pad1.TaperAngle = taperAngle.getGRAD()
-			if (direction.get('x') == 1.0): pad1.setExpression('Dir.x', dimLength.get('alias') + ' / 1mm')
-			if (direction.get('y') == 1.0): pad1.setExpression('Dir.y', dimLength.get('alias') + ' / 1mm')
-			if (direction.get('z') == 1.0): pad1.setExpression('Dir.z', dimLength.get('alias') + ' / 1mm')
+			if (midplane):
+				if (direction.get('x') == 1.0): pad1.setExpression('Dir.x', dimLength.get('alias') + ' / 2mm')
+				if (direction.get('y') == 1.0): pad1.setExpression('Dir.y', dimLength.get('alias') + ' / 2mm')
+				if (direction.get('z') == 1.0): pad1.setExpression('Dir.z', dimLength.get('alias') + ' / 2mm')
+			else:
+				if (direction.get('x') == 1.0): pad1.setExpression('Dir.x', dimLength.get('alias') + ' / 1mm')
+				if (direction.get('y') == 1.0): pad1.setExpression('Dir.y', dimLength.get('alias') + ' / 1mm')
+				if (direction.get('z') == 1.0): pad1.setExpression('Dir.z', dimLength.get('alias') + ' / 1mm')
 
 			#pad1 = newObject(self.doc, 'PartDesign::Pad', name)
 			#pad1.Sketch = sketch
@@ -1749,19 +1747,30 @@ class FreeCADImporter:
 			#pad1.setExpression('Length', dimLength.get('alias'))
 			setDefaultViewObject(pad1)
 
-			if (dimLength2):
+			if ((dimLength2 is not None) | (midplane)):
 				name2 = name + u'_2'
-				len2 = dimLength2.getValue()
+				if (midplane):
+					len2 = -len1
+				else:
+					len2 = dimLength2.getValue()
 				logMessage('        creating pad \'%s\' based on \'%s\' (rev=%s, sym=%s, len=%s, len2=%s) ...' %(name, sketchName, reversed, midplane, len1, len2), LOG.LOG_INFO)
 				pad2 = newObject(self.doc, 'Part::Extrusion', name2)
 				pad2.Base = sketch
-				pad2.Dir = (-x, -y, -z)
+				x    = direction.get('x') * len2
+				y    = direction.get('y') * len2
+				z    = direction.get('z') * len2
+				pad2.Dir = (x, y, z)
 				pad2.Solid = solid is not None
 				pad2.TaperAngle = taperAngle.getGRAD()
 				adjustViewObject(pad2, pad1)
-				if (direction.get('x') == 1.0): pad2.setExpression('Dir.x', dimLength.get('alias') + ' / 1mm')
-				if (direction.get('y') == 1.0): pad2.setExpression('Dir.y', dimLength.get('alias') + ' / 1mm')
-				if (direction.get('z') == 1.0): pad2.setExpression('Dir.z', dimLength.get('alias') + ' / 1mm')
+				if (dimLength2 is not None):
+					if (direction.get('x') == 1.0): pad2.setExpression('Dir.x', dimLength2.get('alias') + ' / 1mm')
+					if (direction.get('y') == 1.0): pad2.setExpression('Dir.y', dimLength2.get('alias') + ' / 1mm')
+					if (direction.get('z') == 1.0): pad2.setExpression('Dir.z', dimLength2.get('alias') + ' / 1mm')
+				else:
+					if (direction.get('x') == 1.0): pad2.setExpression('Dir.x', '-' + pad1.Name + '.Dir.x')
+					if (direction.get('y') == 1.0): pad2.setExpression('Dir.y', '-' + pad1.Name + '.Dir.y')
+					if (direction.get('z') == 1.0): pad2.setExpression('Dir.z', '-' + pad1.Name + '.Dir.z')
 				pad = newObject(self.doc, 'Part::MultiFuse', name)
 				pad.Shapes = [pad1, pad2]
 				adjustViewObject(pad, pad1)
@@ -1805,8 +1814,8 @@ class FreeCADImporter:
 
 		if (participants):
 			properties = revolveNode.get('properties')
-			path       = self.collectSection(participant[0])
-			pathName = participant[0].name
+			path       = self.collectSection(participants[0])
+			pathName = participants[0].name
 			operation  = getProperty(properties, 0x00) # PartFeatureOperation
 			#= getProperty(properties, 0x01) # FxBoundaryPatch
 			lineAxis   = getProperty(properties, 0x02) # Line3D
@@ -1833,8 +1842,8 @@ class FreeCADImporter:
 			dy         = getCoord(lineAxis, 'dirY')
 			dz         = getCoord(lineAxis, 'dirZ')
 			lAxis      = sqrt(dx*dx + dy*dy + dz*dz)
-			axis       = (dx/lAxis, dy/lAxis, dz/lAxis)
-			base       = (x1, y1, z1)
+			axis       = createVector(dx/lAxis, dy/lAxis, dz/lAxis)
+			base       = createVector(x1, y1, z1)
 			solid      = (isSurface.get('value') == False)
 
 			if (extend1.get('value') == 1): # 'Direction' => AngleExtent
@@ -1842,30 +1851,22 @@ class FreeCADImporter:
 				if (angle2 is None):
 					if (direction.get('value') == 0): # positive
 						logMessage('    ... based on \'%s\' (alpha=%s) ...' %(pathName, angle1.getValue()), LOG.LOG_INFO)
-						revolution = self.createRevolve(revolveNode.name, alpha, path, axis, base, solid)
+						revolution = self.createRevolve(revolveNode.name, alpha, 0, path, axis, base, solid)
 					elif (direction.get('value') == 1): # negative
 						logMessage('    ... based on \'%s\' (alpha=%s, inverted) ...' %(pathName, angle1.getValue()), LOG.LOG_INFO)
-						revolution = self.createRevolve(revolveNode.name, -alpha, path, axis, base, solid)
+						revolution = self.createRevolve(revolveNode.name, 0, alpha, path, axis, base, solid)
 					elif (direction.get('value') == 2): # symmetric
 						logMessage('    ... based on \'%s\' (alpha=%s, symmetric) ...' %(pathName, angle1.getValue()), LOG.LOG_INFO)
-						revolution1 = self.createRevolve(revolveNode.name + '_1', alpha / 2.0, path, axis, base, solid)
-						revolution2 = self.createRevolve(revolveNode.name + '_2', -alpha / 2.0, path, axis, base, solid)
-						revolution = newObject(self.doc, 'Part::MultiFuse', revolveNode.name)
-						revolution.Shapes = [revolution1, revolution2]
-						adjustViewObject(revolution, revolution1)
+						revolution = self.createRevolve(revolveNode.name, alpha / 2.0, alpha / 2.0, path, axis, base, solid)
 				else:
 					logMessage('    ... based on \'%s\' (alpha=%s, beta=%s) ...' %(pathName, angle1.getValue(), angle2.getValue()), LOG.LOG_INFO)
 					beta = angle2.getValue().getGRAD()
-					revolution1 = self.createRevolve(revolveNode.name + '_1', alpha, path, axis, base, solid)
-					revolution2 = self.createRevolve(revolveNode.name + '_2', -beta, path, axis, base, solid)
-					revolution = newObject(self.doc, 'Part::MultiFuse', revolveNode.name)
-					revolution.Shapes = [revolution1, revolution2]
-					adjustViewObject(revolution, revolution1)
+					revolution = self.createRevolve(revolveNode.name, alpha, beta, path, axis, base, solid)
 			elif (extend1.get('value') == 3): # 'Path' => FullSweepExtend
 				logMessage('    ... based on \'%s\' (full) ...' %(pathName), LOG.LOG_INFO)
 				revolution = self.createRevolve(revolveNode.name, 360.0, path, axis, base, solid)
 
-			self.addBody(revolveNode, revolution, 0x11, 0x08)
+			if (revolution is not None): self.addBody(revolveNode, revolution, 0x11, 0x08)
 		return revolution
 
 	def Create_FxExtrude(self, extrudeNode):
