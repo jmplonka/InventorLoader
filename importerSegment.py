@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 importerSegment.py:
@@ -338,14 +338,19 @@ class SegmentReader(object):
 		return l
 
 	def HandleBlock(self, file, node):
+		i = 0
+
 		try:
 			readType = getattr(self, 'Read_%s' %(node.typeName))
 			i = readType(node)
-			if (i < len(node.data)):
-				i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
 		except Exception as e:
 			logError('ERROR> (%04X): %s - %s' %(node.index, node.typeName, e))
 			logError('>E: ' + traceback.format_exc())
+
+		try:
+			if (i < len(node.data)): i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
+		except:
+			logError('>ERROR in %s.Read_%s: %s' %(self.__class__.__name__, node.typeName, traceback.format_exc()))
 
 		return
 

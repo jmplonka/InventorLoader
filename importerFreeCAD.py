@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 importerFreeCAD.py
@@ -49,11 +49,52 @@ SKIP_DIM_OFFSET_SPLINE       = 1 << 25 # not supported
 
 INVALID_NAME = re.compile('^[0-9].*')
 
-# x 10                2   2   1   1   0   0   0
-# x  1                4   0   6   2   8   4   0
-#SKIP_CONSTRAINS = 0b11111111111111111111111111
-#SKIP_CONSTRAINS = 0b00000000000000000000000100 # Only geometric coincidens
-SKIP_CONSTRAINS  = 0b11111100110001111010110111 # no workarounds, nor unsupported constrains!
+# x 10                        2   2   1   1   0   0   0
+# x  1                        4   0   6   2   8   4   0
+#SKIP_CONSTRAINS_DEFAULT = 0b11111111111111111111111111
+#SKIP_CONSTRAINS_DEFAULT = 0b00000000000000000000000100 # Only geometric coincidens
+SKIP_CONSTRAINS_DEFAULT  = 0b01111100110001111010110111 # default values: no workarounds, nor unsupported constrains!
+SKIP_CONSTRAINS = SKIP_CONSTRAINS_DEFAULT # will be updated by stored preferences!
+
+def _enableConstraint(params, name, bit, preset):
+	global SKIP_CONSTRAINS
+	b = params.GetBool(name, preset)
+	# clear the bit if already set.
+	SKIP_CONSTRAINS &= ~bit
+	if (b): SKIP_CONSTRAINS |= bit
+	params.SetBool(name, b)
+	return
+
+def _initPreferences():
+	global SKIP_CONSTRAINS
+	SKIP_CONSTRAINS = 0x0
+	params = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.AlignHorizontal', SKIP_GEO_ALIGN_HORIZONTAL , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.AlignVertical',   SKIP_GEO_ALIGN_VERTICAL   , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Coincident',      SKIP_GEO_COINCIDENT       , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Colinear',        SKIP_GEO_COLLINEAR        , False)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.EqualLength',     SKIP_GEO_EQUAL_LENGTH     , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.EqualRadius',     SKIP_GEO_EQUAL_RADIUS     , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Fix',             SKIP_GEO_FIX              , False)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Horizontal',      SKIP_GEO_HORIZONTAL       , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Offset',          SKIP_GEO_OFFSET           , False)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Parallel',        SKIP_GEO_PARALLEL         , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Perpendicular',   SKIP_GEO_PERPENDICULAR    , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Polygon',         SKIP_GEO_POLYGON          , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Radius',          SKIP_GEO_RADIUS           , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.SplineFitPoint',  SKIP_GEO_SPLINEFITPOINT   , False)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.SymmetryLine',    SKIP_GEO_SYMMETRY_LINE    , False)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.SymmetryPoint',   SKIP_GEO_SYMMETRY_POINT   , False)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Tangential',      SKIP_GEO_TANGENTIAL       , True)
+	_enableConstraint(params, 'Sketch.Constraint.Geometric.Vertical',        SKIP_GEO_VERTICAL         , True)
+	_enableConstraint(params, 'Sketch.Constraint.Dimension.Angle2Line',      SKIP_DIM_ANGLE_2_LINE     , False)
+	_enableConstraint(params, 'Sketch.Constraint.Dimension.Angle3Point',     SKIP_DIM_ANGLE_3_POINT    , False)
+	_enableConstraint(params, 'Sketch.Constraint.Dimension.Radius',          SKIP_DIM_RADIUS           , True)
+	_enableConstraint(params, 'Sketch.Constraint.Dimension.Diameter',        SKIP_DIM_DIAMETER         , True)
+	_enableConstraint(params, 'Sketch.Constraint.Dimension.Distance',        SKIP_DIM_DISTANCE         , True)
+	_enableConstraint(params, 'Sketch.Constraint.Dimension.DistanceX',       SKIP_DIM_DISTANCE_X       , True)
+	_enableConstraint(params, 'Sketch.Constraint.Dimension.DistanceY',       SKIP_DIM_DISTANCE_Y       , True)
+	_enableConstraint(params, 'Sketch.Constraint.Dimension.OffsetSpline',    SKIP_DIM_OFFSET_SPLINE    , False)
 
 def ignoreBranch(node):
 	return None
@@ -439,6 +480,7 @@ class FreeCADImporter:
 		self.mapConstraints   = None
 		self.pointDataDict    = None
 		self.bodyNodes   = {}
+		_initPreferences()
 
 	def getEntity(self, node):
 		if (node):
@@ -507,7 +549,7 @@ class FreeCADImporter:
 	def findBase(self, baseNode):
 		if (baseNode is not None):
 			assert (baseNode.typeName == 'FaceCollectionProxy'), 'FATA> Expected FaceCollectionProxy not (%04X): %s!' %(baseNode.index, baseNode.typeName)
-			base = baseNode.get('faceCollection')
+			base = baseNode.get('refSolidBody')
 			if (base):
 				return self.findBase2(base)
 			logError('ERROR> Base (%04X): %s not defined!' %(baseNode.index, baseNode.typeName))
@@ -647,8 +689,8 @@ class FreeCADImporter:
 			index  = self.checkSketchIndex(sketchObj, entity)
 			pos    = findEntityVertex(entity, point)
 		else:
-			index = self.addSketch_ConstructionPoint2D(point, sketchObj)
-			pos   = 1
+			index  = self.addSketch_ConstructionPoint2D(point, sketchObj)
+			pos    = 1
 		return index, pos
 
 	def getSketchEntityInfo(self, sketchObj, entity):
@@ -722,16 +764,40 @@ class FreeCADImporter:
 					logWarning('        ... can\'t create dimension constraint between (%04X): %s and (%04X): %s - not supported by FreeCAD!' %(entity1.index, entity1Name, entity2.index, entity2Name))
 		return
 
-	def collectSection(self, sections, participants, action, skip, i):
-		participant = participants[i]
+	def profile2Section(self, participant):
+		face      = participant.get('refFace')
+		surface   = participant.data.segment.indexNodes[face.get('indexRefs')[0]]
+#		wireIndex = surface.get('wireIndex')
+		wireIndex = participant.get('number')
+		body      = surface.get('refBody')
+		node      = None
+
+		if (body.name in self.bodyNodes):
+			node = self.bodyNodes[body.name]
+		else:
+			label = surface.get('label')
+			node  = self.getEntity(participant.data.segment.indexNodes[label.get('idxCreator')])
+
+		entity  = self.getEntity(node)
+		if (entity is not None):
+			# create an entity that can be featured (e.g. loft, sweep, ...)
+			section = newObject(self.doc, 'Part::Feature', participant.name)
+			self.doc.recompute()
+			wires = len(entity.Shape.Wires) - 1
+			if (wireIndex == 1):   wireIndex = 0
+			print( "App.ActiveDocument." + entity.Name + ".Shape.Wires[" + str(wireIndex) + "] (" + str(wires) + ")")
+			section.Shape = entity.Shape.Wires[wireIndex]
+			return section
+		return None
+
+	def collectSection(self, sections, participant, action, skip):
+		section = None
 		if (participant.index not in skip):
-			# only Sketch2D's and Sketch3D's are supported!
-			if ((participant.typeName == 'Sketch2D') or (participant.typeName == 'Sketch3D')):
-				geometry = self.getEntity(participant)
-				if (geometry is not None):
-					sections.append(geometry)
-			else:
-				logWarning('        ... don\'t know how to %s (%04X): %s \'%s\' - IGNORED!' %(action, participant.index, participant.typeName, participant.name))
+			if (participant.typeName == 'Sketch2D'):           section = self.getEntity(participant)
+			elif (participant.typeName == 'Sketch3D'):         section = self.getEntity(participant)
+			elif (participant.typeName == 'ProfileSelection'): section = self.profile2Section(participant)
+			else: logWarning('        ... don\'t know how to %s (%04X): %s \'%s\' - IGNORED!' %(action, participant.index, participant.typeName, participant.name))
+		if (section is not None): sections.append(section)
 		return
 
 	def collectSections(self, fxNode, action, skip): #
@@ -739,12 +805,8 @@ class FreeCADImporter:
 		sections      = []
 		participants  = fxNode.getParticipants()
 
-		self.collectSection(sections, participants, action, skip, 0)
-		i = 2
-		while (i < len(participants)):
-			self.collectSection(sections, participants, action, skip, i)
-			i += 1
-		self.collectSection(sections, participants, action, skip, 1)
+		for i in xrange(0, len(participants)):
+			self.collectSection(sections, participants[i], action, skip)
 		return sections
 
 	def createBoolean(self, className, name, baseGeo, tools):
@@ -869,9 +931,9 @@ class FreeCADImporter:
 		moving = constraintNode.get('refObject')
 		lineIdx =  self.checkSketchIndex(sketchObj, moving)
 
-		if (lineIdx is None):
+		if ((lineIdx is None) or (lineIdx < 0)):
 			logWarning('        ... can\'t added symmetric constraint between Point and %s - no line index for (%04X)!' %(moving.typeName[0:-2], moving.index))
-		elif (symmetryIdx is None):
+		elif ((symmetryIdx is None) or (symmetryIdx < 0) or (symmetryPos < -1)):
 			logWarning('        ... can\'t added symmetric constraint between Point and %s - no point index for (%04X)!' %(moving.typeName[0:-2], constraintNode.get('refPoint').index))
 		else:
 			key = 'SymmetryPoint_%s_%s' %(lineIdx, symmetryIdx)
@@ -889,14 +951,14 @@ class FreeCADImporter:
 
 		line1 = constraintNode.get('refLine1')
 		line2 = constraintNode.get('refLine2')
-		line1Idx =  self.checkSketchIndex(sketchObj, line1)
-		line2Idx =  self.checkSketchIndex(sketchObj, line2)
+		line1Idx =  self.getPointIndexPos(sketchObj, line1)
+		line2Idx =  self.getPointIndexPos(sketchObj, line2)
 
-		if (symmetryIdx is None):
+		if ((symmetryIdx is None) or (symmetryIdx < 0)):
 			logWarning('        ... skipped symmetric constraint between lines - symmetry (%04X) has no index!' %(symmetry.index))
-		elif (line1Idx is None):
+		elif ((line1Idx is None) or (line1Idx < 0)):
 			logWarning('        ... skipped symmetric constraint between lines - line 1 (%04X) has no index!' %(line1.index))
-		elif (line2Idx is None):
+		elif ((line2Idx is None) or (line2Idx < 0)):
 			logWarning('        ... skipped symmetric constraint between lines - line 2 (%04X) has no index!' %(line2.index))
 		else:
 			key = 'SymmetricLine_%s_%s_%s' %(line1Idx, line2Idx, symmetryIdx)
@@ -1321,10 +1383,10 @@ class FreeCADImporter:
 		vecA = createVector(a_x, a_y, 0.0)
 		vecB = createVector(b_x, b_y, 0.0)
 		vecC = createVector(c_x, c_y, 0.0)
-		
+
 		angle1 = atan2((a_y - c_y), (a_x - c_x))
 		if (angle1 < 0): angle1 += radians(360.0)
-		
+
 		angle2 = atan2((b_y - c_y), (b_x - c_x))
 		if (angle2 < 0): angle2 += radians(360.0)
 
@@ -1332,7 +1394,7 @@ class FreeCADImporter:
 			part = Part.Ellipse(vecA, vecB, vecC)
 		else:
 			part = Part.Ellipse(vecB, vecA, vecC)
-		
+
 		a = ellipseNode.get('alpha')
 		b = ellipseNode.get('beta')
 		if ((a is None) and (b is None)):
@@ -2125,7 +2187,6 @@ class FreeCADImporter:
 		return
 
 	def Create_FxLoft(self, loftNode):
-		name          = loftNode.name
 		properties    = loftNode.get('properties')
 		sections1     = getProperty(properties, 0x00) # LoftSections
 		operation     = getProperty(properties, 0x01) # PartFeatureOperation=Surface
@@ -2146,25 +2207,23 @@ class FreeCADImporter:
 		if (len(sections) > 0):
 			if (loftType.get('value') == 1): # Centerline
 				# this is a sweep between two surfaces!
-				loftGeo          = self.CreateEntity(loftNode, 'Part::Sweep')
-				loftGeo.Sections = sections[0:1] + sections[2:]
-				loftGeo.Spine=(sections[1],["Edge1"])
-				loftGeo.Solid    = surface is None
-				loftGeo.Frenet=False
-				loftGeo.Transition = "Transformed"
+				loftGeo            = self.CreateEntity(loftNode, 'Part::Sweep')
+				loftGeo.Sections   = sections[0:1] + sections[2:]
+				loftGeo.Spine      = (sections[1], ["Edge1"])
+				loftGeo.Frenet     = False
+				loftGeo.Transition = 'Transformed'
 			else:
-				#if (loftType.get('value') == 0): # Rails
-				#elif (loftType.get('value') == 2): # AreaLoft
-				#elif (loftType.get('value') == 3): # RegularLoft
-		
+			#elif (loftType.get('value') == 0): # Rails
+			#elif (loftType.get('value') == 2): # AreaLoft
+			#elif (loftType.get('value') == 3): # RegularLoft
 				loftGeo          = self.CreateEntity(loftNode, 'Part::Loft')
-				loftGeo.Sections = sections
-				loftGeo.Solid    = surface is None
+				loftGeo.Sections = sections[-1:] + sections[0:-2] + sections[-2:-1]
 				loftGeo.Ruled    = ruled.get('value') != 0
 				loftGeo.Closed   = closed.get('value') != 0
-				self.hide(sections)
-				setDefaultViewObject(loftGeo)
-				self.addBody(loftNode, loftGeo, 0x0D, 0x06)
+			loftGeo.Solid    = surface is None
+			self.hide(sections)
+			setDefaultViewObject(loftGeo)
+			self.addBody(loftNode, loftGeo, 0x0D, 0x06)
 		return
 
 	def Create_FxSweep(self, sweepNode):
@@ -2236,13 +2295,12 @@ class FreeCADImporter:
 			if (source):
 				sourceGeos[source.Label] = source
 		else:
-			inputSurfaces   = getProperty(properties, 0x00) # SurfaceSelection => "Faces"
-			for surface in inputSurfaces.get('lst0'):
-				# TODO: FreeCAD only supports "Quilts" not a selection of single faces!
-				if (surface.typeName == 'BF8B8868'):
-					surface = surface.get('refCollection').get('faces')[0]
-					index = surface.get('indexRefs')[0]
-					surface = thickenNode.segment.indexNodes[index]
+			faceOffsets   = getProperty(properties, 0x00) # faceOffsets
+			for faceOffset in faceOffsets.get('lst0'):
+				if (faceOffset.typeName == 'FacesOffset'):
+					face = faceOffset.get('refFaces').get('faces')[0]
+					dim  = faceOffset.get('refThickness')
+					surface = thickenNode.segment.indexNodes[face.get('indexRefs')[0]]
 					surface = surface.get('refSurface')
 				source = self.findSurface(surface)
 				if (source):
@@ -2251,6 +2309,8 @@ class FreeCADImporter:
 		for source in sourceGeos:
 			thickenGeo = self.CreateEntity(thickenNode, 'Part::Offset')
 			thickenGeo.Source = source
+			#thickenGeo = self.CreateEntity(thickenNode, 'Part::Thickness')
+			#thickenGeo.Faces = source
 			if (negativeDir.get('value')):
 				thickenGeo.Value = getCoord(distance, 'valueNominal')
 			else:
@@ -2343,6 +2403,7 @@ class FreeCADImporter:
 		logMessage('    adding Fx%s \'%s\' ...' %(name, featureNode.name), LOG.LOG_INFO)
 		createFxObj = getattr(self, 'Create_Fx%s' %(name))
 		createFxObj(featureNode)
+		self.doc.recompute()
 		return
 
 	def addSketch_Spline3D_Curve(self, bezierNode, edges):

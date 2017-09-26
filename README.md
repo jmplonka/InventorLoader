@@ -54,7 +54,7 @@ That allows it to embed Excel workboos e.g.
 	  references, so that a correct placement is not possible</s>
 	- Added pad feature. Maybe this will be chagned to Part instead of PartDesign.
 
-- 0.4: Added table for parameters.
+- 0.4: Added spreadsheet for parameters.
 	- Added handling of expressions for parameters
 	- fixed missing placement for 2D-sketches
 
@@ -75,17 +75,22 @@ That allows it to embed Excel workboos e.g.
 	Most sections found in pro samples (2010..2018) are now decoded (structured)
 
 - 0.5.1: continued working on Features
-	* added Revolve, Extrude, Loft and Combine
-	* added Polar-Pattern, Rectangular-Pattern and Mirror-Pattern.
+	* added Revolve as Part::Revolution
+	* added Extrude as Part::Extrusion
+	* added Loft  as Part::Loft
+	* added boolean opertations as Part::Cut, Part::MultiFuse, Part::MultiCommon
+	* added Polar-Pattern, Rectangular-Pattern with Draft.makeArray()
+	* added Mirror-Pattern as 'Part::Mirroring'
 
 - 0.5.2: continued working on Features
-	* added Hole
+	* added Hole as combination of creating Part::Cylinder, Part::Cone(s) and Part::MultiFuse and Part::Cut
 
 - 0.5.3: continued working on Features
-	* added Client
+	* added Client as a new group of objects.
 
 - 0.5.4: continued working on Features
-	* added Sweep and Thicken
+	* added Sweep  as Part::Sweep
+	* added Thicken as Part::Offset
 	* Fixed encoding problems regarding filename and Sketch/Feature names
 
 ## Next steps in unsorted order:

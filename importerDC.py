@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 importerDC.py:
@@ -662,8 +662,8 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		if (getFileVersion() < 2011):
 			i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'u32_2a')
+		i = node.ReadUInt32(i, 'u32_2b')
 		i = self.ReadU32U32List(node, i, 'edges')
 		if (getFileVersion() > 2010):
 			i = node.ReadCrossRef(i, 'ref_3')
@@ -1900,12 +1900,12 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'refDirection')
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadUInt32(i, 'u32_3')
+		i = node.ReadUInt32(i, 'u32_1a')
+		i = node.ReadUInt32(i, 'u32_1b')
+		i = node.ReadUInt32(i, 'u32_2a')
+		i = node.ReadUInt32(i, 'u32_2b')
+		i = node.ReadUInt32(i, 'u32_3a')
+		i = node.ReadUInt32(i, 'u32_3bmd')
 		i = node.ReadUInt16(i, 'u16_1')
 		return i
 
@@ -2544,9 +2544,12 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
-		if (len(node.get('lst0')) > 0):
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'indexRefs')
+		if (len(node.get('indexRefs')) > 0):
 			i = node.ReadSInt32(i, 's32_0')
+		else:
+			node.content +=' s32_0=0'
+			node.set('s32_0', 0)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
@@ -5583,20 +5586,20 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadCrossRef(i, 'refBody')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'wireIndex')
 		if (getFileVersion() > 2017):
 			i += 4
 		else:
 			i = self.skipBlockSize(i)
 
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
 		i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst1')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadCrossRef(i, 'refFace')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
@@ -5605,19 +5608,19 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadCrossRef(i, 'refBody')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'wireIndex')
 		if (getFileVersion() > 2017):
 			i += 4
 		else:
 			i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
 		i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst1')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'refValue')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'refFace')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
@@ -5751,7 +5754,7 @@ class DCReader(SegmentReader):
 		node.typeName = 'FaceCollectionProxy'
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'faces')
-		i = node.ReadCrossRef(i, 'faceCollection')
+		i = node.ReadCrossRef(i, 'refSolidBody')
 		return i
 
 	def Read_90874D91(self, node): # Feature
@@ -6807,14 +6810,15 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_B382A87C(self, node):
+		node.typeName = 'ProfileSelection'
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'refFace')
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
 		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'number') # The numbber of the selection
 		return i
 
 	def Read_B3A169E4(self, node): # ShellDirectionEnum {796E2726-2926-48C7-802A-5CAF83C3078D}
@@ -7140,12 +7144,13 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_BF8B8868(self, node):
+		node.typeName = 'FacesOffset'
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'refCollection')
-		i = node.ReadCrossRef(i, 'refParameter')
+		i = node.ReadCrossRef(i, 'refFaces')
+		i = node.ReadCrossRef(i, 'refThickness')
 		return i
 
 	def Read_BFB5EB93(self, node):
@@ -8047,7 +8052,7 @@ class DCReader(SegmentReader):
 	def Read_DA4970B5(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst')
-		i = node.ReadCrossRef(i,'ref_1')
+		i = node.ReadCrossRef(i,'refProfileSelection')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -8756,6 +8761,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_F3FC69C6(self, node):
+		node.typeName = 'SurfaceCreator'
 		i = node.Read_Header0()
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'flags')
@@ -8764,7 +8770,9 @@ class DCReader(SegmentReader):
 		i = node.ReadChildRef(i, 'ref_2')
 		i = node.ReadChildRef(i, 'ref_3')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 4, 'a0')
+		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadUInt16(i, 'idxCreator')
+		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
 	def Read_F4360D18(self, node):
@@ -8801,9 +8809,8 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_1')
-		#i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_0a')
+		i = node.ReadUInt32(i, 'u32_0b')
 		return i
 
 	def Read_F645595C(self, node): # TransactablePartition

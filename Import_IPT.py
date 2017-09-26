@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 Import_IPT.py:
@@ -173,9 +173,6 @@ def ReadFile(doc, readProperties):
 			counter += 1
 		ole.close()
 
-		if (FreeCAD.GuiUp):
-			FreeCADGui.SendMsgToActiveView('ViewFit')
-
 		now = datetime.datetime.now()
 		if (len(doc.Comment) > 0):
 			doc.Comment += '\n'
@@ -201,7 +198,10 @@ def create3dModel(root, doc):
 	creator = FreeCADImporter(root, doc)
 	creator.importModel(model)
 
-	logMessage('DONE!', LOG.LOG_ALWAYS)
+	if (FreeCAD.GuiUp):
+		FreeCADGui.getDocument(doc.Name).activeView().viewAxonometric()
+		FreeCADGui.SendMsgToActiveView("ViewFit")
+		logMessage('DONE!', LOG.LOG_ALWAYS)
 
 	return
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 importerClasses.py:
@@ -6,7 +6,6 @@ importerClasses.py:
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import traceback
 from importerUtils import IntArr2Str, FloatArr2Str, logMessage, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
 from math          import degrees, radians, pi
 
@@ -765,21 +764,15 @@ class ParameterNode(DataNode):
 			functionSupported = (function not in FunctionsNotSupported)
 			if (self.asText or functionSupported):
 				operandRefs = parameterData.get('operands')
-				j = 0
-				sep = '('
-				n = len(operandRefs)
-				subFormula = function
+				sep = ''
+				subFormula = function + '('
 				# WORKAROUND:
 				# There seems to be a bug in the 'tanh' function regarding units! => ignore units!
 				ignoreUnits = (parameterData.name == 'tanh')
-				if (n > 0):
-					while (j < n):
-						operand = self.getParameterFormula(operandRefs[j], withUnits and not ignoreUnits)
-						j += 1
-						subFormula += (sep + operand)
-						sep = ';'
-				else:
-					subFormula += sep
+				for operandRef in operandRefs:
+					operand = self.getParameterFormula(operandRefs[j], withUnits and not ignoreUnits)
+					subFormula += (sep + operand)
+					sep = ';'
 				subFormula += ')'
 
 			else:
@@ -1175,38 +1168,18 @@ class LineNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def _getCoord(self, points, index, coordName):
-		p = points[index]
-		if (p):
-			c = p.get(coordName)
-			if (c is not None):
-				return '%g' %(c)
-		return '#NA#'
-
 	def getRefText(self): # return unicoe
-		p = self.get('points')
-		if (len(p) > 1):
-			x0 = self._getCoord(p, 0, 'x')
-			y0 = self._getCoord(p, 0, 'y')
-			x1 = self._getCoord(p, 1, 'x')
-			y1 = self._getCoord(p, 1, 'y')
-			if (self.typeName[-2:] == '2D'):
-				return u'(%04X): %s - (%s/%s) - (%s/%s)' %(self.index, self.typeName, x0, y0, x1, y1)
-			z0 = self._getCoord(p, 0, 'z')
-			z1 = self._getCoord(p, 1, 'z')
-			return u'(%04X): %s - (%s/%s/%s) - (%s/%s/%s)' %(self.index, self.typeName, x0, y0, z0, x1, y1, z1)
-		else:
-			x0 = self.get('x')
-			y0 = self.get('y')
-			x1 = self.get('dirX') + x0
-			y1 = self.get('dirY') + y0
-			if (self.typeName[-2:] == '2D'):
-				return u'(%04X): %s - (%s/%s) - (%s/%s)' %(self.index, self.typeName, x0, y0, x1, y1)
-			z0 = self.get('z')
-			z1 = self.get('dirZ') + z0
-			return u'(%04X): %s - (%s/%s/%s) - (%s/%s/%s)' %(self.index, self.typeName, x0, y0, z0, x1, y1, z1)
-
-		return u'(%04X): %s' %(self.index, self.typeName)
+		x0 = self.get('x')
+		y0 = self.get('y')
+		if (self.typeName[-2:] == '2D'):
+			x1 = self.get('points')[1].get('x')
+			y1 = self.get('points')[1].get('y')
+			return u'(%04X): %s - (%g/%g) - (%g/%g)' %(self.index, self.typeName, x0, y0, x1, y1)
+		z0 = self.get('z')
+		x1 = self.get('dirX') + x0
+		y1 = self.get('dirY') + y0
+		z1 = self.get('dirZ') + z0
+		return u'(%04X): %s - (%g/%g/%g) - (%g/%g/%g)' %(self.index, self.typeName, x0, y0, z0, x1, y1, z1)
 
 class CircleNode(DataNode):
 	def __init__(self, data, isRef):
