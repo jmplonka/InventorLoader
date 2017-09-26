@@ -783,30 +783,33 @@ class FreeCADImporter:
 			# create an entity that can be featured (e.g. loft, sweep, ...)
 			section = newObject(self.doc, 'Part::Feature', participant.name)
 			self.doc.recompute()
-			wires = len(entity.Shape.Wires) - 1
-			if (wireIndex == 1):   wireIndex = 0
-			print( "App.ActiveDocument." + entity.Name + ".Shape.Wires[" + str(wireIndex) + "] (" + str(wires) + ")")
+			
+			# Convert Inventor-Index to FreeCAD-Index
+			if (wireIndex == 0):   wireIndex = 1
+			elif (wireIndex == 1): wireIndex = 0
+
 			section.Shape = entity.Shape.Wires[wireIndex]
 			return section
 		return None
 
-	def collectSection(self, sections, participant, action, skip):
-		section = None
-		if (participant.index not in skip):
-			if (participant.typeName == 'Sketch2D'):           section = self.getEntity(participant)
-			elif (participant.typeName == 'Sketch3D'):         section = self.getEntity(participant)
-			elif (participant.typeName == 'ProfileSelection'): section = self.profile2Section(participant)
-			else: logWarning('        ... don\'t know how to %s (%04X): %s \'%s\' - IGNORED!' %(action, participant.index, participant.typeName, participant.name))
-		if (section is not None): sections.append(section)
-		return
+	def collectSection(self, participant):
+		if (participant.typeName == 'Sketch2D'):           return self.getEntity(participant)
+		elif (participant.typeName == 'Sketch3D'):         return self.getEntity(participant)
+		elif (participant.typeName == 'ProfileSelection'): return self.profile2Section(participant)
+		return None
 
 	def collectSections(self, fxNode, action, skip): #
-		name          = fxNode.name
-		sections      = []
-		participants  = fxNode.getParticipants()
+		participants = fxNode.getParticipants()
+		sections     = []
 
-		for i in xrange(0, len(participants)):
-			self.collectSection(sections, participants[i], action, skip)
+		for participant in participants:
+			if (participant.index not in skip):
+				section = self.collectSection(participant)
+				if (section is not None):
+					sections.append(section)
+				else:
+					logWarning('        ... don\'t know how to %s (%04X): %s \'%s\' - IGNORED!' %(action, participant.index, participant.typeName, participant.name))
+	
 		return sections
 
 	def createBoolean(self, className, name, baseGeo, tools):
@@ -1696,7 +1699,7 @@ class FreeCADImporter:
 
 		return
 
-	def Create_FxPad_New(self, padNode, sketchNode, name):
+	def Create_FxPad_New(self, padNode, sectionNode, name):
 		properties = padNode.get('properties')
 		direction  = getProperty(properties, 0x02)               # The direction of the extrusion
 		reversed   = getPropertyValue(properties, 0x03, 'value') # If the extrusion direction is inverted
@@ -1711,16 +1714,17 @@ class FreeCADImporter:
 
 		pad = None
 		if (dimLength):
-			sketchName = sketchNode.name
-			sketch = sketchNode.sketchEntity
+			sketchName = sectionNode.name
+			sketch = self.collectSection(sectionNode)
 			len1 = dimLength.getValue()
 			if (isinstance(len1, Length)):
 				len1 = len1.getMM()
 			else:
 				len1 = len1 * 10.0
-			x          = direction.get('x') * len1
-			y          = direction.get('y') * len1
-			z          = direction.get('z') * len1
+
+			x          = direction.get('x') * direction.get('x') * len1
+			y          = direction.get('y') * direction.get('y') * len1
+			z          = direction.get('z') * direction.get('z') * len1
 			taperAngle = dimAngle.getValue()
 
 			if (dimLength2):
@@ -1776,7 +1780,7 @@ class FreeCADImporter:
 			logWarning('        Failed create new extrusion \'%s\' - (%04X): %s properties[04] is None!' %(name, padNode.index, padNode.typeName))
 		return pad
 
-	def createFxPad_Operation(self, padNode, sketchNode, name, nameExtension, className):
+	def createFxPad_Operation(self, padNode, sectionNode, name, nameExtension, className):
 		properties = padNode.get('properties')
 		baseData   = getProperty(properties, 0x1A)
 		boolean    = None
@@ -1784,7 +1788,7 @@ class FreeCADImporter:
 		if (baseData is None):
 			logError('ERROR> (%04X): %s - can\'t find base info (not yet created)!' %(padNode.index, name))
 		else:
-			tool = self.Create_FxPad_New(padNode, sketchNode, name + nameExtension)
+			tool = self.Create_FxPad_New(padNode, sectionNode, name + nameExtension)
 			base    = self.findBase(baseData.next)
 			if (base is not None):
 				if (tool is not None): # no need to raise a warning as it's already done!
@@ -1801,9 +1805,8 @@ class FreeCADImporter:
 
 		if (participants):
 			properties = revolveNode.get('properties')
-			refSketch  = participants[0]
-			sketch     = self.getEntity(refSketch)
-			sketchName = refSketch.name
+			path       = self.collectSection(participant[0])
+			pathName = participant[0].name
 			operation  = getProperty(properties, 0x00) # PartFeatureOperation
 			#= getProperty(properties, 0x01) # FxBoundaryPatch
 			lineAxis   = getProperty(properties, 0x02) # Line3D
@@ -1838,29 +1841,29 @@ class FreeCADImporter:
 				alpha = angle1.getValue().getGRAD()
 				if (angle2 is None):
 					if (direction.get('value') == 0): # positive
-						logMessage('    ... based on \'%s\' (alpha=%s) ...' %(sketchName, angle1.getValue()), LOG.LOG_INFO)
-						revolution = self.createRevolve(revolveNode.name, alpha, sketch, axis, base, solid)
+						logMessage('    ... based on \'%s\' (alpha=%s) ...' %(pathName, angle1.getValue()), LOG.LOG_INFO)
+						revolution = self.createRevolve(revolveNode.name, alpha, path, axis, base, solid)
 					elif (direction.get('value') == 1): # negative
-						logMessage('    ... based on \'%s\' (alpha=%s, inverted) ...' %(sketchName, angle1.getValue()), LOG.LOG_INFO)
-						revolution = self.createRevolve(revolveNode.name, -alpha, sketch, axis, base, solid)
+						logMessage('    ... based on \'%s\' (alpha=%s, inverted) ...' %(pathName, angle1.getValue()), LOG.LOG_INFO)
+						revolution = self.createRevolve(revolveNode.name, -alpha, path, axis, base, solid)
 					elif (direction.get('value') == 2): # symmetric
-						logMessage('    ... based on \'%s\' (alpha=%s, symmetric) ...' %(sketchName, angle1.getValue()), LOG.LOG_INFO)
-						revolution1 = self.createRevolve(revolveNode.name + '_1', alpha / 2.0, sketch, axis, base, solid)
-						revolution2 = self.createRevolve(revolveNode.name + '_2', -alpha / 2.0, sketch, axis, base, solid)
+						logMessage('    ... based on \'%s\' (alpha=%s, symmetric) ...' %(pathName, angle1.getValue()), LOG.LOG_INFO)
+						revolution1 = self.createRevolve(revolveNode.name + '_1', alpha / 2.0, path, axis, base, solid)
+						revolution2 = self.createRevolve(revolveNode.name + '_2', -alpha / 2.0, path, axis, base, solid)
 						revolution = newObject(self.doc, 'Part::MultiFuse', revolveNode.name)
 						revolution.Shapes = [revolution1, revolution2]
 						adjustViewObject(revolution, revolution1)
 				else:
-					logMessage('    ... based on \'%s\' (alpha=%s, beta=%s) ...' %(sketchName, angle1.getValue(), angle2.getValue()), LOG.LOG_INFO)
+					logMessage('    ... based on \'%s\' (alpha=%s, beta=%s) ...' %(pathName, angle1.getValue(), angle2.getValue()), LOG.LOG_INFO)
 					beta = angle2.getValue().getGRAD()
-					revolution1 = self.createRevolve(revolveNode.name + '_1', alpha, sketch, axis, base, solid)
-					revolution2 = self.createRevolve(revolveNode.name + '_2', -beta, sketch, axis, base, solid)
+					revolution1 = self.createRevolve(revolveNode.name + '_1', alpha, path, axis, base, solid)
+					revolution2 = self.createRevolve(revolveNode.name + '_2', -beta, path, axis, base, solid)
 					revolution = newObject(self.doc, 'Part::MultiFuse', revolveNode.name)
 					revolution.Shapes = [revolution1, revolution2]
 					adjustViewObject(revolution, revolution1)
 			elif (extend1.get('value') == 3): # 'Path' => FullSweepExtend
-				logMessage('    ... based on \'%s\' (full) ...' %(sketchName), LOG.LOG_INFO)
-				revolution = self.createRevolve(revolveNode.name, 360.0, sketch, axis, base, solid)
+				logMessage('    ... based on \'%s\' (full) ...' %(pathName), LOG.LOG_INFO)
+				revolution = self.createRevolve(revolveNode.name, 360.0, path, axis, base, solid)
 
 			self.addBody(revolveNode, revolution, 0x11, 0x08)
 		return revolution
@@ -1868,10 +1871,9 @@ class FreeCADImporter:
 	def Create_FxExtrude(self, extrudeNode):
 		name = extrudeNode.name
 		participants = extrudeNode.getParticipants()
-		logMessage('    adding FxExtrusion \'%s\' ...' %(name), LOG.LOG_INFO)
 
 		if (participants):
-			sketchNode = participants[0].node
+			sectionNode = participants[0].node
 			self.getEntity(participants[0])
 
 			properties = extrudeNode.get('properties')
@@ -1882,15 +1884,15 @@ class FreeCADImporter:
 				properties = extrudeNode.get('properties')
 				operation = getPropertyValue(properties, 0x00, 'value')
 				if (operation == FreeCADImporter.FX_EXTRUDE_NEW):
-					padGeo = self.Create_FxPad_New(extrudeNode, sketchNode, name)
+					padGeo = self.Create_FxPad_New(extrudeNode, sectionNode, name)
 				elif (operation == FreeCADImporter.FX_EXTRUDE_CUT):
-					padGeo = self.createFxPad_Operation(extrudeNode, sketchNode, name, '_Cut', 'Cut')
+					padGeo = self.createFxPad_Operation(extrudeNode, sectionNode, name, '_Cut', 'Cut')
 				elif (operation == FreeCADImporter.FX_EXTRUDE_JOIN):
-					padGeo = self.createFxPad_Operation(extrudeNode, sketchNode, name, '_Join', 'MultiFuse')
+					padGeo = self.createFxPad_Operation(extrudeNode, sectionNode, name, '_Join', 'MultiFuse')
 				elif (operation == FreeCADImporter.FX_EXTRUDE_INTERSECTION):
-					padGeo = self.createFxPad_Operation(extrudeNode, sketchNode, name, '_Intersection', 'MultiCommon')
+					padGeo = self.createFxPad_Operation(extrudeNode, sectionNode, name, '_Intersection', 'MultiCommon')
 				elif (operation == FreeCADImporter.FX_EXTRUDE_SURFACE):
-					padGeo = self.Create_FxPad_New(extrudeNode, sketchNode, name) # FIXME: Use Part::Extrusion instead!
+					padGeo = self.Create_FxPad_New(extrudeNode, sectionNode, name)
 				else:
 					padGeo = None
 					logError('    ERROR Don\'t know how to operate PAD=%s for (%04X): %s ' %(operation, extrudeNode.index, extrudeNode.typeName))
@@ -2641,7 +2643,7 @@ class FreeCADImporter:
 					#nominalUnit  = valueNode.data.getUnitName()
 					#if (len(nominalUnit) > 0): nominalUnit = ' ' + nominalUnit
 					#formula = '%s%s' %((nominalValue / nominalFactor)  - nominalOffset, nominalUnit)
-					value   = valueNode.getFormula(False).replace(':', '_')
+					value   = valueNode.getValue().__str__()
 					formula = valueNode.getFormula(True)
 					table.set('A%d' %(r), key.encode('utf8'))
 					table.set('B%d' %(r), value.encode('utf8'))

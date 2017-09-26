@@ -168,6 +168,7 @@ def getBranchNode(data, isRef):
 	if (data.typeName == 'Dimension_Angle3Point2D'): return DimensionAngleNode(data, isRef)
 	if (data.typeName == 'SurfaceBodies'):           return SurfaceBodiesNode(data, isRef)
 	if (data.typeName == 'SolidBody'):               return SurfaceBodiesNode(data, isRef)
+	if (data.typeName == 'Direction'):               return DirectionNode(data, isRef)
 	return DataNode(data, isRef)
 
 def buildBranchRef(parent, file, nodes, ref, level):

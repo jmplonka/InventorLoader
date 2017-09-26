@@ -971,6 +971,13 @@ class EnumNode(DataNode):
 		name = self.get('Enum')
 		return '(%04X): %s %s%s' %(node.index, node.typeName, name, node.content)
 
+class DirectionNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self): # return unicode
+		return u'(%04X): %s - (%g/%g/%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
+
 class FeatureNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)

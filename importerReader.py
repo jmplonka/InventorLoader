@@ -116,10 +116,12 @@ def ReadInventorSummaryInformation(doc, properties, path):
 	for key in properties:
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
-			#if (key == KEY_THUMBNAIL_1):
-			#	val = writeThumbnail(val)
-			#elif (key == KEY_THUMBNAIL_2):
-			#	val = writeThumbnail(val)
+			if (key == KEY_THUMBNAIL_1):
+				if (FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumpnails', False)):
+					val = writeThumbnail(val)
+			elif (key == KEY_THUMBNAIL_2):
+				if (FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumpnails', False)):
+					val = writeThumbnail(val)
 			model.iProperties[name][key] = val
 	return
 
