@@ -205,19 +205,24 @@ def create3dModel(root, doc):
 
 	return
 
-def insert(filename, docname, skip=[], only=[], root=None):
+def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
 	'''
 	if (canImport()):
-		doc = FreeCAD.getDocument(docname)
-		logMessage('Importing: %s' %(filename), LOG.LOG_ALWAYS)
+		try:
+			doc = FreeCAD.getDocument(docname)
+			logMessage('Importing: %s' %(filename), LOG.LOG_ALWAYS)
+			setInventorFile(filename)
 
-		setInventorFile(filename)
+			if (ReadFile(doc, False)):
+				group = insertGroup(doc, filename)
+				create3dModel(group, doc)
+			else:
+				logError('>>>ERROR - no Autodesk Inventor file: %r!' % getInventorFile())
+		except:
+			open(filename, skip, only, root)
 
-		if (ReadFile(doc, False)):
-			root = insertGroup(doc, filename)
-			create3dModel(root, doc)
 	return
 
 def open(filename, skip = [], only = [], root = None):
@@ -227,16 +232,16 @@ def open(filename, skip = [], only = [], root = None):
 	'''
 	if (canImport()):
 		logMessage('Reading: %s' %(filename), LOG.LOG_ALWAYS)
+		setInventorFile(filename)
 		docname = os.path.splitext(os.path.basename(filename))[0]
 		docname = decode(docname, utf=True)
 		doc = FreeCAD.newDocument(docname)
 		doc.Label = docname
 
-		setInventorFile(filename)
 
 		if (ReadFile(doc, True)):
-			root = None # Don't create 3D-Model in sub-group
-			create3dModel(root, doc)
+			group = None # Don't create 3D-Model in sub-group
+			create3dModel(group, doc)
 		else:
 			logError('>>>ERROR - no Autodesk Inventor file: %r!' % getInventorFile())
 	return
