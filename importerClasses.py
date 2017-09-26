@@ -1059,7 +1059,7 @@ class FeatureNode(DataNode):
 		elif (p0 == 'FxBoundaryPatch'):
 			p2 = self._getPropertyName(2)
 			if (p2 == 'FxBoundaryPatch'):           return 'Grill'
-			if (p1 == 'ProfilePath'):               return 'Sweep'
+			if (p1 == 'A477243B'):                  return 'Sweep'
 			if (p1 == 'Direction'):                 return 'Extrude'
 			if (p1 == 'FxBoundaryPatch'):           return 'Rib'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
@@ -1071,7 +1071,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'FaceCollection'):            return 'FaceDraft'
 		elif (p0 == 'CA02411F'):                    return 'NonParametricBase'
 		elif (p0 == 'EB9E49B0'):                    return 'Freeform'
-		elif (p0 == 'ProfilePath'):                 return 'Hem'
+		elif (p0 == 'A477243B'):                    return 'Hem'
 		elif (p0 == 'SolidBody'):                   return 'Knit'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'EA680672'):                    return 'Trim'
@@ -1090,7 +1090,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'Enum'):                      return 'Thicken'
 			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
 			if (p1 == '90874D51'):                  return 'Lip'
-			if (p1 == 'ProfilePath'):               return 'ContourRoll'
+			if (p1 == 'A477243B'):                  return 'ContourRoll'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p10 == 'D524C30A'):                 return 'Fillet'
 		elif (p0 == 'D70E9DDA'):                    return 'Boss'
@@ -1207,11 +1207,7 @@ class CircleNode(DataNode):
 					points += ', (%g/%g/%g)' %(i.get('x'), i.get('y'), i.get('z'))
 		if (self.typeName[-2:] == '2D'):
 			c = self.get('refCenter')
-			try:
-					u'(%04X): %s - (%g/%g), r=%g%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points)
-			except:
-				logError(u'ERROR> (%04X): %s - x=%s, y=%s, r=%s, points=%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points))
-			return u'(%04X): %s' %(self.index, self.typeName)
+			return u'(%04X): %s - (%g/%g), r=%g%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points)
 		return u'(%04X): %s - (%g/%g/%g), r=%g%s' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'), r, points)
 
 class GeometricRadius2DNode(DataNode):

@@ -346,6 +346,10 @@ class AbstractNode(AbstractData):
 				self.content += val
 			else:
 				j = 0
+				if (t == AbstractNode._TYP_NODE_X_REF_):
+					self.content += '%d' %(cnt)
+				if (t == AbstractNode._TYP_NODE_REF_):
+					self.content += '%d' %(cnt)
 				while (j < cnt):
 					str = ''
 					if (t == AbstractNode._TYP_NODE_REF_):

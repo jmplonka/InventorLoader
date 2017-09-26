@@ -5385,10 +5385,14 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_90874D13(self, node):
+		node.typeName = 'SketchEntityRef'
 		i = node.Read_Header0()
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 9, 'a1')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'associativeID') # Number of the entity inside the referenced sketch
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32A(i, 6, 'a1')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'refSketch')
@@ -5403,7 +5407,7 @@ class DCReader(SegmentReader):
 		i = node.ReadChildRef(i, 'label')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'associativeID')
+		i = node.ReadUInt32(i, 'associativeID') # Number of the entity inside the sketch
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
@@ -6333,7 +6337,6 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_A477243B(self, node):
-		node.typeName = 'ProfilePath'
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
