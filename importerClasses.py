@@ -1090,7 +1090,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'Enum'):                      return 'Thicken'
 			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
 			if (p1 == '90874D51'):                  return 'Lip'
-			if (p1 == 'A477243B'):                  return 'ContourRoll'
+			if (p1 == 'FC203F47'):                  return 'ContourRoll'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p10 == 'D524C30A'):                 return 'Fillet'
 		elif (p0 == 'D70E9DDA'):                    return 'Boss'
@@ -1176,12 +1176,14 @@ class LineNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicoe
-		x0 = self.get('x')
-		y0 = self.get('y')
 		if (self.typeName[-2:] == '2D'):
+			x0 = self.get('points')[0].get('x')
+			y0 = self.get('points')[0].get('y')
 			x1 = self.get('points')[1].get('x')
 			y1 = self.get('points')[1].get('y')
 			return u'(%04X): %s - (%g/%g) - (%g/%g)' %(self.index, self.typeName, x0, y0, x1, y1)
+		x0 = self.get('x')
+		y0 = self.get('y')
 		z0 = self.get('z')
 		x1 = self.get('dirX') + x0
 		y1 = self.get('dirY') + y0
@@ -1224,9 +1226,9 @@ class GeometricCoincident2DNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		o = self.get('refObject')
-		p = self.get('refPoint')
-		return u'(%04X): %s - o=(%04X): %s, p=(%04X): %s' %(self.index, self.typeName, o.index, o.typeName, p.index, p.typeName)
+		e1 = self.get('refEntity1')
+		e2 = self.get('refEntity2')
+		return u'(%04X): %s - e1=(%04X): %s, e2=(%04X): %s' %(self.index, self.typeName, e1.index, e1.typeName, e2.index, e2.typeName)
 
 class DimensionAngleNode(DataNode):
 	def __init__(self, data, isRef):

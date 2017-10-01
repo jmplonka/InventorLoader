@@ -115,8 +115,7 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadSInt16(i, 's16_0')
-		i = node.ReadSInt16(i, 's16_1')
+		i = node.ReadUInt32(i, 'flags2')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -563,7 +562,7 @@ class DCReader(SegmentReader):
 			i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
 		else:
 			ref, i = self.ReadNodeRef(node, i, 0, NodeRef.TYPE_CROSS)
-			node.content += ' lst0={}'
+			node.content += ' lst0={1}'
 			node.set('lst0', [ref])
 		i = node.ReadList2(i, AbstractNode._TYP_LIST_3D_FLOAT64_, 'lst1')
 		cnt, i = getUInt32(node.data, i)
@@ -2694,11 +2693,12 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_3A98DCE3(self, node):
+		node.typeName = 'EntityReference'
 		i = node.Read_Header0()
 		i = node.ReadChildRef(i, 'cld_0')
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'refPoint')
+		i = node.ReadCrossRef(i, 'refEntity')
 		i = node.ReadParentRef(i)
 		i = node.ReadChildRef(i, 'ref_1')
 		i = self.skipBlockSize(i)
@@ -3154,8 +3154,7 @@ class DCReader(SegmentReader):
 		node.typeName = 'BSpline3D'
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadSInt16(i, 's16_0')
-		i = node.ReadSInt16(i, 's16_1')
+		i = node.ReadUInt32(i, 'flags2')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'refGroup')
 		i = self.skipBlockSize(i)
@@ -3964,15 +3963,15 @@ class DCReader(SegmentReader):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'refEntity')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		if (getFileVersion() > 2017):
 			i += 4
 		else:
 			i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadCrossRef(i, 'refParameter')
+		i = node.ReadCrossRef(i, 'refDirection')
 		return i
 
 	def Read_61B56690(self, node):
@@ -4034,8 +4033,8 @@ class DCReader(SegmentReader):
 	def Read_64DE16F3(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadCrossRef(i, 'refEntity')
+		i = node.ReadCrossRef(i, 'refTransformation')
 		i = node.ReadCrossRef(i, 'ref_3')
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
@@ -5404,7 +5403,7 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
 		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadChildRef(i, 'label')
+		i = node.ReadChildRef(i, 'refEntityReference')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt32(i, 'associativeID') # Number of the entity inside the sketch
@@ -5772,8 +5771,8 @@ class DCReader(SegmentReader):
 
 	def Read_90874D94(self, node): # CoincidentConstraint {8006A074-ECC4-11D4-8DE9-0010B541CAA8}
 		i = self.ReadConstraintHeader2D(node, 'Geometric_Coincident2D')
-		i = node.ReadCrossRef(i, 'refObject')
-		i = node.ReadCrossRef(i, 'refPoint')
+		i = node.ReadCrossRef(i, 'refEntity1')
+		i = node.ReadCrossRef(i, 'refEntity2')
 		return i
 
 	def Read_90874D95(self, node): # ParallelConstraint {8006A08A-ECC4-11D4-8DE9-0010B541CAA8}

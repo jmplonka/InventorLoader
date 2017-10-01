@@ -6,8 +6,8 @@ from importerUtils import logError
 
 try:
 	if (not hasattr(FreeCADGui, 'InventorLoaderPrefs')):
-		FreeCADGui.addIconPath(FreeCAD.getHomePath() + 'Mod/JMP/Resources')
-		FreeCADGui.addPreferencePage(FreeCAD.getHomePath() + 'Mod/JMP/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
+		FreeCADGui.addIconPath(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources')
+		FreeCADGui.addPreferencePage(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
 		FreeCADGui.InventorImporterPrefs = True
 except:
 	logError('>E: ' + traceback.format_exc())
