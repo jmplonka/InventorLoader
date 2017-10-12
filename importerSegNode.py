@@ -865,7 +865,7 @@ class AbstractNode(AbstractData):
 				elif (factor == -12): factor = u'p'    # Pico
 				elif (factor == -15): factor = u'f'    # Femto
 				elif (factor == -18): factor = u'a'    # Atto
-				subformula = factor + subformula
+				subformula = "%s%s" %(factor, subformula)
 				if (subformula == lastUnit):
 					unitExponent += 1
 				else:
