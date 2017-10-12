@@ -10,7 +10,8 @@ import sys
 import datetime
 import FreeCAD
 from uuid    import UUID
-from struct  import unpack
+from struct  import pack, unpack
+from math    import fabs
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -222,24 +223,25 @@ def getSInt32A(data, offset, size):
 
 def getFloat32(data, offset):
 	'''
-	Returns a single precision floating value.
+	Returns a double precision float value from a single one.
 	Args:
 		data
 			A binary string.
 		offset
 			The zero based offset of the array.
 	Returns:
-		The single precision floating value at offset.
+		The double precision float value at offset from a single one.
 		The new position in the 'stream'.
 	'''
 	end = offset + 4
 	assert end <= len(data), "Trying to read Float32 beyond data end (%X > %X)" %(end, len(data))
 	val = unpack('<f', data[offset:end])[0]
+	val = unpack('d', pack('d',  val))[0]
 	return val, end
 
 def getFloat32A(data, offset, size):
 	'''
-	Returns an array of single precision floating values.
+	Returns an array of double precision float values from a list of single ones.
 	Args:
 		data
 			A binary string.
@@ -248,25 +250,27 @@ def getFloat32A(data, offset, size):
 		size
 			The size of the array.
 	Returns:
-		The array of single precision floating values at offset.
+		The array of double precision float values from a list of single ones at offset.
 		The new position in the 'stream'.
 	'''
 	end = offset + 4 * size
 	assert end <= len(data), "Trying to read Float32 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	val = unpack('<' + 'f'*size, data[offset:end])
-	val = list(val)
+	singles = unpack('<' + 'f'*size, data[offset:end])
+	val = []
+	for s in singles:
+		val += unpack('d', pack('d',  s))
 	return val, end
 
 def getFloat64(data, offset):
 	'''
-	Returns a double precision floating value.
+	Returns a double precision float value.
 	Args:
 		data
 			A binary string.
 		offset
 			The zero based offset of the array.
 	Returns:
-		The double precision floating value at offset.
+		The double precision float value at offset.
 		The new position in the 'stream'.
 	'''
 	end = offset + 8
@@ -276,7 +280,7 @@ def getFloat64(data, offset):
 
 def getFloat64A(data, offset, size):
 	'''
-	Returns an array of double precision floating values.
+	Returns an array of double precision float values.
 	Args:
 		data
 			A binary string.
@@ -285,7 +289,7 @@ def getFloat64A(data, offset, size):
 		size
 			The size of the array.
 	Returns:
-		The array of double precision floating values at offset.
+		The array of double precision float values at offset.
 		The new position in the 'stream'.
 	'''
 	end = offset + 8 * size
@@ -302,36 +306,6 @@ def getColorRGBA(data, offset):
 	a, i = getFloat32(data, i)
 	c = Color(r, g, b, a)
 	return c, i
-
-# | ID                                   | Type | Name
-# +--------------------------------------+------+----------------------------------------------------
-# | B6B5DC40-96E3-11d2-B774-0060B0F159EF | CLS  | Inventor Application
-# | C343ED84-A129-11d3-B799-0060B0F159EF | CLS  | Inventor Apprentice Server
-# | 4D29B490-49B2-11D0-93C3-7E0706000000 | CLS  | Inventor Part
-# | E60F81E1-49B3-11D0-93C3-7E0706000000 | CLS  | Inventor Assembly
-# | BBF9FDF1-52DC-11D0-8C04-0800090BE8EC | CLS  | Inventor Drawing
-# | 76283A80-50DD-11D3-A7E3-00C04F79D7BC | CLS  | Inventor Presentation
-# | 28EC8354-9024-440F-A8A2-0E0E55D635B0 | CLS  | Inventor Weldment
-# | 9C464203-9BAE-11D3-8BAD-0060B0CE6BB4 | CLS  | Inventor Sheet Metal Part
-# | 92055419-B3FA-11D3-A479-00C04F6B9531 | CLS  | Inventor Generic Proxy Part
-# | 9C464204-9BAE-11D3-8BAD-0060B0CE6BB4 | CLS  | Inventor Compatibility Proxy Part
-# | 9C88D3AF-C3EB-11D3-B79E-0060B0F159EF | CLS  | Inventor Catalog Proxy Part
-# | 4D8D80D4-F5B0-4460-8CEA-4CD222684469 | CLS  | Inventor Molded Part Document
-# | 62FBB030-24C7-11D3-B78D-0060B0F159EF | CLS  | Inventor iFeature
-# | 81B95C5D-8E31-4F65-9790-CCF6ECABD141 | CLS  | Inventor Design View
-# | 1BACED46-C2CB-11d3-B79D-0060B0F159EF | I    | Inventor IRxPropVariantProperty
-# | 9C88D3AE-C3EB-11d3-B79E-0060B0F159EF | I    | Inventor IRxPropVariantPropertySet
-# | F29F85E0-4FF9-1068-AB91-08002B27B3D9 | FMT  | Microsoft Summary Information
-# | D5CDD502-2E9C-101B-9397-08002B2CF9AE | FMT  | Microsoft Document Summary Information
-# | D5CDD505-2E9C-101B-9397-08002B2CF9AE | FMT  | Microsoft User Defined Properties
-# | 32853F0F-3444-11d1-9E93-0060B03C1CA6 | FMT  | Inventor Design Tracking Properties
-# | B9600981-DEE8-4547-8D7C-E525B3A1727A | FMT  | Inventor Content Library Component Properties
-# | F73AD5E7-C24C-44F0-B277-0F9A5AA3C35B | FMT  | Inventor Content Part Component Properties
-# | E357129A-DB40-11d2-B783-0060B0F159EF | CAT  | Inventor Application AddIn Server protocol
-# | 39AD2B5C-7A29-11D6-8E0A-0010B541CAA8 | CAT  | Inventor Versioned Application AddIn Server protocol
-# | E357129B-DB40-11d2-B783-0060B0F159EF | CAT  | Inventor Application AddIn Site protocol
-# | E7010077-425E-4ed3-8B28-A0CCED30927D | CAT  | Inventor Application AddIn Registration protocol
-# | E956B1CC-1AA4-41c6-A40C-687B4A4AE0E9 | CAT  | Inventor Application AddIn Re-Registration protocol
 
 def getUUID(data, offset, source):
 	'''
@@ -546,6 +520,9 @@ def isEmbeddings(names):
 
 	return embedding
 
+def isEqual(a, b):
+	return (fabs(a - b) < 0.0001)
+
 def logWarning(msg):
 	logMessage(msg, LOG.LOG_WARNING)
 	return
@@ -649,4 +626,3 @@ class Color():
 		b = int(self.blue  * 0xFF)
 		a = int(self.alpha * 0xFF)
 		return u'#%02X%02X%02X%02X' %(a, r, g, b)
-
