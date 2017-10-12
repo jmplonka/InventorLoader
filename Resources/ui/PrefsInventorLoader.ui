@@ -23,7 +23,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="tabSketches">
          <attribute name="title">
@@ -76,7 +76,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Align_Horizontal.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Align_Horizontal.svg</iconset>
+                         <normaloff>../icons/Constraint_Align_Horizontal.svg</normaloff>../icons/Constraint_Align_Horizontal.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -90,7 +90,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Align_Vertical.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Align_Vertical.svg</iconset>
+                         <normaloff>../icons/Constraint_Align_Vertical.svg</normaloff>../icons/Constraint_Align_Vertical.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -104,7 +104,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_PointOnPoint.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_PointOnPoint.svg</iconset>
+                         <normaloff>../icons/Constraint_PointOnPoint.svg</normaloff>../icons/Constraint_PointOnPoint.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -121,7 +121,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_PointOnObject.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_PointOnObject.svg</iconset>
+                         <normaloff>../icons/Constraint_PointOnObject.svg</normaloff>../icons/Constraint_PointOnObject.svg</iconset>
                        </property>
                        <property name="checkable">
                         <bool>true</bool>
@@ -138,7 +138,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_EqualLength.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_EqualLength.svg</iconset>
+                         <normaloff>../icons/Constraint_EqualLength.svg</normaloff>../icons/Constraint_EqualLength.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -152,7 +152,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Concentric.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Concentric.svg</iconset>
+                         <normaloff>../icons/Constraint_Concentric.svg</normaloff>../icons/Constraint_Concentric.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -169,7 +169,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Fix.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Fix.svg</iconset>
+                         <normaloff>../icons/Constraint_Fix.svg</normaloff>../icons/Constraint_Fix.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -180,7 +180,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Horizontal.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Horizontal.svg</iconset>
+                         <normaloff>../icons/Constraint_Horizontal.svg</normaloff>../icons/Constraint_Horizontal.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -194,7 +194,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Vertical.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Vertical.svg</iconset>
+                         <normaloff>../icons/Constraint_Vertical.svg</normaloff>../icons/Constraint_Vertical.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -208,7 +208,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Parallel.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Parallel.svg</iconset>
+                         <normaloff>../icons/Constraint_Parallel.svg</normaloff>../icons/Constraint_Parallel.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -222,7 +222,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Perpendicular.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Perpendicular.svg</iconset>
+                         <normaloff>../icons/Constraint_Perpendicular.svg</normaloff>../icons/Constraint_Perpendicular.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -236,7 +236,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Tangent.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Tangent.svg</iconset>
+                         <normaloff>../icons/Constraint_Tangent.svg</normaloff>../icons/Constraint_Tangent.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -253,7 +253,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Offset.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Offset.svg</iconset>
+                         <normaloff>../icons/Constraint_Offset.svg</normaloff>../icons/Constraint_Offset.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -264,7 +264,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Polygon.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Polygon.svg</iconset>
+                         <normaloff>../icons/Constraint_Polygon.svg</normaloff>../icons/Constraint_Polygon.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -278,7 +278,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Radius.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Radius.svg</iconset>
+                         <normaloff>../icons/Constraint_Radius.svg</normaloff>../icons/Constraint_Radius.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -295,7 +295,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SplineFitPoint.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SplineFitPoint.svg</iconset>
+                         <normaloff>../icons/Constraint_SplineFitPoint.svg</normaloff>../icons/Constraint_SplineFitPoint.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -306,7 +306,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SymmetricLine.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SymmetricLine.svg</iconset>
+                         <normaloff>../icons/Constraint_SymmetricLine.svg</normaloff>../icons/Constraint_SymmetricLine.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -320,7 +320,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SymmetricPoint.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_SymmetricPoint.svg</iconset>
+                         <normaloff>../icons/Constraint_SymmetricPoint.svg</normaloff>../icons/Constraint_SymmetricPoint.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -375,7 +375,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_InternalAngleLine.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_InternalAngleLine.svg</iconset>
+                         <normaloff>../icons/Constraint_InternalAngleLine.svg</normaloff>../icons/Constraint_InternalAngleLine.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -389,7 +389,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_InternalAnglePoint.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_InternalAnglePoint.svg</iconset>
+                         <normaloff>../icons/Constraint_InternalAnglePoint.svg</normaloff>../icons/Constraint_InternalAnglePoint.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -403,7 +403,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Radius.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Radius.svg</iconset>
+                         <normaloff>../icons/Constraint_Radius.svg</normaloff>../icons/Constraint_Radius.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -417,7 +417,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Diameter.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Diameter.svg</iconset>
+                         <normaloff>../icons/Constraint_Diameter.svg</normaloff>../icons/Constraint_Diameter.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -431,7 +431,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Length.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Length.svg</iconset>
+                         <normaloff>../icons/Constraint_Length.svg</normaloff>../icons/Constraint_Length.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -445,7 +445,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_HorizontalDistance.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_HorizontalDistance.svg</iconset>
+                         <normaloff>../icons/Constraint_HorizontalDistance.svg</normaloff>../icons/Constraint_HorizontalDistance.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -459,7 +459,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_VerticalDistance.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_VerticalDistance.svg</iconset>
+                         <normaloff>../icons/Constraint_VerticalDistance.svg</normaloff>../icons/Constraint_VerticalDistance.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -473,7 +473,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Length_Driven.svg</normaloff>D:/Inventor/JMP/Resources/icons/Constraint_Length_Driven.svg</iconset>
+                         <normaloff>../icons/Constraint_Length_Driven.svg</normaloff>../icons/Constraint_Length_Driven.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -507,8 +507,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>651</width>
-               <height>147</height>
+               <width>98</width>
+               <height>28</height>
               </rect>
              </property>
              <attribute name="label">
@@ -538,8 +538,29 @@
          <attribute name="title">
           <string>Others</string>
          </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
-          <item>
+         <layout class="QFormLayout" name="formLayout">
+          <item row="0" column="0" colspan="2">
+           <widget class="QCheckBox" name="cbxDumpThumbnail">
+            <property name="text">
+             <string>dump thumbnails</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblLogLevel">
+            <property name="text">
+             <string>Loggign level:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="cbxLogLevel">
+            <property name="currentText">
+             <string>INFO</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
            <spacer name="verticalSpacer_3">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
