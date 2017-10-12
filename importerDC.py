@@ -98,7 +98,6 @@ class DCReader(SegmentReader):
 		flags = node.get('flags')
 		node.visible             = (flags & 0x00000400) > 0
 		node.dimensioningVisible = (flags & 0x00800000) > 0
-		node.set('ContentHeader', True)
 		node.segment.indexNodes[node.get('index')] = node
 		return i
 
@@ -383,6 +382,24 @@ class DCReader(SegmentReader):
 		node.set(name, lst)
 		return i
 
+	def ReadU32U32U8List(self, node, offset, name):
+		cnt, i = getUInt32(node.data, offset)
+		j = 0
+		lst = []
+		sep = ''
+		node.content += ' '+name+'=['
+		while (j < cnt):
+			ref, i = getUInt32(node.data, i)
+			val, i = getUInt32(node.data, i)
+			u8, i  = getUInt8(node.data, i)
+			lst.append([ref, val, u8])
+			j += 1
+			node.content += '%s(%04X,%04X,%02X)' %(sep, ref, val, u8)
+			sep = ','
+		node.content += ']'
+		node.set(name, lst)
+		return i
+
 	def ReadRefU32U8List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
 		j = 0
@@ -401,19 +418,19 @@ class DCReader(SegmentReader):
 		node.set(name, lst)
 		return i
 
-	def ReadRefU32D64List(self, node, offset, name):
+	def ReadU32U32D64List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
 		j = 0
 		lst = []
 		sep = ''
 		node.content += ' '+name+'=['
 		while (j < cnt):
-			ref, i = self.ReadNodeRef(node, i, j, NodeRef.TYPE_CROSS)
+			ref, i = getUInt32(node.data, i)
 			val, i = getUInt32(node.data, i)
 			f64, i = getFloat64(node.data, i)
 			lst.append([ref, val, f64])
 			j += 1
-			node.content += '%s(%s,%04X,%g)' %(sep, ref, val, f64)
+			node.content += '%s(%04X,%04X,%g)' %(sep, ref, val, f64)
 			sep = ','
 		node.content += ']'
 		node.set(name, lst)
@@ -670,9 +687,9 @@ class DCReader(SegmentReader):
 
 	def Read_03CC1996(self, node):
 		node.typeName = 'Feature'
-		node.set('Feature', 'FlangeLofted')
+		node.set('Feature', 'LoftedFlange')
 		i = self.ReadHeadersS32ss(node)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'properties')
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
@@ -771,12 +788,12 @@ class DCReader(SegmentReader):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
-		i = self.ReadRefU32List(node, i, 'a1')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = self.ReadU32U32List(node, i, 'a1')
+		i = node.ReadUInt32(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = self.ReadRefU32U8List(node, i, 'a2')
-		i = self.ReadRefU32D64List(node, i, 'a3')
-		i = self.ReadRefU32D64List(node, i, 'a4')
+		i = self.ReadU32U32U8List(node, i, 'a2')
+		i = self.ReadU32U32D64List(node, i, 'a3')
+		i = self.ReadU32U32D64List(node, i, 'a4')
 		if (getFileVersion() > 2010):
 			i += 16
 		return i
@@ -1097,9 +1114,9 @@ class DCReader(SegmentReader):
 
 	def Read_0DDD7C10(self, node): # SymmetryConstraint {8006A08E-ECC4-11D4-8DE9-0010B541CAA8}
 		i = self.ReadConstraintHeader2D(node, 'Geometric_SymmetryLine2D')
-		i = node.ReadCrossRef(i, 'refLine1')
-		i = node.ReadCrossRef(i, 'refLine2')
-		i = node.ReadCrossRef(i, 'refLineSym')
+		i = node.ReadCrossRef(i, 'refEntity1')
+		i = node.ReadCrossRef(i, 'refEntity2')
+		i = node.ReadCrossRef(i, 'refSymmetry')
 		return i
 
 	def Read_0E64A759(self, node): # ModelGeneralNote {88C68B3A-B9B0-45DD-873C-FA0187B80E62}
@@ -1713,16 +1730,16 @@ class DCReader(SegmentReader):
 
 	def Read_22178C64(self, node):
 		i = self.ReadList2U32(node)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadUInt32(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadUInt32(i, 'ref_2')
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
-		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadU32U32U8List(node, i, 'a1')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 2)
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadUInt32(i, 'ref_3')
 		i = node.ReadUInt32(i, 'u32_3')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 5)
@@ -2094,6 +2111,7 @@ class DCReader(SegmentReader):
 			i = node.ReadUInt32(i, 'flags')
 			i = node.ReadParentRef(i)
 			i = node.ReadUInt32(i, 'index')
+			node.segment.indexNodes[node.get('index')] = node
 			content = node.content
 			j = i
 			i = node.ReadUInt16(i, 'u16_1')
@@ -2748,8 +2766,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_3BCC6772(self, node):
-		# i = self.ReadEnumValue(node, '', [''])
-		i = self.ReadHeadersss2S16s(node)
+		i = self.ReadEnumValue(node, '3BCC6772_Enum', [])
 		i = self.skipBlockSize(i)
 		return i
 
@@ -3458,7 +3475,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_51CA84E2(self, node):
-		i  = self.ReadContentHeader(node)
+		i = self.ReadContentHeader(node)
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadCrossRef(i, 'ref_3')
@@ -3481,8 +3498,8 @@ class DCReader(SegmentReader):
 	def Read_52534838(self, node): # PatternConstraint {C173A073-012F-11D5-8DEA-0010B541CAA8}
 		i = self.ReadSketch2DEntityHeader(node, 'Geometric_PolygonCenter2D')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'refEntity1')
-		i = node.ReadCrossRef(i, 'refEntity2')
+		i = node.ReadCrossRef(i, 'refCenter')
+		i = node.ReadCrossRef(i, 'refConstruction')
 		return i
 
 	def Read_526B3F3D(self, node):
@@ -3826,8 +3843,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_5E50B969(self, node):
-		# i = self.ReadEnumValue(node, '')
-		i = self.ReadHeadersss2S16s(node)
+		i = self.ReadEnumValue(node, '5E50B969_Enum', [])
 		return i
 
 	def Read_5F425538(self, node):
@@ -4588,50 +4604,16 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_75A6689B(self, node):
+		node.typeName = 'Geometric_PolygonPattern2D'
 		i = self.ReadHeadersS32ss(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
-#		i = node.ReadUInt32(i, 'u32_0')
-#		if (node.get('u32_0') == 0):
-#			i = node.ReadUInt32A(i, 12, 'a0')
-#			i = node.ReadUInt16A(i, 5, 'a1')
-#		else:
-#			i = node.ReadUInt32(i, 'defFmt')
-#			defFmt = node.get('defFmt')
-#			lst = []
-#			sep = ''
-#			if (defFmt == 0):
-#				node.content += ' lst2=['
-#				loop = 0
-#				while (loop == 0):
-#					a1, i = getUInt32A(node.data, i, 2)
-#					a2, i = getUInt16A(node.data, i, 2)
-#					lst.append([a1, a2])
-#					node.content += '%s(%s,%s)' %(sep, IntArr2Str(a1, 4), IntArr2Str(a2, 2))
-#					sep = ','
-#					loop = a2[0] + a2[1]
-#				node.content += ']'
-#				node.set('lst2', lst)
-#			elif (defFmt == 1):
-#				node.content += ' lst2=['
-#				loop, i = getUInt16(node.data, i)
-#				while (loop == 0):
-#					u16, i = getUInt16(node.data, i)
-#					a, i   = getUInt32A(node.data, i, 2)
-#					lst.append([u16, a])
-#					node.content += '%s(%02X,%s)' %(sep, u16, IntArr2Str(a, 4))
-#					sep = ','
-#					loop, i = getUInt16(node.data, i)
-#				node.content += ']'
-#				node.set('lst2', lst)
-#				i = node.ReadUInt16(i, 'u16_0')
-#			else:
-#				logError('    >ERROR in Read_75A6689B: unknown type %X!' %(defFmt))
-#				return i
-#			i = node.ReadUInt16A(i, 5 , 'a0')
-#		i = node.ReadCrossRef(i, 'refSketch')
-#		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst3')
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 3)
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadUInt32(i, 'pattern')
+		i = node.ReadUInt16A(i, 4, 'a1')
+		i = node.ReadCrossRef(i, 'refSketch')
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst3')
 		return i
 
 	def Read_75F64419(self, node):
@@ -5756,8 +5738,8 @@ class DCReader(SegmentReader):
 	def Read_90874D74(self, node):
 		node.typeName = 'FaceCollectionProxy'
 		i = self.ReadHeadersS32ss(node)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'faces')
-		i = node.ReadCrossRef(i, 'refSolidBody')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadCrossRef(i, 'ref_1')
 		return i
 
 	def Read_90874D91(self, node): # Feature
@@ -5879,11 +5861,12 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_936522B1(self, node):
+		node.typeName = 'HoleCenterPoints'
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'points')
 		return i
 
 	def Read_938BED94(self, node):
@@ -6071,16 +6054,16 @@ class DCReader(SegmentReader):
 
 	def Read_9BB4281C(self, node):
 		i = self.ReadList2U32(node)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadUInt32(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadUInt32(i, 'ref_2')
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_2')
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
-		i = self.ReadRefU32U8List(node, i, 'a1')
+		i = self.ReadU32U32U8List(node, i, 'a1')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 2)
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadUInt32(i, 'ref_3')
 		i = node.ReadUInt32(i, 'u32_3')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a2')
@@ -6236,7 +6219,10 @@ class DCReader(SegmentReader):
 		i = node.ReadFloat64(i, 'x')
 		i = node.ReadFloat64(i, 'y')
 		i = node.ReadFloat64(i, 'z')
-		i = node.ReadFloat64A(i, 6, 'a0')
+		i = node.ReadFloat64(i, 'dirX')
+		i = node.ReadFloat64(i, 'dirY')
+		i = node.ReadFloat64(i, 'dirZ')
+		i = node.ReadFloat64A(i, 3, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_1')
@@ -6888,13 +6874,13 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = self.ReadRefList(node, i, 'lst2')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'refCenter')
 		i = node.ReadSInt32(i, 's32_0')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadCrossRef(i, 'refAngle')
+		i = node.ReadCrossRef(i, 'refPolygonCenter')
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadCrossRef(i, 'ref_4')
-		i = node.ReadFloat64(i, 'f64_0')
+		i = node.ReadCrossRef(i, 'refCount')
+		i = node.ReadFloat64(i, 'angle')
 		return i
 
 	def Read_B5DFF07E(self, node):
@@ -7122,15 +7108,15 @@ class DCReader(SegmentReader):
 
 	def Read_BF32E0A6(self, node):
 		i = self.ReadList2U32(node)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadUInt32(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadUInt32(i, 'ref_2')
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_2')
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
-		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadU32U32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
-		i = self.ReadRefU32List(node, i, 'lst3')
+		i = self.ReadU32U32List(node, i, 'lst3')
 		return i
 
 	def Read_BF3B5C84(self, node): # ThreePointAngleDimConstraint {C173A07D-012F-11D5-8DEA-0010B541CAA8}:
@@ -7152,7 +7138,7 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'refFaces')
-		i = node.ReadCrossRef(i, 'refThickness')
+		i = node.ReadCrossRef(i, 'refOffset')
 		return i
 
 	def Read_BFB5EB93(self, node):
@@ -7507,14 +7493,11 @@ class DCReader(SegmentReader):
 		j = 0
 		while (j<cnt):
 			key, i = getUInt32(node.data, i)
-			node.content += '%s' %(sep)
-			i = node.ReadChildRef(i, 'tmp')
-			val = node.get('tmp')
-			node.content += ':%02X' %(key)
+			val, i = self.ReadNodeRef(node, i, key, NodeRef.TYPE_CHILD)
+			node.content += '%s%02X:%s' %(sep, key, val)
 			j += 1
 			lst0[key] = val
 			sep = ','
-			node.delete('tmp')
 
 		node.content += '}'
 		node.set('lst0', lst0)
@@ -7650,9 +7633,9 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2017):
 			i += 4
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64(i, 'dirX')
+		i = node.ReadFloat64(i, 'dirY')
+		i = node.ReadFloat64(i, 'dirZ')
 		return i
 
 	def Read_CE52DF42(self, node): # Plane
@@ -8782,7 +8765,7 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 4, 'a1')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
-		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadU32U32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst3', 2)
 		i = node.ReadUInt32A(i, 2, 'a3')
@@ -8832,16 +8815,16 @@ class DCReader(SegmentReader):
 
 	def Read_F7693D55(self, node):
 		i = self.ReadList2U32(node)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadUInt32(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadUInt32(i, 'ref_2')
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
-		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadU32U32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 2)
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadUInt32(i, 'ref_3')
 		i = node.ReadUInt32(i, 'u32_3')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_4')
@@ -8935,7 +8918,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_F9372FD4(self, node): # SketchControlPointSpline {D5F8CF99-AF1F-4089-A638-F6889762C1D6}
-		i = self.ReadSketch2DEntityHeader(node, 'ControlPointSpline2D')
+		i = self.ReadSketch2DEntityHeader(node, 'BSplineCurve2D')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'points')
 		if (getFileVersion() > 2012):
@@ -9343,30 +9326,3 @@ class DCReader(SegmentReader):
 	def Read_F8A77A09(self, node): return self.Read_Operation(node, 'Div'   , '/')
 	def Read_F8A77A0A(self, node): return self.Read_Operation(node, 'Modulo', '\x25')
 	def Read_F8A77A0B(self, node): return self.Read_Operation(node, 'Power' , '^')
-
-	def dumpNodeDict(self):
-		invFile = getInventorFile()
-		filename = '%s\\_segments.log' %(invFile[0:-4])
-		file = open (filename, 'wb')
-		if (invFile.find('/') < 0):
-			name = invFile[invFile.index('\\')+1:-4]
-		else:
-			name = invFile[invFile.index('/')+1:-4]
-		l = []
-
-		for n, f in DCReader.__dict__.items():
-			result = re.search('Read_([0-9A-F]{8})', n)
-			if (result):
-				l.append(result.group(1))
-		l.sort()
-
-		file.write('version\tname\t%s\n' %('\t'.join(l)))
-		file.write('%s\t%s' %(getFileVersion(), name.encode(sys.getfilesystemencoding())))
-		for n in l:
-			if (n in self.nodeDict):
-				file.write('\t%d' %(self.nodeDict[n]))
-			else:
-				file.write('\t0')
-		file.write('\n')
-		file.close()
-		return
