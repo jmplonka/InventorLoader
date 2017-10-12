@@ -148,27 +148,30 @@ def dumpRemainingDataB(file, data, offset):
 	return
 
 def getBranchNode(data, isRef):
-	if (data.typeName == 'Parameter'):               return ParameterNode(data, isRef)
-	if (data.typeName == 'ParameterText'):           return ParameterTextNode(data, isRef)
-	if (data.typeName == 'ParameterBoolean'):        return ValueNode(data, isRef)
-	if (data.typeName == 'Enum'):                    return EnumNode(data, isRef)
-	if (data.typeName == 'Feature'):                 return FeatureNode(data, isRef)
-	if (data.typeName == 'Point2D'):                 return PointNode(data, isRef)
-	if (data.typeName == 'BlockPoint2D'):            return PointNode(data, isRef)
-	if (data.typeName == 'Point3D'):                 return PointNode(data, isRef)
-	if (data.typeName == 'Line2D'):                  return LineNode(data, isRef)
-	if (data.typeName == 'Line3D'):                  return LineNode(data, isRef)
-	if (data.typeName == 'Arc2D'):                   return CircleNode(data, isRef)
-	if (data.typeName == 'Circle2D'):                return CircleNode(data, isRef)
-	if (data.typeName == 'Circle3D'):                return CircleNode(data, isRef)
-	if (data.typeName == 'Geometric_Radius2D'):      return GeometricRadius2DNode(data, isRef)
-	if (data.typeName == 'Geometric_Coincident2D'):  return GeometricCoincident2DNode(data, isRef)
-	if (data.typeName == 'Dimension_Distance2D'):    return DimensionDistance2DNode(data, isRef)
-	if (data.typeName == 'Dimension_Angle2Line2D'):  return DimensionAngleNode(data, isRef)
-	if (data.typeName == 'Dimension_Angle3Point2D'): return DimensionAngleNode(data, isRef)
-	if (data.typeName == 'SurfaceBodies'):           return SurfaceBodiesNode(data, isRef)
-	if (data.typeName == 'SolidBody'):               return SurfaceBodiesNode(data, isRef)
-	if (data.typeName == 'Direction'):               return DirectionNode(data, isRef)
+	if (data.typeName == 'Parameter'):                       return ParameterNode(data, isRef)
+	if (data.typeName == 'ParameterText'):                   return ParameterTextNode(data, isRef)
+	if (data.typeName == 'ParameterBoolean'):                return ValueNode(data, isRef)
+	if (data.typeName == 'Enum'):                            return EnumNode(data, isRef)
+	if (data.typeName == 'Feature'):                         return FeatureNode(data, isRef)
+	if (data.typeName == 'Point2D'):                         return PointNode(data, isRef)
+	if (data.typeName == 'BlockPoint2D'):                    return PointNode(data, isRef)
+	if (data.typeName == 'Point3D'):                         return PointNode(data, isRef)
+	if (data.typeName == 'Line2D'):                          return LineNode(data, isRef)
+	if (data.typeName == 'Line3D'):                          return LineNode(data, isRef)
+	if (data.typeName == 'Arc2D'):                           return CircleNode(data, isRef)
+	if (data.typeName == 'Circle2D'):                        return CircleNode(data, isRef)
+	if (data.typeName == 'Circle3D'):                        return CircleNode(data, isRef)
+	if (data.typeName == 'Geometric_Radius2D'):              return GeometricRadius2DNode(data, isRef)
+	if (data.typeName == 'Geometric_Coincident2D'):          return GeometricCoincident2DNode(data, isRef)
+	if (data.typeName == 'Dimension_Distance2D'):            return DimensionDistance2DNode(data, isRef)
+	if (data.typeName == 'Dimension_Distance_Horizontal2D'): return DimensionDistance2DNode(data, isRef)
+	if (data.typeName == 'Dimension_Distance_Vertical2D'):   return DimensionDistance2DNode(data, isRef)
+	if (data.typeName == 'Dimension_Angle2Line2D'):          return DimensionAngleNode(data, isRef)
+	if (data.typeName == 'Dimension_Angle3Point2D'):         return DimensionAngleNode(data, isRef)
+	if (data.typeName == 'SurfaceBodies'):                   return SurfaceBodiesNode(data, isRef)
+	if (data.typeName == 'SolidBody'):                       return SurfaceBodiesNode(data, isRef)
+	if (data.typeName == 'Direction'):                       return DirectionNode(data, isRef)
+	if (data.typeName == 'A244457B'):                        return DirectionNode(data, isRef)
 	return DataNode(data, isRef)
 
 def buildBranchRef(parent, file, nodes, ref, level):
@@ -289,7 +292,6 @@ class SegmentReader(object):
 		self.nodeCounter = 0
 		self.analyseLists = analyseLists
 		self.fmt_old = (getFileVersion() < 2011)
-		self.nodeDict = {}
 
 	def createNewNode(self):
 		return BinaryNode()
@@ -399,9 +401,6 @@ class SegmentReader(object):
 		newFileRaw.close()
 		return
 
-	def dumpNodeDict(self):
-		return
-
 	def ReadSegmentData(self, file, buffer, seg):
 		vers = getFileVersion()
 		showTree = False
@@ -427,11 +426,6 @@ class SegmentReader(object):
 					data = self.ReadBlock(file, buffer, i, l, seg)
 					i += data.size
 					t = '%08X' % (data.typeID.time_low)
-					if (not t in self.nodeDict):
-						count = 1
-					else:
-						count = self.nodeDict[t] + 1
-					self.nodeDict[t] = count
 					u32_0, i = getUInt32(buffer, i)
 					assert (u32_0 == l), '%s: BLOCK[%X] - incorrect block size %X != %X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, u32_0, start, data.typeName)
 					i += hdrSize
@@ -441,7 +435,5 @@ class SegmentReader(object):
 			if (showTree):
 				tree = buildTree(file, seg)
 				seg.tree = tree
-
-				self.dumpNodeDict()
 
 		return
