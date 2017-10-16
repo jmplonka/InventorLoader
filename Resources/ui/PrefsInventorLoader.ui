@@ -23,7 +23,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="tabSketches">
          <attribute name="title">
@@ -51,7 +51,7 @@
               <item>
                <widget class="QGroupBox" name="grpGeometric">
                 <property name="title">
-                 <string>Geometric</string>
+                 <string>Geometric:</string>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_2">
                  <item>
@@ -350,7 +350,7 @@
               <item>
                <widget class="QGroupBox" name="grpDimension">
                 <property name="title">
-                 <string>Geometric</string>
+                 <string>Dimension:</string>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_4">
                  <item>
@@ -432,34 +432,6 @@
                        <property name="icon">
                         <iconset>
                          <normaloff>../icons/Constraint_Length.svg</normaloff>../icons/Constraint_Length.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="cbxDimDistanceX">
-                       <property name="text">
-                        <string>distance X</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_HorizontalDistance.svg</normaloff>../icons/Constraint_HorizontalDistance.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QCheckBox" name="cbxDimDistanceY">
-                       <property name="text">
-                        <string>distance Y</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_VerticalDistance.svg</normaloff>../icons/Constraint_VerticalDistance.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
