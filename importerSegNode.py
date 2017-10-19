@@ -96,39 +96,6 @@ class AbstractNode(AbstractData):
 	def __init__(self):
 		AbstractData.__init__(self)
 
-	def set(self, name, value):
-		'''
-		Sets the value for the property name.
-		name:  The name of the property.
-		value: The value of the property.
-		'''
-		oldVal = None
-
-		if (name):
-			if (name in self.properties):
-				# logMessage('>W0005: name already defined in %08X[%d]!' %(self.typeID.time_low, self.index))
-				oldVal = self.properties[name]
-			self.properties[name] = value
-		return oldVal
-
-	def get(self, name):
-		'''
-		Returns the value fo the property given by the name.
-		name: The name of the property.
-		Returns None if the property is not yet set.
-		'''
-		if (name in self.properties):
-			return self.properties[name]
-		return None
-
-	def delete(self, name):
-		'''
-		Removes the value from the property given by the name.
-		name: The name of the property.
-		'''
-		if (name in self.properties):
-			del self.properties[name]
-
 	def ReadUInt8(self, offset, name):
 		x, i = getUInt8(self.data, offset)
 		self.set(name, x)
@@ -894,10 +861,6 @@ class AbstractNode(AbstractData):
 		unit  = self.get('refUnit')
 		unitName = u''
 		if (unit):
-#			derived = unit.get('refDerived')
-#			if (derived):
-#				unit = derived
-
 			unitName     = self.getUnitFormula(unit.get('numerators'))
 			denominators = self.getUnitFormula(unit.get('denominators'))
 			if (len(denominators) > 0):
@@ -917,18 +880,6 @@ class AbstractNode(AbstractData):
 
 				return unitName
 		return None
-
-	def getName(self):
-		if (self.name is None):
-			label = self.get('label')
-			if (label):
-				return label.name
-		return self.name
-
-	def __str__(self): # return unicode
-		if (self.name is None):
-			return u'(%04X): %s%s' %(self.index, self.typeID, self.content.encode(sys.getdefaultencoding()))
-		return u'(%04X): %s \'%s\'%s' %(self.index, self.typeID, self.name, self.content.encode(sys.getdefaultencoding()))
 
 class AppNode(AbstractNode):
 	def __init__(self):

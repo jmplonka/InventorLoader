@@ -1177,7 +1177,7 @@ class LineNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
 
-	def getRefText(self): # return unicoe
+	def getRefText(self): # return unicode
 		if (self.typeName[-2:] == '2D'):
 			x0 = self.get('points')[0].get('x')
 			y0 = self.get('points')[0].get('y')
@@ -1370,6 +1370,43 @@ class AbstractData():
 		self.sketchPos    = None
 		self.valid        = True
 		self.handled      = False
+
+	def set(self, name, value):
+		'''
+		Sets the value for the property name.
+		name:  The name of the property.
+		value: The value of the property.
+		'''
+		oldVal = self.properties.get(name)
+		if (name): self.properties[name] = value
+		return oldVal
+
+	def get(self, name):
+		'''
+		Returns the value fo the property given by the name.
+		name: The name of the property.
+		Returns None if the property is not yet set.
+		'''
+		return self.properties.get(name)
+
+	def delete(self, name):
+		'''
+		Removes the value from the property given by the name.
+		name: The name of the property.
+		'''
+		if (name in self.properties):
+			del self.properties[name]
+
+	def getName(self):
+		if (self.name is None):
+			label = self.get('label')
+			if (label): return label.name
+		return self.name
+
+	def __str__(self): # return unicode
+		if (self.name is None):
+			return u"(%04X): %s%s" %(self.index, self.typeID, self.content.encode(sys.getdefaultencoding()))
+		return u"(%04X): %s '%s'%s" %(self.index, self.typeID, self.name, self.content.encode(sys.getdefaultencoding()))
 
 class Enum(tuple): __getattr__ = tuple.index
 
