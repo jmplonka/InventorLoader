@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 importerReader.py:
@@ -15,6 +15,7 @@ import zlib
 import operator
 import glob
 import struct
+import codecs
 from importerClasses     import *
 from importerSegment     import SegmentReader
 from importerApp         import AppReader
@@ -32,7 +33,7 @@ from importerUtils       import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.3.1'
+__version__     = '0.4.0'
 __status__      = 'In-Development'
 
 # Indicator that everything is ready for the import
@@ -115,10 +116,12 @@ def ReadInventorSummaryInformation(doc, properties, path):
 	for key in properties:
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
-			#if (key == KEY_THUMBNAIL_1):
-			#	val = writeThumbnail(val)
-			#elif (key == KEY_THUMBNAIL_2):
-			#	val = writeThumbnail(val)
+			if (key == KEY_THUMBNAIL_1):
+				if (FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumpnails', False)):
+					val = writeThumbnail(val)
+			elif (key == KEY_THUMBNAIL_2):
+				if (FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumpnails', False)):
+					val = writeThumbnail(val)
 			model.iProperties[name][key] = val
 	return
 
@@ -1070,7 +1073,7 @@ def ReadRSeMetaDataB(dataB, seg):
 		folder = getInventorFile()[0:-4]
 
 		filename = '%s\\%sB.log' %(folder, seg.name)
-		newFile = open (filename, 'wb')
+		newFile = codecs.open(filename, 'wb', 'utf8')
 
 		newFile.write('[%s]\n' %(getFileVersion()))
 		i = 0

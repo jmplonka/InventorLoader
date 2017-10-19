@@ -1,12 +1,16 @@
 # InventorLoader
-Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD. Until now only the structure of IPD, IAM and IDW files can be dumpt, but neither parts (IPT) nor assemblies (IAM), nor drawings (IDW) can be displayed.
+Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD. Until now only
+the structure of IPD, IAM and IDW files can be dumpt, but neither parts (IPT)
+nor assemblies (IAM), nor drawings (IDW) can be displayed.
 
 ## Prerequisits
 - The AddON requires additional python packages in the FreeCAD python installation:
   - https://pypi.python.org/pypi/xlrd: for reading embedded Excel workbooks
-  - http://pypi.python.org/pypi/xlutils: for preparing imported Excel workbooks to be stored
+  - http://pypi.python.org/pypi/xlutils: for preparing imported Excel workbooks to
+    be stored
   - https://pypi.python.org/pypi/xlwt: for writing embedded Excel workbooks
-  - http://www.decalage.info/python/olefileio olefile for reading Microsoft OLE(2) files.
+  - http://www.decalage.info/python/olefileio olefile for reading Microsoft OLE(2)
+  	files.
 
 ## Status:
 > Alpha!
@@ -14,7 +18,8 @@ Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD. Until now only the
 Autodesk Inventor files have a OLE2 files.
 That allows it to embed Excel workboos e.g.
 
-- The addon is able to read (not analyse) Inventor files from 2003 till 2017 (RSe Meta Stream Version Version 3 till 8)
+- The addon is able to read (not analyse) Inventor files from 2003 till 2017 (RSe
+  Meta Stream Version Version 3 till 8)
 - Read the iProperties (only a few can be set in FreeCAD)
 - Display embedded workbooks as a new spreadsheet
 - Read BrowserView structure (started V2015 & IPT files only)
@@ -39,45 +44,56 @@ That allows it to embed Excel workboos e.g.
 		- (Arc-)Ellipse-2D
 	- embedded files dumped to export folder
 
-- 0.2: Reading document content now from DC-Segment instead of Graphics-/Browser-Segment
+- 0.2: Reading document content now from DC-Segment instead of Graphics-/Browser-
+  Segment
 	- added reading of object names
 	- 2D sketch constraints and dimensions
 
-- 0.3: Started working on FxFeatures.
+- 0.3: Started working on sketches.
 	- Added placement to sketches. <s>Sometimes Placements have to "Orientation"
 	  references, so that a correct placement is not possible</s>
 	- Added pad feature. Maybe this will be chagned to Part instead of PartDesign.
 
-- 0.4: Added table for parameters.
+- 0.4: Added spreadsheet for parameters.
 	- Added handling of expressions for parameters
 	- fixed missing placement for 2D-sketches
 
-- 0.5: Completed parameter management.
-	Parameter table now contains the name, value, formula, tolerance and comment of each parameter
+- 0.4.1: Completed parameter management.
+	Parameter table now contains the name, value, formula, tolerance and comment
+	of each parameter
 	- Added parameter unit handling
 	- Added parameter formulas handling
 	- Added parameter operations handling (e.g. '+', '-', '*' and '/')
-	Even if operations or functions are not supported by FreeCAD (e.g. modulo operator, signum or random function),
-	they will be replaced by their nominal value and unit.
+	Even if operations or functions are not supported by FreeCAD (e.g. modulo
+	operator, signum or random function), parameters will be replaced by their
+	nominal value and unit.
 
-- 0.6: Only Code Review
+- 0.4.2: Only Code Review
 	Most sections found in LT samples are now decoded (structured)
 
-- 0.7: Preparation for supporting Featrues (except iFeature)
+- 0.5: Preparation for supporting Featrues (except iFeature)
 	Most sections found in pro samples (2010..2018) are now decoded (structured)
 
-- 0.8: Added Features
-	* FX-Revolve, FX-Extrude, FX-Loft
-	* FX-Combine
-	* Polar-Pattern, Rectangular-Pattern and Mirror-Pattern.
+- 0.5.1: continued working on Features
+	* added Revolve as Part::Revolution
+	* added Extrude as Part::Extrusion
+	* added Loft  as Part::Loft
+	* added boolean opertations as Part::Cut, Part::MultiFuse, Part::MultiCommon
+	* added Polar-Pattern, Rectangular-Pattern with Draft.makeArray()
+	* added Mirror-Pattern as 'Part::Mirroring'
 
-- 0.8.1: Added Features
-	* FX-Hole
+- 0.5.2: continued working on Features
+	* added Hole as combination of creating Part::Cylinder, Part::Cone(s) and Part::MultiFuse and Part::Cut
 
-- 0.8.2: Added Features
-	* FX-Client
+- 0.5.3: continued working on Features
+	* added Client as a new group of objects.
+
+- 0.5.4: continued working on Features
+	* added Sweep  as Part::Sweep
+	* added Thicken as Part::Offset
+	* Fixed encoding problems regarding filename and Sketch/Feature names
 
 ## Next steps in unsorted order:
-- Features like Grave, Thicken, etc.
+- Features like Grave, etc.
 - Features like Fillet, Champher, Draft, etc.
 - Prefferences page

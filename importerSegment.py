@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 importerSegment.py:
@@ -14,12 +14,14 @@ from importerUtils     import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.3.1'
+__version__     = '0.4.0'
 __status__      = 'In-Development'
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
 
 _fmt_new = False
+
+ENCODING_FS = 'utf8'
 
 def checkReadAll(node, i, l):
 	assert (i == l), '%s: Have not read all data (%d <> %d)' %(node.typeID, i, l)
@@ -34,7 +36,7 @@ def dumpData(file, data, offset, end):
 	return
 
 def getNodeType(index, seg):
-	assert (index in seg.sec4), 'Index %X not defined in segment\'s section No.4!' %(index)
+	assert (index in seg.sec4), "Index %X not defined in segment's section No.4!" %(index)
 	blockType = seg.sec4[index]
 	return blockType.typeID
 
@@ -122,7 +124,7 @@ def dumpRemainingDataB(file, data, offset):
 				txt, i = getLen32Text16(data, i1)
 				if (len(txt) > 0):
 					file.write(HexAsciiDump(data[iOld:i1], iOld, False))
-					file.write('%04X: \'%s\'\n' %(i1, txt))
+					file.write("%04X: '%s'\n" %(i1, txt))
 					iOld = i
 				else:
 					i = i1+4
@@ -134,7 +136,7 @@ def dumpRemainingDataB(file, data, offset):
 				txt, i = getLen32Text8(data, i2)
 				if (len(txt) > 0):
 					file.write(HexAsciiDump(data[iOld:i2], iOld, False))
-					file.write('%04X: \'%s\'\n' %(i2, txt))
+					file.write("%04X: '%s'\n" %(i2, txt))
 					iOld = i
 				else:
 					i = i2+4
@@ -145,53 +147,64 @@ def dumpRemainingDataB(file, data, offset):
 	file.write(HexAsciiDump(data[iOld:], iOld, False))
 	return
 
-def getBranchNode(node, isRef):
-	if (node.typeName == 'Parameter'):               return ParameterNode(node, isRef)
-	if (node.typeName == 'ParameterText'):           return ParameterTextNode(node, isRef)
-	if (node.typeName == 'ParameterBoolean'):        return ValueNode(node, isRef)
-	if (node.typeName == 'Enum'):                    return EnumNode(node, isRef)
-	if (node.typeName == 'Feature'):                 return FeatureNode(node, isRef)
-	if (node.typeName == 'Point2D'):                 return PointNode(node, isRef)
-	if (node.typeName == 'BlockPoint2D'):            return PointNode(node, isRef)
-	if (node.typeName == 'Point3D'):                 return PointNode(node, isRef)
-	if (node.typeName == 'Line2D'):                  return LineNode(node, isRef)
-	if (node.typeName == 'Line3D'):                  return LineNode(node, isRef)
-	if (node.typeName == 'Circle2D'):                return CircleNode(node, isRef)
-	if (node.typeName == 'Circle3D'):                return CircleNode(node, isRef)
-	if (node.typeName == 'Geometric_Radius2D'):      return GeometricRadius2DNode(node, isRef)
-	if (node.typeName == 'Geometric_Coincident2D'):  return GeometricCoincident2DNode(node, isRef)
-	if (node.typeName == 'Dimension_Distance2D'):    return DimensionDistance2DNode(node, isRef)
-	if (node.typeName == 'Dimension_Angle2Line2D'):  return DimensionAngleNode(node, isRef)
-	if (node.typeName == 'Dimension_Angle3Point2D'): return DimensionAngleNode(node, isRef)
-	return DataNode(node, isRef)
+def getBranchNode(data, isRef):
+	if (data.typeName == 'Parameter'):                       return ParameterNode(data, isRef)
+	if (data.typeName == 'ParameterText'):                   return ParameterTextNode(data, isRef)
+	if (data.typeName == 'ParameterBoolean'):                return ValueNode(data, isRef)
+	if (data.typeName == 'Enum'):                            return EnumNode(data, isRef)
+	if (data.typeName == 'Feature'):                         return FeatureNode(data, isRef)
+	if (data.typeName == 'Point2D'):                         return PointNode(data, isRef)
+	if (data.typeName == 'BlockPoint2D'):                    return PointNode(data, isRef)
+	if (data.typeName == 'Point3D'):                         return PointNode(data, isRef)
+	if (data.typeName == 'Line2D'):                          return LineNode(data, isRef)
+	if (data.typeName == 'Line3D'):                          return LineNode(data, isRef)
+	if (data.typeName == 'Arc2D'):                           return CircleNode(data, isRef)
+	if (data.typeName == 'Circle2D'):                        return CircleNode(data, isRef)
+	if (data.typeName == 'Circle3D'):                        return CircleNode(data, isRef)
+	if (data.typeName == 'Geometric_Radius2D'):              return GeometricRadius2DNode(data, isRef)
+	if (data.typeName == 'Geometric_Coincident2D'):          return GeometricCoincident2DNode(data, isRef)
+	if (data.typeName == 'Dimension_Distance2D'):            return DimensionDistance2DNode(data, isRef)
+	if (data.typeName == 'Dimension_Distance_Horizontal2D'): return DimensionDistance2DNode(data, isRef)
+	if (data.typeName == 'Dimension_Distance_Vertical2D'):   return DimensionDistance2DNode(data, isRef)
+	if (data.typeName == 'Dimension_Angle2Line2D'):          return DimensionAngleNode(data, isRef)
+	if (data.typeName == 'Dimension_Angle3Point2D'):         return DimensionAngleNode(data, isRef)
+	if (data.typeName == 'SurfaceBodies'):                   return SurfaceBodiesNode(data, isRef)
+	if (data.typeName == 'SolidBody'):                       return SurfaceBodiesNode(data, isRef)
+	if (data.typeName == 'Direction'):                       return DirectionNode(data, isRef)
+	if (data.typeName == 'A244457B'):                        return DirectionNode(data, isRef)
+	return DataNode(data, isRef)
 
 def buildBranchRef(parent, file, nodes, ref, level):
-	branch = getBranchNode(ref.node, True)
+	branch = getBranchNode(ref.data, True)
 	parent.append(branch)
 
 	num = ''
 	if (ref.number >= 0):
 		num = '[%02X] ' %(ref.number)
-	file.write('%s-> %s%s\n' %(level * '\t', num, branch.getRefText()))
+	reftext = branch.getRefText()
+	if (not isinstance(reftext, unicode)):
+		print branch.typeName, type(reftext)
+	file.write('%s-> %s%s\n' %(level * '\t', num, reftext))
 
 	return
 
-def buildBranch(parent, file, nodes, node, level, ref):
-	branch = getBranchNode(node, False)
+def buildBranch(parent, file, nodes, data, level, ref):
+	branch = getBranchNode(data, False)
 	parent.append(branch)
 
 	num = ''
 	if ((ref is not None) and (ref.number >= 0)):
 		num = '[%02X] ' %(ref.number)
-	file.write('%s%s%s\n' %(level * '\t', num, branch))
+	s = branch.__str__()
+	file.write('%s%s%s\n' %(level * '\t', num, s))
 
-	for childRef in node.childIndexes:
+	for childRef in data.childIndexes:
 		if (childRef.index in nodes):
-			childRef.node = nodes[childRef.index]
-		if(childRef.node is not None):
-			child = childRef.node
+			childRef.data = nodes[childRef.index]
+		if (childRef.data is not None):
+			child = childRef.data
 			if (childRef.type == NodeRef.TYPE_CHILD):
-				buildBranch(branch, file, nodes, childRef.node, level + 1, childRef)
+				buildBranch(branch, file, nodes, childRef.data, level + 1, childRef)
 			elif (childRef.type == NodeRef.TYPE_CROSS):
 				buildBranchRef(branch, file, nodes, childRef, level + 1)
 
@@ -203,32 +216,34 @@ def buildTree(file, seg):
 	tree = DataNode(None, False)
 
 	for idx1 in nodes:
-		node = nodes[idx1]
-		isRadius2D = node.typeName == 'Dimension_Radius2D'
-		for ref in node.childIndexes:
+		data = nodes[idx1]
+		data.handled = False
+		data.sketchIndex = None
+		isRadius2D = (data.typeName == 'Dimension_Radius2D')
+		for ref in data.childIndexes:
 			if (ref.index in nodes):
 				child = nodes[ref.index]
-				ref.node = child
+				ref._data = child
 				if (ref.type == NodeRef.TYPE_CHILD):
-					ref.node.hasParent = True
+					ref.data.hasParent = True
 				elif (ref.type == NodeRef.TYPE_CROSS):
-					if (isRadius2D and ((child.typeName == 'Circle2D') or (child.typeName == 'Ellipse2D') or (child.typeName == '160915E2'))):
+					if (isRadius2D and ((ref.typeName == 'Circle2D') or (ref.typeName == 'Ellipse2D') or (ref.typeName == '160915E2'))):
 						radius = NodeRef(idx1, 0x8000, NodeRef.TYPE_CROSS)
-						radius.node = node
-						child.set('refRadius', radius)
+						radius._data = data
+						ref.data.set('refRadius', radius)
 			elif (ref.index > -1):
-				logError('>E0010: (%04X): %s - Index out of range (%X>%X)!' %(node.index, node.typeName, ref.index, l))
+				logError('>E0010: (%04X): %s - Index out of range (%X>%X)!' %(data.index, data.typeName, ref.index, l))
 
-		ref = node.parentIndex
-		node.parent = None
+		ref = data.parentIndex
+		data.parent = None
 		if (ref):
 			if (ref.index in nodes):
-				node.parent = nodes[ref.index]
+				data.parent = nodes[ref.index]
 
 	for idx1 in nodes:
-		node = nodes[idx1]
-		if (node.hasParent == False):
-			buildBranch(tree, file, nodes, node, 0, None)
+		data = nodes[idx1]
+		if (data.hasParent == False):
+			buildBranch(tree, file, nodes, data, 0, None)
 	return tree
 
 def Read_F645595C_chunk(offset, node):
@@ -266,7 +281,7 @@ def Read_F645595C_chunk(offset, node):
 	elif (key == 0x15):
 		val, i = getUInt32(node.data, i)
 	else:
-		assert (False), '%04X: Don\'t know to %X!' %(node.offset + offset, key)
+		assert (False), "%04X: Don't know to %X!" %(node.offset + offset, key)
 
 	chunk = BRepChunk(key, val)
 	return chunk, i
@@ -277,7 +292,6 @@ class SegmentReader(object):
 		self.nodeCounter = 0
 		self.analyseLists = analyseLists
 		self.fmt_old = (getFileVersion() < 2011)
-		self.nodeDict = {}
 
 	def createNewNode(self):
 		return BinaryNode()
@@ -326,29 +340,27 @@ class SegmentReader(object):
 
 		return l
 
-	def HandleBlock(self, file, node, seg):
+	def HandleBlock(self, file, node):
 		i = 0
+
 		try:
 			readType = getattr(self, 'Read_%s' %(node.typeName))
 			i = readType(node)
-		except AttributeError as e:
-			logError('ERROR: %s.Read_%s: %s' %(self.__class__.__name__, node.typeName, e))
 		except Exception as e:
 			logError('ERROR> (%04X): %s - %s' %(node.index, node.typeName, e))
 			logError('>E: ' + traceback.format_exc())
 
 		try:
-			if (i < len(node.data)):
-				i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
+			if (i < len(node.data)): i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
 		except:
 			logError('>ERROR in %s.Read_%s: %s' %(self.__class__.__name__, node.typeName, traceback.format_exc()))
 
 		return
 
-	def setNodeData(self, node, data, seg):
+	def setNodeData(self, node, data):
 		offset = node.offset
 		nodeTypeID, i = getUInt8(data, offset - 4)
-		node.typeID = getNodeType(nodeTypeID, seg)
+		node.typeID = getNodeType(nodeTypeID, node.seg)
 		if (isinstance(node.typeID, UUID)):
 			node.typeName = '%08X' % (node.typeID.time_low)
 		else:
@@ -364,13 +376,13 @@ class SegmentReader(object):
 		node.reader = self
 		seg.elementNodes[node.index] = node
 		node.segment = seg
-		self.setNodeData(node, data, seg)
+		self.setNodeData(node, data)
 
 		return node
 
 	def ReadBlock(self, file, data, offset, size, seg):
 		node = self.newNode(size, offset, data, seg)
-		self.HandleBlock(file, node, seg)
+		self.HandleBlock(file, node)
 		return node
 
 	def skipDumpRawData(self):
@@ -389,40 +401,33 @@ class SegmentReader(object):
 		newFileRaw.close()
 		return
 
-	def dumpNodeDict(self):
-		return
-
-	def ReadSegmentData(self, file, data, seg):
+	def ReadSegmentData(self, file, buffer, seg):
 		vers = getFileVersion()
 		showTree = False
 
 		if (not self.skipDumpRawData()):
-			self.dumpRawData(seg, data)
+			self.dumpRawData(seg, buffer)
 
 		self.nodeCounter = 0
 
 		hdrSize = IFF(vers < 2015, 4, 5)
 
-		logMessage('>I0002: reaging %s binary data ...' %(seg.name), LOG.LOG_INFO)
+		logMessage('>I0002: reaging %s binary buffer ...' %(seg.name), LOG.LOG_INFO)
 
 		try:
 			i = 4
 
 			seg.elementNodes = {}
+			seg.indexNodes   = {}
 			for sec in seg.sec1:
 				if (sec.flags == 1):
 					l = sec.length
 					start = i - 4
-					node = self.ReadBlock(file, data, i, l, seg)
-					i += node.size
-					t = '%08X' % (node.typeID.time_low)
-					if (not t in self.nodeDict):
-						count = 1
-					else:
-						count = self.nodeDict[t] + 1
-					self.nodeDict[t] = count
-					u32_0, i = getUInt32(data, i)
-					assert (u32_0 == l), '%s: BLOCK[%X] - incorrect block size %X != %X found for offset %X for %s!' %(self.__class__.__name__, node.index, l, u32_0, start, node.typeName)
+					data = self.ReadBlock(file, buffer, i, l, seg)
+					i += data.size
+					t = '%08X' % (data.typeID.time_low)
+					u32_0, i = getUInt32(buffer, i)
+					assert (u32_0 == l), '%s: BLOCK[%X] - incorrect block size %X != %X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, u32_0, start, data.typeName)
 					i += hdrSize
 			showTree = True
 
@@ -430,7 +435,5 @@ class SegmentReader(object):
 			if (showTree):
 				tree = buildTree(file, seg)
 				seg.tree = tree
-
-				self.dumpNodeDict()
 
 		return

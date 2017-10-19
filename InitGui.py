@@ -1,6 +1,14 @@
-#import FreeCADGui
+# -*- coding: utf8 -*-
 
-# Import_IPT.py is the file that has the code for opening and reading .ipt files
-FreeCAD.addImportType('Autodesk INVENTOR part file (*.ipt)', 'Import_IPT')
-# Inventor Importer has some user adjustable preferences for troubleshooting
-#FreeCADGui.addPreferencePage( ':/ui/IPTprefs.ui', 'Import-Export' )
+# Assumes Import_IPT.py is the file that has the code for opening and reading .ipt files
+import traceback
+from importerUtils import logError
+
+try:
+	if (not hasattr(FreeCADGui, 'InventorLoaderPrefs')):
+		FreeCADGui.addIconPath(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources')
+		FreeCADGui.addPreferencePage(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
+		FreeCADGui.InventorImporterPrefs = True
+except:
+	logError(">E: " + traceback.format_exc())
+
