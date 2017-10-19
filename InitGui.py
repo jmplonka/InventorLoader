@@ -10,5 +10,5 @@ try:
 		FreeCADGui.addPreferencePage(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
 		FreeCADGui.InventorImporterPrefs = True
 except:
-	logError('>E: ' + traceback.format_exc())
+	logError(">E: " + traceback.format_exc())
 

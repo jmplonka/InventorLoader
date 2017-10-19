@@ -36,7 +36,7 @@ def dumpData(file, data, offset, end):
 	return
 
 def getNodeType(index, seg):
-	assert (index in seg.sec4), 'Index %X not defined in segment\'s section No.4!' %(index)
+	assert (index in seg.sec4), "Index %X not defined in segment's section No.4!" %(index)
 	blockType = seg.sec4[index]
 	return blockType.typeID
 
@@ -124,7 +124,7 @@ def dumpRemainingDataB(file, data, offset):
 				txt, i = getLen32Text16(data, i1)
 				if (len(txt) > 0):
 					file.write(HexAsciiDump(data[iOld:i1], iOld, False))
-					file.write('%04X: \'%s\'\n' %(i1, txt))
+					file.write("%04X: '%s'\n" %(i1, txt))
 					iOld = i
 				else:
 					i = i1+4
@@ -136,7 +136,7 @@ def dumpRemainingDataB(file, data, offset):
 				txt, i = getLen32Text8(data, i2)
 				if (len(txt) > 0):
 					file.write(HexAsciiDump(data[iOld:i2], iOld, False))
-					file.write('%04X: \'%s\'\n' %(i2, txt))
+					file.write("%04X: '%s'\n" %(i2, txt))
 					iOld = i
 				else:
 					i = i2+4
@@ -281,7 +281,7 @@ def Read_F645595C_chunk(offset, node):
 	elif (key == 0x15):
 		val, i = getUInt32(node.data, i)
 	else:
-		assert (False), '%04X: Don\'t know to %X!' %(node.offset + offset, key)
+		assert (False), "%04X: Don't know to %X!" %(node.offset + offset, key)
 
 	chunk = BRepChunk(key, val)
 	return chunk, i
