@@ -521,6 +521,8 @@ def isEmbeddings(names):
 	return embedding
 
 def isEqual(a, b):
+	if (a is None): return isEqual(b, 0)
+	if (b is None): return isEqual(a, 0)
 	return (fabs(a - b) < 0.0001)
 
 def logWarning(msg):
