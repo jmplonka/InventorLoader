@@ -93,6 +93,8 @@ That allows it to embed Excel workboos e.g.
 	* added Thicken as Part::Offset
 	* Fixed encoding problems regarding filename and Sketch/Feature names
 
+- 0.5.5: code review and bug fixes
+
 ## Next steps in unsorted order:
 - Features like Grave, etc.
 - Features like Fillet, Champher, Draft, etc.
