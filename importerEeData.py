@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 importerEeData.py:

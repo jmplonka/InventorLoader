@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf8 -*-
 
 '''
 importerGraphics.py:
@@ -16,7 +16,7 @@ from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.0'
+__version__     = '0.4.0'
 __status__      = 'In-Development'
 
 class GraphicsReader(SegmentReader):
@@ -1790,9 +1790,6 @@ class GraphicsReader(SegmentReader):
 		return i
 
 	def Read_D79AD3F3(self, node):
-		'''
-		Mesh???
-		'''
 		i = self.Read_32RRR2(node)
 		i = node.ReadList2(i, AbstractNode._TYP_3D_FLOAT32_, 'lst0')
 		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst1')
@@ -1935,7 +1932,7 @@ class GraphicsReader(SegmentReader):
 
 		return i
 
-	def HandleBlock(self, file, node, seg):
+	def HandleBlock(self, file, node):
 		i = 0
 		ntid = node.typeID.time_low
 		if (ntid == 0x6e176bb6):
