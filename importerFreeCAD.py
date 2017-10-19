@@ -409,6 +409,7 @@ def setDefaultViewObject(geo):
 	geo.ViewObject.LineWidth    = 1.00
 	geo.ViewObject.PointColor   = (1.0, 1.0, 1.0)
 	geo.ViewObject.PointSize    = 1.00
+	geo.ViewObject.PointSize    = 2.00
 	geo.ViewObject.ShapeColor   = (0.80, 0.80, 0.80)
 	geo.ViewObject.Transparency = 0
 
