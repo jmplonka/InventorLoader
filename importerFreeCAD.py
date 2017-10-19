@@ -359,7 +359,7 @@ def setDefaultViewObject(geo):
 	geo.ViewObject.PointColor   = (1.0, 1.0, 1.0)
 	geo.ViewObject.PointSize    = 2.00
 	geo.ViewObject.ShapeColor   = (0.80, 0.80, 0.80)
-	geo.ViewObject.Transparency = 0
+	geo.ViewObject.Transparency = 25 # percent
 
 def adjustViewObject(newGeo, baseGeo):
 	if (newGeo  is None): return

@@ -95,6 +95,12 @@ That allows it to embed Excel workboos e.g.
 
 - 0.5.5: code review and bug fixes
 
+- 0.8.1: Added Features
+	* FX-Hole
+
+- 0.8.2: Added Features
+	* FX-Client
+
 ## Next steps in unsorted order:
 - Features like Grave, etc.
 - Features like Fillet, Champher, Draft, etc.

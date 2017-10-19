@@ -11,4 +11,3 @@ try:
 		FreeCADGui.InventorImporterPrefs = True
 except:
 	logError(">E: " + traceback.format_exc())
-
