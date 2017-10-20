@@ -1699,11 +1699,12 @@ class FreeCADImporter:
 					point = Part.Point(FreeCAD.Vector(vec2D[0], vec2D[1], 0))
 					index = sketchObj.addGeometry(point, True)
 					fix = (point, index, 1)
-			for mov in constraints:
-				constraint = self.addCoincidentConstraint(fix, mov, sketchObj)
-				if (constraint):
-					key = ('K%g#%g' %vec2D).replace('-', '_').replace('.', '_')
-					self.addConstraint(sketchObj, constraint, key)
+			if (len(constraints) > 1):
+				for mov in constraints:
+					constraint = self.addCoincidentConstraint(fix, mov, sketchObj)
+					if (constraint):
+						key = ('K%g#%g' %vec2D).replace('-', '_').replace('.', '_')
+						self.addConstraint(sketchObj, constraint, key)
 		return
 
 	def Create_Sketch2D(self, sketchNode):
@@ -2465,49 +2466,11 @@ class FreeCADImporter:
 		self.hide(sourceGeos.values())
 		return
 
-	def Create_FxCoil(self, coilNode):
-		properties  = coilNode.get('properties')
-		operation   = getProperty(properties, 0x00) # PartFeatureOperation=Join
-		patch       = getProperty(properties, 0x01) # FxBoundaryPatch
-		axis        = getProperty(properties, 0x02) # Line3D - (-1.49785,-1.08544,1.11022e-16) - (-1.49785,-0.085438,1.11022e-16)
-		dirReversed = getProperty(properties, 0x03) # ParameterBoolean 'AxisDirectionReversed'
-		localCoord  = getProperty(properties, 0x04) # 402A8F9F u8_0=0
-		# = getProperty(properties, 0x05) # 4FB10CB8 flags2=010003, u32_0=0
-		radius      = getProperty(properties, 0x06) # Parameter 'd21'=1.1176mm
-		height      = getProperty(properties, 0x07) # Parameter 'd22'=25.4mm
-		revolutions = getProperty(properties, 0x08) # Parameter 'd23'=2
-		angle       = getProperty(properties, 0x09) # Parameter 'd24'=0°
-		startIsFlat = getProperty(properties, 0x0A) # ParameterBoolean=False
-		startTrans  = getProperty(properties, 0x0B) # Parameter 'd15'=90°
-		startFlat   = getProperty(properties, 0x0C) # Parameter 'd16'=90°
-		endIsFlat   = getProperty(properties, 0x0D) # ParameterBoolean=False
-		endTrans    = getProperty(properties, 0x0E) # Parameter 'd17'=0°
-		endFlat     = getProperty(properties, 0x0F) # Parameter 'd18'=0°
-		# = getProperty(properties, 0x10) # ???
-		# = getProperty(properties, 0x11) # ???
-		# = getProperty(properties, 0x12) # FeatureDimensions
-		solid       = getProperty(properties, 0x13) # SolidBody 'Solid1'
-
-		
-		profile = createBoundary(patch)
-		base    = p2v(axis)
-		dir     = FreeCAD.Vector(getCoord(axis, 'dirX') + base.x, getCoord(axis, 'dirY') + base.y, getCoord(axis, 'dirZ') + base.z)
-
-		coilGeo = self.CreateEntity(coilNode, 'Part::Helix')
-		coilGeo.Pitch      = 1.00
-		coilGeo.Height     = getMM(height)
-		coilGeo.Radius     = getMM(radius)
-		coilGeo.Angle      = angle.getGRAD()
-		coilGeo.LocalCoord = localCoord.get('u8_0') # 0=Right handed, 1=Left handed
-		coilGeo.Style      = 1
-		coilGeo.Placement  = FreeCAD.Placement(FreeCAD.Vector(0,0,0), FreeCAD.Rotation(dir, 0.0), base)
-
-		self.addBody(coilNode, coilGeo, 0x13, 0x11)
-		return
 
 	def Create_FxBoss(self, bossNode):                           return notYetImplemented(bossNode) # MultiFuse Geometry
 	def Create_FxBoundaryPatch(self, boundaryPatchNode):         return notYetImplemented(boundaryPatchNode) # Sketches, Edges
 	def Create_FxChamfer(self, chamferNode):                     return notYetImplemented(chamferNode)
+	def Create_FxCoil(self, coilNode):                           return notYetImplemented(coilNode)
 	def Create_FxCoreCavity(self, coreCavityNode):               return notYetImplemented(coreCavityNode)
 	def Create_FxCornerRound(self, cornerNode):                  return notYetImplemented(cornerNode)
 	def Create_FxCut(self, cutNode):                             return notYetImplemented(cutNode)
