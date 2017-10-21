@@ -2931,12 +2931,13 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_402A8F9F(self, node):
+		node.typeName = 'RotateClockwise'
 		i = self.ReadContentHeader(node)
 		if (getFileVersion() > 2010):
 			i += 8
 		else:
 			i += 12
-		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadBoolean(i, 'clockwise')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -3436,7 +3437,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_4FB10CB8(self, node):
-		i = self.ReadHeadersss2S16s(node)
+		i = self.ReadEnumValue(node, 'EnumCoilType', ["PitchAndRevolution","RevolutionAndHeight","PitchAndHeight","Spiral"])
 		i = node.ReadUInt32(i,'u32_0')
 		return i
 
@@ -3458,7 +3459,6 @@ class DCReader(SegmentReader):
 		i = node.ReadFloat64A(i, 4, 'a2')
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_0')
-		# 00,00,00,00,00,00,00,00,00,00,00,E0,D7,81,D3,BF,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
 		return i
 
 	def Read_509FB5CC(self, node):

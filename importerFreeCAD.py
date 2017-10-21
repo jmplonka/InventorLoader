@@ -381,6 +381,13 @@ def getMM(length):
 	if (isinstance(val, Scalar)): return val.x * 10
 	return val * 10.0
 
+def getGRAD(angle):
+	if (angle is None): return 0.0
+	val = angle.getValue()
+	if (isinstance(val, Angle)): return val.getGRAD()
+	if (isinstance(val, Scalar)): return val.x
+	return val
+
 def isTrue(param):
 	if (param is None): return False
 	return param.get('value')
@@ -709,7 +716,7 @@ class FreeCADImporter:
 
 		if (entity.typeName == 'Point2D'):
 			vec2De = (getX(entity), getY(entity))
-			if (isOrigo2D(vec2De): return (-1, 1) + self.findEntityPos(sketchObj, point)
+			if (isOrigo2D(vec2De)): return (-1, 1) + self.findEntityPos(sketchObj, point)
 			# check if both point belongs to the same line
 			if ((vec2Dp in self.pointDataDict) and (vec2De in self.pointDataDict)):
 				lstP = self.pointDataDict[vec2Dp]
@@ -1699,11 +1706,12 @@ class FreeCADImporter:
 					point = Part.Point(FreeCAD.Vector(vec2D[0], vec2D[1], 0))
 					index = sketchObj.addGeometry(point, True)
 					fix = (point, index, 1)
-			for mov in constraints:
-				constraint = self.addCoincidentConstraint(fix, mov, sketchObj)
-				if (constraint):
-					key = ('K%g#%g' %vec2D).replace('-', '_').replace('.', '_')
-					self.addConstraint(sketchObj, constraint, key)
+			if (len(constraints) > 1):
+				for mov in constraints:
+					constraint = self.addCoincidentConstraint(fix, mov, sketchObj)
+					if (constraint):
+						key = ('K%g#%g' %vec2D).replace('-', '_').replace('.', '_')
+						self.addConstraint(sketchObj, constraint, key)
 		return
 
 	def Create_Sketch2D(self, sketchNode):
@@ -1817,12 +1825,11 @@ class FreeCADImporter:
 			baseName = sectionNode.name
 			base     = self.createBoundary(boundary)
 			if (midplane): len1 = len1 / 2.0
-			taperAngle = dimAngle.getValue()
 
 			pad = newObject(self.doc, 'Part::Extrusion', name)
 			pad.Base = base
 			pad.Solid = solid is not None # FIXME!!
-			pad.TaperAngle = -taperAngle.getGRAD() # Taper angle is in FreeCAD inverted!
+			pad.TaperAngle = -getGRAD(dimAngle) # Taper angle is in FreeCAD inverted!
 
 			setDefaultViewObject(pad)
 
@@ -1909,7 +1916,7 @@ class FreeCADImporter:
 
 			if (boundary):
 				if (extend1.get('value') == 1): # 'Direction' => AngleExtent
-					alpha = angle1.getValue().getGRAD()
+					alpha = getGRAD(angle1)
 					if (angle2 is None):
 						if (direction.get('value') == 0): # positive
 							logMessage("    ... based on '%s' (alpha=%s) ..." %(pathName, angle1.getValue()), LOG.LOG_DEBUG)
@@ -1922,7 +1929,7 @@ class FreeCADImporter:
 							revolution = self.createRevolve(revolveNode.name, alpha / 2.0, alpha / 2.0, boundary, axis, base, solid)
 					else:
 						logMessage("    ... based on '%s' (alpha=%s, beta=%s) ..." %(pathName, angle1.getValue(), angle2.getValue()), LOG.LOG_DEBUG)
-						beta = angle2.getValue().getGRAD()
+						beta = getGRAD(angle2)
 						revolution = self.createRevolve(revolveNode.name, alpha, beta, boundary, axis, base, solid)
 				elif (extend1.get('value') == 3): # 'Path' => FullSweepExtend
 					logMessage("    ... based on '%s' (full) ..." %(pathName), LOG.LOG_DEBUG)
@@ -2465,10 +2472,80 @@ class FreeCADImporter:
 		self.hide(sourceGeos.values())
 		return
 
+	def Create_FxCoil(self, coilNode):
+		properties  = coilNode.get('properties')
+		operation   = getProperty(properties, 0x00) # PartFeatureOperation=Join
+		patch       = getProperty(properties, 0x01) # FxBoundaryPatch
+		axis        = getProperty(properties, 0x02) # Line3D - (-1.49785,-1.08544,1.11022e-16) - (-1.49785,-0.085438,1.11022e-16)
+		reversed    = getProperty(properties, 0x03) # ParameterBoolean 'AxisDirectionReversed'
+		rotate      = getProperty(properties, 0x04) # RotateClockwise u8_0=0
+		coilType    = getProperty(properties, 0x05) # EnumCoilType=010003, u32_0=0
+		pitch       = getProperty(properties, 0x06) # Parameter 'd21'=1.1176mm
+		height      = getProperty(properties, 0x07) # Parameter 'd22'=25.4mm
+		revolutions = getProperty(properties, 0x08) # Parameter 'd23'=2
+		taperAngle  = getProperty(properties, 0x09) # Parameter 'd24'=0°
+		startIsFlat = getProperty(properties, 0x0A) # ParameterBoolean=False
+		startTrans  = getProperty(properties, 0x0B) # Parameter 'd15'=90°
+		startFlat   = getProperty(properties, 0x0C) # Parameter 'd16'=90°
+		endIsFlat   = getProperty(properties, 0x0D) # ParameterBoolean=False
+		endTrans    = getProperty(properties, 0x0E) # Parameter 'd17'=0°
+		endFlat     = getProperty(properties, 0x0F) # Parameter 'd18'=0°
+		# = getProperty(properties, 0x10) # ???
+		surface     = getProperty(properties, 0x11) # SurfaceBody 'Surface1'
+		# = getProperty(properties, 0x12) # FeatureDimensions
+		solid       = getProperty(properties, 0x13) # SolidBody 'Solid1'
+
+
+		profile = self.createBoundary(patch)
+		base    = p2v(axis)
+		dir     = FreeCAD.Vector(getCoord(axis, 'dirX'), getCoord(axis, 'dirY'), getCoord(axis, 'dirZ'))
+		if (isTrue(reversed) == False): dir = dir * -1
+
+		sweepGeo = self.CreateEntity(coilNode, 'Part::Sweep')
+		r = revolutions.getValue().x
+		if (coilType.get('value') == 3):
+			coilGeo = newObject(self.doc, 'Part::Spiral', sweepGeo.Name + '_coil')
+			coilGeo.Growth = getMM(pitch)
+			coilGeo.Rotations = revolutions.getValue().x
+			#FIXME can't counter clockwise a spiral!
+		else:
+			coilGeo = newObject(self.doc, 'Part::Helix', sweepGeo.Name + '_coil')
+			if (coilType.get('value') == 0): #PitchAndRevolution
+				coilGeo.Pitch  = getMM(pitch)
+				coilGeo.Height = getMM(pitch) * revolutions.getValue().x
+			elif (coilType.get('value') == 1):
+				coilGeo.Pitch  = getMM(height) /  revolutions.getValue().x
+				coilGeo.Height = getMM(height)
+			elif (coilType.get('value') == 2):
+				coilGeo.Pitch  = getMM(pitch)
+				coilGeo.Height = getMM(height)
+			coilGeo.LocalCoord = IFF(rotate.get('clockwise'), 1, 0) # 0=Right handed, 1=Left handed
+		zAxis = FreeCAD.Vector(0,0,1)
+		#c = FreeCAD.Vector(profile.Shape.BoundBox.Center.x, profile.Shape.BoundBox.Center.y, profile.Shape.BoundBox.Center.z) # center fo the profile
+		c = profile.Shape.BoundBox.Center
+		r = c.distanceToLine(base, dir)
+		d = FreeCAD.Vector(c).projectToLine(base, dir).normalize()
+		x = (c + d*r)
+
+		a = dir.getAngle(zAxis)           # rotation of the axis
+		coilGeo.Radius     = r
+		coilGeo.Angle      = getGRAD(taperAngle)
+		coilGeo.Placement  = FreeCAD.Placement(x, FreeCAD.Rotation(dir.cross(zAxis), a * 180/pi), FreeCAD.Vector(0,0,0))
+
+		a = d.getAngle(x - coilGeo.Shape.Vertexes[0].Point) # Angle beween helix' start and profile's center
+		sweepGeo.Sections  = [profile]
+		sweepGeo.Spine     = (coilGeo, [])
+		sweepGeo.Solid     = solid is not None
+		sweepGeo.Frenet    = True
+		sweepGeo.Placement = FreeCAD.Placement(x*2, FreeCAD.Rotation(dir, a * 180/pi), FreeCAD.Vector(0,0,0))
+
+		self.addBody(coilNode, sweepGeo, 0x13, 0x11)
+		self.hide([coilGeo])
+		return
+
 	def Create_FxBoss(self, bossNode):                           return notYetImplemented(bossNode) # MultiFuse Geometry
 	def Create_FxBoundaryPatch(self, boundaryPatchNode):         return notYetImplemented(boundaryPatchNode) # Sketches, Edges
 	def Create_FxChamfer(self, chamferNode):                     return notYetImplemented(chamferNode)
-	def Create_FxCoil(self, coilNode):                           return notYetImplemented(coilNode)
 	def Create_FxCoreCavity(self, coreCavityNode):               return notYetImplemented(coreCavityNode)
 	def Create_FxCornerRound(self, cornerNode):                  return notYetImplemented(cornerNode)
 	def Create_FxCut(self, cutNode):                             return notYetImplemented(cutNode)
@@ -2678,7 +2755,7 @@ class FreeCADImporter:
 
 	def addParameterTableTolerance(self, table, r, tolerance):
 		if (tolerance):
-			table.set('D%d' %(r), tolerance)
+			table.set('D%d' %(r), tolerance.encode('utf8'))
 			return u'; D%d=\'%s\'' %(r, tolerance)
 		return u''
 
@@ -2686,7 +2763,7 @@ class FreeCADImporter:
 		if (commentRef):
 			comment = commentRef.name
 			if (comment):
-				table.set('E%d' %(r), comment)
+				table.set('E%d' %(r), comment.encode('utf8'))
 				return u'; E%d=\'%s\'' %(r, comment)
 		return u''
 

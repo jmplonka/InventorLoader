@@ -34,29 +34,38 @@ That allows it to embed Excel workboos e.g.
 | Workbook | Spreadsheet | done | done | done |
 
 ## History:
-- 0.1: first "working" prototype.
-	- reading Inventor file Structure
-	- reading compressed data for Model-Segments (e.g. Graphics- and Browser-View)
-	- displaying Sketches
-		- Points-2D
-		- Line-2D
-		- (Arc-)Circle-2D
-		- (Arc-)Ellipse-2D
-	- embedded files dumped to export folder
+- 0.6:  continued working on Features
+	* added Coil as Part::Helix and Part::Spiral with Sweep
 
-- 0.2: Reading document content now from DC-Segment instead of Graphics-/Browser-
-  Segment
-	- added reading of object names
-	- 2D sketch constraints and dimensions
+- 0.5.5: Maintenance version
+	* Fixed wrong creation of boundary wires/faces from sketches
+	* Fixed wrong handling of constraints in sketches
+	* Code reviewed
 
-- 0.3: Started working on sketches.
-	- Added placement to sketches. <s>Sometimes Placements have to "Orientation"
-	  references, so that a correct placement is not possible</s>
-	- Added pad feature. Maybe this will be chagned to Part instead of PartDesign.
+- 0.5.4: continued working on Features
+	* added Sweep  as Part::Sweep
+	* added Thicken as Part::Offset
+	* Fixed encoding problems regarding filename and Sketch/Feature names
 
-- 0.4: Added spreadsheet for parameters.
-	- Added handling of expressions for parameters
-	- fixed missing placement for 2D-sketches
+- 0.5.3: continued working on Features
+	* added Client as a new group of objects.
+
+- 0.5.2: continued working on Features
+	* added Hole as combination of creating Part::Cylinder, Part::Cone(s) and Part::MultiFuse and Part::Cut
+
+- 0.5.1: continued working on Features
+	* added Revolve as Part::Revolution
+	* added Extrude as Part::Extrusion
+	* added Loft  as Part::Loft
+	* added boolean opertations as Part::Cut, Part::MultiFuse, Part::MultiCommon
+	* added Polar-Pattern, Rectangular-Pattern with Draft.makeArray()
+	* added Mirror-Pattern as 'Part::Mirroring'
+
+- 0.5: Preparation for supporting Featrues (except iFeature)
+	Most sections found in pro samples (2010..2018) are now decoded (structured)
+
+- 0.4.2: Only Code Review
+	Most sections found in LT samples are now decoded (structured)
 
 - 0.4.1: Completed parameter management.
 	Parameter table now contains the name, value, formula, tolerance and comment
@@ -68,30 +77,29 @@ That allows it to embed Excel workboos e.g.
 	operator, signum or random function), parameters will be replaced by their
 	nominal value and unit.
 
-- 0.4.2: Only Code Review
-	Most sections found in LT samples are now decoded (structured)
+- 0.4: Added spreadsheet for parameters.
+	- Added handling of expressions for parameters
+	- fixed missing placement for 2D-sketches
 
-- 0.5: Preparation for supporting Featrues (except iFeature)
-	Most sections found in pro samples (2010..2018) are now decoded (structured)
+- 0.3: Started working on sketches.
+	- Added placement to sketches. <s>Sometimes Placements have to "Orientation"
+	  references, so that a correct placement is not possible</s>
+	- Added pad feature. Maybe this will be chagned to Part instead of PartDesign.
 
-- 0.5.1: continued working on Features
-	* added Revolve as Part::Revolution
-	* added Extrude as Part::Extrusion
-	* added Loft  as Part::Loft
-	* added boolean opertations as Part::Cut, Part::MultiFuse, Part::MultiCommon
-	* added Polar-Pattern, Rectangular-Pattern with Draft.makeArray()
-	* added Mirror-Pattern as 'Part::Mirroring'
+- 0.2: Reading document content now from DC-Segment instead of Graphics-/Browser-
+  Segment
+	- added reading of object names
+	- 2D sketch constraints and dimensions
 
-- 0.5.2: continued working on Features
-	* added Hole as combination of creating Part::Cylinder, Part::Cone(s) and Part::MultiFuse and Part::Cut
-
-- 0.5.3: continued working on Features
-	* added Client as a new group of objects.
-
-- 0.5.4: continued working on Features
-	* added Sweep  as Part::Sweep
-	* added Thicken as Part::Offset
-	* Fixed encoding problems regarding filename and Sketch/Feature names
+- 0.1: first "working" prototype.
+	- reading Inventor file Structure
+	- reading compressed data for Model-Segments (e.g. Graphics- and Browser-View)
+	- displaying Sketches
+		- Points-2D
+		- Line-2D
+		- (Arc-)Circle-2D
+		- (Arc-)Ellipse-2D
+	- embedded files dumped to export folder
 
 ## Next steps in unsorted order:
 - Features like Grave, etc.
