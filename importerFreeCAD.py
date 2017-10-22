@@ -13,7 +13,7 @@ import re
 from importerUtils   import logMessage, logWarning, logError, LOG, IFF, IntArr2Str, FloatArr2Str, getFileVersion, isEqual
 from importerClasses import RSeMetaData, Scalar, Angle, Length, ParameterNode, ParameterTextNode, ValueNode, FeatureNode, AbstractValue, DataNode
 from importerSegNode import AbstractNode, NodeRef
-from math            import sqrt, fabs, tan, acos, atan2, degrees, radians, pi
+from math            import sqrt, fabs, tan, asin, acos, atan2, degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -77,8 +77,8 @@ def getY(point):
 def getZ(point):
 	return getCoord(point, 'z')
 
-def p2v(p):
-	return FreeCAD.Vector(getX(p), getY(p), getZ(p))
+def p2v(p, x='x', y='y', z='z'):
+	return FreeCAD.Vector(getCoord(p, x), getCoord(p, y), getCoord(p, z))
 
 def createConstructionPoint(sketchObj, point):
 	part = Part.Point(p2v(point))
@@ -341,7 +341,7 @@ def getCountDir(length, count, direction, fitted):
 	y = getDirection(direction, 'dirY', distance)
 	z = getDirection(direction, 'dirZ', distance)
 
-	cnt      = getNominalValue(count)
+	cnt = getNominalValue(count)
 	if (isTrue(fitted) and (cnt > 1)):
 		x = x / (cnt - 1)
 		y = y / (cnt - 1)
@@ -1249,14 +1249,10 @@ class FreeCADImporter:
 		return True
 
 	def createLine3D(self, edges, line):
-		x1 = getCoord(line, 'x')
-		y1 = getCoord(line, 'y')
-		z1 = getCoord(line, 'z')
-		x2 = getCoord(line, 'dirX') + x1
-		y2 = getCoord(line, 'dirY') + y1
-		z2 = getCoord(line, 'dirZ') + z1
-		if(isEqual(x1, x2) and isEqual(y1, y2) and isEqual(z1, z2)): return False
-		part = Part.Line(FreeCAD.Vector(x1, y1, z1), FreeCAD.Vector(x2, y2, z2))
+		p1 = p2v(line)
+		p2 = p2v(line, 'dirX', 'dirY', 'dirZ')
+		if (p1.Length == 0): return False
+		part = Part.Line(p1, p1 + p2)
 		addSketch3D(edges, part, isConstructionMode(line), line)
 		return True
 
@@ -1429,28 +1425,19 @@ class FreeCADImporter:
 		return
 
 	def addSketch_Ellipse3D(self, ellipseNode, edges):
-		a_x = getCoord(ellipseNode, 'a_x')
-		a_y = getCoord(ellipseNode, 'a_y')
-		a_z = getCoord(ellipseNode, 'a_z')
-		vecA = FreeCAD.Vector(a_x, a_y, a_z)
-		b_x = getCoord(ellipseNode, 'b_x')
-		b_y = getCoord(ellipseNode, 'b_y')
-		b_z = getCoord(ellipseNode, 'b_z')
-		vecB = FreeCAD.Vector(b_x, b_y, b_z)
-		c_x = getCoord(ellipseNode, 'c_x')
-		c_y = getCoord(ellipseNode, 'c_y')
-		c_z = getCoord(ellipseNode, 'c_z')
-		vecC = FreeCAD.Vector(c_x, c_y, c_z)
-		part = Part.Ellipse(vecA, vecB, vecC)
+		a = p2v(ellipseNode, 'a_x', 'a_y', 'a_z')
+		b = p2v(ellipseNode, 'b_x', 'b_y', 'b_z')
+		c = p2v(ellipseNode, 'c_x', 'c_y', 'c_z')
+		part = Part.Ellipse(a, b, c)
 
-		a = ellipseNode.get('startAngle')
-		b = ellipseNode.get('sweepAngle')
-		if (isEqual(a, b)):
-			logMessage('        ... added 3D-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) ...' %(c_x, c_y, c_z, a_x, a_y, a_z, b_x, b_y, b_z), LOG.LOG_DEBUG)
+		a1 = ellipseNode.get('startAngle')
+		a2 = ellipseNode.get('sweepAngle')
+		if (isEqual(a1, b1)):
+			logMessage("        ... added 3D-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) ..." %(c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z), LOG.LOG_DEBUG)
 		else:
-			a = Angle(a, pi/180.0, u'\xb0')
-			b = Angle(b, pi/180.0, u'\xb0')
-			logMessage('        ... added 3D-Arc-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) from %s to %s ...' %(c_x, c_y, c_z, a_x, a_y, a_z, b_x, b_y, b_z, a, b), LOG.LOG_DEBUG)
+			a1 = Angle(a1, pi/180.0, u'\xb0')
+			a2 = Angle(a2, pi/180.0, u'\xb0')
+			logMessage("        ... added 3D-Arc-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) from %s to %s ..." %(c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z, a1, a2), LOG.LOG_DEBUG)
 			arc = Part.ArcOfEllipse(part, a.getGRAD(), b.getGRAD())
 			addSketch3D(edges, arc, isConstructionMode(ellipseNode), ellipseNode)
 		return
@@ -1904,14 +1891,8 @@ class FreeCADImporter:
 
 			boundary   = self.createBoundary(patch)
 
-			x1         = getCoord(lineAxis, 'x')
-			y1         = getCoord(lineAxis, 'y')
-			z1         = getCoord(lineAxis, 'z')
-			dx         = getCoord(lineAxis, 'dirX')
-			dy         = getCoord(lineAxis, 'dirY')
-			dz         = getCoord(lineAxis, 'dirZ')
-			axis       = FreeCAD.Vector(dx, dy, dz)
-			base       = FreeCAD.Vector(x1, y1, z1)
+			base       = p2v(lineAxis)
+			axis       = p2v(lineAxis, 'dirX', 'dirY', 'dirZ')
 			solid      = (isTrue(isSurface) == False)
 
 			if (boundary):
@@ -2002,7 +1983,7 @@ class FreeCADImporter:
 				return
 			angle = Angle(getNominalValue(angleRef), pi/180.0, u'\xb0')
 			center = p2v(axisData)
-			axis  = FreeCAD.Vector(center.x - getCoord(axisData, 'dirX'), center.y - getCoord(axisData, 'dirY'), center.z - getCoord(axisData, 'dirZ'))
+			axis   = center - p2v(axisData, 'dirX', 'dirY', 'dirZ')
 			logMessage("        ... count=%d, angle=%s) ..." %(count, angle), LOG.LOG_INFO)
 			namePart = name
 			if (len(participants) > 1):
@@ -2495,11 +2476,10 @@ class FreeCADImporter:
 		# = getProperty(properties, 0x12) # FeatureDimensions
 		solid       = getProperty(properties, 0x13) # SolidBody 'Solid1'
 
-
 		profile = self.createBoundary(patch)
 		base    = p2v(axis)
-		dir     = FreeCAD.Vector(getCoord(axis, 'dirX'), getCoord(axis, 'dirY'), getCoord(axis, 'dirZ'))
-		if (isTrue(reversed) == False): dir = dir * -1
+		dir     = p2v(axis, 'dirX', 'dirY', 'dirZ').normalize()
+		if (isTrue(reversed) == True): dir = dir * -1
 
 		sweepGeo = self.CreateEntity(coilNode, 'Part::Sweep')
 		r = revolutions.getValue().x
@@ -2507,40 +2487,49 @@ class FreeCADImporter:
 			coilGeo = newObject(self.doc, 'Part::Spiral', sweepGeo.Name + '_coil')
 			coilGeo.Growth = getMM(pitch)
 			coilGeo.Rotations = revolutions.getValue().x
-			#FIXME can't counter clockwise a spiral!
+			if (isTrue(rotate)): dir = dir * -1
 		else:
 			coilGeo = newObject(self.doc, 'Part::Helix', sweepGeo.Name + '_coil')
-			if (coilType.get('value') == 0): #PitchAndRevolution
+			if (coilType.get('value') == 0):   # PitchAndRevolution
 				coilGeo.Pitch  = getMM(pitch)
 				coilGeo.Height = getMM(pitch) * revolutions.getValue().x
-			elif (coilType.get('value') == 1):
+			elif (coilType.get('value') == 1): # RevolutionAndHeight
 				coilGeo.Pitch  = getMM(height) /  revolutions.getValue().x
 				coilGeo.Height = getMM(height)
-			elif (coilType.get('value') == 2):
+			elif (coilType.get('value') == 2): # PitchAndHeight
 				coilGeo.Pitch  = getMM(pitch)
 				coilGeo.Height = getMM(height)
 			coilGeo.LocalCoord = IFF(rotate.get('clockwise'), 1, 0) # 0=Right handed, 1=Left handed
-		zAxis = FreeCAD.Vector(0,0,1)
-		#c = FreeCAD.Vector(profile.Shape.BoundBox.Center.x, profile.Shape.BoundBox.Center.y, profile.Shape.BoundBox.Center.z) # center fo the profile
 		c = profile.Shape.BoundBox.Center
 		r = c.distanceToLine(base, dir)
-		d = FreeCAD.Vector(c).projectToLine(base, dir).normalize()
-		x = (c + d*r)
-
-		a = dir.getAngle(zAxis)           # rotation of the axis
+		b = FreeCAD.Vector()
+		b.projectToLine(c-base, dir).normalize()
+		
+		yaw   = degrees(acos(-b.x))
+		pitch = degrees(acos(sqrt(dir.y**2 + dir.z**2)))
+		roll  = degrees(acos(dir.z))
+		print ("yaw=%s, pitch=%s, roll=%s" %(yaw, pitch, roll))
+		p1 = FreeCAD.Placement((c + b*r), FreeCAD.Rotation(yaw, pitch, roll))
 		coilGeo.Radius     = r
 		coilGeo.Angle      = getGRAD(taperAngle)
-		coilGeo.Placement  = FreeCAD.Placement(x, FreeCAD.Rotation(dir.cross(zAxis), a * 180/pi), FreeCAD.Vector(0,0,0))
+		coilGeo.Placement  = p1
+		
+		#TODO:
+		if (isTrue(startIsFlat)):
+			# add flat start to coil wire
+			pass
+		if (isTrue(endIsFlat)):
+			# add flat end to coil wire
+			pass
 
-		a = d.getAngle(x - coilGeo.Shape.Vertexes[0].Point) # Angle beween helix' start and profile's center
 		sweepGeo.Sections  = [profile]
 		sweepGeo.Spine     = (coilGeo, [])
-		sweepGeo.Solid     = solid is not None
+		sweepGeo.Solid     = surface is None
 		sweepGeo.Frenet    = True
-		sweepGeo.Placement = FreeCAD.Placement(x*2, FreeCAD.Rotation(dir, a * 180/pi), FreeCAD.Vector(0,0,0))
 
 		self.addBody(coilNode, sweepGeo, 0x13, 0x11)
 		self.hide([coilGeo])
+		
 		return
 
 	def Create_FxBoss(self, bossNode):                           return notYetImplemented(bossNode) # MultiFuse Geometry
