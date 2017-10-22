@@ -13,7 +13,7 @@ import re
 from importerUtils   import logMessage, logWarning, logError, LOG, IFF, IntArr2Str, FloatArr2Str, getFileVersion, isEqual
 from importerClasses import RSeMetaData, Scalar, Angle, Length, ParameterNode, ParameterTextNode, ValueNode, FeatureNode, AbstractValue, DataNode
 from importerSegNode import AbstractNode, NodeRef
-from math            import sqrt, fabs, tan, asin, acos, atan2, degrees, radians, pi
+from math            import sqrt, fabs, sin, cos, tan, asin, acos, atan2, degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -323,9 +323,9 @@ def getDirection(node, name, distance):
 	return distance * dir/fabs(dir)
 
 def getCountDir(length, count, direction, fitted):
-	if (length is None):    return 1, FreeCAD.Vector(0, 0, 0)
-	if (count is None):     return 1, FreeCAD.Vector(0, 0, 0)
-	if (direction is None): return 1, FreeCAD.Vector(0, 0, 0)
+	if (length is None):    return 1, FreeCAD.Vector()
+	if (count is None):     return 1, FreeCAD.Vector()
+	if (direction is None): return 1, FreeCAD.Vector()
 
 	distance = getMM(length)
 
@@ -335,7 +335,7 @@ def getCountDir(length, count, direction, fitted):
 		pass
 	elif (direction.typeName != 'Direction'):
 		logError("Don't know how to get direction from (%04X) %s - ignoring pattern!" %(direction.index, direction.typeName))
-		return 1, FreeCAD.Vector(0, 0, 0)
+		return 1, FreeCAD.Vector()
 
 	x = getDirection(direction, 'dirX', distance)
 	y = getDirection(direction, 'dirY', distance)
@@ -359,7 +359,7 @@ def setDefaultViewObject(geo):
 	geo.ViewObject.PointColor   = (1.0, 1.0, 1.0)
 	geo.ViewObject.PointSize    = 2.00
 	geo.ViewObject.ShapeColor   = (0.80, 0.80, 0.80)
-	geo.ViewObject.Transparency = 25 # percent
+	geo.ViewObject.Transparency = 50 # percent
 
 def adjustViewObject(newGeo, baseGeo):
 	if (newGeo  is None): return
@@ -468,6 +468,15 @@ def createEdgeFromNode(wires, sketchEdge):
 	if (edge):
 		wires.append(edge.toShape())
 	return
+
+def getRotation(dir, b):
+	'''
+	Returns the Euler angles for the given axis direction and a normal vector
+	'''
+	xAxis = FreeCAD.Vector(-1,0,0)
+	x     = rot.multVec(xAxis)
+	beta  = b.getAngle(x)
+	return rot#FreeCAD.Rotation(dir, degrees(beta))
 
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
@@ -1263,7 +1272,7 @@ class FreeCADImporter:
 		revolution.Axis = axis
 		revolution.Base = base
 		revolution.Solid = solid
-		revolution.Placement = FreeCAD.Placement(FreeCAD.Vector(0,0,0), FreeCAD.Rotation(axis, -beta), base)
+		revolution.Placement = FreeCAD.Placement(FreeCAD.Vector(), FreeCAD.Rotation(axis, -beta), base)
 		setDefaultViewObject(revolution)
 		source.ViewObject.Visibility = False
 		return revolution
@@ -2458,8 +2467,8 @@ class FreeCADImporter:
 		operation   = getProperty(properties, 0x00) # PartFeatureOperation=Join
 		patch       = getProperty(properties, 0x01) # FxBoundaryPatch
 		axis        = getProperty(properties, 0x02) # Line3D - (-1.49785,-1.08544,1.11022e-16) - (-1.49785,-0.085438,1.11022e-16)
-		reversed    = getProperty(properties, 0x03) # ParameterBoolean 'AxisDirectionReversed'
-		rotate      = getProperty(properties, 0x04) # RotateClockwise u8_0=0
+		negative    = getProperty(properties, 0x03) # ParameterBoolean 'AxisDirectionReversed'
+		rotate      = getProperty(properties, 0x04) # RotateClockwise clockwise=0
 		coilType    = getProperty(properties, 0x05) # EnumCoilType=010003, u32_0=0
 		pitch       = getProperty(properties, 0x06) # Parameter 'd21'=1.1176mm
 		height      = getProperty(properties, 0x07) # Parameter 'd22'=25.4mm
@@ -2479,7 +2488,7 @@ class FreeCADImporter:
 		profile = self.createBoundary(patch)
 		base    = p2v(axis)
 		dir     = p2v(axis, 'dirX', 'dirY', 'dirZ').normalize()
-		if (isTrue(reversed) == True): dir = dir * -1
+		if (isTrue(negative)): dir = dir.negative()
 
 		sweepGeo = self.CreateEntity(coilNode, 'Part::Sweep')
 		r = revolutions.getValue().x
@@ -2487,45 +2496,40 @@ class FreeCADImporter:
 			coilGeo = newObject(self.doc, 'Part::Spiral', sweepGeo.Name + '_coil')
 			coilGeo.Growth = getMM(pitch)
 			coilGeo.Rotations = revolutions.getValue().x
-			if (isTrue(rotate)): dir = dir * -1
+			if (isTrue(rotate)): dir = dir.negative()
 		else:
 			coilGeo = newObject(self.doc, 'Part::Helix', sweepGeo.Name + '_coil')
+			coilGeo.Pitch  = getMM(pitch)
+			coilGeo.Height = getMM(height)
 			if (coilType.get('value') == 0):   # PitchAndRevolution
-				coilGeo.Pitch  = getMM(pitch)
 				coilGeo.Height = getMM(pitch) * revolutions.getValue().x
 			elif (coilType.get('value') == 1): # RevolutionAndHeight
 				coilGeo.Pitch  = getMM(height) /  revolutions.getValue().x
-				coilGeo.Height = getMM(height)
-			elif (coilType.get('value') == 2): # PitchAndHeight
-				coilGeo.Pitch  = getMM(pitch)
-				coilGeo.Height = getMM(height)
-			coilGeo.LocalCoord = IFF(rotate.get('clockwise'), 1, 0) # 0=Right handed, 1=Left handed
-		c = profile.Shape.BoundBox.Center
-		r = c.distanceToLine(base, dir)
-		b = FreeCAD.Vector()
-		b.projectToLine(c-base, dir).normalize()
-		
-		yaw   = degrees(acos(-b.x))
-		pitch = degrees(acos(sqrt(dir.y**2 + dir.z**2)))
-		roll  = degrees(acos(dir.z))
-		print ("yaw=%s, pitch=%s, roll=%s" %(yaw, pitch, roll))
-		p1 = FreeCAD.Placement((c + b*r), FreeCAD.Rotation(yaw, pitch, roll))
+			coilGeo.LocalCoord = 1-rotate.get('clockwise') # 1 = "Left handed"; 1= "Right handed"
+		c   = profile.Shape.BoundBox.Center
+		r   = c.distanceToLine(base, dir) # Helix-Radius
+		b   = FreeCAD.Vector().projectToLine(c-base, dir).normalize()
+		z   = FreeCAD.Vector(0,0,1) # zAxis
+		rot = FreeCAD.Rotation(z.cross(dir), degrees(z.getAngle(dir)))
+		p1  = FreeCAD.Placement((c + b*r), rot)
+		x   = rot.multVec(FreeCAD.Vector(-1, 0, 0))
+		p2  = FreeCAD.Placement(FreeCAD.Vector(),FreeCAD.Rotation(z, degrees(x.getAngle(b))))
 		coilGeo.Radius     = r
 		coilGeo.Angle      = getGRAD(taperAngle)
-		coilGeo.Placement  = p1
+
+		coilGeo.Placement  = p1.multiply(p2)
 		
 		#TODO:
-		if (isTrue(startIsFlat)):
-			# add flat start to coil wire
+		if (isTrue(startIsFlat)): # add flat start to coil wire
 			pass
-		if (isTrue(endIsFlat)):
-			# add flat end to coil wire
+		if (isTrue(endIsFlat)):   # add flat end to coil wire
 			pass
 
 		sweepGeo.Sections  = [profile]
 		sweepGeo.Spine     = (coilGeo, [])
 		sweepGeo.Solid     = surface is None
 		sweepGeo.Frenet    = True
+		setDefaultViewObject(sweepGeo)
 
 		self.addBody(coilNode, sweepGeo, 0x13, 0x11)
 		self.hide([coilGeo])

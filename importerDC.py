@@ -2937,7 +2937,7 @@ class DCReader(SegmentReader):
 			i += 8
 		else:
 			i += 12
-		i = node.ReadBoolean(i, 'clockwise')
+		i = node.ReadUInt8(i, 'clockwise')
 		i = self.skipBlockSize(i)
 		return i
 
