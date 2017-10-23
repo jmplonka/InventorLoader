@@ -250,7 +250,7 @@ if __name__ == '__main__':
 			if (len(files) == 1):
 				open(filename)
 			else:
-				# this is only for debuging purposes...
+				# this is only for debugging purposes...
 				docname = os.path.splitext(os.path.basename(filename))[0]
 				docname = decode(docname, utf=True)
 				doc = FreeCAD.newDocument(docname)
