@@ -58,29 +58,31 @@ KEY_LANGUAGE_CODE        = 0x80000000
 KEY_DTP_VERSION          = 43
 KEY_DTP_BUILD            = 0
 
-try:
-	import xlrd
-except:
-	logError('>>>FATAL - This program requires module olefile.\nhttps://pypi.python.org/pypi/xlrd')
+def missingDependency(module, url, folder):
+	global _can_import
+	logError(">>>FATAL - This program requires module %s from '%s'" %(module, url))
+	logWarning("Trying to install '%s' packages..." %(module))
+	import os
+	from subprocess import call
+	os.chdir(App.getHomePath() + "Mod/InventorLoader/libs/")
+	call(['python', 'installLibs.py', App.getHomePath(), url, folder])
+	logWarning("... DONE! Please reastart FreeCAD")
 	_can_import = False
+
+try:
+	from xlrd.book import open_workbook_xls
+except:
+	missingDependency("xlrd", "https://pypi.python.org/pypi/xlrd", "xlrd-1.1.0")
 
 try:
 	from xlutils.copy import copy
 except:
-	logError('>>>FATAL - This program requires module olefile.\nhttp://pypi.python.org/pypi/xlutils')
-	_can_import = False
-
-try:
-	import xlwt
-except:
-	logError('>>>FATAL - This program requires module olefile.\nhttps://pypi.python.org/pypi/xlwt')
-	_can_import = False
+	missingDependency("xlutils", "http://pypi.python.org/pypi/xlutils", "xlutils-2.0.0")
 
 try:
 	import olefile
 except:
-	logError('>>>FATAL - This program requires module olefile.\nhttp://www.decalage.info/python/olefileio')
-	_can_import = False
+	missingDependency("olefile", "http://www.decalage.info/python/olefileio", "olefile")
 
 def getProperty(properties, key):
 	value = ''
@@ -316,7 +318,7 @@ def ReadWorkbook(doc, data, name, stream):
 	folder = getInventorFile()[0:-4]
 	filename = '%s\\%s.xls' %(folder, name)
 
-	wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
+	wbk = open_workbook_xls(file_contents=data, formatting_info=True)
 	for name in wbk.name_obj_list:
 		r = name.area2d()
 

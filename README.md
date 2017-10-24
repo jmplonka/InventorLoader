@@ -5,11 +5,11 @@ nor assemblies (IAM), nor drawings (IDW) can be displayed.
 
 ## Prerequisits
 - The AddON requires additional python packages in the FreeCAD python installation:
-  - https://pypi.python.org/pypi/xlrd: for reading embedded Excel workbooks
-  - http://pypi.python.org/pypi/xlutils: for preparing imported Excel workbooks to
+  - https://pypi.python.org/pypi/xlrd - for reading embedded Excel workbooks
+  - http://pypi.python.org/pypi/xlutils - for preparing imported Excel workbooks to
     be stored
-  - https://pypi.python.org/pypi/xlwt: for writing embedded Excel workbooks
-  - http://www.decalage.info/python/olefileio olefile for reading Microsoft OLE(2)
+  - https://pypi.python.org/pypi/xlwt  - for writing embedded Excel workbooks
+  - http://www.decalage.info/python/olefileio - olefile for reading Microsoft OLE(2)
   	files.
 
 ## Status:
