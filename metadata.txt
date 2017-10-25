@@ -1,0 +1,49 @@
+; An example for this metadata.txt from 
+; http://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/plugins.html#plugin-metadata
+; the next section is mandatory
+
+[general]
+name=InventorLoader
+email=me@example.com
+author=jmplonka
+qgisMinimumVersion=2.0
+description=This plugin enables FreeCAD to import Inventor part files (*.IPT)
+about=
+version=version 0.6
+tracker=https://github.com/jmplonka/InventorLoader/issues
+repository=https://github.com/jmplonka/InventorLoader
+; end of mandatory metadata
+
+; start of optional metadata
+category=
+changelog=The changelog lists the plugin versions and their changes:
+	0.6 - added Coil Feature workaround for installing 3rd Party libraries
+	0.5 - added Sweep, Loft and Thicken Feature
+    0.4 - added Rectangular-/Circular-Pattern, Mirror and Hole Feature
+    0.3 - added Extrude and Revolve Featrues
+    0.2 - added parameter table
+    0.1 - First testing release with 2D-Sketches
+
+; Tags are in comma separated value format, spaces are allowed within the
+; tag name.
+; Tags should be in English language. Please also check for existing tags and
+; synonyms before creating a new one.
+tags=Autodesk,Inventor,IPT
+
+; these metadata can be empty, they will eventually become mandatory.
+homepage=https://github.com/jmplonka/InventorLoader
+icon=icon.png
+
+; experimental flag (applies to the single version)
+experimental=True
+
+; deprecated flag (applies to the whole plugin and not only to the uploaded version)
+deprecated=False
+
+; if empty, it will be automatically set to major version + .99
+qgisMaximumVersion=
+
+[dependencies]
+workbenches=Part,Draft,Sketcher
+pylibs=xlutils,xlrd,olefile
+FCaddon=sheetmetal@4db5840

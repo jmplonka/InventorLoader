@@ -11,7 +11,7 @@ from math          import degrees, radians, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
+__version__     = '0.6.0'
 __status__      = 'In-Development'
 
 def writeThumbnail(data):
@@ -1049,11 +1049,11 @@ class FeatureNode(DataNode):
 			if (p8 == 'Enum'):                      return 'Fillet'
 		elif (p1 == 'FxFilletVariable'):            return 'Fillet'
 		elif (p0 == 'FaceCollection'):
-			if (p1 == 'Enum'):                      return 'MoveFace'
-			if (p1 == 'FaceCollection'):            return 'ReplaceFace'
+			if (p1 == 'Enum'):                      return 'FaceMove'
+			if (p1 == 'FaceCollection'):            return 'FaceReplace'
 			if (p1 == 'ParameterBoolean'):
 				p3 = self._getPropertyName(3)
-				if (p3 == 'SurfaceBodies'):         return 'DeleteFace'
+				if (p3 == 'SurfaceBodies'):         return 'FaceDelete'
 				if (p3 == 'Parameter'):             return 'Thread'
 		elif (p0 == 'FxBoundaryPatch'):
 			p2 = self._getPropertyName(2)

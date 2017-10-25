@@ -10,15 +10,16 @@ import FreeCAD
 import FreeCADGui
 import sys
 import os
-import olefile
-from importerReader    import *
-from importerUtils     import LOG, getInventorFile, setInventorFile, setFileVersion, PrintableName, isEmbeddings, logMessage
-from importerFreeCAD   import FreeCADImporter, createGroup
+from importerUtils     import LOG, getInventorFile, setInventorFile, setFileVersion, PrintableName, isEmbeddings, logMessage, logWarning, logError
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
+__version__     = '0.6.0'
 __status__      = 'In-Development'
+
+# Indicator that everything is ready for the import
+from importerReader    import *
+from importerFreeCAD   import FreeCADImporter, createGroup
 
 def ReadIgnorable(fname, data):
 	logMessage("\t>>> IGNORED: %r" % ('/'.join(fname)))
@@ -209,7 +210,8 @@ def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
 	'''
-	if (canImport()):
+	global _can_import
+	if (_can_import):
 		try:
 			doc = FreeCAD.getDocument(docname)
 			logMessage("Importing: %s" %(filename), LOG.LOG_ALWAYS)
@@ -228,7 +230,8 @@ def open(filename, skip = [], only = [], root = None):
 	opens an Autodesk Inventor file in a new document
 	In addition to insert (import), the iProperties are as well added to the document.
 	'''
-	if (canImport()):
+	global _can_import
+	if (_can_import):
 		logMessage("Reading: %s" %(filename), LOG.LOG_ALWAYS)
 		setInventorFile(filename)
 		docname = os.path.splitext(os.path.basename(filename))[0]
@@ -250,7 +253,7 @@ if __name__ == '__main__':
 			if (len(files) == 1):
 				open(filename)
 			else:
-				# this is only for debuging purposes...
+				# this is only for debugging purposes...
 				docname = os.path.splitext(os.path.basename(filename))[0]
 				docname = decode(docname, utf=True)
 				doc = FreeCAD.newDocument(docname)

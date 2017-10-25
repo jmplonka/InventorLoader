@@ -5,11 +5,11 @@ nor assemblies (IAM), nor drawings (IDW) can be displayed.
 
 ## Prerequisits
 - The AddON requires additional python packages in the FreeCAD python installation:
-  - https://pypi.python.org/pypi/xlrd: for reading embedded Excel workbooks
-  - http://pypi.python.org/pypi/xlutils: for preparing imported Excel workbooks to
+  - https://pypi.python.org/pypi/xlrd - for reading embedded Excel workbooks
+  - http://pypi.python.org/pypi/xlutils - for preparing imported Excel workbooks to
     be stored
-  - https://pypi.python.org/pypi/xlwt: for writing embedded Excel workbooks
-  - http://www.decalage.info/python/olefileio olefile for reading Microsoft OLE(2)
+  - https://pypi.python.org/pypi/xlwt  - for writing embedded Excel workbooks
+  - http://www.decalage.info/python/olefileio - olefile for reading Microsoft OLE(2)
   	files.
 
 ## Status:
@@ -34,6 +34,10 @@ That allows it to embed Excel workboos e.g.
 | Workbook | Spreadsheet | done | done | done |
 
 ## History:
+- 0.6:  continued working on Features
+	* added Coil as Part::Helix and Part::Spiral with Sweep
+	* automated installation of required site-packages
+
 - 0.5.5: Maintenance version
 	* Fixed wrong creation of boundary wires/faces from sketches
 	* Fixed wrong handling of constraints in sketches

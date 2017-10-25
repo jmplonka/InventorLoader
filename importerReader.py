@@ -30,14 +30,13 @@ from importerGraphics    import GraphicsReader
 from importerNotebook    import NotebookReader
 from importerResults     import ResultReader
 from importerUtils       import *
+import xlrd
+from xlutils.copy import copy
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
+__version__     = '0.6.0'
 __status__      = 'In-Development'
-
-# Indicator that everything is ready for the import
-_can_import = True
 
 # The model representing the content of the imported file
 model = Inventor()
@@ -57,30 +56,6 @@ KEY_LANGUAGE_CODE        = 0x80000000
 
 KEY_DTP_VERSION          = 43
 KEY_DTP_BUILD            = 0
-
-try:
-	import xlrd
-except:
-	logError('>>>FATAL - This program requires module olefile.\nhttps://pypi.python.org/pypi/xlrd')
-	_can_import = False
-
-try:
-	from xlutils.copy import copy
-except:
-	logError('>>>FATAL - This program requires module olefile.\nhttp://pypi.python.org/pypi/xlutils')
-	_can_import = False
-
-try:
-	import xlwt
-except:
-	logError('>>>FATAL - This program requires module olefile.\nhttps://pypi.python.org/pypi/xlwt')
-	_can_import = False
-
-try:
-	import olefile
-except:
-	logError('>>>FATAL - This program requires module olefile.\nhttp://www.decalage.info/python/olefileio')
-	_can_import = False
 
 def getProperty(properties, key):
 	value = ''
@@ -316,7 +291,7 @@ def ReadWorkbook(doc, data, name, stream):
 	folder = getInventorFile()[0:-4]
 	filename = '%s\\%s.xls' %(folder, name)
 
-	wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
+	wbk =  xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
 	for name in wbk.name_obj_list:
 		r = name.area2d()
 
@@ -1284,6 +1259,3 @@ def dumpRemaining(data, offset):
 		logMessage('\t%r' %(txt))
 
 	logMessage(HexAsciiDump(data[i:len(data)], i, False), LOG.LOG_DEBUG)
-
-def canImport():
-	return _can_import
