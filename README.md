@@ -36,6 +36,7 @@ That allows it to embed Excel workboos e.g.
 ## History:
 - 0.6:  continued working on Features
 	* added Coil as Part::Helix and Part::Spiral with Sweep
+	* automated installation of required site-packages
 
 - 0.5.5: Maintenance version
 	* Fixed wrong creation of boundary wires/faces from sketches
