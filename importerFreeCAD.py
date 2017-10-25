@@ -17,7 +17,7 @@ from math            import sqrt, fabs, tan, degrees, pi
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
+__version__     = '0.6.0'
 __status__      = 'In-Development'
 
 BIT_GEO_ALIGN_HORIZONTAL    = 1 <<  0
@@ -2486,12 +2486,14 @@ class FreeCADImporter:
 	def Create_FxCornerRound(self, cornerNode):                  return notYetImplemented(cornerNode)
 	def Create_FxCut(self, cutNode):                             return notYetImplemented(cutNode)
 	def Create_FxDecal(self, decalNode):                         return notYetImplemented(decalNode)
-	def Create_FxDeleteFace(self, deleteFaceNode):               return notYetImplemented(deleteFaceNode)
 	def Create_FxDirectEdit(self, directEditNode):               return notYetImplemented(directEditNode)
 	def Create_FxEmboss(self, embossNode):                       return notYetImplemented(embossNode)
 	def Create_FxExtend(self, extendNode):                       return notYetImplemented(extendNode)
-	def Create_FxFaceDraft(self, faceDraftNode):                 return notYetImplemented(faceDraftNode)
-	def Create_FxFaceOffset(self, faceOffsetNode):               return notYetImplemented(faceOffsetNode)
+	def Create_FxFaceDelete(self, faceNode):                     return notYetImplemented(faceNode)
+	def Create_FxFaceDraft(self, faceNode):                      return notYetImplemented(faceNode)
+	def Create_FxFaceMove(self, faceNode):                       return notYetImplemented(faceNode)
+	def Create_FxFaceOffset(self, faceNode):                     return notYetImplemented(faceNode)
+	def Create_FxFaceReplace(self, faceNode):                    return notYetImplemented(faceNode)
 	def Create_FxFillet(self, filletNode):                       return notYetImplemented(filletNode)
 	def Create_FxFilletConstant(self, filletNode):               return notYetImplemented(filletNode)
 	def Create_FxFilletVariable(self, filletNode):               return notYetImplemented(filletNode)
@@ -2503,12 +2505,10 @@ class FreeCADImporter:
 	def Create_FxMesh(self, meshNode):                           return notYetImplemented(meshNode)
 	def Create_FxMidSurface(self, midSurfaceNode):               return notYetImplemented(midSurfaceNode)
 	def Create_FxMove(self, moveNode):                           return notYetImplemented(moveNode)
-	def Create_FxMoveFace(self, moveFaceNode):                   return notYetImplemented(moveFaceNode)
 	def Create_FxNonParametricBase(self, nonParametricBaseNode): return notYetImplemented(nonParametricBaseNode)
 	def Create_FxPatternSketchDriven(self, patternNode):         return notYetImplemented(patternNode)
 	def Create_FxPresentationMesh(self, presentationMeshNode):   return notYetImplemented(presentationMeshNode)
 	def Create_FxReference(self, referenceNode):                 return notYetImplemented(referenceNode)
-	def Create_FxReplaceFace(self, replaceFaceNode):             return notYetImplemented(replaceFaceNode)
 	def Create_FxRest(self, restNode):                           return notYetImplemented(restNode)
 	def Create_FxRib(self, ribNode):                             return notYetImplemented(ribNode)
 	def Create_FxRuledSurface(self, ruledSurfaceNode):           return notYetImplemented(ruledSurfaceNode)

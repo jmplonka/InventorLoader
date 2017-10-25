@@ -30,14 +30,13 @@ from importerGraphics    import GraphicsReader
 from importerNotebook    import NotebookReader
 from importerResults     import ResultReader
 from importerUtils       import *
+import xlrd
+from xlutils.copy import copy
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
+__version__     = '0.6.0'
 __status__      = 'In-Development'
-
-# Indicator that everything is ready for the import
-_can_import = True
 
 # The model representing the content of the imported file
 model = Inventor()
@@ -57,32 +56,6 @@ KEY_LANGUAGE_CODE        = 0x80000000
 
 KEY_DTP_VERSION          = 43
 KEY_DTP_BUILD            = 0
-
-def missingDependency(module, url, folder):
-	global _can_import
-	logError(">>>FATAL - This program requires module %s from '%s'" %(module, url))
-	logWarning("Trying to install '%s' packages..." %(module))
-	import os
-	from subprocess import call
-	os.chdir(App.getHomePath() + "Mod/InventorLoader/libs/")
-	call(['python', 'installLibs.py', App.getHomePath(), url, folder])
-	logWarning("... DONE! Please reastart FreeCAD")
-	_can_import = False
-
-try:
-	from xlrd.book import open_workbook_xls
-except:
-	missingDependency("xlrd", "https://pypi.python.org/pypi/xlrd", "xlrd-1.1.0")
-
-try:
-	from xlutils.copy import copy
-except:
-	missingDependency("xlutils", "http://pypi.python.org/pypi/xlutils", "xlutils-2.0.0")
-
-try:
-	import olefile
-except:
-	missingDependency("olefile", "http://www.decalage.info/python/olefileio", "olefile")
 
 def getProperty(properties, key):
 	value = ''
@@ -318,7 +291,7 @@ def ReadWorkbook(doc, data, name, stream):
 	folder = getInventorFile()[0:-4]
 	filename = '%s\\%s.xls' %(folder, name)
 
-	wbk = open_workbook_xls(file_contents=data, formatting_info=True)
+	wbk =  xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
 	for name in wbk.name_obj_list:
 		r = name.area2d()
 
@@ -1286,6 +1259,3 @@ def dumpRemaining(data, offset):
 		logMessage('\t%r' %(txt))
 
 	logMessage(HexAsciiDump(data[i:len(data)], i, False), LOG.LOG_DEBUG)
-
-def canImport():
-	return _can_import

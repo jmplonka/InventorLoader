@@ -16,7 +16,7 @@ import re
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
+__version__     = '0.6.0'
 __status__      = 'In-Development'
 
 def _addEmpty(node, indexes, list):
@@ -8676,8 +8676,8 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a1')
 		return i
 
-	def Read_EF8279FB(self, node): # MoveFaceTypeEnum
-		i = self.ReadEnumValue(node, 'MoveFaceType', ['DirectionAndDistance', 'Planar', 'Free'])
+	def Read_EF8279FB(self, node): # FaceMoveTypeEnum
+		i = self.ReadEnumValue(node, 'FaceMoveType', ['DirectionAndDistance', 'Planar', 'Free'])
 		return i
 
 	def Read_EFE47BB4(self, node):

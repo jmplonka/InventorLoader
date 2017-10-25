@@ -255,8 +255,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="7.9999996"
-     inkscape:cx="3.5458104"
-     inkscape:cy="27.101563"
+     inkscape:cx="-17.460671"
+     inkscape:cy="35.428063"
      inkscape:current-layer="layer1"
      showgrid="true"
      inkscape:document-units="px"
@@ -282,28 +282,70 @@
   <g
      id="layer1"
      inkscape:label="Layer 1"
-     inkscape:groupmode="layer">
+     inkscape:groupmode="layer"
+     transform="matrix(0.53992752,0,0,0.54612395,15.182416,15.213398)"
+     style="stroke-width:1.84156334">
     <path
-       style="opacity:0.988;fill:#cd4500;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="fill:#efefef;fill-opacity:1;fill-rule:evenodd;stroke:black;stroke-width:0.99999988px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+       d="M -0.33785275,78.345954 V -13.208353 H 51.52096 L 64.485663,-0.39075012 V 78.345954 Z"
+       id="path4523"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccc"
+       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+       inkscape:export-xdpi="121.55234"
+       inkscape:export-ydpi="121.55234" />
+    <path
+       style="fill:white;fill-rule:evenodd;stroke:black;stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1;fill-opacity:1"
+       d="M 51.52096,-13.208353 64.485663,-0.39075012 H 51.52096 Z"
+       id="path4540"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccc"
+       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+       inkscape:export-xdpi="121.55234"
+       inkscape:export-ydpi="121.55234" />
+    <path
+       style="opacity:0.98799995;fill:#cd4500;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        d="M 23,0.40337863 52,0.02772813 V 16 H 40 v 31 h 12 c 0.01455,6.363961 -1.516392,13.711549 -2,15 -2.56787,0.333333 -12.416731,1.108608 -27.005418,1 z"
        id="path6342"
        inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccccccc" />
+       sodipodi:nodetypes="ccccccccc"
+       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+       inkscape:export-xdpi="121.55234"
+       inkscape:export-ydpi="121.55234" />
     <path
-       style="opacity:0.8;fill:#ff6000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="opacity:0.8;fill:#ff6000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        d="M 11,16 15,0 h 8 l 17,16 z"
-       id="polygon49" />
+       id="polygon49"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+       inkscape:export-xdpi="121.55234"
+       inkscape:export-ydpi="121.55234" />
     <path
-       style="opacity:0.8;fill:#ff6000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       style="opacity:0.8;fill:#ff6000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        d="M 10,47 H 40 L 22.994582,63 H 10 Z"
        id="polygon51"
        inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccc" />
+       sodipodi:nodetypes="ccccc"
+       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+       inkscape:export-xdpi="121.55234"
+       inkscape:export-ydpi="121.55234" />
     <path
-       style="opacity:0.22099998;fill:black;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;filter:url(#filter878)"
+       style="opacity:0.22099998;fill:black;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;filter:url(#filter878)"
        d="m 54,2.0273438 -2,0.025391 V 16 H 40 v 31 h 2 V 18 H 54 Z M 13.5,16 13,18 h 9.998047 V 16 Z M 51.949219,49 C 51.700576,54.820848 50.433607,60.844764 50,62 47.43213,62.333333 37.582828,63.108608 22.994141,63 H 12 v 2 H 24.994141 C 39.582828,65.108608 49.43213,64.333333 52,64 c 0.483608,-1.288451 2.01455,-8.636039 2,-15 z"
        id="path58"
        inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccccccccccccccccccccc" />
+       sodipodi:nodetypes="ccccccccccccccccccccccc"
+       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+       inkscape:export-xdpi="121.55234"
+       inkscape:export-ydpi="121.55234" />
+    <path
+       style="fill:#59d452;fill-opacity:1;fill-rule:evenodd;stroke:#396d36;stroke-width:1.84156322px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 35.08357,23.184479 c 24.07731,-8.926545 31.71723,7.324346 31.71723,7.324346 2.79323,-1.605532 4.68998,-5.796972 4.39873,-9.84209 0.40246,-0.795775 6.895163,21.156788 5.09328,26.321866 -6.95031,-5.394324 -14.72357,-6.691809 -21.06765,-5.493259 6.18504,-2.595444 7.93364,-4.642625 9.26051,-6.637688 -9.93271,-5.738116 -19.31575,-3.40491 -29.86512,1.831087 5.40016,-5.698259 2.88777,-9.591263 0.46302,-13.504262 z"
+       id="path4562"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccc"
+       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+       inkscape:export-xdpi="121.55234"
+       inkscape:export-ydpi="121.55234" />
   </g>
 </svg>
