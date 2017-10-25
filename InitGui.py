@@ -2,6 +2,7 @@
 
 # Assumes Import_IPT.py is the file that has the code for opening and reading .ipt files
 import traceback
+from importerUtils import setCanImport, canImport
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -16,12 +17,9 @@ try:
 except:
 	FreeCAD.Console.PrintError(">E: %s\n"% traceback.format_exc())
 
-_can_import = True
-
 def missingDependency(module, url, folder):
 	import os
 	import subprocess
-	global _can_import
 	
 	addinpath = FreeCAD.getHomePath() + "Mod/InventorLoader/"
 	if (not os.path.exists(addinpath + "libs")):
@@ -35,7 +33,7 @@ def missingDependency(module, url, folder):
 	os.chdir(addinpath + "libs")
 	subprocess.call(['python', 'installLibs.py', FreeCAD.getHomePath(), url, folder])
 	FreeCAD.Console.PrintWarning("DONE!\n")
-	_can_import = False
+	setCanImport(False)
 
 try:
 	import xlwt
@@ -57,7 +55,7 @@ try:
 except:
 	missingDependency("olefile", "http://www.decalage.info/python/olefileio", "olefile")
 
-if (not _can_import):
+if (not canImport()):
 	from PySide import QtCore, QtGui
 	msgBox = QtGui.QMessageBox()
 	msgBox.setIcon(QtGui.QMessageBox.Question)

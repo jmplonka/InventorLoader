@@ -15,17 +15,27 @@ from math    import fabs
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
+__version__     = '0.6.0'
 __status__      = 'In-Development'
 
 _dumpLineLength = 0x20
-_fileVersion = None
+_fileVersion    = None
+_can_import     = True
 
 # The file the be imported
 _inventor_file = None
 
 # The dictionary of all found UUIDs and their origin
 foundUids = {}
+
+def setCanImport(canImport):
+	global _can_import
+	_can_import = canImport
+	return
+
+def canImport():
+	global _can_import
+	return _can_import
 
 class LOG():
 	LOG_DEBUG   = 1

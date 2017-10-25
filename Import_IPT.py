@@ -10,7 +10,8 @@ import FreeCAD
 import FreeCADGui
 import sys
 import os
-from importerUtils     import LOG, getInventorFile, setInventorFile, setFileVersion, PrintableName, isEmbeddings, logMessage, logWarning, logError
+from olefile           import isOleFile, OleFileIO
+from importerUtils     import LOG, getInventorFile, setInventorFile, setFileVersion, PrintableName, isEmbeddings, logMessage, logWarning, logError, canImport
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -145,8 +146,8 @@ def ReadFile(doc, readProperties):
 
 	# LOG.LOG_FILTER = LOG.LOG_FILTER | LOG.LOG_DEBUG
 
-	if (olefile.isOleFile(getInventorFile())):
-		ole = olefile.OleFileIO(getInventorFile())
+	if (isOleFile(getInventorFile())):
+		ole = OleFileIO(getInventorFile())
 		setFileVersion(ole)
 		elements = ole.listdir(streams=True, storages=False)
 
@@ -210,8 +211,7 @@ def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
 	'''
-	global _can_import
-	if (_can_import):
+	if (canImport()):
 		try:
 			doc = FreeCAD.getDocument(docname)
 			logMessage("Importing: %s" %(filename), LOG.LOG_ALWAYS)
@@ -230,8 +230,7 @@ def open(filename, skip = [], only = [], root = None):
 	opens an Autodesk Inventor file in a new document
 	In addition to insert (import), the iProperties are as well added to the document.
 	'''
-	global _can_import
-	if (_can_import):
+	if (canImport()):
 		logMessage("Reading: %s" %(filename), LOG.LOG_ALWAYS)
 		setInventorFile(filename)
 		docname = os.path.splitext(os.path.basename(filename))[0]
@@ -249,7 +248,7 @@ if __name__ == '__main__':
 		files = sys.argv[1:]
 		filename = files[0].decode(sys.getfilesystemencoding()) # make it UNICODE!
 		setInventorFile(filename)
-		if (olefile.isOleFile(filename)):
+		if (isOleFile(filename)):
 			if (len(files) == 1):
 				open(filename)
 			else:
@@ -258,7 +257,7 @@ if __name__ == '__main__':
 				docname = decode(docname, utf=True)
 				doc = FreeCAD.newDocument(docname)
 
-				ole = olefile.OleFileIO(filename)
+				ole = OleFileIO(filename)
 				setFileVersion(ole)
 				elements = ole.listdir(streams=True, storages=False)
 				counter = 1
