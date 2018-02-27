@@ -11,8 +11,8 @@ __status__      = 'In-Development'
 
 try:
 	if (not hasattr(FreeCADGui, 'InventorLoaderPrefs')):
-		FreeCADGui.addIconPath(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources')
-		FreeCADGui.addPreferencePage(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
+		FreeCADGui.addIconPath(FreeCAD.getUserAppDataDir() + 'Mod/InventorLoader/Resources')
+		FreeCADGui.addPreferencePage(FreeCAD.getUserAppDataDir() + 'Mod/InventorLoader/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
 		FreeCADGui.InventorImporterPrefs = True
 except:
 	FreeCAD.Console.PrintError(">E: %s\n"% traceback.format_exc())
@@ -21,9 +21,9 @@ def missingDependency(module, url, folder):
 	import os
 	import subprocess
 	
-	addinpath = FreeCAD.getHomePath() + "Mod/InventorLoader/"
+	addinpath = FreeCAD.getUserAppDataDir() + "Mod/InventorLoader/"
 	if (not os.path.exists(addinpath + "libs")):
-		print "Libs does not exists will try to unpack them ... "
+		print "Libs does not exists will try to unpack them ... " 
 		import zipfile
 		zip = zipfile.ZipFile(addinpath + "libs.zip", 'r')
 		zip.extractall(addinpath)
@@ -31,7 +31,7 @@ def missingDependency(module, url, folder):
 		FreeCAD.Console.PrintWarning("DONE!\n")
 	FreeCAD.Console.PrintWarning("Trying to install missing site-package '%s' ... " %(module))
 	os.chdir(addinpath + "libs")
-	subprocess.call(['python', 'installLibs.py', FreeCAD.getHomePath(), url, folder])
+	subprocess.call(['python', 'installLibs.py', FreeCAD.getUserAppDataDir(), url, folder])
 	FreeCAD.Console.PrintWarning("DONE!\n")
 	setCanImport(False)
 
