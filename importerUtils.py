@@ -47,7 +47,7 @@ class LOG():
 
 def getUInt8(data, offset):
 	'''
-	Returns a single unsingned 8-Bit value (byte).
+	Returns a single unsigned 8-Bit value (byte).
 	Args:
 		data
 			A binary string.
@@ -64,7 +64,7 @@ def getUInt8(data, offset):
 
 def getUInt8A(data, offset, size):
 	'''
-	Returns an array of unsingned 8-Bit values (bytes).
+	Returns an array of unsigned 8-Bit values (bytes).
 	Args:
 		data
 			A binary string.
@@ -84,7 +84,7 @@ def getUInt8A(data, offset, size):
 
 def getUInt16(data, offset):
 	'''
-	Returns a single unsingned 16-Bit value.
+	Returns a single unsigned 16-Bit value.
 	Args:
 		data
 			A binary string.
@@ -101,7 +101,7 @@ def getUInt16(data, offset):
 
 def getUInt16A(data, offset, size):
 	'''
-	Returns an array of unsingned 16-Bit values.
+	Returns an array of unsigned 16-Bit values.
 	Args:
 		data
 			A binary string.
@@ -159,7 +159,7 @@ def getSInt16A(data, offset, size):
 
 def getUInt32(data, offset):
 	'''
-	Returns a single unsingned 32-Bit value.
+	Returns a single unsigned 32-Bit value.
 	Args:
 		data
 			A binary string.
@@ -176,7 +176,7 @@ def getUInt32(data, offset):
 
 def getUInt32A(data, offset, size):
 	'''
-	Returns an array of unsingned 32-Bit values.
+	Returns an array of unsigned 32-Bit values.
 	Args:
 		data
 			A binary string.
