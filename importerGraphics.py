@@ -2,22 +2,20 @@
 
 '''
 importerGraphics.py:
-
 Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) graphics data.
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
-TODO:
 '''
 
 import traceback
-from importerSegment import SegmentReader, checkReadAll
-from importerSegNode import AbstractNode, GraphicsNode
-from importerClasses import B32BF6AC, _32RRR2, _32RA
-from importerUtils   import *
+from importerSegment        import SegmentReader, checkReadAll
+from importerSegNode        import AbstractNode, GraphicsNode
+from importerClasses        import B32BF6AC, _32RRR2, _32RA
+from importerTransformation import Transformation
+from importerUtils          import *
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
-__status__      = 'In-Development'
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class GraphicsReader(SegmentReader):
 
@@ -95,7 +93,7 @@ class GraphicsReader(SegmentReader):
 				lst0.append(a0)
 				node.content += ' %d: (%s)' %(j, FloatArr2Str(a0))
 			elif (t == 0x17):
-				a0, i = getFloat64A(node.data, i, 0x06)
+				a0, i = getFloat64A(node.data, i, 0x06) # X, Y, Z, n, m, k
 				lst0.append(a0)
 				node.content += ' %d: (%s)' %(j, FloatArr2Str(a0))
 			else:
@@ -104,332 +102,14 @@ class GraphicsReader(SegmentReader):
 		node.set('TypedFloat.lst0', lst0)
 		return i
 
-	def Read_CodedFloatA(self, offset, node):
-		i = node.ReadUInt16A(offset, 2, 'CodedFloatA.a0')
-		a0 = node.get('CodedFloatA.a0')
-		if (a0[0] == 0x8000 and a0[1] == 0x7000):
-			n = 0x0C
-		elif (a0[0] == 0x8000 and a0[1] == 0x7010):
-			n = 0x0B
-		elif (a0[0] == 0x8000 and a0[1] == 0x7100):
-			n = 0x0B
-		elif (a0[0] == 0x8001 and a0[1] == 0x7002):
-			n = 0x0A
-		elif (a0[0] == 0x8001 and a0[1] == 0x7004):
-			n = 0x0A
-		elif (a0[0] == 0x8001 and a0[1] == 0x7116):
-			n = 0x07
-		elif (a0[0] == 0x8010 and a0[1] == 0x7100):
-			n = 0x0A
-		elif (a0[0] == 0x8010 and a0[1] == 0x7110):
-			n = 0x0A
-		elif (a0[0] == 0x8010 and a0[1] == 0x7171):
-			n = 0x07
-		elif (a0[0] == 0x8010 and a0[1] == 0x7961):
-			n = 0x06
-		elif (a0[0] == 0x8010 and a0[1] == 0x7971):
-			n = 0x06
-		elif (a0[0] == 0x8020 and a0[1] == 0x7010):
-			n = 0x0A
-		elif (a0[0] == 0x8020 and a0[1] == 0x7200):
-			n = 0x0A
-		elif (a0[0] == 0x8040 and a0[1] == 0x7000):
-			n = 0x0B
-		elif (a0[0] == 0x8100 and a0[1] == 0x7000):
-			n = 0x0B
-		elif (a0[0] == 0x8100 and a0[1] == 0x7190):
-			n = 0x09
-		elif (a0[0] == 0x8100 and a0[1] == 0x7711):
-			n = 0x07
-		elif (a0[0] == 0x8100 and a0[1] == 0x7C08):
-			n = 0x08
-		elif (a0[0] == 0x8100 and a0[1] == 0x7E99):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x7004):
-			n = 0x09
-		elif (a0[0] == 0x8124 and a0[1] == 0x7014):
-			n = 0x08
-		elif (a0[0] == 0x8124 and a0[1] == 0x7100):
-			n = 0x09
-		elif (a0[0] == 0x8124 and a0[1] == 0x7110):
-			n = 0x08
-		elif (a0[0] == 0x8124 and a0[1] == 0x7140):
-			n = 0x08
-		elif (a0[0] == 0x8124 and a0[1] == 0x7204):
-			n = 0x08
-		elif (a0[0] == 0x8124 and a0[1] == 0x7256):
-			n = 0x05
-		elif (a0[0] == 0x8124 and a0[1] == 0x7352):
-			n = 0x05
-		elif (a0[0] == 0x8124 and a0[1] == 0x7615):
-			n = 0x05
-		elif (a0[0] == 0x8124 and a0[1] == 0x7657):
-			n = 0x03
-		elif (a0[0] == 0x8124 and a0[1] == 0x7711):
-			n = 0x05
-		elif (a0[0] == 0x8124 and a0[1] == 0x7753):
-			n = 0x03
-		elif (a0[0] == 0x8124 and a0[1] == 0x7E15):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x7E57):
-			n = 0x02
-		elif (a0[0] == 0x8124 and a0[1] == 0x7ED7):
-			n = 0x01
-		elif (a0[0] == 0x8124 and a0[1] == 0x7EDF):
-			n = 0
-		elif (a0[0] == 0x8124 and a0[1] == 0x7F11):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x7F53):
-			n = 0x02
-		elif (a0[0] == 0x8124 and a0[1] == 0x7FD3):
-			n = 0x01
-		elif (a0[0] == 0x8142 and a0[1] == 0x7737):
-			n = 0x03
-		elif (a0[0] == 0x8142 and a0[1] == 0x7E35):
-			n = 0x02
-		elif (a0[0] == 0x8200 and a0[1] == 0x7188):
-			n = 0x08
-		elif (a0[0] == 0x8200 and a0[1] == 0x7200):
-			n = 0x0B
-		elif (a0[0] == 0x8200 and a0[1] == 0x7280):
-			n = 0x0A
-		elif (a0[0] == 0x8200 and a0[1] == 0x7300):
-			n = 0x0A
-		elif (a0[0] == 0x8200 and a0[1] == 0x7522):
-			n = 0x07
-		elif (a0[0] == 0x8200 and a0[1] == 0x7600):
-			n = 0x0A
-		elif (a0[0] == 0x8200 and a0[1] == 0x7D22):
-			n = 0x06
-		elif (a0[0] == 0x8200 and a0[1] == 0x7D2A):
-			n = 0x05
-		elif (a0[0] == 0x8214 and a0[1] == 0x7522):
-			n = 0x05
-		elif (a0[0] == 0x8214 and a0[1] == 0x7563):
-			n = 0x03
-		elif (a0[0] == 0x8214 and a0[1] == 0x7577):
-			n = 0x03
-		elif (a0[0] == 0x8214 and a0[1] == 0x75B6):
-			n = 0x04
-		elif (a0[0] == 0x8214 and a0[1] == 0x7961):
-			n = 0x04
-		elif (a0[0] == 0x8214 and a0[1] == 0x7D22):
-			n = 0x04
-		elif (a0[0] == 0x8214 and a0[1] == 0x7D36):
-			n = 0x04
-		elif (a0[0] == 0x8214 and a0[1] == 0x7D63):
-			n = 0x02
-		elif (a0[0] == 0x8214 and a0[1] == 0x7D77):
-			n = 0x02
-		elif (a0[0] == 0x8214 and a0[1] == 0x7DBE):
-			n = 0x02
-		elif (a0[0] == 0x8214 and a0[1] == 0x7DE3):
-			n = 0x01
-		elif (a0[0] == 0x8214 and a0[1] == 0x7DEB):
-			n = 0
-		elif (a0[0] == 0x8214 and a0[1] == 0x7DF7):
-			n = 0x01
-		elif (a0[0] == 0x8214 and a0[1] == 0x7DFF):
-			n = 0
-		elif (a0[0] == 0x8241 and a0[1] == 0x7040):
-			n = 0x09
-		elif (a0[0] == 0x8241 and a0[1] == 0x7042):
-			n = 0x08
-		elif (a0[0] == 0x8241 and a0[1] == 0x7140):
-			n = 0x08
-		elif (a0[0] == 0x8241 and a0[1] == 0x7200):
-			n = 0x09
-		elif (a0[0] == 0x8241 and a0[1] == 0x7202):
-			n = 0x08
-		elif (a0[0] == 0x8241 and a0[1] == 0x7300):
-			n = 0x08
-		elif (a0[0] == 0x8241 and a0[1] == 0x7316):
-			n = 0x05
-		elif (a0[0] == 0x8241 and a0[1] == 0x7440):
-			n = 0x08
-		elif (a0[0] == 0x8241 and a0[1] == 0x7474):
-			n = 0x05
-		elif (a0[0] == 0x8241 and a0[1] == 0x7562):
-			n = 0x05
-		elif (a0[0] == 0x8241 and a0[1] == 0x7576):
-			n = 0x03
-		elif (a0[0] == 0x8241 and a0[1] == 0x7634):
-			n = 0x05
-		elif (a0[0] == 0x8241 and a0[1] == 0x7722):
-			n = 0x05
-		elif (a0[0] == 0x8241 and a0[1] == 0x7736):
-			n = 0x03
-		elif (a0[0] == 0x8241 and a0[1] == 0x7C40):
-			n = 0x07
-		elif (a0[0] == 0x8241 and a0[1] == 0x7D37):
-			n = 0x02
-		elif (a0[0] == 0x8241 and a0[1] == 0x7D3F):
-			n = 0x01
-		elif (a0[0] == 0x8241 and a0[1] == 0x7D76):
-			n = 0x02
-		elif (a0[0] == 0x8241 and a0[1] == 0x7D7E):
-			n = 0x01
-		elif (a0[0] == 0x8241 and a0[1] == 0x7DBF):
-			n = 0
-		elif (a0[0] == 0x8241 and a0[1] == 0x7DEA):
-			n = 0x02
-		elif (a0[0] == 0x8241 and a0[1] == 0x7DFE):
-			n = 0
-		elif (a0[0] == 0x8241 and a0[1] == 0x7E34):
-			n = 0x04
-		elif (a0[0] == 0x8241 and a0[1] == 0x7F22):
-			n = 0x04
-		elif (a0[0] == 0x8241 and a0[1] == 0x7F36):
-			n = 0x02
-		elif (a0[0] == 0x8241 and a0[1] == 0x7F3E):
-			n = 0x01
-		elif (a0[0] == 0x8241 and a0[1] == 0x7FBE):
-			n = 0
-		elif (a0[0] == 0x8400 and a0[1] == 0x7400):
-			n = 0x0B
-		elif (a0[0] == 0x8412 and a0[1] == 0x7367):
-			n = 0x03
-		elif (a0[0] == 0x8412 and a0[1] == 0x7B67):
-			n = 0x02
-		elif (a0[0] == 0x8421 and a0[1] == 0x7000):
-			n = 0x09
-		elif (a0[0] == 0x8421 and a0[1] == 0x7002):
-			n = 0x08
-		elif (a0[0] == 0x8421 and a0[1] == 0x7010):
-			n = 0x08
-		elif (a0[0] == 0x8421 and a0[1] == 0x7116):
-			n = 0x05
-		elif (a0[0] == 0x8421 and a0[1] == 0x7252):
-			n = 0x05
-		elif (a0[0] == 0x8421 and a0[1] == 0x7344):
-			n = 0x05
-		elif (a0[0] == 0x8421 and a0[1] == 0x7356):
-			n = 0x03
-		elif (a0[0] == 0x8421 and a0[1] == 0x7365):
-			n = 0x05
-		elif (a0[0] == 0x8421 and a0[1] == 0x73D6):
-			n = 0x02
-		elif (a0[0] == 0x8421 and a0[1] == 0x73DE):
-			n = 0x01
-		elif (a0[0] == 0x8421 and a0[1] == 0x7401):
-			n = 0x09
-		elif (a0[0] == 0x8421 and a0[1] == 0x7403):
-			n = 0x08
-		elif (a0[0] == 0x8421 and a0[1] == 0x7517):
-			n = 0x05
-		elif (a0[0] == 0x8421 and a0[1] == 0x7653):
-			n = 0x05
-		elif (a0[0] == 0x8421 and a0[1] == 0x7757):
-			n = 0x03
-		elif (a0[0] == 0x8421 and a0[1] == 0x77DF):
-			n = 0x01
-		elif (a0[0] == 0x8421 and a0[1] == 0x7810):
-			n = 0x07
-		elif (a0[0] == 0x8421 and a0[1] == 0x7916):
-			n = 0x04
-		elif (a0[0] == 0x8421 and a0[1] == 0x7B56):
-			n = 0x02
-		elif (a0[0] == 0x8421 and a0[1] == 0x7BD6):
-			n = 0x01
-		elif (a0[0] == 0x8421 and a0[1] == 0x7BDE):
-			n = 0
-		elif (a0[0] == 0x8421 and a0[1] == 0x7F45):
-			n = 0x04
-		elif (a0[0] == 0x8421 and a0[1] == 0x7F57):
-			n = 0x02
-		elif (a0[0] == 0x8421 and a0[1] == 0x7FDF):
-			n = 0
-		elif (a0[0] == 0x8C21 and a0[1] == 0x73DE):
-			n = 0
-		else:
-			assert (False), 'Don\'t know how to read float array for [%s]!' %(IntArr2Str(a0, 4))
-		i = node.ReadFloat64A(i, n, 'CodedFloatA.a1')
-		return i
-
-	def Read_CodedFloatB(self, offset, node):
-		i = node.ReadUInt16A(offset, 2, 'CodedFloatB.a0')
-		a0 = node.get('CodedFloatB.a0')
-		if (a0[0] == 0x8000 and a0[1] == 0x7000):
-			n = 0x0C
-		elif (a0[0] == 0x8000 and a0[1] == 0x7001):
-			n = 0x0B
-		elif (a0[0] == 0x8020 and a0[1] == 0x7252):
-			n = 0x07
-		elif (a0[0] == 0x8020 and a0[1] == 0x725A):
-			n = 0x06
-		elif (a0[0] == 0x8020 and a0[1] == 0x72D2):
-			n = 0x06
-		elif (a0[0] == 0x8020 and a0[1] == 0x72DA):
-			n = 0x05
-		elif (a0[0] == 0x8020 and a0[1] == 0x7A12):
-			n = 0x06
-		elif (a0[0] == 0x8020 and a0[1] == 0x7A52):
-			n = 0x06
-		elif (a0[0] == 0x8020 and a0[1] == 0x7ADA):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x7256):
-			n = 0x05
-		elif (a0[0] == 0x8124 and a0[1] == 0x72D6):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x7352):
-			n = 0x05
-		elif (a0[0] == 0x8124 and a0[1] == 0x735A):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x73D2):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x73DA):
-			n = 0x03
-		elif (a0[0] == 0x8124 and a0[1] == 0x7A16):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x7A56):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x7ADE):
-			n = 0x02
-		elif (a0[0] == 0x8124 and a0[1] == 0x7B52):
-			n = 0x04
-		elif (a0[0] == 0x8124 and a0[1] == 0x7BDA):
-			n = 0x02
-		elif (a0[0] == 0x8400 and a0[1] == 0x7000):
-			n = 0x0B
-		elif (a0[0] == 0x8400 and a0[1] == 0x7344):
-			n = 0x07
-		elif (a0[0] == 0x8400 and a0[1] == 0x7B44):
-			n = 0x06
-		elif (a0[0] == 0x8401 and a0[1] == 0x7B46):
-			n = 0x04
-		elif (a0[0] == 0x8412 and a0[1] == 0x7002):
-			n = 0x09
-		elif (a0[0] == 0x8412 and a0[1] == 0x7346):
-			n = 0x05
-		elif (a0[0] == 0x8412 and a0[1] == 0x7354):
-			n = 0x05
-		elif (a0[0] == 0x8412 and a0[1] == 0x73DC):
-			n = 0x03
-		elif (a0[0] == 0x8412 and a0[1] == 0x7B46):
-			n = 0x04
-		elif (a0[0] == 0x8412 and a0[1] == 0x7B54):
-			n = 0x04
-		elif (a0[0] == 0x8421 and a0[1] == 0x7356):
-			n = 0x03
-		elif (a0[0] == 0x8421 and a0[1] == 0x7653):
-			n = 0x05
-		elif (a0[0] == 0x8421 and a0[1] == 0x7B56):
-			n = 0x02
-		elif (a0[0] == 0x8421 and a0[1] == 0x7ED3):
-			n = 0x03
-		elif (a0[0] == 0x8429 and a0[1] == 0x7BDE):
-			n = 0
-		elif (a0[0] == 0x8480 and a0[1] == 0x7BCC):
-			n = 0x04
-		elif (a0[0] == 0x8492 and a0[1] == 0x7BCE):
-			n = 0x02
-		elif (a0[0] == 0x8820 and a0[1] == 0x7ADA):
-			n = 0x04
-		elif (a0[0] == 0x8924 and a0[1] == 0x7ADE):
-			n = 0x02
-		else:
-			assert (False), 'Don\'t know how to read float array for [%s]!' %(IntArr2Str(a0, 4))
-		i = node.ReadFloat64A(i, n, 'CodedFloatB.a1')
+	def ReadTransformation(self, node, offset):
+		'''
+		Read the transformation matrix
+		'''
+		val = Transformation()
+		node.set('transformation', val)
+		i = val.read(node.data, offset)
+		node.content += '%s' %(val)
 		return i
 
 	def Read_Float32Arr(self, offset, node, name):
@@ -546,6 +226,11 @@ class GraphicsReader(SegmentReader):
 
 		return i
 
+	def Read_0B2C8AE9(self, node):
+		i = self.skipBlockSize(0)
+		i = node.ReadUInt16A(i, 4, 'a0')
+		return i
+
 	def Read_0BC8EA6D(self, node):
 		'''
 		ParentKeyRef
@@ -620,15 +305,9 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadFloat64A(i, 3, 'a4')
 		i = node.ReadFloat64A(i, 3, 'a5')
 
-		# TODO: Hugh - Does this really fit????
-		if (node.get('Header0').x == 0x09):
-			i = node.ReadUInt32(i, 'u32_0')
-		else:
-			node.set('u32_0', 0)
-		i = self.Read_CodedFloatA(i, node)
-		i = node.ReadUInt8A(i, 3, 'a6')
-
 		return i
+
+	def Read_184FDA9C(self, node): return 0
 
 	def Read_189725D1(self, node):
 		i = self.skipBlockSize(0)
@@ -645,6 +324,8 @@ class GraphicsReader(SegmentReader):
 
 		return i
 
+	def Read_23ADA14E(self, node): return 0
+
 	def Read_2C7020F6(self, node):
 		'''
 		Workaxis
@@ -656,7 +337,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadChildRef(i)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 6, 'a0')
-		i = self.Read_CodedFloatB(i, node)
+		i = self.ReadTransformation(node, i)
 		i = node.ReadUInt8A(i, 3, 'a3')
 
 		return i
@@ -672,7 +353,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadChildRef(i)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 6, 'a3')
-		i = self.Read_CodedFloatA(i, node)
+		i = self.ReadTransformation(node, i)
 		i = node.ReadUInt16(i, 'u16_0')
 
 		return i
@@ -899,7 +580,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 
 		lst0 = node.get('lst0')
-		assert (len(lst0) == 0 or len(lst0) == l), '%s: unknown format for list length = %d!' %(node.typeID, len(lst0))
+		assert (len(lst0) == 0 or len(lst0) == 1), '%s: unknown format for list length = %d!' %(node.typeID, len(lst0))
 
 		i = self.skipBlockSize(i)
 
@@ -913,7 +594,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'key')
-		i = self.Read_CodedFloatA(i, node)
+		i = self.ReadTransformation(node, i)
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst1')
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst2')
 		i = node.ReadUInt8(i, 'u8_1')
@@ -980,6 +661,8 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_2')
 
 		return i
+
+	def Read_76986821(self, node): return 0
 
 	def Read_7AE0E1A3(self, node):
 		i = self.skipBlockSize(0)
@@ -1118,7 +801,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadFloat64A(i, 2, 'a2')
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
-#		i = node.ReadList7(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst1')
+		i = node.ReadList7(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst1')
 #		i = node.ReadUInt16A(i, 4, 'a3')
 #
 #		a4, dummy = getUInt16A(node.data, i, 2)
@@ -1135,11 +818,15 @@ class GraphicsReader(SegmentReader):
 
 		return i
 
+	def Read_A3EBE198(self, node): return 0
+
 	def Read_A529D1E2(self, node):
 		i = self.Read_32RA(node)
 		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 
 		return i
+
+	def Read_A6DD2FCC(self, node): return 0
 
 	def Read_A79EACC7(self, node):
 		'''
@@ -1232,7 +919,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadFloat64A(i, 3, 'a1')
 		i = node.ReadFloat64A(i, 3, 'a2')
 		i = self.Read_TypedFloat(i, node)
-		i = node.ReadList2(i, AbstractNode._TYP_LIST_3D_FLOAT64_, 'lst0')
+		#i = node.ReadList2(i, AbstractNode._TYP_LIST_3D_FLOAT64_, 'lst0')
 
 		return i
 
@@ -1271,8 +958,8 @@ class GraphicsReader(SegmentReader):
 		lst2 = []
 		while (j < cnt1):
 			j += 1
-			i = self.Read_CodedFloatB(i, node)
-			lst2.append(node.get('CodedFloatB.a1'))
+			i = self.ReadTransformation(node, i)
+			lst2.append(node.get('transformation'))
 		node.set('lst2', lst2)
 		node.delete('CodedFloatB.a0')
 		node.delete('CodedFloatB.a1')
@@ -1372,6 +1059,8 @@ class GraphicsReader(SegmentReader):
 
 		return i
 
+	def Read_AFD5CEEB(self, node): return 0
+
 	def Read_B01025BF(self, node):
 		'''
 		Dimensioning
@@ -1442,6 +1131,8 @@ class GraphicsReader(SegmentReader):
 		i = self.skipBlockSize(i)
 
 		return i
+
+	def Read_B247B180(self, node): return 0
 
 	def Read_B255D907(self, node):
 		i = self.skipBlockSize(0)
@@ -1644,7 +1335,7 @@ class GraphicsReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'a1')
 		i = node.ReadUInt8A(i, 4, 'a2')
-		i = self.Read_CodedFloatB(i, node)
+		i = self.ReadTransformation(node, i)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 7, 'a5')
 
@@ -1729,32 +1420,8 @@ class GraphicsReader(SegmentReader):
 		i = self.Read_32RRR2(node)
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
-		a3,    i = getUInt16A(node.data, i, 2)
-		# like Read_CodedFloatA
-		if (a3[0] == 0x8000 and a3[1] == 0x7000):
-			n = 0x0C
-		elif (a3[0] == 0x8000 and a3[1] == 0x7090):
-			n = 0x0A
-		elif (a3[0] == 0x8000 and a3[1] == 0x76DB):
-			n = 0x04
-		elif (a3[0] == 0x8100 and a3[1] == 0x7799):
-			n = 0x05
-		elif (a3[0] == 0x8214 and a3[1] == 0x7577):
-			n = 0x03
-		elif (a3[0] == 0x8214 and a3[1] == 0x79FD):
-			n = 0x02
-		elif (a3[0] == 0x8421 and a3[1] == 0x7F57):
-			n = 0x02
-		else:
-			i += self.ReadUnknown(node, node.data[i:], None, True, False)
-			assert (False), 'Don\'t know how to read float array for [%s]!' %(IntArr2Str(a3, 4))
-		i = node.ReadFloat64A(i, n, 'a4')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'key')
-		i = node.ReadUInt8(i, 'u8_1')
+		a3, i = getUInt16A(node.data, i, 2)
+		i = self.ReadTransformation(node, i)
 
 		return i
 
@@ -1788,6 +1455,8 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadFloat64A(i, 2, 'a4')
 
 		return i
+
+	def Read_D4824069(self, node): return 0
 
 	def Read_D79AD3F3(self, node):
 		i = self.Read_32RRR2(node)

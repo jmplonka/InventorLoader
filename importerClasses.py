@@ -2,32 +2,35 @@
 
 '''
 importerClasses.py:
-
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-from importerUtils import IntArr2Str, FloatArr2Str, logMessage, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
+import sys
+from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion, setThumbnailData
 from math          import degrees, radians, pi
+from FreeCAD       import ParamGet
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.6.0'
-__status__      = 'In-Development'
+__author__     = "Jens M. Plonka"
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 def writeThumbnail(data):
 	folder = getInventorFile()[0:-4]
 	filename = folder + '/_.png'
-	with open(filename, 'wb') as thumbnail:
-		# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
-		thumbnail.write(data[0x10:])
-	filename = folder + '/_.log'
-	with open(filename, 'wb') as thumbnail:
-		# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
-		arr, i = getUInt16A(data, 0, 8)
-		thumbnail.write(IntArr2Str(arr, 2))
+	# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
+	buffer = data[0x10:]
+	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumpnails', False)):
+		with open(filename, 'wb') as thumbnail:
+			thumbnail.write(buffer)
+		filename = folder + '/_.log'
+		with open(filename, 'wb') as thumbnail:
+			# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
+			arr, i = getUInt16A(data, 0, 8)
+			thumbnail.write(IntArr2Str(arr, 2))
 	thmb = Thumbnail()
 	thmb.width, i = getUInt16(data, 10)
 	thmb.height, i = getUInt16(data, i)
+	setThumbnailData(buffer)
 	return thmb
 
 class UFRxDocument():
@@ -315,6 +318,7 @@ class RSeMetaData():
 		self.nodes       = None
 		self.elementNodes = {}
 		self.indexNodes  = {}
+		self.tree        = DataNode(None, False)
 
 	@staticmethod
 	def isApp(seg):
@@ -653,8 +657,10 @@ class DataNode():
 		return node
 
 	def getChild(self, index):
-		if (index in self._map): return self._map[index]
-		return None
+		try:
+			return self._map[index]
+		except:
+			return None
 
 	def getFirstChild(self, key):
 		child = self.first
@@ -698,15 +704,17 @@ class DataNode():
 
 	def __str__(self):
 		node = self.data
-		content = node.content
-		if (not isinstance(content, unicode)):
-			content = unicode(content)
-		name = node.name
-		if (name):
-			if (not isinstance(name, unicode)):
-				name = unicode(name)
-			return u'(%04X): %s \'%s\'%s' %(node.index, node.typeName, name, content)
-		return u'(%04X): %s%s' %(node.index, node.typeName, content)
+		if (node is not None):
+			content = node.content
+			if (not isinstance(content, unicode)):
+				content = unicode(content)
+			name = node.name
+			if (name):
+				if (not isinstance(name, unicode)):
+					name = unicode(name)
+				return u'(%04X): %s \'%s\'%s' %(node.index, node.typeName, name, content)
+			return u'(%04X): %s%s' %(node.index, node.typeName, content)
+		return "<NONE>"
 
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
@@ -763,16 +771,10 @@ class ParameterNode(DataNode):
 			functionSupported = (function not in FunctionsNotSupported)
 			if (self.asText or functionSupported):
 				operandRefs = parameterData.get('operands')
-				sep = ''
-				subFormula = function + '('
 				# WORKAROUND:
 				# There seems to be a bug in the 'tanh' function regarding units! => ignore units!
 				ignoreUnits = (parameterData.name == 'tanh')
-				for operandRef in operandRefs:
-					operand = self.getParameterFormula(operandRef, withUnits and not ignoreUnits)
-					subFormula += (sep + operand)
-					sep = ';'
-				subFormula += ')'
+				subFormula = "(%s)" %(';'.join(["%s" %(self.getParameterFormula(ref, withUnits and not ignoreUnits)) for ref in operandRefs]))
 
 			else:
 				# Modulo operation not supported by FreeCAD
@@ -1124,18 +1126,10 @@ class FeatureNode(DataNode):
 
 	def __str__(self):
 		data = self.data
-		name = self.name
-		properties = ''
 		list = data.get('properties')
 		if (list is not None):
-			for p in list:
-				properties += '\t'
-				if (p):
-					properties += p.typeName
-#		logError('%d\tFEATURE\t%s\t%s%s' %(getFileVersion(), self.getSubTypeName(), name, properties))
-			return '(%04X): %s\t%s\t\'%s\'\tpropererties=%d\t%s' %(data.index, data.typeName, self.getSubTypeName(), name, len(list), data.content)
-
-		return '(%04X): %s\t%s\t\'%s\'\tpropererties=None\t%s' %(data.index, data.typeName, self.getSubTypeName(), name, data.content)
+			return '(%04X): %s\t%s\t\'%s\'\tpropererties=%d\t%s' %(data.index, data.typeName, self.getSubTypeName(), self.name, len(list), data.content)
+		return '(%04X): %s\t%s\t\'%s\'\tpropererties=None\t%s' %(data.index, data.typeName, self.getSubTypeName(), self.name, data.content)
 
 
 class ValueNode(DataNode):
@@ -1143,9 +1137,9 @@ class ValueNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		if ('value' in self.data.properties):
+		try:
 			value = self.data.properties['value']
-		else:
+		except:
 			value = None
 		name = self.data.name
 		if (name is None or len(name) == 0):
@@ -1272,12 +1266,8 @@ class SurfaceBodiesNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		d = self.get('bodies')
-		sep = u''
-		names = u''
-		for body in d:
-			names += u'\'%s\'%s' %(body.name, sep)
-			sep = u','
+		bodies = self.get('bodies')
+		names = ','.join([u"'%s'" %(b.name) for b in bodies])
 		return u'(%04X): %s %s' %(self.index, self.typeName, names)
 
 class B32BF6AC():
@@ -1313,30 +1303,6 @@ class _32RA():
 
 	def __str__(self):
 		return 'i=%X f=%X n=%X' %(self.i, self.f, self.n)
-
-class BRepChunk():
-	def __init__(self, key, val):
-		self.key = key
-		self.val = val
-
-	def __str__(self):
-		if (self.key == 0x04): return '%X' %(self.val)
-		if (self.key == 0x06): return '(%s)' %(FloatArr2Str(self.val))
-		if (self.key == 0x07): return '\'%s\'' %(self.val)
-		if (self.key == 0x0B):
-			str = '['
-			sep = ''
-			for x in self.val:
-				str += sep
-				str += '%s' %(x)
-				sep = ','
-			str += ']'
-			return str
-		if (self.key == 0x0C): return '%X' %(self.val)
-		if (self.key == 0x0D): return '\'%s\'' %(self.val)
-		if (self.key == 0x0E): return '\'%s\'' %(self.val)
-		if (self.key == 0x11): return '\n'
-		return ''
 
 class ModelerTxnMgr():
 	def __init__(self):

@@ -1,27 +1,28 @@
 # -*- coding: utf8 -*-
 
-# Assumes Import_IPT.py is the file that has the code for opening and reading .ipt files
-import traceback
-from importerUtils import setCanImport, canImport
+'''
+InitGui.py
+Assumes Import_IPT.py is the file that has the code for opening and reading .ipt files
+'''
+import traceback, importerUtils
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.6.0'
-__status__      = 'In-Development'
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-try:
-	if (not hasattr(FreeCADGui, 'InventorLoaderPrefs')):
-		FreeCADGui.addIconPath(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources')
-		FreeCADGui.addPreferencePage(FreeCAD.getHomePath() + 'Mod/InventorLoader/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
-		FreeCADGui.InventorImporterPrefs = True
-except:
-	FreeCAD.Console.PrintError(">E: %s\n"% traceback.format_exc())
+#try:
+#	addinpath = os.path.dirname(os.path.abspath(__file__))
+#	if (not hasattr(FreeCADGui, 'InventorLoaderPrefs')):
+#		FreeCADGui.addIconPath(addinpath + '/Resources')
+#		FreeCADGui.addPreferencePage(addinpath + '/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
+#		FreeCADGui.InventorImporterPrefs = True
+#except:
+#	FreeCAD.Console.PrintError(">E: %s\n"% traceback.format_exc())
 
 def missingDependency(module, url, folder):
-	import os
-	import subprocess
-	
-	addinpath = FreeCAD.getHomePath() + "Mod/InventorLoader/"
+	import os, subprocess, importerUtils
+
+	addinpath = "%sMod/InventorLoader/" %(FreeCAD.getHomePath())
 	if (not os.path.exists(addinpath + "libs")):
 		print "Libs does not exists will try to unpack them ... "
 		import zipfile
@@ -33,7 +34,7 @@ def missingDependency(module, url, folder):
 	os.chdir(addinpath + "libs")
 	subprocess.call(['python', 'installLibs.py', FreeCAD.getHomePath(), url, folder])
 	FreeCAD.Console.PrintWarning("DONE!\n")
-	setCanImport(False)
+	importerUtils.setCanImport(False)
 
 try:
 	import xlwt
@@ -55,7 +56,13 @@ try:
 except:
 	missingDependency("olefile", "http://www.decalage.info/python/olefileio", "olefile")
 
-if (not canImport()):
+try:
+	import SheetMetalCmd
+	importerUtils.setUseSheetMetal(True)
+except:
+	importerUtils.setUseSheetMetal(False)
+
+if (not importerUtils.canImport()):
 	from PySide import QtCore, QtGui
 	msgBox = QtGui.QMessageBox()
 	msgBox.setIcon(QtGui.QMessageBox.Question)

@@ -2,20 +2,10 @@
 
 '''
 importerReader.py:
-
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys
-import os
-import uuid
-import datetime
-import re
-import zlib
-import operator
-import glob
-import struct
-import codecs
+import sys, os, uuid, datetime, re, zlib, operator, glob, struct, codecs, xlrd, FreeCAD, Import_IPT
 from importerClasses     import *
 from importerSegment     import SegmentReader
 from importerApp         import AppReader
@@ -30,13 +20,11 @@ from importerGraphics    import GraphicsReader
 from importerNotebook    import NotebookReader
 from importerResults     import ResultReader
 from importerUtils       import *
-import xlrd
-from xlutils.copy import copy
+from xlutils.copy        import copy
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.6.0'
-__status__      = 'In-Development'
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 # The model representing the content of the imported file
 model = Inventor()
@@ -58,12 +46,10 @@ KEY_DTP_VERSION          = 43
 KEY_DTP_BUILD            = 0
 
 def getProperty(properties, key):
-	value = ''
-	if (key in properties):
-		value = properties[key]
-		if (type(value) is str):
-			if ((len(value)>0) and (value[-1] == '\0')):
-				value = value[0:-1]
+	value = properties.get(key, '')
+	if (type(value) is str):
+		if ((len(value) > 0) and (value[-1] == '\0')):
+			value = value[0:-1]
 	return value
 
 def getPropertySetName(properties, path):
@@ -92,11 +78,9 @@ def ReadInventorSummaryInformation(doc, properties, path):
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
 			if (key == KEY_THUMBNAIL_1):
-				if (FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumpnails', False)):
-					val = writeThumbnail(val)
+				val = writeThumbnail(val)
 			elif (key == KEY_THUMBNAIL_2):
-				if (FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumpnails', False)):
-					val = writeThumbnail(val)
+				val = writeThumbnail(val)
 			model.iProperties[name][key] = val
 	return
 
@@ -291,7 +275,7 @@ def ReadWorkbook(doc, data, name, stream):
 	folder = getInventorFile()[0:-4]
 	filename = '%s\\%s.xls' %(folder, name)
 
-	wbk =  xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
+	wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
 	for name in wbk.name_obj_list:
 		r = name.area2d()
 
@@ -995,49 +979,48 @@ def ReadRSeMetaDataSectionB(value, data, offset, size, cnt):
 def findSegment(segRef):
 	global model
 
-	if (segRef in model.RSeSegInfo.segments):
-		seg = model.RSeSegInfo.segments[segRef]
-		return seg
-
-	return None
+	return model.RSeSegInfo.segments.get(segRef)
 
 def getReader(seg):
 	reader = None
-	if (RSeMetaData.isApp(seg)):
-		pass
+	seg.AcisList = []
+	if (RSeMetaData.isApp(seg)): # ApplicationSettings
 		# reader = AppReader()
-	elif (RSeMetaData.isBRep(seg)):
-		# Skip reading Browser Repository data
 		pass
-		# reader = BRepReader()
+	elif (RSeMetaData.isBRep(seg)): # BoundaryRepresentation
+		if (Import_IPT.isStrategySat()):
+			reader = BRepReader()
+		pass
 	elif (RSeMetaData.isBrowser(seg)):
-		pass
 		# reader = BrowserReader()
+		pass
 	elif (RSeMetaData.isDefault(seg)):
+		# reader = DefaultReader()
 		pass
 	elif (RSeMetaData.isDC(seg)):
-		reader = DCReader()
+		if (Import_IPT.isStrategyNative()):
+			reader = DCReader()
 	elif (RSeMetaData.isGraphics(seg)):
-		pass
 		# reader = GraphicsReader()
+		pass
 	elif (RSeMetaData.isResult(seg)):
-		pass
 		# reader = ResultReader()
+		pass
 	elif (RSeMetaData.isDesignView(seg)):
-		pass
 		# reader = DesignViewReader()
+		pass
 	elif (RSeMetaData.isEeData(seg)):
-		pass
 		# reader = EeDataReader()
+		pass
 	elif (RSeMetaData.isEeScene(seg)):
-		pass
 		# reader = EeSceneReader()
+		pass
 	elif (RSeMetaData.isFBAttribute(seg)):
-		pass
 		# reader = FBAttributeReader()
-	elif (RSeMetaData.isNBNotebook(seg)):
 		pass
+	elif (RSeMetaData.isNBNotebook(seg)):
 		# reader = NotebookReader()
+		pass
 	elif (seg.segRef is not None):
 		logWarning('>W: %s will be read, but not considered!' %(seg.name))
 	return reader
@@ -1167,7 +1150,7 @@ def ReadRSeEmbeddingsDatabaseInterfaces(data):
 		i += dbInterface.type
 		dbInterface.uid, i = getUUID(data, i, 'RSeEmbeddings.DatabaseInterfaces[%X].uid' % (n))
 		if (dbInterface.type  == 0x01):
-			dbInterface.value = IFF(struct.unpack('<?', dbInterface.data)[0], 'YES', 'NO')
+			dbInterface.value = 'YES' if (struct.unpack('<?', dbInterface.data)[0]) else 'NO'
 		elif (dbInterface.type== 0x04):
 			dbInterface.value = struct.unpack('<i', dbInterface.data)[0]
 		elif (dbInterface.type== 0x10):
@@ -1209,7 +1192,7 @@ def ReadRSeEmbeddingsContentsText16(data, offset):
 	len, i = getUInt8A(data, offset, 4)
 	end = i + len[3]*2
 	buf = data[i: end]
-	txt = buf.decode('UTF-16LE').encode('UTF-8')
+	txt = buf.decode('UTF-16LE').encode(ENCODING_FS)
 	return txt, end
 
 def ReadRSeEmbeddingsContents(data):

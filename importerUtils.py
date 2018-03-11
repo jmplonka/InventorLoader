@@ -2,25 +2,25 @@
 
 '''
 importerUtils.py:
-
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys
-import datetime
-import FreeCAD
+import sys, datetime, FreeCADGui
 from uuid    import UUID
-from struct  import pack, unpack
-from math    import fabs
+from struct  import Struct, unpack_from
+from FreeCAD import Vector as VEC, Console, GuiUp
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.6.0'
-__status__      = 'In-Development'
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-_dumpLineLength = 0x20
-_fileVersion    = None
-_can_import     = True
+ENCODING_FS      = 'utf8'
+
+_dumpLineLength  = 0x20
+_fileVersion     = None
+_can_import      = True
+_use_sheet_metal = True
+_thumbnailData   = None
 
 # The file the be imported
 _inventor_file = None
@@ -37,6 +37,24 @@ def canImport():
 	global _can_import
 	return _can_import
 
+def setUseSheetMetal(sheetMetal):
+	global _use_sheet_metal
+	_use_sheet_metal = sheetMetal
+	return
+
+def useSheetMetal():
+	global _use_sheet_metal
+	return _use_sheet_metal
+
+def setThumbnailData(data):
+	from PySide.QtCore import QByteArray
+	global _thumbnailData
+	_thumbnailData = QByteArray(data)
+
+def getThumbnailData():
+	global _thumbnailData
+	return _thumbnailData
+
 class LOG():
 	LOG_DEBUG   = 1
 	LOG_INFO    = 2
@@ -44,6 +62,16 @@ class LOG():
 	LOG_ERROR   = 8
 	LOG_ALWAYS  = 16
 	LOG_FILTER  = LOG_INFO | LOG_WARNING | LOG_ERROR
+
+UINT8    = Struct('<B').unpack_from
+UINT16   = Struct('<H').unpack_from
+SINT16   = Struct('<h').unpack_from
+UINT32   = Struct('<L').unpack_from
+SINT32   = Struct('<l').unpack_from
+FLOAT32  = Struct('<f').unpack_from
+FLOAT64  = Struct('<d').unpack_from
+RGBA     = Struct('<ffff').unpack_from
+DATETIME = Struct('<Q').unpack_from
 
 def getUInt8(data, offset):
 	'''
@@ -57,10 +85,8 @@ def getUInt8(data, offset):
 		The unsigned 8-Bit value at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 1
-	assert end <= len(data), "Trying to read UInt8 beyond data end (%X > %X)" %(end, len(data))
-	val = unpack('<B', data[offset:end])[0]
-	return val, end
+	val, = UINT8(data, offset)
+	return val, offset + 1
 
 def getUInt8A(data, offset, size):
 	'''
@@ -78,7 +104,7 @@ def getUInt8A(data, offset, size):
 	'''
 	end = offset + size
 	assert end <= len(data), "Trying to read UInt8 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	val = unpack('<' +'B'*size, data[offset:end])
+	val = unpack_from('<' +'B'*size, data, offset)
 	val = list(val)
 	return val, end
 
@@ -94,10 +120,8 @@ def getUInt16(data, offset):
 		The unsigned 16-Bit value at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 2
-	assert end <= len(data), "Trying to read UInt16 beyond data end (%X > %X)" %(end, len(data))
-	val = unpack('<H', data[offset:end])[0]
-	return val, end
+	val, = UINT16(data, offset)
+	return val, offset + 2
 
 def getUInt16A(data, offset, size):
 	'''
@@ -113,12 +137,9 @@ def getUInt16A(data, offset, size):
 		The array of unsigned 16-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 2*size
-	assert end <= len(data), "Trying to read UInt16 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	val = unpack('<' +'H'*size, data[offset:end])
-
+	val = unpack_from('<' +'H'*size, data, offset)
 	val = list(val)
-	return val, end
+	return val, offset + 2*size
 
 def getSInt16(data, offset):
 	'''
@@ -132,10 +153,8 @@ def getSInt16(data, offset):
 		The signed 16-Bit value at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 2
-	assert end <= len(data), "Trying to read SInt16 beyond data end (%X > %X)" %(end, len(data))
-	val = unpack('<h', data[offset:end])[0]
-	return val, end
+	val, = SINT16(data, offset)
+	return val, offset + 2
 
 def getSInt16A(data, offset, size):
 	'''
@@ -151,11 +170,9 @@ def getSInt16A(data, offset, size):
 		The array of unsigned 32-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 2 * size
-	assert end <= len(data), "Trying to read SInt16 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	val = unpack('<' +'h'*size, data[offset:end])
+	val = unpack_from('<' +'h'*size, data, offset)
 	val = list(val)
-	return val, end
+	return val, offset + 2 * size
 
 def getUInt32(data, offset):
 	'''
@@ -169,10 +186,8 @@ def getUInt32(data, offset):
 		The unsigned 32-Bit value at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 4
-	assert end <= len(data), "Trying to read UInt32 beyond data end (%X > %X)" %(end, len(data))
-	val = unpack('<L', data[offset:end])[0]
-	return val, end
+	val, = UINT32(data, offset)
+	return val, offset + 4
 
 def getUInt32A(data, offset, size):
 	'''
@@ -188,11 +203,9 @@ def getUInt32A(data, offset, size):
 		The array of unsigned 32-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 4 * size
-	assert end <= len(data), "Trying to read UInt32 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	val = unpack('<' +'L'*size, data[offset:end])
+	val = unpack_from('<' +'L'*size, data, offset)
 	val = list(val)
-	return val, end
+	return val, offset + 4 * size
 
 def getSInt32(data, offset):
 	'''
@@ -206,10 +219,8 @@ def getSInt32(data, offset):
 		The singned 32-Bit value at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 4
-	assert end <= len(data), "Trying to read SInt32 beyond data end (%X > %X)" %(end, len(data))
-	val = unpack('<l', data[offset:end])[0]
-	return val, end
+	val, = SINT32(data, offset)
+	return val, offset + 4
 
 def getSInt32A(data, offset, size):
 	'''
@@ -225,11 +236,9 @@ def getSInt32A(data, offset, size):
 		The array of signed 32-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 4 * size
-	assert end <= len(data), "Trying to read SInt32 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	val = unpack('<' +'l'*size, data[offset:end])
+	val = unpack_from('<' + 'l'*size, data, offset)
 	val = list(val)
-	return val, end
+	return val, offset + 4 * size
 
 def getFloat32(data, offset):
 	'''
@@ -243,11 +252,9 @@ def getFloat32(data, offset):
 		The double precision float value at offset from a single one.
 		The new position in the 'stream'.
 	'''
-	end = offset + 4
-	assert end <= len(data), "Trying to read Float32 beyond data end (%X > %X)" %(end, len(data))
-	val = unpack('<f', data[offset:end])[0]
-	val = unpack('d', pack('d',  val))[0]
-	return val, end
+	val, = FLOAT32(data, offset)
+	val = float(val)
+	return val, offset + 4
 
 def getFloat32A(data, offset, size):
 	'''
@@ -263,13 +270,9 @@ def getFloat32A(data, offset, size):
 		The array of double precision float values from a list of single ones at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 4 * size
-	assert end <= len(data), "Trying to read Float32 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	singles = unpack('<' + 'f'*size, data[offset:end])
-	val = []
-	for s in singles:
-		val += unpack('d', pack('d',  s))
-	return val, end
+	singles = unpack_from('<' + 'f'*size, data, offset)
+	val = [float(s) for s in singles]
+	return val, offset + 4 * size
 
 def getFloat64(data, offset):
 	'''
@@ -283,10 +286,8 @@ def getFloat64(data, offset):
 		The double precision float value at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 8
-	assert end <= len(data), "Trying to read Float64 beyond data end (%X > %X)" %(end, len(data))
-	val = unpack('<d', data[offset:end])[0]
-	return val, end
+	val, = FLOAT64(data, offset)
+	return val, offset + 8
 
 def getFloat64A(data, offset, size):
 	'''
@@ -302,20 +303,14 @@ def getFloat64A(data, offset, size):
 		The array of double precision float values at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 8 * size
-	assert end <= len(data), "Trying to read Float64 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	val = unpack('<' + 'd'*size, data[offset:end])
+	val = unpack_from('<' + 'd'*size, data, offset)
 	val = list(val)
-	return val, end
+	return val, offset + 8 * size
 
 def getColorRGBA(data, offset):
-	i = offset
-	r, i = getFloat32(data, i)
-	g, i = getFloat32(data, i)
-	b, i = getFloat32(data, i)
-	a, i = getFloat32(data, i)
+	r, g, b, a = RGBA(data, offset)
 	c = Color(r, g, b, a)
-	return c, i
+	return c, offset + 0x10
 
 def getUUID(data, offset, source):
 	'''
@@ -357,17 +352,15 @@ def getDateTime(data, offset):
 		The timestamp at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + 8
-	assert end <= len(data), "Trying to read DateTime beyond data end (%X > %X)" %(end, len(data))
-	val = unpack('<Q', data[offset:end])[0]
+	val, = DATETIME(data, offset)
 	if val != 0:
-		return datetime.datetime(1601, 1, 1) + datetime.timedelta(microseconds=val/10.), end
-	return None, end
+		return datetime.datetime(1601, 1, 1) + datetime.timedelta(microseconds=val/10.), offset + 8
+	return None, offset + 8
 
 def getText8(data, offset, l):
 	i = offset
 	end = i + l
-	txt = data[i: end].decode('UTF-8')
+	txt = data[i: end].decode(ENCODING_FS)
 
 	if (txt[-1:] == '\0'):
 		txt = txt[:-1]
@@ -462,15 +455,8 @@ def getText2(uid):
 
 	return uid
 
-# IFF: IF Function
-def IFF(expression, valueTrue, valueFalse):
-	if expression:
-		return valueTrue
-	else:
-		return valueFalse
-
 def FloatArr2Str(arr):
-	return (', '.join('%g' %(f) for f in arr))
+	return (', '.join(['%g' %(f) for f in arr]))
 
 def IntArr2Str(arr, width):
 	fmt = '%0{0}X'.format(width)
@@ -504,7 +490,7 @@ def HexAsciiDump(data, offset = 0, doAscii = True):
 			hexDump = '%04X:' % (i+offset)
 			asciiDump = ''
 		hexDump+= ' %02X' % ord(b)
-		asciiDump += IFF(ord(b) >= 32 and ord(b), b, '.')
+		asciiDump += b if (ord(b) >= 32 and ord(b)) else '.'
 	if (doAscii == True):
 		oDumpStream.Addline(CombineHexAscii(hexDump, asciiDump))
 	else:
@@ -531,9 +517,9 @@ def isEmbeddings(names):
 	return embedding
 
 def isEqual(a, b):
-	if (a is None): return isEqual(b, 0)
-	if (b is None): return isEqual(a, 0)
-	return (fabs(a - b) < 0.0001)
+	if (a is None): return isEqual(b, VEC())
+	if (b is None): return isEqual(a, VEC())
+	return ((a - b).Length < 0.0001)
 
 def logWarning(msg):
 	logMessage(msg, LOG.LOG_WARNING)
@@ -548,11 +534,11 @@ def logMessage(msg, level=LOG.LOG_DEBUG):
 		if ((level & LOG.LOG_FILTER) == 0):
 			return
 	if (level == LOG.LOG_WARNING):
-		FreeCAD.Console.PrintWarning(msg + '\n')
+		Console.PrintWarning(msg + '\n')
 	elif (level == LOG.LOG_ERROR):
-		FreeCAD.Console.PrintError(msg + '\n')
+		Console.PrintError(msg + '\n')
 	else:
-		FreeCAD.Console.PrintMessage(msg + '\n')
+		Console.PrintMessage(msg + '\n')
 
 def getDumpLineLength():
 	global _dumpLineLength
@@ -568,11 +554,10 @@ def getFileVersion():
 
 def getProperty(ole, path, key):
 	p = ole.getproperties([path], convert_time=True)
-	if (p is not None):
-		if (key in p):
-			v = p[key]
-			return v
-	return None
+	try:
+		return p[key]
+	except:
+		return None
 
 def setFileVersion(ole):
 	global _fileVersion
@@ -581,7 +566,7 @@ def setFileVersion(ole):
 	b = getProperty(ole, '\x05Qz4dgm1gRjudbpksAayal4qdGf', 0x16)
 
 	if (b is not None):
-		if ((b // 100000) == 1402):
+		if ((b // 10000000) == 14):
 			_fileVersion = 2010
 		else:
 			_fileVersion = 2009
@@ -593,8 +578,14 @@ def setFileVersion(ole):
 	if (v is not None):
 		v = v[0:v.index(' ')]
 		_fileVersion = int(float(v))
-
+		if (_fileVersion == 134): # early version of 2010
+			_fileVersion = 2010
 	logMessage('Autodesk Inventor %s (Build %d) file' %(_fileVersion, b), LOG.LOG_ALWAYS)
+
+def setThumbnail(ole):
+	t = getProperty(ole, '\x05Zrxrt4arFafyu34gYa3l3ohgHg', 0x11)
+	if (t is not None):
+		setThumbnailData(t[0x10:])
 
 def getInventorFile():
 	global _inventor_file
@@ -613,6 +604,12 @@ def translate(str):
 	res = res.replace(u'ü', 'ue')
 	res = res.replace(u'ß', 'ss')
 	return res
+
+def viewAxonometric(doc):
+	if (GuiUp):
+		FreeCADGui.getDocument(doc.Name).activeView().viewAxonometric()
+		FreeCADGui.SendMsgToActiveView("ViewFit")
+	logMessage("DONE!", LOG.LOG_ALWAYS)
 
 class CDumpStream():
 	def __init__(self):

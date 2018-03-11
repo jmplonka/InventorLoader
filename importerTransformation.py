@@ -8,13 +8,12 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 TODO:
 '''
 from importerUtils import getFloat64, getUInt32, getUInt16, FloatArr2Str, logError
-from FreeCAD         import Rotation, Vector, Matrix
+from FreeCAD         import Rotation as ROT, Vector as VEC, Matrix as MAT
 import math
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
-__status__      = 'In-Development'
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class Transformation:
 	def __init__(self):
@@ -111,7 +110,7 @@ class Transformation:
 		x = self.m[0, 3]
 		y = self.m[1, 3]
 		z = self.m[2, 3]
-		return Vector(x, y, z)
+		return VEC(x, y, z)
 
 	def getRotation(self):
 		"""Return quaternion from the transformation matrix.
@@ -157,11 +156,11 @@ class Transformation:
 			x = (xz + zx) * s
 			y = (zy + yz) * s
 			w = (yx - xy) * s
-		return Rotation(x, y, z, w)
+		return ROT(x, y, z, w)
 
 	def getMatrix(self):
 		m = self.m
-		return Matrix(                              \
+		return MAT(                              \
 			m[0][0], m[0][1], m[0][2], m[0][3], \
 			m[1][0], m[1][1], m[1][2], m[1][3], \
 			m[2][0], m[2][1], m[2][2], m[2][3], \

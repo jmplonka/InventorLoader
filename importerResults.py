@@ -2,10 +2,8 @@
 
 '''
 importerResults.py:
-
 Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) browser view data.
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
-TODO:
 '''
 
 from importerSegment import SegmentReader, checkReadAll
@@ -13,10 +11,9 @@ from importerSegNode import AbstractNode, ResultNode
 from importerClasses import ResultItem4
 from importerUtils   import *
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.2.0'
-__status__      = 'In-Development'
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class ResultReader(SegmentReader):
 	def __init__(self):
@@ -218,7 +215,6 @@ class ResultReader(SegmentReader):
 		return i
 
 	def Read_F645595C(self, node):
-		node.typeName = 'TransactablePartition'
 		i = node.Read_Header0()
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = self.skipBlockSize(i)

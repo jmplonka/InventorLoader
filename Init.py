@@ -1,6 +1,13 @@
 # -*- coding: utf8 -*-
 
-# FreeCAD init script of the InventorLoader module
-# (c) 2017 Jens M. Plonka
+'''
+Init.py
+FreeCAD init script of the InventorLoader module
+'''
 
-FreeCAD.addImportType("Autodesk INVENTOR part file (*.ipt)","Import_IPT")
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
+
+FreeCAD.addImportType("Autodesk INVENTOR part file (*.ipt)", "Import_IPT")
+FreeCAD.addImportType("3D ACIS Modeler file (*.sat)", "importer")

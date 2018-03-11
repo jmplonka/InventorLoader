@@ -2,26 +2,74 @@
 
 '''
 importerSegment.py:
-
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import re
-import traceback
+import re, traceback
 from importerClasses   import *
 from importerSegNode   import BinaryNode, isList, NodeRef
 from importerUtils     import *
+from importerSAT       import AcisChunk, AcisEntity, AcisRef
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
-__status__      = 'In-Development'
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 _listPattern = re.compile('[^\x00]\x00\x00\x30')
 
 _fmt_new = False
 
-ENCODING_FS = 'utf8'
+def resolveEntityReferences(entities, lst):
+	skip = False
+	for entity in lst[6:]:
+		name = entity.name
+		if (name == "Begin-of-ACIS-History-Data"):
+			entity.index = -1
+			skip = True
+		elif (name == 'asmheader'):
+			# skip ASM specific stuff
+			entity.index = -1 # mark as deleted
+
+		try:
+			# delete history reference!
+			entity.chunks[1].val = -1
+		except:
+			pass
+
+		if (not skip):
+			for chunk in entity.chunks:
+				if (chunk.key == 0x0C):
+					ref = chunk.val
+					if (ref.index >= 0):
+						entity = entities[ref.index]
+						if (entity.index == -1):
+							ref.index = -1 # entity was removed
+							ref.entity = None
+						else:
+							ref.entity = entity
+		else:
+			# skip everything beyond history
+			entity.index = -1
+
+	idx = 0
+	for entity in lst[6:]:
+		if (entity.index != -1):
+			entity.index = idx
+			idx += 1
+
+def dumpSat(node):
+	folder = getInventorFile()[0:-4]
+	filename = "%s\%04X.sat" %(folder, node.index)
+
+	lst = node.get('SAT')
+	content = '700 0 1 0\n'
+	content += ''.join(['%s' %(r) for r in lst[0:3]])
+	content += '\n'
+	content += ''.join(['%s' %(r) for r in lst[3:6]])
+	content += '\n'
+	content += ''.join(['%s' %(r) for r in lst[6:]])
+	with open(filename, 'w') as sat:
+		sat.write(content)
 
 def checkReadAll(node, i, l):
 	assert (i == l), '%s: Have not read all data (%d <> %d)' %(node.typeID, i, l)
@@ -182,8 +230,6 @@ def buildBranchRef(parent, file, nodes, ref, level):
 	if (ref.number >= 0):
 		num = '[%02X] ' %(ref.number)
 	reftext = branch.getRefText()
-	if (not isinstance(reftext, unicode)):
-		print branch.typeName, type(reftext)
 	file.write('%s-> %s%s\n' %(level * '\t', num, reftext))
 
 	return
@@ -246,45 +292,85 @@ def buildTree(file, seg):
 			buildBranch(tree, file, nodes, data, 0, None)
 	return tree
 
-def Read_F645595C_chunk(offset, node):
+def Read_Acis_Str1(data, offset):
+	l, i = getUInt8(data, offset)
+	end = i + l
+	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
+	return txt, end
+
+def Read_Acis_Str2(data, offset):
+	l, i = getUInt16(data, offset)
+	end = i + l
+	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
+	return txt, end
+
+def Read_Acis_Str4(data, offset):
+	l, i = getUInt32(data, offset)
+	end = i + l
+	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
+	return txt, end
+
+def Read_AcisEntityRef(data, offset):
+	index, i = getSInt32(data, offset)
+	return AcisRef(index), i
+
+def Read_AcisChunk(offset, node):
 	key, i = getUInt8(node.data, offset)
-	val = None
 
-	if (key == 0x04):
-		val, i = getSInt32(node.data, i)
-	elif (key == 0x06):
-		val, i = getFloat32A(node.data, i, 2)
-	elif (key == 0x07):
-		val, i = getLen8Text8(node.data, i)
-	elif (key == 0x0A):
-		val, i = Read_F645595C_chunk(i, node)
-	elif (key == 0x0B):
-		dummy0, i = Read_F645595C_chunk(i, node)
-		dummy1, i = Read_F645595C_chunk(i, node)
-		val = [dummy0, dummy1]
-	elif (key == 0x0C):
-		val, i = getSInt32(node.data, i)
-	elif (key == 0x0D):
-		val, i = getLen8Text8(node.data, i)
-	elif (key == 0x0E):
-		val, i = getLen8Text8(node.data, i)
-	elif (key == 0x0F):
-		val, i = Read_F645595C_chunk(i, node)
-	elif (key == 0x10):
-		val, i = Read_F645595C_chunk(i, node)
-	elif (key == 0x11):
-		val = None
-	elif (key == 0x13):
-		val, i = getFloat64A(node.data, i, 3)
-	elif (key == 0x14):
-		val, i = getFloat64A(node.data, i, 3)
-	elif (key == 0x15):
-		val, i = getUInt32(node.data, i)
+	if (key == 0x04):   val, i = getSInt32(node.data, i)
+	elif (key == 0x06): val, i = getFloat64(node.data, i)
+	elif (key == 0x07): val, i = Read_Acis_Str1(node.data, i)
+	elif (key == 0x08): val, i = Read_Acis_Str2(node.data, i)
+	elif (key == 0x0A): val    = '0x0A'
+	elif (key == 0x0B): val    = '0x0B'
+	elif (key == 0x0C): val, i = Read_AcisEntityRef(node.data, i) # ENTITY_POINTER
+	elif (key == 0x0D): val, i = Read_Acis_Str1(node.data, i)
+	elif (key == 0x0E): val, i = Read_Acis_Str1(node.data, i)
+	elif (key == 0x0F): val    = '{'
+	elif (key == 0x10): val    = '}'
+	elif (key == 0x11): val    = '#'
+	elif (key == 0x12): val, i = Read_Acis_Str4(node.data, i)
+	elif (key == 0x13): val, i = getFloat64A(node.data, i, 3) # normalized direction
+	elif (key == 0x14): val, i = getFloat64A(node.data, i, 3) # position that needs to be scaled
+	elif (key == 0x15): val, i = getUInt32(node.data, i)
+	elif (key == 0x16): val, i = getFloat64A(node.data, i, 2)
 	else:
-		assert (False), "%04X: Don't know to %X!" %(node.offset + offset, key)
+		buf, dummy = getUInt8A(node.data, offset, 64)
+		assert (False), "%04X: Don't know to %X - [%s]" %(node.offset + offset, key, IntArr2Str(buf, 2))
+	return key, val, i
 
-	chunk = BRepChunk(key, val)
-	return chunk, i
+def Read_AcisEntity(offset, node, end):
+	name = ""
+	i = offset
+	entity = None
+	while (i < end):
+		key, val, i = Read_AcisChunk(i, node)
+
+		name += val if (val != "ASM") else "ACIS"
+
+		if (key == 0x0D):
+			break
+		name += "-"
+
+	entity = AcisEntity(name)
+	if (name != "End-of-ACIS-History-Section"):
+		while ((key != 0x11) and (i < end)):
+			key, val, i = Read_AcisChunk(i, node)
+			entity.add(key, val)
+	return entity, i
+
+def convert2Version7(entity):
+	if ((getFileVersion() > 2012) and (entity.name == 'coedge')):
+		del entity.chunks[len(entity.chunks) - 3]
+	elif (entity.name == 'vertex'):
+		del entity.chunks[len(entity.chunks) - 3]
+	elif (entity.name == 'tvertex-vertex'):
+		del entity.chunks[7]
+		del entity.chunks[6]
+		del entity.chunks[4]
+	elif ((getFileVersion() > 2012) and (entity.name == 'tcoedge-coedge')):
+		del entity.chunks[9]
+	return
 
 class SegmentReader(object):
 
@@ -295,6 +381,17 @@ class SegmentReader(object):
 
 	def createNewNode(self):
 		return BinaryNode()
+
+	def ReadNodeRef(self, node, offset, number, type):
+		n, i = getUInt16(node.data, offset)
+		m, i = getUInt16(node.data, i)
+		ref = NodeRef(n, m, type)
+		if (ref.index > 0):
+			ref.number = number
+			node.childIndexes.append(ref)
+		else:
+			ref = None
+		return ref, i
 
 	def ReadUnknown(self, node, block, file, logError = False, analyseLists = True):
 		l = len(block)
@@ -347,8 +444,10 @@ class SegmentReader(object):
 			readType = getattr(self, 'Read_%s' %(node.typeName))
 			i = readType(node)
 		except Exception as e:
-			logError('ERROR> (%04X): %s - %s' %(node.index, node.typeName, e))
-			logError('>E: ' + traceback.format_exc())
+			if (not isinstance(e, AttributeError)):
+				logError('>E: ' + traceback.format_exc())
+			else:
+				logError('ERROR> (%04X): %s - %s' %(node.index, node.typeName, e))
 
 		try:
 			if (i < len(node.data)): i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
@@ -360,7 +459,7 @@ class SegmentReader(object):
 	def setNodeData(self, node, data):
 		offset = node.offset
 		nodeTypeID, i = getUInt8(data, offset - 4)
-		node.typeID = getNodeType(nodeTypeID, node.seg)
+		node.typeID = getNodeType(nodeTypeID, node.segment)
 		if (isinstance(node.typeID, UUID)):
 			node.typeName = '%08X' % (node.typeID.time_low)
 		else:
@@ -401,6 +500,59 @@ class SegmentReader(object):
 		newFileRaw.close()
 		return
 
+	def Read_F645595C(self, node):
+		# Spatial's (A)CIS (S)olid (M)odeling
+		# 3 Line Header:
+		# [1]	[VERSION_NUMBER] [ENTIY_RECORDS] 4 [FLAGS]
+		# [2]	[STR_LEN] [STRING:PRODUCT] [STR_LEN] [STRING:PRODUCER] [STR_LEN] [STRING:DATE]
+		# [3]	[UNIT_LENGTH] [FAC_RES_ABS] [FAC_RES_NOR]
+		node.typeName = 'ASM'
+		l = len(node.data)
+		e = (l - 17) if (getFileVersion() > 2010) else (l - 25)
+		i = node.Read_Header0()
+		i = node.ReadUInt16A(i, 2, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt16A(i, 2, 'u32_1')
+		txt, i = getText8(node.data, i, 15)
+		node.content += " fmt='%s'" %(txt)
+		node.set('fmt', txt)
+		vrs, i = getUInt32A(node.data, i, 4)
+		lst = []
+		sat = ' '.join(["%d" %(v) for v in vrs])
+		sat += '\n'
+		for header in range(6):
+			key, val, i = Read_AcisChunk(i, node)
+			chunk = AcisChunk(key, val)
+			chunk.str = ''
+			lst.append(chunk)
+		index = 0
+		entities = {}
+		while (i < e):
+			entity, i = Read_AcisEntity(i, node, e)
+			entity.index = index
+			entities[index] = entity
+			lst.append(entity)
+			convert2Version7(entity)
+			index += 1
+			if (entity.name == "End-of-ACIS-data"):
+				break
+		i = self.skipBlockSize(i)
+		resolveEntityReferences(entities, lst)
+
+		sat += ''.join(['%s' %(r) for r in lst[0:3]])
+		sat += '\n'
+		sat += ''.join(['%s' %(r) for r in lst[3:6]])
+		sat += '\n'
+		sat += ''.join(['%s' %(r) for r in lst[6:]])
+		try:
+			node.content += ' SAT="\n%s\n"' %(sat)
+		except:
+			pass
+		node.set('SAT', lst)
+		node.segment.AcisList.append(node)
+		dumpSat(node)
+		return i
+
 	def ReadSegmentData(self, file, buffer, seg):
 		vers = getFileVersion()
 		showTree = False
@@ -410,9 +562,9 @@ class SegmentReader(object):
 
 		self.nodeCounter = 0
 
-		hdrSize = IFF(vers < 2015, 4, 5)
+		hdrSize = 5 if (vers > 2014) else 4
 
-		logMessage('>I0002: reaging %s binary buffer ...' %(seg.name), LOG.LOG_INFO)
+		logMessage('>I0002: Reading %s binary buffer ...' %(seg.name), LOG.LOG_INFO)
 
 		try:
 			i = 4

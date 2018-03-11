@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="svg8" version="1.1" width="100" height="100" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" >
+  <defs id="d001">
+    <linearGradient id="lg001">
+      <stop id="s001" style="stop-color:#424242;stop-opacity:1" offset="0"/>
+      <stop id="s002" style="stop-color:#626262;stop-opacity:0" offset="1"/>
+    </linearGradient>
+    <linearGradient id="lg002" x1="25.5" y1="33" x2="19.5" y2="17" xlink:href="#lg001" gradientUnits="userSpaceOnUse"/>
+    <linearGradient id="lg003" x1="25.5" y1="33" x2="19.5" y2="17" xlink:href="#lg001" gradientUnits="userSpaceOnUse" gradientTransform=" translate(0,32.85)"/>
+    <linearGradient id="lg004" x1="25.5" y1="33" x2="19.5" y2="17" xlink:href="#lg001" gradientUnits="userSpaceOnUse" gradientTransform=" translate(0,65.7)"/>
+  </defs>
+  <path id="p001" d="m 10,0    80,16.4 v -15 l -7,-1.4 Z"   style="fill:#626262;fill-opacity:1;stroke:black;stroke-width:1;stroke-linejoin:round"/>
+  <path id="p002" d="m 10,32.9 80,16.4 v -15 l -80,-16.4 Z" style="fill:#626262;fill-opacity:1;stroke:black;stroke-width:1;stroke-linejoin:round"/>
+  <path id="p003" d="m 10,65.7 80,16.4 v -15 l -80,-16.4 Z" style="fill:#626262;fill-opacity:1;stroke:black;stroke-width:1;stroke-linejoin:round"/>
+  <path id="p004" d="m 10,98.5 7,1.4 h 73 l -80,-16.4 Z"    style="fill:#626262;fill-opacity:1;stroke:black;stroke-width:1;stroke-linejoin:round"/>
+  <path id="p005" d="m 35,0    h 30 v 100 h -30 Z"          style="fill:#e3e3e3;fill-opacity:1;stroke:black;stroke-width:1;stroke-linejoin:round"/>
+  <path id="p006" d="m 10,32.9 80,-16.4 c 10,-2 10,-17 0,-15 l -80,16.4 c -10,2 -10,17 0,15 z" style="fill:white;fill-opacity:1;stroke:black;stroke-width:1;stroke-linejoin:round"/>
+  <path id="p007" d="m 10,32.9 80,-16.4 c 10,-2 10,-17 0,-15 l -80,16.4 c -10,2 -10,17 0,15 z" style="fill:url(#lg002);fill-opacity:1;stroke:black"/>
+  <path id="p008" d="m 10,65.7 80,-16.4 c 10,-2 10,-17 0,-15 l -80,16.4 c -10,2 -10,17 0,15 z" style="fill:white;fill-opacity:1;stroke:black;stroke-width:1;stroke-linejoin:round"/>
+  <path id="p009" d="m 10,65.7 80,-16.4 c 10,-2 10,-17 0,-15 l -80,16.4 c -10,2 -10,17 0,15 z" style="fill:url(#lg003);fill-opacity:1;stroke:black"/>
+  <path id="p010" d="m 10,98.5 80,-16.4 c 10,-2 10,-17 0,-15 l -80,16.4 c -10,2 -10,17 0,15 z" style="fill:white;fill-opacity:1;stroke:black;stroke-width:1;stroke-linejoin:round"/>
+  <path id="p011" d="m 10,98.5 80,-16.4 c 10,-2 10,-17 0,-15 l -80,16.4 c -10,2 -10,17 0,15 z" style="fill:url(#lg004);fill-opacity:1;stroke:black"/>
+</svg>

@@ -2,25 +2,61 @@
 
 '''
 Import_IPT.py:
-
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import FreeCAD
-import FreeCADGui
-import sys
-import os
+import FreeCAD, FreeCADGui, sys, os, importerBRep, importerSAT
 from olefile           import isOleFile, OleFileIO
-from importerUtils     import LOG, getInventorFile, setInventorFile, setFileVersion, PrintableName, isEmbeddings, logMessage, logWarning, logError, canImport
+from importerUtils     import LOG, getInventorFile, setInventorFile, setFileVersion, setThumbnail, PrintableName, isEmbeddings, logMessage, logWarning, logError, canImport
+from PySide.QtCore     import *
+from PySide.QtGui      import *
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.6.0'
-__status__      = 'In-Development'
+__author__     = "Jens M. Plonka"
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 # Indicator that everything is ready for the import
 from importerReader    import *
 from importerFreeCAD   import FreeCADImporter, createGroup
+
+STRATEGY_SAT    = 0
+STRATEGY_NATIVE = 1
+
+def getStrategy():
+	return FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetInt("strategy", STRATEGY_SAT)
+
+def isStrategySat():
+	return getStrategy() == STRATEGY_SAT
+
+def isStrategyNative():
+	return getStrategy() == STRATEGY_NATIVE
+
+def chooseImportStrategy():
+	btnSat   = QPushButton('&SAT')
+	btnNativ = QPushButton('&nativ')
+	msgBox = QMessageBox()
+	data = getThumbnailData()
+	if (data is not None):
+		png = QPixmap()
+		if (png.loadFromData(getThumbnailData())):
+			msgBox.setIconPixmap(png)
+		else:
+			msgBox.setIcon(QMessageBox.Question)
+	else:
+		msgBox.setIcon(QMessageBox.Question)
+	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
+	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
+	msgBox.addButton(btnSat, QMessageBox.YesRole)
+	msgBox.addButton(btnNativ, QMessageBox.NoRole)
+	param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
+	if (param.GetInt("strategy") == 0):
+		msgBox.setDefaultButton(btnSat)
+	else:
+		msgBox.setDefaultButton(btnNativ)
+	strategy = msgBox.exec_()
+
+	param.SetInt("strategy", strategy)
+	return STRATEGY_SAT if (strategy == 0) else STRATEGY_NATIVE
 
 def ReadIgnorable(fname, data):
 	logMessage("\t>>> IGNORED: %r" % ('/'.join(fname)))
@@ -149,6 +185,12 @@ def ReadFile(doc, readProperties):
 	if (isOleFile(getInventorFile())):
 		ole = OleFileIO(getInventorFile())
 		setFileVersion(ole)
+		setThumbnail(ole)
+
+		strategy = chooseImportStrategy()
+		param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
+		param.SetInt("strategy", strategy)
+
 		elements = ole.listdir(streams=True, storages=False)
 
 		folder = getInventorFile()[0:-4]
@@ -183,7 +225,7 @@ def ReadFile(doc, readProperties):
 		logMessage("Dumped data to folder: '%s'" %(getInventorFile()[0:-4]), LOG.LOG_INFO)
 
 		return True
-	logError("Error - '%s' is not a valid Autodesk Inventor file." %(infile))
+	logError("Error - '%s' is not a valid Autodesk Inventor file." %(getInventorFile()))
 	return False
 
 def insertGroup(doc, filename):
@@ -196,14 +238,24 @@ def insertGroup(doc, filename):
 
 def create3dModel(root, doc):
 	global model
+	if (model):
+		storage = model.RSeStorageData
+		strategy = getStrategy()
+		if (strategy == STRATEGY_NATIVE):
+			dc = FreeCADImporter.findDC(storage)
+			if (dc is not None):
+				creator = FreeCADImporter()
+				creator.importModel(root, doc, dc)
+		elif (strategy == STRATEGY_SAT):
+			brep = FreeCADImporter.findBRep(storage)
+			for asm in brep.AcisList:
+				lst    = asm.get('SAT')
+				header, entities = importerSAT.getHeader(asm)
+				importerSAT.importModel(root, doc, entities, header)
+		else:
+			logError("WRONG STRATEGY!")
 
-	creator = FreeCADImporter(root, doc)
-	creator.importModel(model)
-
-	if (FreeCAD.GuiUp):
-		FreeCADGui.getDocument(doc.Name).activeView().viewAxonometric()
-		FreeCADGui.SendMsgToActiveView("ViewFit")
-		logMessage("DONE!", LOG.LOG_ALWAYS)
+	viewAxonometric(doc)
 
 	return
 
@@ -242,48 +294,3 @@ def open(filename, skip = [], only = [], root = None):
 			group = None # Don't create 3D-Model in sub-group
 			create3dModel(group, doc)
 	return
-
-if __name__ == '__main__':
-	if (len(sys.argv) > 1):
-		files = sys.argv[1:]
-		filename = files[0].decode(sys.getfilesystemencoding()) # make it UNICODE!
-		setInventorFile(filename)
-		if (isOleFile(filename)):
-			if (len(files) == 1):
-				open(filename)
-			else:
-				# this is only for debugging purposes...
-				docname = os.path.splitext(os.path.basename(filename))[0]
-				docname = decode(docname, utf=True)
-				doc = FreeCAD.newDocument(docname)
-
-				ole = OleFileIO(filename)
-				setFileVersion(ole)
-				elements = ole.listdir(streams=True, storages=False)
-				counter = 1
-				if (files[1] == 'l'):
-					for filename in elements:
-						ListElement(ole, filename, counter)
-						counter += 1
-				else:
-					list     = {}
-					counters = {}
-
-					for a in (elements):
-						path = PrintableName(a)
-						list['%s' %(counter)] = a
-						counters['%s' %(counter)] = counter
-						counter += 1
-
-					for a in (files[1:]):
-						if (a in list):
-							filename = list[a]
-							ReadElement(ole, filename, doc, counters[a], readProperties)
-						else:
-							p = re.compile(a)
-							counter = 1
-							for fname in elements:
-								if (p.match(PrintableName(fname))):
-									ReadElement(ole, filename, doc, counter, readProperties)
-						counter += 1
-

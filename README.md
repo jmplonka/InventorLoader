@@ -1,14 +1,14 @@
 # InventorLoader
 Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD. Until now only
-the structure of IPD, IAM and IDW files can be dumpt, but neither parts (IPT)
+the structure of IPD, IAM and IDW files can be dumped, but neither parts (IPT)
 nor assemblies (IAM), nor drawings (IDW) can be displayed.
 
-## Prerequisits
+## Prerequisites
 - The AddON requires additional python packages in the FreeCAD python installation:
   - https://pypi.python.org/pypi/xlrd - for reading embedded Excel workbooks
   - http://pypi.python.org/pypi/xlutils - for preparing imported Excel workbooks to
     be stored
-  - https://pypi.python.org/pypi/xlwt  - for writing embedded Excel workbooks
+  - https://pypi.python.org/pypi/xlwt - for writing embedded Excel workbooks
   - http://www.decalage.info/python/olefileio - olefile for reading Microsoft OLE(2)
   	files.
 
@@ -18,7 +18,7 @@ nor assemblies (IAM), nor drawings (IDW) can be displayed.
 Autodesk Inventor files have a OLE2 files.
 That allows it to embed Excel workboos e.g.
 
-- The addon is able to read (not analyse) Inventor files from 2003 till 2017 (RSe
+- The addon is able to read (not analyze) Inventor files from 2003 till 2017 (RSe
   Meta Stream Version Version 3 till 8)
 - Read the iProperties (only a few can be set in FreeCAD)
 - Display embedded workbooks as a new spreadsheet
@@ -29,12 +29,15 @@ That allows it to embed Excel workboos e.g.
 | [5]xyz | iProperties | done | done | done |
 | RSeDb | Database | done | done | done |
 | RSeSegInfo | Content Structure | structure | structure | structure |
-| M... | Segment Structre info | started | started | started | started |
+| M... | Segment Structure info | started | started | started | started |
 | B... | Segment Data | done | started | started |
 | Workbook | Spreadsheet | done | done | done |
 
 ## History:
-- 0.6:  continued working on Features
+- 0.7: added ACIS file format reading for IPT and SAT files
+	* IPT: during import user selectable strategy with thumbnail.
+
+- 0.6: continued working on Features
 	* added Coil as Part::Helix and Part::Spiral with Sweep
 	* automated installation of required site-packages
 
@@ -58,11 +61,11 @@ That allows it to embed Excel workboos e.g.
 	* added Revolve as Part::Revolution
 	* added Extrude as Part::Extrusion
 	* added Loft  as Part::Loft
-	* added boolean opertations as Part::Cut, Part::MultiFuse, Part::MultiCommon
+	* added boolean operations as Part::Cut, Part::MultiFuse, Part::MultiCommon
 	* added Polar-Pattern, Rectangular-Pattern with Draft.makeArray()
 	* added Mirror-Pattern as 'Part::Mirroring'
 
-- 0.5: Preparation for supporting Featrues (except iFeature)
+- 0.5: Preparation for supporting Features (except iFeature)
 	Most sections found in pro samples (2010..2018) are now decoded (structured)
 
 - 0.4.2: Only Code Review
@@ -85,7 +88,7 @@ That allows it to embed Excel workboos e.g.
 - 0.3: Started working on sketches.
 	- Added placement to sketches. <s>Sometimes Placements have to "Orientation"
 	  references, so that a correct placement is not possible</s>
-	- Added pad feature. Maybe this will be chagned to Part instead of PartDesign.
+	- Added pad feature. Maybe this will be changed to Part instead of PartDesign.
 
 - 0.2: Reading document content now from DC-Segment instead of Graphics-/Browser-
   Segment
@@ -105,4 +108,4 @@ That allows it to embed Excel workboos e.g.
 ## Next steps in unsorted order:
 - Features like Grave, etc.
 - Features like Fillet, Champher, Draft, etc.
-- Prefferences page
+- Preferences page

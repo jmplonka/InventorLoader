@@ -2,21 +2,17 @@
 
 '''
 importerSegNode.py:
-
 Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) browser view data.
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
-TODO:
 '''
 
-import traceback
 from importerClasses import AbstractData, Header0, Angle, GraphicsFont, ModelerTxnMgr
 from importerUtils   import *
-from math            import log10
+from math            import log10, pi
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
-__status__      = 'In-Development'
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 def isList(data, code):
 	return ((data[-1] == 0x3000) and (data[-2] == code))
@@ -54,8 +50,9 @@ class AbstractNode(AbstractData):
 	_TYP_2D_F64_U32_4D_U8_     = 0x0012
 	_TYP_NODE_REF_             = 0x0013
 	_TYP_STRING16_             = 0x0014
-	_TYP_RESULT_ITEM4_         = 0x0015
-	_TYP_NODE_X_REF_           = 0x0016
+	_TYP_STRING8_              = 0x0015
+	_TYP_RESULT_ITEM4_         = 0x0016
+	_TYP_NODE_X_REF_           = 0x0017
 
 	_TYP_LIST_GUESS_           = 0x8000
 	_TYP_LIST_2D_UINT16_       = 0x8001
@@ -330,6 +327,9 @@ class AbstractNode(AbstractData):
 					elif (t == AbstractNode._TYP_STRING16_):
 						val, i = getLen32Text16(self.data, i)
 						str = '\"%s\"' %(val)
+					elif (t == AbstractNode._TYP_STRING8_):
+						val, i = getLen32Text8(self.data, i)
+						str = '\"%s\"' %(val)
 					elif (t == AbstractNode._TYP_1D_UINT32_):
 						val, i = getUInt32(self.data, i)
 						str = '%04X' %(val)
@@ -493,6 +493,7 @@ class AbstractNode(AbstractData):
 		return lst, i
 
 	def ReadMetaData_04(self, offset, typ, arraySize = 0):
+		sep = ''
 		lst = []
 		skipBlockSize = (getFileVersion() < 2011)
 
@@ -518,6 +519,9 @@ class AbstractNode(AbstractData):
 				elif (t == AbstractNode._TYP_STRING16_):
 					val, i = getLen32Text16(self.data, i)
 					str = '\"%s\"' %(val)
+				elif (t == AbstractNode._TYP_STRING8_):
+					val, i = getLen32Text8(self.data, i)
+					str = '\"%s\"' %(val)
 				elif (t == AbstractNode._TYP_2D_SINT32_):
 					val, i = getSInt32A(self.data, i, 2)
 					str = '[%s]' %(IntArr2Str(val, 8))
@@ -538,6 +542,7 @@ class AbstractNode(AbstractData):
 				lst.append(val)
 				if (len(str) > 0):
 					self.content += '%s%s' %(sep, str)
+					sep = ','
 
 		return lst, i
 

@@ -2,20 +2,17 @@
 
 '''
 importerApp.py:
-
 Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) browser view data.
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
-TODO:
 '''
 
 from importerSegment import SegmentReader, getNodeType
 from importerSegNode import AbstractNode, AppNode
 from importerUtils   import *
 
-__author__      = 'Jens M. Plonka'
-__copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.4.0'
-__status__      = 'In-Development'
+__author__     = "Jens M. Plonka"
+__copyright__  = 'Copyright 2018, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class AppReader(SegmentReader):
 	def __init__(self):
@@ -25,7 +22,11 @@ class AppReader(SegmentReader):
 		return AppNode()
 
 	def skipDumpRawData(self):
-		return False
+		return True
+
+	def Read_10389219(self, node): return 0
+
+	def Read_10D6C06B(self, node): return 0
 
 	def Read_11FBECCD(self, node):
 		i = node.Read_Header0()
@@ -76,6 +77,8 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		return i
+
+	def Read_276E3074(self, node): return 0
 
 	def Read_2AE52C91(self, node):
 		i = node.Read_Header0()
@@ -155,6 +158,10 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		return i
+
+	def Read_473180FD(self, node): return 0
+
+	def Read_55231213(self, node): return 0
 
 	def Read_5C30CDF2(self, node):
 		i = node.Read_Header0()
@@ -338,6 +345,20 @@ class AppReader(SegmentReader):
 		# i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
+	def Read_6D8A4AC7(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadLen32Text16(i, 'txt_0')
+		return i
+
+	def Read_6D8A4AC9(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadLen32Text16(i, 'txt_0')
+		return i
+
 	def Read_6DD8F4A0(self, node):
 		i = node.Read_Header0()
 		i = node.ReadLen32Text8(i)
@@ -392,6 +413,12 @@ class AppReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadSInt32A(i, 3, 'a2')
 		i = node.ReadLen32Text16(i, 'FontName')
+		return i
+
+	def Read_81A9D693(self, node): return 0
+
+	def Read_81AFC10F(self, node):
+		i = node.Read_Header0()
 		return i
 
 	def Read_958DB976(self, node):
@@ -511,6 +538,10 @@ class AppReader(SegmentReader):
 		# i = node.ReadUInt16A(i, 6, 'a1')
 
 		return i
+
+	def Read_DA6B0B3E(self, node): return 0
+
+	def Read_DD4C4D3A(self, node): return 0
 
 	def Read_E454FA4D(self, node):
 		i = node.Read_Header0()
@@ -661,9 +692,6 @@ class AppReader(SegmentReader):
 				i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 		else:
 			logError('Unknown type: %04X' %(type))
-		a0, j = getUInt8A(node.data, i, len(node.data) - i)
-		if (len(a0) > 0):
-			logError('%s\t%s %02X/%02X\t%s' %(getInventorFile()[0:getInventorFile().index('\\')], node.typeName, type, subType, ' '.join(['%0{0}X'.format(2) %(h) for h in a0])))
 		return i
 
 	def Read_F8A779FD(self, node):
@@ -686,6 +714,18 @@ class AppReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		return i
+
+	def Read_FD1E8992(self, node): return 0
+
+	def Read_FD1E8995(self, node): return 0
+
+	def Read_FD1E8997(self, node): return 0
+
+	def Read_FD1E899A(self, node): return 0
+
+	def Read_FD1E899B(self, node): return 0
+
+	def Read_FD1E899D(self, node): return 0
 
 	def Read_FDA6D020(self, node):
 		i = node.Read_Header0()
