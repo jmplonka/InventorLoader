@@ -7,7 +7,7 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 
 import traceback, FreeCAD, math, Part
 from importerUtils import LOG, logMessage, logWarning, logError, isEqual
-from FreeCAD       import Vector as VEC, Rotation as ROT, Placement as PLC
+from FreeCAD       import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT
 from math          import pi
 
 __author__     = 'Jens M. Plonka'
@@ -15,69 +15,69 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 ENTIY_VERSIONS = {
-	'ADV_BL_VERSION' = 1.8,
-	'ADV_VAR_BLEND_TWO_RADII_VERSION' = 2.2, 
-	'ANG_XCUR_VERSION' = 1.7, 
-	'ANNO_HOOKED_VERSION' = 7.0, 
-	'APPROX_SUMMARY_VERSION' = 5.0, 
-	'ARCWISE_SKIN_VERSION' = 2.2, 
-	'AT_VERSION' = 7.0, 
-	'BLEND_VERSION' = 1.5, 
-	'BL_ENV_SF_VERSION' = 4.0, 
-	'BNDCUR_VERSION' = 1.6, 
-	'BNDSUR_VERSION' = 1.6, 
-	'COEDGE_SENSE_VERSION' = 2.2, 
-	'CONE_SCALING_VERSION' = 4.0, 
-	'CONSISTENT_VERSION' = 2.0, 
-	'CURVE_VERSION' = 1.3, 
-	'DISCONTINUITY_VERSION' = 3.0, 
-	'DM_60_VERSION' = 6.0, 
-	'DM_MULTI_SURF_COLOR_VERSION' = 6.0, 
-	'DM_MULTI_SURF_VERSION' = 5.0, 
-	'DOLLAR_VERSION' = 1.3, 
-	'EELIST_OWNER_VERSION' = 6.0, 
-	'ELLIPSE_OFFSET_VERSION' = 5.0, 
-	'ENTITY_TAGS_VERSION' = 7.0, 
-	'EXT_CU_SF_VERSION' = 2.1, 
-	'FILEINFO_VERSION' = 2.0, 
-	'FILEINTERFACE_VERSION' = 1.6, 
-	'GA_COPY_ACTION_VERSION' = 6.0, 
-	'HISTORY_VERSION' = 1.7, 
-	'INFINT_VERSION' = 1.6, 
-	'INTCURVE_VERSION' = 1.3, 
-	'LAW_VERSION' = 2.2, 
-	'LAW_SPL_VERSION' = 4.0, 
-	'LAZY_B_SPLINE_VERSION' = 5.0, 
-	'LOFT_LAW_VERSION' = 4.0, 
-	'LOFT_PCURVE_VERSION' = 6.0, 
-	'LOGIO_VERSION' = 1.5, 
-	'LUMP_VERSION' = 1.1, 
-	'MESH_VERSION' = 2.0, 
-	'MULTSAV_VERSION' = 1.5, 
-	'NET_LAW_VERSION' = 7.0, 
-	'NET_SPL_VERSION' = 3.0, 
-	'OFFSET_REV_VERSION' = 2.2, 
-	'PARAM_VERSION' = 1.1, 
-	'PARCUR_VERSION' = 1.5, 
-	'PATTERN_VERSION' = 7.0, 
-	'PCURVE_VERSION' = 1.5, 
-	'RECAL_SKIN_ERROR_VERSION' = 5.2, 
-	'REF_MIN_UV_GRID_VERSION' = 4.0, 
-	'SAFERANGE_VERSION' = 1.7, 
-	'SHARABLE_VERSION' = 1.4, 
-	'SORTCOED_VERSION' = 1.5, 
-	'SPLINE_VERSION' = 1.3, 
-	'STRINGLESS_HISTORY_VERSION' = 7.0, 
-	'SURFACE_VERSION' = 1.3, 
-	'TAPER_EXISTENCE_VERSION' = 2.1, 
-	'TAPER_VERSION' = 3.0, 
-	'TAPER_SCALING_VERSION' = 5.0, 
-	'TAPER_U_RULED_VERSION' = 6.0, 
-	'THREEDEYE_REF_VERSION' = 1.7, 
-	'TOL_MODELING_VERSION' = 5.0, 
-	'TWOSIDE_VERSION' = 1.5, 
-	'VBLEND_AUTO_VERSION' = 4.0, 
-	'WIREBOOL_VERSION' = 1.7, 
+	'ADV_BL_VERSION': 1.8,
+	'ADV_VAR_BLEND_TWO_RADII_VERSION': 2.2,
+	'ANG_XCUR_VERSION': 1.7,
+	'ANNO_HOOKED_VERSION': 7.0,
+	'APPROX_SUMMARY_VERSION': 5.0,
+	'ARCWISE_SKIN_VERSION': 2.2,
+	'AT_VERSION': 7.0,
+	'BLEND_VERSION': 1.5,
+	'BL_ENV_SF_VERSION': 4.0,
+	'BNDCUR_VERSION': 1.6,
+	'BNDSUR_VERSION': 1.6,
+	'COEDGE_SENSE_VERSION': 2.2,
+	'CONE_SCALING_VERSION': 4.0,
+	'CONSISTENT_VERSION': 2.0,
+	'CURVE_VERSION': 1.3,
+	'DISCONTINUITY_VERSION': 3.0,
+	'DM_60_VERSION': 6.0,
+	'DM_MULTI_SURF_COLOR_VERSION': 6.0,
+	'DM_MULTI_SURF_VERSION': 5.0,
+	'DOLLAR_VERSION': 1.3,
+	'EELIST_OWNER_VERSION': 6.0,
+	'ELLIPSE_OFFSET_VERSION': 5.0,
+	'ENTITY_TAGS_VERSION': 7.0,
+	'EXT_CU_SF_VERSION': 2.1,
+	'FILEINFO_VERSION': 2.0,
+	'FILEINTERFACE_VERSION': 1.6,
+	'GA_COPY_ACTION_VERSION': 6.0,
+	'HISTORY_VERSION': 1.7,
+	'INFINT_VERSION': 1.6,
+	'INTCURVE_VERSION': 1.3,
+	'LAW_VERSION': 2.2,
+	'LAW_SPL_VERSION': 4.0,
+	'LAZY_B_SPLINE_VERSION': 5.0,
+	'LOFT_LAW_VERSION': 4.0,
+	'LOFT_PCURVE_VERSION': 6.0,
+	'LOGIO_VERSION': 1.5,
+	'LUMP_VERSION': 1.1,
+	'MESH_VERSION': 2.0,
+	'MULTSAV_VERSION': 1.5,
+	'NET_LAW_VERSION': 7.0,
+	'NET_SPL_VERSION': 3.0,
+	'OFFSET_REV_VERSION': 2.2,
+	'PARAM_VERSION': 1.1,
+	'PARCUR_VERSION': 1.5,
+	'PATTERN_VERSION': 7.0,
+	'PCURVE_VERSION': 1.5,
+	'RECAL_SKIN_ERROR_VERSION': 5.2,
+	'REF_MIN_UV_GRID_VERSION': 4.0,
+	'SAFERANGE_VERSION': 1.7,
+	'SHARABLE_VERSION': 1.4,
+	'SORTCOED_VERSION': 1.5,
+	'SPLINE_VERSION': 1.3,
+	'STRINGLESS_HISTORY_VERSION': 7.0,
+	'SURFACE_VERSION': 1.3,
+	'TAPER_EXISTENCE_VERSION': 2.1,
+	'TAPER_VERSION': 3.0,
+	'TAPER_SCALING_VERSION': 5.0,
+	'TAPER_U_RULED_VERSION': 6.0,
+	'THREEDEYE_REF_VERSION': 1.7,
+	'TOL_MODELING_VERSION': 5.0,
+	'TWOSIDE_VERSION': 1.5,
+	'VBLEND_AUTO_VERSION': 4.0,
+	'WIREBOOL_VERSION': 1.7,
 }
 MIN_0   = 0.0
 MIN_PI2 = -pi / 2
@@ -89,6 +89,30 @@ MAX_INF = float('inf')
 MAX_LEN = 0.5e+07
 scale = 1.0
 
+SUB_TYPE_INDEXES = {}
+
+def addEntity(entity):
+	global SUB_TYPE_INDEXES
+	name = entity.name
+	i = name.rfind('-')
+	if (i > 0):
+		name = name[0:i]
+	try:
+		refs = SUB_TYPE_INDEXES[name]
+	except KeyError:
+		refs = []
+		SUB_TYPE_INDEXES[name] = refs
+	refs.append(entity)
+
+def getEntity(subtype, index):
+	global SUB_TYPE_INDEXES
+	refs = SUB_TYPE_INDEXES[name]
+	return refs[index]
+
+def clearEntities():
+	global SUB_TYPE_INDEXES
+	SUB_TYPE_INDEXES.clear()
+
 def enum(*sequential, **named):
 	enums   = dict(zip(sequential, range(len(sequential))), **named)
 	reverse = dict((value, key) for key, value in enums.iteritems())
@@ -97,20 +121,20 @@ def enum(*sequential, **named):
 	enums['mapping'] = values
 	return type('Enum', (), enums)
 
-RANGE      = enum(I          = 0x0B,  F         = 0x0A)
-REFLECTION = enum(no_reflect = 0x0B,  reflect   = 0x0A)
-ROTATION   = enum(no_rotate  = 0x0B,  rotate    = 0x0A)
-SHEAR      = enum(no_shear   = 0x0B,  shear     = 0x0A)
-SENSE      = enum(forward    = 0x0B,  reversed  = 0x0A)
-SENSEV     = enum(forward_v  = 0x0B,  reverse_v = 0x0A)
-SIDES      = enum(single     = 0x0B,  double    = 0x0A)
-SIDE       = enum(outside    = 'out', inside    = 'in')
-#SWEEP_SURFACE  = enum(normal = 0x0A, angled = 0x0B)
-#BOOL_SURFACE  = enum(TRUE = 0x0A, FALSE = 0x0B)
-#UNIT_SURFACE  = enum(ISO = 0x0B)
-#SKIN_SURFACE  = enum(SKIN = 0x0B)
-FORMAT = enum(open=0, closed=1, periodic = 2)
-FULLL  = enum(full=0, none=2)
+RANGE      = enum(I          = 0x0B,  F             = 0x0A)
+REFLECTION = enum(no_reflect = 0x0B,  reflect       = 0x0A)
+ROTATION   = enum(no_rotate  = 0x0B,  rotate        = 0x0A)
+SHEAR      = enum(no_shear   = 0x0B,  shear         = 0x0A)
+SENSE      = enum(forward    = 0x0B,  reversed      = 0x0A)
+SENSEV     = enum(forward_v  = 0x0B,  reverse_v     = 0x0A)
+SIDES      = enum(single     = 0x0B,  double        = 0x0A)
+SIDE       = enum(outside    = 'out', inside        = 'in')
+SURF_BOOL  = enum(FALSE      = 0x0B,  TRUE          = 0x0A)
+SURF_NORM  = enum(ISO        = 0x0B,  UNKNOWN       = 0x0A)
+SURF_DIR   = enum(SKIN       = 0x0B,  PERPENDICULAR = 0x0A)
+SURF_SWEEP = enum(angled     = 0x0B,  normal        = 0x0A)
+FORMAT     = enum(open = 0, closed = 1, periodic = 2)
+FULLL      = enum(full = 0, none   = 2)
 references = {}
 CENTER = VEC(0, 0, 0)
 DIR_X  = VEC(1, 0, 0)
@@ -211,6 +235,30 @@ def getFormat(data, index):
 	if (chunk.val == 2): return 'periodic', index + 1
 	return chunk.val, index + 1
 
+def getSurfBool(data, index):
+	chunk = data[index]
+	if (chunk.val == 0x0A): return 'TRUE', index + 1
+	if (chunk.val == 0x0B): return 'FALSE', index + 1
+	return chunk.val, index + 1
+
+def getSurfNorm(data, index):
+	chunk = data[index]
+	if (chunk.val == 0x0A): return 'UNKNOWN', index + 1
+	if (chunk.val == 0x0B): return 'ISO', index + 1
+	return chunk.val, index + 1
+
+def getSurfDir(data, index):
+	chunk = data[index]
+	if (chunk.val == 0x0A): return 'PERPENDICULAR', index + 1
+	if (chunk.val == 0x0B): return 'SKIN', index + 1
+	return chunk.val, index + 1
+
+def getSurfSweep(data, index):
+	chunk = data[index]
+	if (chunk.val == 0x0A): return 'normal', index + 1
+	if (chunk.val == 0x0B): return 'angled', index + 1
+	return chunk.val, index + 1
+
 def getUnknownFT(entity, index, version):
 	i = index
 	if (version > 7.0):
@@ -291,7 +339,7 @@ def readFull(entity, index):
 	if (val == 'none'): return val, index + 1
 	return 'full', index
 
-def readDimension(entity, index):
+def readDimension1(entity, index):
 	# DIMENSION      = (nullbs|nurbs [:NUMBER:]|nubs [:NUMBER:]|summary [:NUMBER:])
 	val = entity.data[index].val
 	if (val == 'nullbs'):
@@ -301,7 +349,26 @@ def readDimension(entity, index):
 		return val, number, i
 	raise Exception("Unknown DIMENSION '%s'" %(val))
 
-def readFormat(entity, index):
+def readDimension2(entity, index):
+	# DIMENSION      = (nullbs|nurbs [:NUMBER:]|nubs [:NUMBER:]|summary [:NUMBER:])
+	val = entity.data[index].val
+	if (val == 'nullbs'):
+		return val, 0, index + 1
+	if ((val == 'nurbs') or (val == 'nubs') or (val == 'summary')):
+		number1, i = readNumber(entity, index + 1)
+		number2, i = readNumber(entity, index + 1)
+		return val, [number1, number2], i
+	raise Exception("Unknown DIMENSION '%s'" %(val))
+
+def readFormat1(entity, index):
+	# FORMAT = (open=0|closed=1|periodic=2)
+	val, i = getFormat(entity.data, index)
+	if ((val == 'open') or (val == 'closed') or (val == 'periodic')):
+		number, i = readNumber(entity, i)
+		return val, number, i
+	raise Exception("Unknown FORMAT '%s'!" %(val))
+
+def readFormat2(entity, index):
 	# FORMAT = (open=0|closed=1|periodic=2)
 	val, i = getFormat(entity.data, index)
 	if ((val == 'open') or (val == 'closed') or (val == 'periodic')):
@@ -318,7 +385,7 @@ def addPoint(entity, i):
 		d, i = readFloat(entity, i)
 	return i
 
-def readPoints(entity, index):
+def readPoints1(entity, index):
 	j = 0
 	i = index
 	counts = []
@@ -338,6 +405,38 @@ def readPoints(entity, index):
 		if (counts[-1] > 2):
 			i = addPoint(entity, i)
 		i = addPoint(entity, i)
+	else:
+		logWarning("%s" %(entity))
+
+	return i
+
+def readPoints2(entity, index):
+	j = 0
+	i = index
+	countsX = []
+	while (j < entity.frmCount[0]):
+		d, i = readFloat(entity, i)
+		n, i = readNumber(entity, i)
+		countsX.append(n)
+		j += 1
+	countsY = []
+	while (j < entity.frmCount[1]):
+		d, i = readFloat(entity, i)
+		n, i = readNumber(entity, i)
+		countsY.append(n)
+		j += 1
+
+	if ((len(countsX) > 0) and (len(countsY) > 0)):
+		pass
+#		if (countsX[0] > 2):
+#			i = addPoint(entity, i)
+#		i = addPoint(entity, i)
+#		for c in counts[1:-1]:
+#			for j in range(c):
+#				i = addPoint(entity, i)
+#		if (counts[-1] > 2):
+#			i = addPoint(entity, i)
+#		i = addPoint(entity, i)
 	else:
 		logWarning("%s" %(entity))
 
@@ -545,13 +644,13 @@ class Transform(Entity):
 		i = super(Transform, self).set(entity, version)
 		p, i                         = getPoint(entity, i)
 		self.a11, self.a21, self.a31 = p
-		self.a41                     = 0
+		self.a41                     = 0.0
 		p, i                         = getPoint(entity, i)
 		self.a12, self.a22, self.a32 = p
-		self.a42                     = 0
+		self.a42                     = 0.0
 		p, i                         = getPoint(entity, i)
 		self.a13, self.a23, self.a33 = p
-		self.a43                     = 0
+		self.a43                     = 0.0
 		p, i                         = getPoint(entity, i)
 		self.a14, self.a24, self.a34 = p
 		self.a44, i                  = getDouble(entity, i)
@@ -559,7 +658,9 @@ class Transform(Entity):
 		self.reflection, i           = getReflection(entity.chunks, i)
 		self.shear, i                = getShear(entity.chunks, i)
 		return i
-
+	def getPlacement(self):
+		matrix = MAT(self.a11, self.a12, self.a13, self.a14, self.a21, self.a22, self.a23, self.a24, self.a31, self.a32, self.a33, self.a34, self.a41, self.a42, self.a43, self.a44)
+		return PLC(matrix)
 # abstract super class for all topologies
 class Topology(Entity):
 	def __init__(self): super(Topology, self).__init__()
@@ -1007,9 +1108,9 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setCurve(self, index):
 		self.interval, i = readFull(self, index)
 		if (self.interval == 'full'):
-			self.dimName, self.dimType, i = readDimension(self, i)
-			self.frmName, self.frmCount, i = readFormat(self, i)
-			i = readPoints(self, i)
+			self.dimName, self.dimType, i = readDimension1(self, i)
+			self.frmName, self.frmCount, i = readFormat1(self, i)
+			i = readPoints1(self, i)
 			self.factor, i = readFloat(self, i)
 		elif (self.interval == 'none'):
 			self.range = getInterval(self.data, i, MIN_INF, MAX_INF, getScale())
@@ -1141,10 +1242,10 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return self.setCurve(i)
 	def set(self, entity, version):
 		i = super(CurveInt, self).set(entity, version)
-		self.sense, i  = getSense(entity.chunks, i)
-		self.data, i   = getBlock(entity, i)
+		self.sense, i = getSense(entity.chunks, i)
+		self.data, i  = getBlock(entity, i)
 		self.setData(version)
-		self.range, i  = getInterval(entity.chunks, i, MIN_INF, MAX_INF, getScale())
+		self.range, i = getInterval(entity.chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def __str__(self): return "-%d Curve-Int: type=%s, points=%s" %(self.getIndex(), self.type, len(self.points))
 	def build(self, start, end):
@@ -1254,6 +1355,8 @@ class SurfaceCone(Surface):
 		self.cosine, i = getDouble(entity, i)
 		if (version >= ENTIY_VERSIONS.get('CONE_SCALING_VERSION')):
 			self.scale, i = getLength(entity, i)
+		else:
+			self.scale = getScale()
 		self.sense, i  = getSense(entity.chunks, i)
 		self.urange, i = getInterval(entity.chunks, i, MIN_0, MAX_2PI, 1.0)
 		self.vrange, i = getInterval(entity.chunks, i, MIN_INF, MAX_INF, getScale())
@@ -1347,8 +1450,203 @@ class SurfaceSpline(Surface):
 	def __init__(self):
 		super(SurfaceSpline, self).__init__()
 		self.data = None # The spline's data
+	def setSurface(self, i):
+		self.interval, i = readFull(self, index)
+		if (self.interval == 'full'):
+			self.dimName, self.dimType, i = readDimension2(self, i)
+			self.frmName, self.frmCount, i = readFormat2(self, i)
+			#  both periodic open none none 5 2
+			i = readPoints2(self, i)
+			self.factor, i = readFloat(self, i)
+		elif (self.interval == 'none'):
+			self.range = getInterval(self.data, i, MIN_INF, MAX_INF, getScale())
+	def setSubCurve(self, type, i, version):
+		chunk = self.data[i]
+		subtype = chunk.val
+		if (subtype == 'ellipse'):
+			curve = CurveEllipse()
+			curve.normal, i = getVector(entity, i + 1)
+			curve.major, i  = getLocation(entity, i)
+			curve.ratio, i  = getDouble(entity, i)
+			curve.range, i  = getInterval(entity.data, i, MIN_0, MAX_2PI, 1.0)
+			curve.u, i      = getLocation(entity, i)
+			curve.v, i      = getLocation(entity, i)
+			return curve, i
+		if (subtype == 'intcurve'):
+			curve = CurveInt()
+			curve.sense, i = getSense(entity.data, i)
+			curve.data, i  = getBlock(entity, i)
+			curve.setData(version)
+			curve.range, i = getInteger(entity.data, i, MIN_INF, MAX_INF, getScale())
+			return curve, i
+		raise Exception("Unknown curve-type '%s' in spline-surface type '%s'!" % (subtype, type))
+	def setSubSurface(self, type, i, version):
+		chunk = self.data[i]
+		subtype = chunk.val
+		if (subtype == 'cone'):
+			surface = SurfaceCone()
+			surface.center, i = getLocation(entity, i)
+			surface.axis, i   = getVector(entity, i)
+			surface.major, i  = getLocation(entity, i)
+			surface.ratio, i  = getDouble(entity, i)
+			surface.range, i  = getInterval(entity.data, i, MIN_INF, MIN_INF, getScale())
+			surface.sine, i   = getDouble(entity, i)
+			surface.cosine, i = getDouble(entity, i)
+			if (version >= ENTIY_VERSIONS.get('CONE_SCALING_VERSION')):
+				surface.scale, i = getLength(entity, i)
+			surface.sense, i  = getSense(entity.data, i)
+			surface.urange, i = getInterval(entity.data, i, MIN_0, MAX_2PI, 1.0)
+			surface.vrange, i = getInterval(entity.data, i, MIN_INF, MAX_INF, getScale())
+			vec1, i = getVector(entity, i)
+			vec2, i = getVector(entity, i)
+			vec3, i = getVector(entity, i)
+			vec4, i = getVector(entity, i)
+			vec5, i = getVector(entity, i)
+			self.setSurface(i)
+			return surface, i
+		if (subtype == 'plane'):
+			surface = SurfacePlane()
+			surface.root, i     = getLocation(entity, i)
+			surface.normal, i   = getVector(entity, i)
+			surface.uvorigin, i = getLocation(entity, i)
+			surface.sensev, i   = getSensev(entity.data, i)
+			surface.urange, i   = getInterval(entity.data, i, MIN_INF, MAX_INF, getScale())
+			surface.vrange, i   = getInterval(entity.data, i, MIN_INF, MAX_INF, getScale())
+			return surface, i
+		if (subtype == 'spline'):
+			surface = SurfaceSpline()
+			curve.sense, i = getSense(entity.data, i)
+			curve.data, i  = getBlock(entity, i)
+			# break potential endless loops ?!?
+			return surface, i
+		raise Exception("Unknown surface-type '%s' in spline-surface type '%s'!" % (subtype, type))
+	def setCylinder(self, i, version):
+		chunk = self.data[i]
+		curveType = chunk.val
+		if (curveType == 'intcurve'):
+			curve = CurveInt()
+			curve.sense, i = getSense(entity.data, i)
+			curve.data, i  = getBlock(entity, i)
+			curve.setData(version)
+			curve.range, i = getInterval(entity.data, i, MIN_INF, MAX_INF, getScale())
+			vec1, i = readVector(entity, i)
+			d, i = readFloat(entity, i)
+			vec2, i = readVector(entity, i)
+			self.setSurface(i)
+		else:
+			raise Exception("Unknown curve-type '%s' in spline-surface type cylinder!" % (curveType))
+	def setClLoft(self, i, version):
+		self.setSurface(i)
+		pass
+	def setDefm(self, i, version):
+		self.setSubSurface('DEFM', i, version)
+	def setExact(self, i, version):
+		self.setSurface(i)
+	def setG2Blend(self, i, version):
+		chunk = self.data[i]
+		name = chunk.val
+		self.setSubSurface('G2Blend', i + 1, version)
+	def setLoft(self, i, version):
+		a, i = readNumber(entity, i)
+		b, i = readNumber(entity, i)
+		c, i = readNumber(entity, i)
+		d, i = readNumber(entity, i)
+		self.setSubCurve('Loft', i, version)
+	def setOffset(self, i, version):
+		self.setSubSurface('Offset', i, version)
+	def setRbBlend(self, i, version):
+		self.setSubSurface('RB-Blend', i, version)
+	def setRotation(self, i, version):
+		self.setSubCurve('Rotation', i, version)
+		self.setSurface(i)
+	def setSkin(self, i, version, asm):
+		# 0x0B 0x0B 0x0B 3 -1 -1 -1 -1 0 1 1
+		bool, i = getSurfBool(entity.data, i)
+		norm, i = getSurfNorm(entity.data, i)
+		dir, i  = getSurfDir(entity.data, i)
+		num, i  = readNumber(entity, i)
+		a1, i  = readNumber(entity, i)
+		a2, i  = readNumber(entity, i)
+		a3, i  = readNumber(entity, i)
+		a4, i  = readNumber(entity, i)
+		a5, i  = readNumber(entity, i)
+		if (asm): i += 2
+		self.setSubCurve('Skin', i, version)
+	def setBlendSupport(self, i, version):
+		chunk = self.data[i]
+		name = chunk.val
+		self.setSubSurface(name, i + 1, version)
+	def setSweep(self, i, version):
+		type, i = getSurfSweep(entity.data)
+		self.setSubCurve('Sweep', i, version)
+	def setData(self, version):
+		i = 0
+		chunk = self.data[i]
+		self.type = chunk.val
+		i += 1
+		if (self.type == 'cl_loft_spl_sur'):
+			self.type = 'clloftsur'
+			i += 1
+		elif (self.type == 'cyl_spl_sur'):
+			self.type = 'cylsur'
+			i += 1
+		elif (self.type == 'defm_spl_sur'):
+			self.type = 'defmsur'
+			i += 1
+		elif (self.type == 'loft_spl_sur'):
+			self.type = 'loftsur'
+			i += 1
+		elif (self.type == 'exact_spl_sur'):
+			self.type = 'exactsur'
+			i += 1
+		elif (self.type == 'g2_blend_spl_sur'):
+			self.type = 'g2blnsur'
+			i += 1
+		elif (self.type == 'off_spl_sur'):
+			self.type = 'offsur'
+			i += 1
+		elif (self.type == 'rb_blend_spl_sur'):
+			self.type = 'rbblnsur'
+			i += 1
+		elif (self.type == 'rot_spl_sur'):
+			self.type = 'rotsur'
+			i += 1
+		elif (self.type == 'scaled_cloft_spl_sur'):
+			self.type = 'sclclftsur'
+			i += 1
+		elif (self.type == 'skin_spl_sur'):
+			i += 1
+		elif (self.type == 'srf_srf_v_bl_spl_sur'):
+			self.type = 'srfsrfblndsur'
+			i += 1
+		elif (self.type == 'sss_blend_spl_sur'):
+			self.type = 'sssblndsur'
+			i += 1
+		elif (self.type == 'sweep_spl_sur'):
+			self.type = 'sweepsur'
+			i += 1
+		if (self.type == 'cylsur'):        return self.setCylinder(i, version)
+		if (self.type == 'defmsur'):       return self.setDefm(i, version)
+		if (self.type == 'exactsur'):      return self.setExact(i, version)
+		if (self.type == 'g2blnsur'):      return self.setG2Blend(i, version)
+		if (self.type == 'loftsur'):       return self.setLoft(i, version)
+		if (self.type == 'clloftsur'):     return self.setClLoft(i, version)
+		if (self.type == 'offsur'):        return self.setOffset(i, version)
+		if (self.type == 'rbblnsur'):      return self.setRbBlend(i, version)
+		if (self.type == 'rotsur'):        return self.setRotation(i, version)
+		if (self.type == 'skinsur'):       return self.setSkin(i, version, False)
+		if (self.type == 'skin_spl_sur'):  return self.setSkin(i, version, True)
+		if (self.type == 'srfsrfblndsur'): return self.setBlendSupport(i, version)
+		if (self.type == 'sssblndsur'):    return self.setBlendSupport(i, version)
+		if (self.type == 'sweepsur'):      return self.setSweep(i, version)
+		raise Exception("Unknown SplineSurface '%s'!"%(self.type))
 	def set(self, entity, version):
 		i = super(SurfaceSpline, self).set(entity, version)
+		self.sense, i = getSense(entity.chunks, i)
+		self.data, i  = getBlock(entity, i)
+		self.setData(version)
+		self.range1, i = getInterval(entity.chunks, i, MIN_INF, MAX_INF, getScale())
+		self.range2, i = getInterval(entity.chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 class SurfaceTorus(Surface):
 	'''

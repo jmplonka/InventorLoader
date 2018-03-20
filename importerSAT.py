@@ -65,7 +65,6 @@ class AcisChunk():
 		self.key = key
 		self.val = val
 		self.str = '@'
-		self.elf = 0
 
 	def __str__(self):
 		if (self.key == 0x04): return "%d "      %(self.val)
@@ -93,6 +92,7 @@ class AcisEntity():
 		self.name   = name
 		self.index  = -1
 		self.node   = None
+		Acis.addEntity(self)
 
 	def add(self, key, val):
 		self.chunks.append(AcisChunk(key, val))
@@ -148,11 +148,10 @@ def readEntity(line, i):
 		elif (token == '0x0B'):
 			entity.add(0x0B, token)
 		elif (token.startswith('(')):
-			tok0 = float(token[1:])
 			tok1, data = getNextToken(data)
 			tok2, data = getNextToken(data)
 			assert tok2.endswith(')'), "Expected ')' but found '%s'!" %(dummy.val)
-			entity.add(0x13, [tok0, tok1, tok2[:-1]])
+			entity.add(0x13, [float(token[1:]), float(tok1), float(tok2[:-1])])
 		elif (token == 'reversed'):
 			entity.add(0x0A, token)
 		elif (token == 'reverse_v'):
@@ -238,33 +237,35 @@ def getName(attrib):
 		a = a.getNext()
 	return name
 
-def createBody(doc, root, name, shape):
+def createBody(doc, root, name, shape, transform):
 	if (shape is not None):
 		body = doc.addObject("Part::Feature", name)
 		if (root is not None):
 			root.addObject(body)
 		body.Shape = shape
+		if (transform is not None):
+			body.Placement = transform.getPlacement()
 
-def buildFaces(shells, doc, root, name):
+def buildFaces(shells, doc, root, name, transform):
 	faces = []
-
+	i = 1
 	for shell in shells:
 		for face in shell.getFaces():
 			surfaces = face.build(doc)
-#			if (len(surfaces) > 0):
-#				faces += surfaces
-			#createBody(doc, root, "Face-%d" %(face.index), surface)
+			if (len(surfaces) > 0):
+				faces += surfaces
 			for f in surfaces:
-				Part.show(f)
+				createBody(doc, root, "%s_%d" %(name, i), f, transform)
+				i += 1
 
-#	if (len(faces) > 0):
-#		logMessage("    ... %d face(s)!" %(len(faces)), LOG.LOG_INFO)
+	if (len(faces) > 0):
+		logMessage("    ... %d face(s)!" %(len(faces)), LOG.LOG_INFO)
 #		shell = faces[0] if (len(faces) == 1) else Part.Shell(faces)
-#		createBody(doc, root, name, shell)
+#		createBody(doc, root, name, shell, transform)
 
 	return
 
-def buildWires(coedges, doc, root, name):
+def buildWires(coedges, doc, root, name, transform):
 	edges = []
 
 	for coedge in coedges:
@@ -274,21 +275,21 @@ def buildWires(coedges, doc, root, name):
 	if (len(edges) > 0):
 		logMessage("    ... %d edges!" %(len(edges)), LOG.LOG_INFO)
 		wires = [Part.Wire(cluster) for cluster in Part.getSortedClusters(edges)]
-		createBody(doc, root, name, wires[0].fuse(wires[1:]) if (len(wires) > 1) else wires[0])
+		createBody(doc, root, name, wires[0].fuse(wires[1:]) if (len(wires) > 1) else wires[0], transform)
 
 	return
 
-def buildLump(root, doc, lump):
+def buildLump(root, doc, lump, transform):
 	global lumps
 	lumps += 1
 	name = "Lump%02d" %lumps
 	logMessage("    building lump '%s'..." %(name), LOG.LOG_INFO)
 
-	buildFaces(lump.getShells(), doc, root, name)
+	buildFaces(lump.getShells(), doc, root, name, transform)
 
 	return True
 
-def buildWire(root, doc, wire):
+def buildWire(root, doc, wire, transform):
 	global wires
 	wires += 1
 	name = "Wire%02d" %wires
@@ -302,10 +303,11 @@ def buildWire(root, doc, wire):
 def buildBody(root, doc, entity):
 	if (entity.index >= 0 ):
 		node = entity.node
+		transform = node.getTransform()
 		for lump in node.getLumps():
-			buildLump(root, doc, lump)
+			buildLump(root, doc, lump, transform)
 		for wire in node.getWires():
-			buildWire(root, doc, wire)
+			buildWire(root, doc, wire, transform)
 	return
 
 def importModel(root, doc, model, header):
@@ -322,6 +324,8 @@ def read(doc, fileName):
 	entities = {}
 	lst      = []
 	index    = 0
+	Acis.clearEntities()
+
 	with open(fileName, 'rU') as file:
 		header = Header()
 		header.read(file)

@@ -10,6 +10,7 @@ from importerClasses   import *
 from importerSegNode   import BinaryNode, isList, NodeRef
 from importerUtils     import *
 from importerSAT       import AcisChunk, AcisEntity, AcisRef
+from Acis              import clearEntities
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -526,6 +527,7 @@ class SegmentReader(object):
 			chunk.str = ''
 			lst.append(chunk)
 		index = 0
+		clearEntities()
 		entities = {}
 		while (i < e):
 			entity, i = Read_AcisEntity(i, node, e)
