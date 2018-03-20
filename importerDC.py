@@ -5274,7 +5274,7 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt32(i, 'point2AI')  # association number of the start point inside the referenced sketch
 		i = node.ReadUInt32(i, 'typPt2')    # type of the entity (should be 1)
-		i = node.ReadUInt8(i,  'posDir')    # Indicator for the orientaion of edge (required for e.g. circles)
+		i = node.ReadUInt8(i,  'posDir')    # Indicator for the orientation of edge (required for e.g. circles)
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'refSketch')
 		return i

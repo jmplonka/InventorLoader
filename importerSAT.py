@@ -81,7 +81,7 @@ class AcisChunk():
 		if (self.key == 0x11): return "%s\n"     %(self.val)                         # TERMINATOR
 		if (self.key == 0x12): return "%s%d %s " %(self.str, len(self.val), self.val)# STRING
 		if (self.key == 0x13): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.key == 0x14): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val])) # somthing to do with scale
+		if (self.key == 0x14): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
 		if (self.key == 0x15): return "%d "      %(self.val)
 		if (self.key == 0x16): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
 		return ''
