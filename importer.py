@@ -5,7 +5,7 @@ importer.py:
 Collection of 3D Mesh importers
 '''
 
-import sys, os, FreeCAD, importerSAT, Import_IPT
+import os, FreeCAD, importerSAT, Import_IPT
 from importerUtils import canImport, logMessage, LOG
 
 __author__     = "Jens M. Plonka"
@@ -35,12 +35,18 @@ def insertGroup(doc, filename):
 def read(doc, filename, readProperties):
 	name, ext = os.path.splitext(filename)
 	ext = ext.lower()
-	if (ext == ".ipt"):
+	if (ext == '.ipt'):
 		if (Import_IPT.read(doc, filename, readProperties)):
 			return Import_IPT
-	elif (ext == ".sat"):
-		if (importerSAT.read(doc, filename)):
+	elif (ext == '.sat'):
+		if (importerSAT.readText(doc, filename)):
 			return importerSAT
+	elif (ext == '.iam'):
+		logError("Sorry, AUTODESK assembly files not yet supported!")
+	elif (ext == '.sab'):
+		if (importerSAT.readBinary(doc, filename)):
+			return importerSAT
+	return None
 
 def insert(filename, docname, skip = [], only = [], root = None):
 	'''

@@ -240,7 +240,6 @@ def create3dModel(root, doc):
 		elif (strategy == STRATEGY_SAT):
 			brep = FreeCADImporter.findBRep(storage)
 			for asm in brep.AcisList:
-				lst    = asm.get('SAT')
 				importerSAT.readEntities(asm)
 				importerSAT.importModel(root, doc)
 		else:

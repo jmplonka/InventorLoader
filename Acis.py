@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 '''
 
 import traceback, FreeCAD, math, Part
-from importerUtils import LOG, logMessage, logWarning, logError, isEqual
+from importerUtils import LOG, logMessage, logWarning, logError, isEqual, getUInt8, getUInt16, getSInt32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
 from FreeCAD       import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT
 from math          import pi
 
@@ -785,7 +785,6 @@ class Entity(object):
 
 			try:
 				references[entity.index] = self
-				self.index = entity.index
 				self._attrib, i = getRefNode(entity, i, None)
 				if (version > 6):
 					i += 1 # skip history!
@@ -2252,6 +2251,106 @@ class AnnotationTolCreate(AnnotationTol):
 	def __init__(self): super(AnnotationTolCreate, self).__init__()
 class AnnotationTolRevert(AnnotationTol):
 	def __init__(self): super(AnnotationTolRevert, self).__init__()
+
+class AcisChunk():
+	def __init__(self, key, val):
+		self.tag = key
+		self.val = val
+		self.typ = '@'
+
+	def __str__(self):
+		if (self.tag == 0x04): return "%d "      %(self.val)
+		if (self.tag == 0x06): return "%g "      %(self.val)
+		if (self.tag == 0x07): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
+		if (self.tag == 0x08): return "%s"       %(self.val)                         # STRING
+		if (self.tag == 0x0A): return "%s "      %(self.val)
+		if (self.tag == 0x0B): return "%s "      %(self.val)
+		if (self.tag == 0x0C): return "%s "      %(self.val)                         # ENTITY_POINTER
+		if (self.tag == 0x0D): return "%s "      %(self.val)                         # CLASS_IDENTIFYER
+		if (self.tag == 0x0E): return "%s-"      %(self.val)                         # SUBCLASS_IDENTIFYER
+		if (self.tag == 0x0F): return "%s "      %(self.val)                         # SUBTYP_START
+		if (self.tag == 0x10): return "%s "      %(self.val)                         # SUBTYP_END
+		if (self.tag == 0x11): return "%s\n"     %(self.val)                         # TERMINATOR
+		if (self.tag == 0x12): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
+		if (self.tag == 0x13): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == 0x14): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val])) # somthing to do with scale
+		if (self.tag == 0x15): return "%d "      %(self.val)
+		if (self.tag == 0x16): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
+		return ''
+
+class AcisEntity():
+	def __init__(self, name):
+		self.chunks = []
+		self.name   = name
+		self.index  = -1
+		self.node   = None
+
+	def add(self, key, val):
+		self.chunks.append(AcisChunk(key, val))
+	def getStr(self):
+		return "-%d %s %s" %(self.index, self.name,''.join('%s' %c for c in self.chunks))
+	def __str__(self):
+		if (self.index < 0):
+			if (self.index == -2):
+				return "%s %s" %(self.name,''.join('%s' %c for c in self.chunks))
+			return ""
+		return self.getStr()
+
+class AcisRef():
+	def __init__(self, index):
+		self.index = index
+		self.entity = None
+
+	def __str__(self):
+		if (self.entity is None or self.entity.index < 0):
+			return "$%d" % self.index
+		return "$%d" %(self.entity.index)
+
+def readStr1(data, offset):
+	l, i = getUInt8(data, offset)
+	end = i + l
+	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
+	return txt, end
+
+def readStr2(data, offset):
+	l, i = getUInt16(data, offset)
+	end = i + l
+	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
+	return txt, end
+
+def readStr4(data, offset):
+	l, i = getUInt32(data, offset)
+	end = i + l
+	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
+	return txt, end
+
+def readEntityRef(data, offset):
+	index, i = getSInt32(data, offset)
+	return AcisRef(index), i
+
+def readNextSabChunk(data, index):
+	tag, i = getUInt8(data, index)
+
+	if (tag == 0x04):   val, i = getSInt32(data, i)
+	elif (tag == 0x06): val, i = getFloat64(data, i)
+	elif (tag == 0x07): val, i = readStr1(data, i)
+	elif (tag == 0x08): val, i = readStr2(data, i)
+	elif (tag == 0x0A): val    = '0x0A'
+	elif (tag == 0x0B): val    = '0x0B'
+	elif (tag == 0x0C): val, i = readEntityRef(data, i) # ENTITY_POINTER
+	elif (tag == 0x0D): val, i = readStr1(data, i)
+	elif (tag == 0x0E): val, i = readStr1(data, i)
+	elif (tag == 0x0F): val    = '{'
+	elif (tag == 0x10): val    = '}'
+	elif (tag == 0x11): val    = '#'
+	elif (tag == 0x12): val, i = readStr4(data, i)
+	elif (tag == 0x13): val, i = getFloat64A(data, i, 3) # normalized direction
+	elif (tag == 0x14): val, i = getFloat64A(data, i, 3) # position that needs to be scaled
+	elif (tag == 0x15): val, i = getUInt32(data, i)
+	elif (tag == 0x16): val, i = getFloat64A(data, i, 2)
+	else:
+		raise Exception("Don't know to read TAG %X" %(tag))
+	return tag, val, i
 
 TYPES = {
 	"annotation":                                                                                  Annotation,

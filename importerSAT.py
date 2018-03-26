@@ -6,7 +6,8 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime
-from importerUtils import LOG, logMessage, logWarning, logError, viewAxonometric
+from importerUtils import LOG, logMessage, logWarning, logError, viewAxonometric, getUInt8A
+from Acis          import AcisRef, AcisEntity, readNextSabChunk
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -98,10 +99,11 @@ class Header():
 
 	def __str__(self):
 		sat = "%d %d %d %d\n" %(int(self.version * 100), self.records, self.bodies, self.flags)
-		sat += "%d %s %d %s %d %s\n" %(len(self.prodId), prodId, len(self.prodVer), prodVer, lend(self.date), self.date)
+		sat += "%d %s %d %s %d %s\n" %(len(self.prodId), self.prodId, len(self.prodVer), self.prodVer, len(self.date), self.date)
 		sat += "%g %g %g\n" %(self.scale, self.resabs, self.resnor)
+		return sat
 
-	def read(self, file):
+	def readText(self, file):
 		data   = file.readline()
 		tokens   = data.replace('\r', '').replace('\n', '').split(' ')
 		self.version = float(tokens[0]) / 100.0
@@ -114,67 +116,34 @@ class Header():
 			self.prodId, data = getNextText(data)
 			self.prodVer, data = getNextText(data)
 			self.date, data = getNextText(data)
-			logMessage("    product: %s" %(self.prodId), LOG.LOG_INFO)
-			logMessage("    version: %s" %(self.prodVer), LOG.LOG_INFO)
-			logMessage("    date: %s" %(self.date), LOG.LOG_INFO)
 			data = file.readline()
 			tokens = data.split(' ')
 			self.scale  = float(tokens[0])
-			Acis.setScale(self.scale)
 			self.resabs = float(tokens[1])
 			self.resnor = float(tokens[2])
 			if (self.version > 24.0):
 				file.readline() # skip T @52 E94NQRBTUCKCWQWFE_HB5PSXH48CGGNH9CMMPASCFADVJGQAYC84
-
-class AcisChunk():
-	def __init__(self, key, val):
-		self.tag = key
-		self.val = val
-		self.typ = '@'
-
-	def __str__(self):
-		if (self.tag == 0x04): return "%d "      %(self.val)
-		if (self.tag == 0x06): return "%g "      %(self.val)
-		if (self.tag == 0x07): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
-		if (self.tag == 0x08): return "%s"       %(self.val)                         # STRING
-		if (self.tag == 0x0A): return "%s "      %(self.val)
-		if (self.tag == 0x0B): return "%s "      %(self.val)
-		if (self.tag == 0x0C): return "%s "      %(self.val)                         # ENTITY_POINTER
-		if (self.tag == 0x0D): return "%s "      %(self.val)                         # CLASS_IDENTIFYER
-		if (self.tag == 0x0E): return "%s-"      %(self.val)                         # SUBCLASS_IDENTIFYER
-		if (self.tag == 0x0F): return "%s "      %(self.val)                         # SUBTYP_START
-		if (self.tag == 0x10): return "%s "      %(self.val)                         # SUBTYP_END
-		if (self.tag == 0x11): return "%s\n"     %(self.val)                         # TERMINATOR
-		if (self.tag == 0x12): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
-		if (self.tag == 0x13): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == 0x14): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val])) # somthing to do with scale
-		if (self.tag == 0x15): return "%d "      %(self.val)
-		if (self.tag == 0x16): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
-		return ''
-
-class AcisEntity():
-	def __init__(self, name):
-		self.chunks = []
-		self.name   = name
-		self.index  = -1
-		self.node   = None
-
-	def add(self, key, val):
-		self.chunks.append(AcisChunk(key, val))
-	def getStr(self):
-		return "-%d %s %s" %(self.index, self.name,''.join('%s' %c for c in self.chunks))
-	def __str__(self):
-		return self.getStr() if (self.index != -1) else ""
-
-class AcisRef():
-	def __init__(self, index):
-		self.index = index
-		self.entity = None
-
-	def __str__(self):
-		if (self.entity is None or self.entity.index < 0):
-			return "$%d" % self.index
-		return "$%d" %(self.entity.index)
+			Acis.setScale(self.scale)
+			logMessage("    product: '%s'" %(self.prodId), LOG.LOG_INFO)
+			logMessage("    version: '%s'" %(self.prodVer), LOG.LOG_INFO)
+			logMessage("    date:    %s" %(self.date), LOG.LOG_INFO)
+		return
+	def readBinary(self, data):
+		tag, self.version, i = readChunkBinary(data, 0)
+		tag, self.records, i = readChunkBinary(data, i)
+		tag, self.bodies, i  = readChunkBinary(data, i)
+		tag, self.flags, i   = readChunkBinary(data, i)
+		tag, self.prodId, i  = readChunkBinary(data, i)
+		tag, self.prodVer, i = readChunkBinary(data, i)
+		tag, self.date, i    = readChunkBinary(data, i)
+		tag, self.scale, i   = readChunkBinary(data, i)
+		tag, self.resabs, i  = readChunkBinary(data, i)
+		tag, self.resnor, i  = readChunkBinary(data, i)
+		self.version /= 100.0
+		logMessage("    product: '%s'" %(self.prodId), LOG.LOG_INFO)
+		logMessage("    version: '%s'" %(self.prodVer), LOG.LOG_INFO)
+		logMessage("    date:    %s" %(self.date), LOG.LOG_INFO)
+		return i
 
 def getNextText(data):
 	m = LENGTH_TEXT.match(data)
@@ -204,7 +173,34 @@ def getNextToken(data):
 		return token, remaining
 	return '', ''
 
-def readEntity(line, i):
+def readChunkBinary(data, index):
+	try:
+		return readNextSabChunk(data, index)
+	except Exception as e:
+		buf, dummy = getUInt8A(data, index, 64)
+		assert (False), "%04X: %s- [%s]" %(index, e, IntArr2Str(buf, 2))
+
+def readEntityBinary(data, index, end):
+	name = ""
+	i = index
+	entity = None
+	while (i < end):
+		tag, val, i = readChunkBinary(data, i)
+
+		name += val if (val != "ASM") else "ACIS"
+
+		if (tag == 0x0D):
+			break
+		name += "-"
+
+	entity = AcisEntity(name)
+	if ((name != "End-of-ACIS-History-Section") and (name != 'End-of-ACIS-data')):
+		while ((tag != 0x11) and (i < end)):
+			tag, val, i = readChunkBinary(data, i)
+			entity.add(tag, val)
+	return entity, i
+
+def readEntityText(line, i):
 	index = i
 	token, data = getNextToken(line)
 	if (token.startswith('-')):
@@ -344,7 +340,7 @@ def importModel(root, doc):
 
 	return
 
-def read(doc, fileName):
+def readText(doc, fileName):
 	header = Header()
 	entities = {}
 	lst      = []
@@ -352,14 +348,41 @@ def read(doc, fileName):
 	Acis.clearEntities()
 
 	with open(fileName, 'rU') as file:
-		header.read(file)
+		header.readText(file)
 		data = file.read()
 		lines = re.sub('[ \t\r\n]+', ' ', data).split('#')
 
 		for line in lines:
-			entity, index = readEntity(line, index)
+			entity, index = readEntityText(line, index)
 			lst.append(entity)
 			entities[entity.index] = entity
+	resolveEntityReferences(entities, lst)
+	setHeader(header)
+	setEntities(lst)
+	return
+
+def readBinary(doc, fileName):
+	header = Header()
+	entities = {}
+	lst      = []
+	index    = 0
+	Acis.clearEntities()
+
+	with open(fileName, 'rU') as file:
+		data = file.read()
+		header.readBinary(data)
+		index = 0
+		clearEntities()
+		entities = {}
+		while (i < e):
+			entity, i = readEntityBinary(data, i, e)
+			entity.index = index
+			entities[index] = entity
+			lst.append(entity)
+			index += 1
+			if (entity.name == "End-of-ACIS-data"):
+				entity.index = -2
+				break
 	resolveEntityReferences(entities, lst)
 	setHeader(header)
 	setEntities(lst)
@@ -371,23 +394,13 @@ def create3dModel(group, doc):
 	return
 
 def readEntities(asm):
-	header = Header()
-	lst = asm.get('SAT')
+	header, lst = asm.get('SAT')
 	setHeader(header)
-	setEntities(lst[6:])
+	setEntities(lst)
 	bodies = 0
-	for entity in lst[6:]:
+	for entity in lst:
 		if (entity.name == "body"):
 			bodies += 1
-	header.version = 7.0 # all Inventor Versions uses internally ACIS-Version 7.0!
-	header.records = 0
 	header.bodies  = bodies
-	header.flags   = 0
-	header.prodId  = lst[0].val
-	header.prodVer = lst[1].val
-	header.date    = lst[2].val
-	header.scale   = lst[3].val
-	header.resabs  = lst[4].val
-	header.resnor  = lst[5].val
 	Acis.setScale(header.scale)
 	return
