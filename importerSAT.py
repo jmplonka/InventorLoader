@@ -66,6 +66,23 @@ def translateToken(data, token):
 		except:
 			pass
 	return data, tag, val
+
+_entities = None
+def getEntities():
+	global _entities
+	return _entities
+def setEntities(entites):
+	global _entities
+	_entities = entites
+
+_header = None
+def getHeader():
+	global _header
+	return _header
+def setHeader(header):
+	global _header
+	_header = header
+
 class Header():
 	def __init__(self):
 		self.version = 7.0
@@ -224,11 +241,13 @@ def resolveNode(entity, version):
 		logError('>E: ' + traceback.format_exc())
 	return
 
-def resolveNodes(model, version):
+def resolveNodes():
 	Acis.references = {}
 	bodies = []
+	header = getHeader()
+	model = getEntities()
 	for entity in model:
-		resolveNode(entity, version)
+		resolveNode(entity, header.version)
 		if (entity.name == "body"):
 			bodies.append(entity)
 	return bodies
@@ -315,24 +334,24 @@ def buildBody(root, doc, entity):
 			buildWire(root, doc, wire, transform)
 	return
 
-def importModel(root, doc, model, header):
+def importModel(root, doc):
 	global lumps, wires
 	wires = 0
 	lumps = 0
-	bodies = resolveNodes(model, header.version)
+	bodies = resolveNodes()
 	for body in bodies:
 		buildBody(root, doc, body)
 
 	return
 
 def read(doc, fileName):
+	header = Header()
 	entities = {}
 	lst      = []
 	index    = 0
 	Acis.clearEntities()
 
 	with open(fileName, 'rU') as file:
-		header = Header()
 		header.read(file)
 		data = file.read()
 		lines = re.sub('[ \t\r\n]+', ' ', data).split('#')
@@ -342,18 +361,27 @@ def read(doc, fileName):
 			lst.append(entity)
 			entities[entity.index] = entity
 	resolveEntityReferences(entities, lst)
-	importModel(None, doc, lst, header)
-
-	viewAxonometric(doc)
-
+	setHeader(header)
+	setEntities(lst)
 	return
 
-def getHeader(asm):
+def create3dModel(group, doc):
+	importModel(group, doc)
+	viewAxonometric(doc)
+	return
+
+def readEntities(asm):
 	header = Header()
 	lst = asm.get('SAT')
+	setHeader(header)
+	setEntities(lst[6:])
+	bodies = 0
+	for entity in lst[6:]:
+		if (entity.name == "body"):
+			bodies += 1
 	header.version = 7.0 # all Inventor Versions uses internally ACIS-Version 7.0!
 	header.records = 0
-	header.bodies  = -1 # TODO count all bodies in lst
+	header.bodies  = bodies
 	header.flags   = 0
 	header.prodId  = lst[0].val
 	header.prodVer = lst[1].val
@@ -362,4 +390,4 @@ def getHeader(asm):
 	header.resabs  = lst[4].val
 	header.resnor  = lst[5].val
 	Acis.setScale(header.scale)
-	return header, lst[6:]
+	return

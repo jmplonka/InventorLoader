@@ -6,6 +6,7 @@ Collection of 3D Mesh importers
 '''
 
 import sys, os, FreeCAD, importerSAT, Import_IPT
+from importerUtils import canImport, logMessage, LOG
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -23,33 +24,55 @@ def decode(name):
 			decodedName = name
 	return decodedName
 
-def read(doc, filename):
+def insertGroup(doc, filename):
+	grpName = os.path.splitext(os.path.basename(filename))[0]
+	#There's a problem with adding groups starting with numbers!
+	root = createGroup(doc, '_%s' %(grpName))
+	root.Label = grpName
+
+	return root
+
+def read(doc, filename, readProperties):
 	name, ext = os.path.splitext(filename)
 	ext = ext.lower()
-	FreeCAD.ActiveDocument = doc
-	if (ext == '.sat'):
-		importerSAT.read(doc, filename)
-	else:
-		FreeCAD.Console.PrintError("No suitable reader found for ext=%s\n" %(ext))
+	if (ext == ".ipt"):
+		if (Import_IPT.read(doc, filename, readProperties)):
+			return Import_IPT
+	elif (ext == ".sat"):
+		if (importerSAT.read(doc, filename)):
+			return importerSAT
+
+def insert(filename, docname, skip = [], only = [], root = None):
+	'''
+	opens an Autodesk Inventor file in the current document
+	'''
+	if (canImport()):
+		try:
+			doc = FreeCAD.getDocument(docname)
+			logMessage("Importing: %s" %(filename), LOG.LOG_ALWAYS)
+			reader = read(doc, filename, False)
+			if (reader is not None):
+				name = os.path.splitext(os.path.basename(filename))[0]
+				name = decode(name)
+				group = insertGroup(doc, name)
+				reader.create3dModel(group, doc)
+		except:
+			open(filename, skip, only, root)
 	return
 
-def insert(filename, docname):
+def open(filename, skip = [], only = [], root = None):
 	'''
-	Called when freecad wants to import a file into an existing project.
+	opens an Autodesk Inventor file in a new document
+	In addition to insert (import), the iProperties are as well added to the document.
 	'''
-	try:
-		doc = FreeCAD.getDocument(docname)
-		read(doc, filename)
-		return doc
-	except:
-		return open(filename)
-
-def open(filename):
-	'''
-	Called when freecad wants to open a file as a new project.
-	'''
-	docname = (os.path.splitext(os.path.basename(filename))[0]).encode("utf8")
-	doc = FreeCAD.newDocument(docname)
-	doc.Label = decode(docname)
-	read(doc, filename)
-	return doc
+	if (canImport()):
+		logMessage("Reading: %s" %(filename), LOG.LOG_ALWAYS)
+		name = os.path.splitext(os.path.basename(filename))[0]
+		name = decode(name)
+		doc = FreeCAD.newDocument(name)
+		doc.Label = name
+		reader = read(doc, filename, True)
+		if (reader is not None):
+			# Create 3D-Model in root (None) of document
+			reader.create3dModel(None , doc)
+	return

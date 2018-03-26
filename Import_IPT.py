@@ -5,9 +5,9 @@ Import_IPT.py:
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import FreeCAD, FreeCADGui, sys, os, importerBRep, importerSAT
+import os, FreeCAD, FreeCADGui, importerBRep, importerSAT
 from olefile           import isOleFile, OleFileIO
-from importerUtils     import LOG, getInventorFile, setInventorFile, setFileVersion, setThumbnail, PrintableName, isEmbeddings, logMessage, logWarning, logError, canImport
+from importerUtils     import LOG, getInventorFile, setInventorFile, setFileVersion, setThumbnail, PrintableName, isEmbeddings, logMessage, logWarning, logError
 from PySide.QtCore     import *
 from PySide.QtGui      import *
 
@@ -175,15 +175,15 @@ def ListElement(ole, fname, counter):
 	stream = ole.openstream(fname).read()
 	logMessage("%2d: %s size=%s" % (counter, path, len(stream)), LOG.LOG_ALWAYS)
 
-def read(doc, readProperties):
+def read(doc, filename, readProperties):
 	first = 0
 	list = {}
 	counters = {}
 
 	# LOG.LOG_FILTER = LOG.LOG_FILTER | LOG.LOG_DEBUG
-
-	if (isOleFile(getInventorFile())):
-		ole = OleFileIO(getInventorFile())
+	if (isOleFile(filename)):
+		setInventorFile(filename)
+		ole = OleFileIO(filename)
 		setFileVersion(ole)
 		setThumbnail(ole)
 		strategy = chooseImportStrategy()
@@ -192,7 +192,7 @@ def read(doc, readProperties):
 
 		elements = ole.listdir(streams=True, storages=False)
 
-		folder = getInventorFile()[0:-4]
+		folder = filename[0:-4]
 		if not os.path.exists(folder):
 			os.makedirs(folder)
 
@@ -219,21 +219,13 @@ def read(doc, readProperties):
 		now = datetime.datetime.now()
 		if (len(doc.Comment) > 0):
 			doc.Comment += '\n'
-		doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), getInventorFile())
+		doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), filename)
 
-		logMessage("Dumped data to folder: '%s'" %(getInventorFile()[0:-4]), LOG.LOG_INFO)
+		logMessage("Dumped data to folder: '%s'" %(folder), LOG.LOG_INFO)
 
 		return True
-	logError("Error - '%s' is not a valid Autodesk Inventor file." %(getInventorFile()))
+	logError("Error - '%s' is not a valid Autodesk Inventor file." %(filename))
 	return False
-
-def insertGroup(doc, filename):
-	grpName = os.path.splitext(os.path.basename(filename))[0]
-	#There's a problem with adding groups starting with numbers!
-	root = createGroup(doc, '_%s' %(grpName))
-	root.Label = grpName
-
-	return root
 
 def create3dModel(root, doc):
 	global model
@@ -249,47 +241,11 @@ def create3dModel(root, doc):
 			brep = FreeCADImporter.findBRep(storage)
 			for asm in brep.AcisList:
 				lst    = asm.get('SAT')
-				header, entities = importerSAT.getHeader(asm)
-				importerSAT.importModel(root, doc, entities, header)
+				importerSAT.readEntities(asm)
+				importerSAT.importModel(root, doc)
 		else:
 			logError("WRONG STRATEGY!")
 
 	viewAxonometric(doc)
 
-	return
-
-def insert(filename, docname, skip = [], only = [], root = None):
-	'''
-	opens an Autodesk Inventor file in the current document
-	'''
-	if (canImport()):
-		try:
-			doc = FreeCAD.getDocument(docname)
-			logMessage("Importing: %s" %(filename), LOG.LOG_ALWAYS)
-			setInventorFile(filename)
-
-			if (read(doc, False)):
-				group = insertGroup(doc, filename)
-				create3dModel(group, doc)
-		except:
-			open(filename, skip, only, root)
-
-	return
-
-def open(filename, skip = [], only = [], root = None):
-	'''
-	opens an Autodesk Inventor file in a new document
-	In addition to insert (import), the iProperties are as well added to the document.
-	'''
-	if (canImport()):
-		logMessage("Reading: %s" %(filename), LOG.LOG_ALWAYS)
-		setInventorFile(filename)
-		docname = os.path.splitext(os.path.basename(filename))[0]
-		docname = decode(docname, utf=True)
-		doc = FreeCAD.newDocument(docname)
-		doc.Label = docname
-
-		if (read(doc, True)):
-			group = None # Don't create 3D-Model in sub-group
-			create3dModel(group, doc)
 	return
