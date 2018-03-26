@@ -22,7 +22,9 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 def missingDependency(module, url, folder):
 	import os, subprocess, importerUtils
 
-	addinpath = "%sMod/InventorLoader/" %(FreeCAD.getHomePath())
+	# Where is this file located???
+	addinpath = FreeCAD.getHomePath() + "Mod/InventorLoader/"
+	#addinpath = FreeCAD.getUserAppDataDir() + "Mod/InventorLoader/"
 	if (not os.path.exists(addinpath + "libs")):
 		print "Libs does not exists will try to unpack them ... "
 		import zipfile

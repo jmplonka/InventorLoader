@@ -315,78 +315,78 @@ class AbstractNode(AbstractData):
 				if (t == AbstractNode._TYP_NODE_REF_):
 					self.content += '%d' %(cnt)
 				while (j < cnt):
-					str = ''
+					s = ''
 					if (t == AbstractNode._TYP_NODE_REF_):
 						i = self.ReadChildRef(i, 'tmp', j, False)
 						val = self.get('tmp')
-						str = ''
+						s = ''
 					elif (t == AbstractNode._TYP_NODE_X_REF_):
 						i = self.ReadCrossRef(i, 'tmp', j, False)
 						val = self.get('tmp')
-						str = ''
+						s = ''
 					elif (t == AbstractNode._TYP_STRING16_):
 						val, i = getLen32Text16(self.data, i)
-						str = '\"%s\"' %(val)
+						s = '\"%s\"' %(val)
 					elif (t == AbstractNode._TYP_STRING8_):
 						val, i = getLen32Text8(self.data, i)
-						str = '\"%s\"' %(val)
+						s = '\"%s\"' %(val)
 					elif (t == AbstractNode._TYP_1D_UINT32_):
 						val, i = getUInt32(self.data, i)
-						str = '%04X' %(val)
+						s = '%04X' %(val)
 					elif (t == AbstractNode._TYP_1D_FLOAT32_):
 						if (getFileVersion() < 2011):
 							val, i = getFloat32(self.data, i)
 						else:
 							val = unpack('<f', self.data[i+2:i+4]+self.data[i:i+2])[0]
 							i += 4
-						str = '%g' %(val)
+						s = '%g' %(val)
 					elif (t == AbstractNode._TYP_2D_UINT16_):
 						val, i = getUInt16A(self.data, i, 2)
-						str = '(%s)' %(IntArr2Str(val, 4))
+						s = '(%s)' %(IntArr2Str(val, 4))
 					elif (t == AbstractNode._TYP_2D_SINT16_):
 						val, i = getSInt16A(self.data, i, 2)
 						if (skipBlockSize):
 							i += 4
-						str = '(%s)' %(IntArr2Str(val, 4))
+						s = '(%s)' %(IntArr2Str(val, 4))
 					elif (t == AbstractNode._TYP_UINT32A_):
 						val, i = getUInt32A(self.data, i, arraySize)
-						str = '(%s)' %(IntArr2Str(val, 8))
+						s = '(%s)' %(IntArr2Str(val, 8))
 					elif (t == AbstractNode._TYP_2D_SINT32_):
 						val, i = getSInt32A(self.data, i, 2)
-						str = '(%s)' %(IntArr2Str(val, 8))
+						s = '(%s)' %(IntArr2Str(val, 8))
 					elif (t == AbstractNode._TYP_2D_FLOAT32_):
 						val, i = getFloat32A(self.data, i, 2)
 						if (skipBlockSize):
 							i += 4
-						str = '(%s)' %(FloatArr2Str(val))
+						s = '(%s)' %(FloatArr2Str(val))
 					elif (t == AbstractNode._TYP_2D_FLOAT64_):
 						val, i = getFloat64A(self.data, i, 2)
 						if (skipBlockSize):
 							i += 4
-						str = '(%s)' %(FloatArr2Str(val))
+						s = '(%s)' %(FloatArr2Str(val))
 					elif (t == AbstractNode._TYP_3D_UINT16_):
 						val, i = getUInt16A(self.data, i, 3)
 						if (skipBlockSize):
 							i += 4
-						str = '(%s)' %(IntArr2Str(val, 4))
+						s = '(%s)' %(IntArr2Str(val, 4))
 					elif (t == AbstractNode._TYP_3D_SINT16_):
 						val, i = getSInt16A(self.data, i, 3)
 						if (skipBlockSize):
 							i += 4
-						str = '(%s)' %(IntArr2Str(val, 4))
+						s = '(%s)' %(IntArr2Str(val, 4))
 					elif (t == AbstractNode._TYP_3D_SINT32_):
 						val, i = getSInt32A(self.data, i, 3)
 						if (skipBlockSize):
 							i += 4
-						str = '(%s)' %(IntArr2Str(val, 8))
+						s = '(%s)' %(IntArr2Str(val, 8))
 					elif (t == AbstractNode._TYP_3D_FLOAT32_): # 3D-Float32
 						val, i = getFloat32A(self.data, i, 3)
 						if (skipBlockSize):
 							i += 4
-						str = '(%s)' %(FloatArr2Str(val))
+						s = '(%s)' %(FloatArr2Str(val))
 					elif (t == AbstractNode._TYP_3D_FLOAT64_):
 						val, i = getFloat64A(self.data, i, 3)
-						str = '(%s)' %(FloatArr2Str(val))
+						s = '(%s)' %(FloatArr2Str(val))
 					elif (t == AbstractNode._TYP_FONT_): # Font settings
 						val = GraphicsFont()
 						val.number, i = getUInt32(self.data, i)
@@ -396,7 +396,7 @@ class AbstractNode(AbstractData):
 						val.name, i = getLen32Text16(self.data, i)
 						val.f, i = getFloat32A(self.data, i, 2)
 						val.ukn4, i = getUInt8A(self.data, i, 3)
-						str = '%s' %(val)
+						s = '%s' %(val)
 					elif (t == AbstractNode._TYP_2D_F64_U32_4D_U8_):
 						val = []
 						f, i = getFloat64A(self.data, i, 2)
@@ -409,7 +409,7 @@ class AbstractNode(AbstractData):
 						val.append(a)
 						if (skipBlockSize):
 							i += 4
-						str = '(%s) %X [%s]' %(FloatArr2Str(f), u, IntArr2Str(a, 1))
+						s = '(%s) %X [%s]' %(FloatArr2Str(f), u, IntArr2Str(a, 1))
 					elif (t == AbstractNode._TYP_LIST_GUESS_):
 						i = self.ReadList2(i, AbstractNode._TYP_GUESS_, 'lst_tmp')
 						val = self.get('lst_tmp')
@@ -482,11 +482,11 @@ class AbstractNode(AbstractData):
 						self.content += '%s[%s: (%X)]' %(sep, getIndex(key), val)
 					else:
 						val, i = getUInt16A(self.data, i, 2)
-						str = '[%s]' %(IntArr2Str(val[0], 1))
+						s = '[%s]' %(IntArr2Str(val[0], 1))
 					lst.append(val)
 
-					if (len(str) > 0):
-						self.content += '%s%s' %(sep, str)
+					if (len(s) > 0):
+						self.content += '%s%s' %(sep, s)
 					sep = ','
 					j += 1
 			self.delete('tmp')
@@ -511,25 +511,25 @@ class AbstractNode(AbstractData):
 				if (t == AbstractNode._TYP_NODE_REF_):
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
-					str = ''
+					s = ''
 				elif (t == AbstractNode._TYP_NODE_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
-					str = ''
+					s = ''
 				elif (t == AbstractNode._TYP_STRING16_):
 					val, i = getLen32Text16(self.data, i)
-					str = '\"%s\"' %(val)
+					s = '\"%s\"' %(val)
 				elif (t == AbstractNode._TYP_STRING8_):
 					val, i = getLen32Text8(self.data, i)
-					str = '\"%s\"' %(val)
+					s = '\"%s\"' %(val)
 				elif (t == AbstractNode._TYP_2D_SINT32_):
 					val, i = getSInt32A(self.data, i, 2)
-					str = '[%s]' %(IntArr2Str(val, 8))
+					s = '[%s]' %(IntArr2Str(val, 8))
 				elif (t == AbstractNode._TYP_UINT32A_):
 					val, i = getUInt32A(self.data, i, arraySize)
 					if (skipBlockSize):
 						i += 4
-					str = '[%s]' %(IntArr2Str(val, 8))
+					s = '[%s]' %(IntArr2Str(val, 8))
 				elif (t == AbstractNode._TYP_RESULT_ITEM4_):
 					val = ResultItem4()
 					val.a0, i = getUInt16A(self.data, i, 4)
@@ -537,11 +537,11 @@ class AbstractNode(AbstractData):
 					val.a2, i = getFloat64A(self.data, i, 3)
 					if (skipBlockSize):
 						i += 4
-					str = '%s' %(val)
+					s = '%s' %(val)
 				j += 1
 				lst.append(val)
-				if (len(str) > 0):
-					self.content += '%s%s' %(sep, str)
+				if (len(s) > 0):
+					self.content += '%s%s' %(sep, s)
 					sep = ','
 
 		return lst, i

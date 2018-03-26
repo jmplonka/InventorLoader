@@ -39,7 +39,7 @@ def resolveEntityReferences(entities, lst):
 
 		if (not skip):
 			for chunk in entity.chunks:
-				if (chunk.key == 0x0C):
+				if (chunk.tag == 0x0C):
 					ref = chunk.val
 					if (ref.index >= 0):
 						entity = entities[ref.index]
@@ -524,7 +524,7 @@ class SegmentReader(object):
 		for header in range(6):
 			key, val, i = Read_AcisChunk(i, node)
 			chunk = AcisChunk(key, val)
-			chunk.str = ''
+			chunk.typ = ''
 			lst.append(chunk)
 		index = 0
 		clearEntities()

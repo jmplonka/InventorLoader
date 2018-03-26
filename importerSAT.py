@@ -17,6 +17,55 @@ NEXT_TOKEN  = re.compile('[ \t]*([^ \t]+) +(.*)')
 lumps = 0
 wires = 0
 
+TokenTranslations = {
+	'0x0A':       0x0A,
+	'0x0B':       0x0B,
+	'reversed':   0x0A,
+	'reverse_v':  0x0A,
+	'in':         0x0A,
+	'double':     0x0A,
+	'rotate':     0x0A,
+	'reflect':    0x0A,
+	'shear':      0x0A,
+	'F':          0x0A,
+	'forward':    0x0B,
+	'forward_v':  0x0B,
+	'out':        0x0B,
+	'single':     0x0B,
+	'no_rotate':  0x0B,
+	'no_reflect': 0x0B,
+	'no_shear':   0x0B,
+	'I':          0x0B,
+	'{':          0x0F,
+	'}':          0x10,
+	'#':          0x11
+}
+def translateToken(data, token):
+	if (token.startswith('@')):
+		count = int(token[1:])
+		text = data[0:count]
+		data = data[count + 1:]
+		return data, 0x08, text
+	if (token.startswith('$')):
+		ref = int(token[1:])
+		return data, 0x0C, AcisRef(ref)
+	if (token == '('):
+		tokX, data  = getNextToken(data)
+		tokY, data  = getNextToken(data)
+		tokZ, data  = getNextToken(data)
+		dummy, data = getNextToken(data)
+		assert (dummy == ')'), "Expected ')' but found '%s'!" %(dummy)
+		return data, 0x13, [float(tokX), float(tokY), float(tokZ)]
+	tag = TokenTranslations.get(token, None)
+	val = token
+	if (tag is None):
+		tag = 0x07
+		try:
+			val = float(val)
+			tag = 0x06
+		except:
+			pass
+	return data, tag, val
 class Header():
 	def __init__(self):
 		self.version = 7.0
@@ -62,28 +111,28 @@ class Header():
 
 class AcisChunk():
 	def __init__(self, key, val):
-		self.key = key
+		self.tag = key
 		self.val = val
-		self.str = '@'
+		self.typ = '@'
 
 	def __str__(self):
-		if (self.key == 0x04): return "%d "      %(self.val)
-		if (self.key == 0x06): return "%g "      %(self.val)
-		if (self.key == 0x07): return "%s%d %s " %(self.str, len(self.val), self.val)# STRING
-		if (self.key == 0x08): return "%s"       %(self.val)                         # STRING
-		if (self.key == 0x0A): return "%s "      %(self.val)
-		if (self.key == 0x0B): return "%s "      %(self.val)
-		if (self.key == 0x0C): return "%s "      %(self.val)                         # ENTITY_POINTER
-		if (self.key == 0x0D): return "%s "      %(self.val)                         # CLASS_IDENTIFYER
-		if (self.key == 0x0E): return "%s-"      %(self.val)                         # SUBCLASS_IDENTIFYER
-		if (self.key == 0x0F): return "%s "      %(self.val)                         # SUBTYP_START
-		if (self.key == 0x10): return "%s "      %(self.val)                         # SUBTYP_END
-		if (self.key == 0x11): return "%s\n"     %(self.val)                         # TERMINATOR
-		if (self.key == 0x12): return "%s%d %s " %(self.str, len(self.val), self.val)# STRING
-		if (self.key == 0x13): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.key == 0x14): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val])) # somthing to do with scale
-		if (self.key == 0x15): return "%d "      %(self.val)
-		if (self.key == 0x16): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == 0x04): return "%d "      %(self.val)
+		if (self.tag == 0x06): return "%g "      %(self.val)
+		if (self.tag == 0x07): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
+		if (self.tag == 0x08): return "%s"       %(self.val)                         # STRING
+		if (self.tag == 0x0A): return "%s "      %(self.val)
+		if (self.tag == 0x0B): return "%s "      %(self.val)
+		if (self.tag == 0x0C): return "%s "      %(self.val)                         # ENTITY_POINTER
+		if (self.tag == 0x0D): return "%s "      %(self.val)                         # CLASS_IDENTIFYER
+		if (self.tag == 0x0E): return "%s-"      %(self.val)                         # SUBCLASS_IDENTIFYER
+		if (self.tag == 0x0F): return "%s "      %(self.val)                         # SUBTYP_START
+		if (self.tag == 0x10): return "%s "      %(self.val)                         # SUBTYP_END
+		if (self.tag == 0x11): return "%s\n"     %(self.val)                         # TERMINATOR
+		if (self.tag == 0x12): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
+		if (self.tag == 0x13): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == 0x14): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val])) # somthing to do with scale
+		if (self.tag == 0x15): return "%d "      %(self.val)
+		if (self.tag == 0x16): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
 		return ''
 
 class AcisEntity():
@@ -92,7 +141,6 @@ class AcisEntity():
 		self.name   = name
 		self.index  = -1
 		self.node   = None
-		Acis.addEntity(self)
 
 	def add(self, key, val):
 		self.chunks.append(AcisChunk(key, val))
@@ -122,7 +170,20 @@ def getNextToken(data):
 	m = NEXT_TOKEN.match(data)
 	if (m is not None):
 		token = m.group(1)
-		remaining = m.group(2)
+		if (token.startswith('{') and (len(token) > 1)):
+			remaining = token[1:] + ' ' + m.group(2)
+			token = '{'
+		elif (token.endswith('}') and (len(token) > 1)):
+			token = token[0:-1]
+			remaining = '} ' + m.group(2)
+		elif (token.startswith('(') and (len(token) > 1)):
+			remaining = token[1:] + ' ' + m.group(2)
+			token = '('
+		elif (token.endswith(')') and (len(token) > 1)):
+			token = token[0:-1]
+			remaining = ') ' + m.group(2)
+		else:
+			remaining = m.group(2)
 		return token, remaining
 	return '', ''
 
@@ -138,63 +199,8 @@ def readEntity(line, i):
 	entity.index = index
 	while (len(data) > 0):
 		token, data = getNextToken(data)
-		if (token.startswith('@')):
-			count = int(token[1:])
-			text = data[0:count]
-			data = data[count + 1:]
-			entity.add(0x08, text)
-		elif (token == '0x0A'):
-			entity.add(0x0A, token)
-		elif (token == '0x0B'):
-			entity.add(0x0B, token)
-		elif (token.startswith('(')):
-			tok1, data = getNextToken(data)
-			tok2, data = getNextToken(data)
-			assert tok2.endswith(')'), "Expected ')' but found '%s'!" %(dummy.val)
-			entity.add(0x13, [float(token[1:]), float(tok1), float(tok2[:-1])])
-		elif (token == 'reversed'):
-			entity.add(0x0A, token)
-		elif (token == 'reverse_v'):
-			entity.add(0x0A, token)
-		elif (token == 'in'):
-			entity.add(0x0A, token)
-		elif (token == 'double'):
-			entity.add(0x0A, token)
-		elif (token == 'rotate'):
-			entity.add(0x0A, token)
-		elif (token == 'reflect'):
-			entity.add(0x0A, token)
-		elif (token == 'shear'):
-			entity.add(0x0A, token)
-		elif (token == 'F'):
-			entity.add(0x0A, token)
-		elif (token == 'forward'):
-			entity.add(0x0B, token)
-		elif (token == 'forward_v'):
-			entity.add(0x0B, token)
-		elif (token == 'out'):
-			entity.add(0x0B, token)
-		elif (token == 'single'):
-			entity.add(0x0B, token)
-		elif (token == 'no_rotate'):
-			entity.add(0x0B, token)
-		elif (token == 'no_reflect'):
-			entity.add(0x0B, token)
-		elif (token == 'no_shear'):
-			entity.add(0x0B, token)
-		elif (token == 'I'):
-			entity.add(0x0B, token)
-		elif (token.startswith('$')):
-			entity.add(0x0C, AcisRef(int(token[1:])))
-		elif (token.startswith('{')):
-			entity.add(0x0F, token)
-		elif (token.startswith('}')):
-			entity.add(0x10, token)
-		else:
-			try:
-				entity.add(0x06, float(token))
-			except:
-				entity.add(0x07, token)
+		data, tag, val = translateToken(data, token)
+		entity.add(tag, val)
 
 	entity.add(0x11, '#')
 
@@ -203,7 +209,7 @@ def readEntity(line, i):
 def resolveEntityReferences(entities, lst):
 	for entity in lst:
 		for chunk in entity.chunks:
-			if (chunk.key == 0x0C):
+			if (chunk.tag == 0x0C):
 				ref = chunk.val
 				if (ref.index >= 0):
 					ref.entity = entities[ref.index]
@@ -211,9 +217,8 @@ def resolveEntityReferences(entities, lst):
 
 def resolveNode(entity, version):
 	try:
-		type = entity.name
-		if (len(type) > 0):
-			node = Acis.createNode(entity.index, type, entity, version)
+		if (len(entity.name) > 0):
+			Acis.createNode(entity.index, entity.name, entity, version)
 	except Exception as e:
 		logError("Can't resolve '%s' - %s" %(entity, e))
 		logError('>E: ' + traceback.format_exc())
@@ -295,8 +300,8 @@ def buildWire(root, doc, wire, transform):
 	name = "Wire%02d" %wires
 	logMessage("    building wire '%s'..." %(name), LOG.LOG_INFO)
 
-	buildWires(wire.getCoEdges(), doc, root, name)
-	buildFaces(wire.getShells(), doc, root, name)
+	buildWires(wire.getCoEdges(), doc, root, name, transform)
+	buildFaces(wire.getShells(), doc, root, name, transform)
 
 	return True
 
@@ -329,9 +334,10 @@ def read(doc, fileName):
 	with open(fileName, 'rU') as file:
 		header = Header()
 		header.read(file)
-		data = file.read().replace('\n', '').replace('\r', '').split('#')
+		data = file.read()
+		lines = re.sub('[ \t\r\n]+', ' ', data).split('#')
 
-		for line in data:
+		for line in lines:
 			entity, index = readEntity(line, index)
 			lst.append(entity)
 			entities[entity.index] = entity
@@ -357,4 +363,3 @@ def getHeader(asm):
 	header.resnor  = lst[5].val
 	Acis.setScale(header.scale)
 	return header, lst[6:]
-

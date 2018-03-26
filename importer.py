@@ -5,7 +5,7 @@ importer.py:
 Collection of 3D Mesh importers
 '''
 
-import os, FreeCAD, importerSAT
+import sys, os, FreeCAD, importerSAT, Import_IPT
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'

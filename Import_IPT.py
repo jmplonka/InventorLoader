@@ -175,7 +175,7 @@ def ListElement(ole, fname, counter):
 	stream = ole.openstream(fname).read()
 	logMessage("%2d: %s size=%s" % (counter, path, len(stream)), LOG.LOG_ALWAYS)
 
-def ReadFile(doc, readProperties):
+def read(doc, readProperties):
 	first = 0
 	list = {}
 	counters = {}
@@ -186,7 +186,6 @@ def ReadFile(doc, readProperties):
 		ole = OleFileIO(getInventorFile())
 		setFileVersion(ole)
 		setThumbnail(ole)
-
 		strategy = chooseImportStrategy()
 		param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
 		param.SetInt("strategy", strategy)
@@ -269,7 +268,7 @@ def insert(filename, docname, skip = [], only = [], root = None):
 			logMessage("Importing: %s" %(filename), LOG.LOG_ALWAYS)
 			setInventorFile(filename)
 
-			if (ReadFile(doc, False)):
+			if (read(doc, False)):
 				group = insertGroup(doc, filename)
 				create3dModel(group, doc)
 		except:
@@ -290,7 +289,7 @@ def open(filename, skip = [], only = [], root = None):
 		doc = FreeCAD.newDocument(docname)
 		doc.Label = docname
 
-		if (ReadFile(doc, True)):
+		if (read(doc, True)):
 			group = None # Don't create 3D-Model in sub-group
 			create3dModel(group, doc)
 	return
