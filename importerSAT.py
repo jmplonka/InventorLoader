@@ -359,7 +359,7 @@ def readText(doc, fileName):
 	resolveEntityReferences(entities, lst)
 	setHeader(header)
 	setEntities(lst)
-	return
+	return True
 
 def readBinary(doc, fileName):
 	header = Header()

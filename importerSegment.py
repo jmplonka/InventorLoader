@@ -447,7 +447,10 @@ class SegmentReader(object):
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
 		vrs, i = getUInt32(node.data, i)
-		data = '\x04\xBC\x02\x00\x00\x04' + node.data[i:i+4] + '\x04' + node.data[i+4:i+8] + '\x04' + node.data[i+8:]
+		data = '\x04\xBC\x02\x00\x00'       # ACIS-Version
+		data += '\x04' + node.data[i:i+4]   # Number of records
+		data += '\x04' + node.data[i+4:i+8] # Number of bodies
+		data += '\x04' + node.data[i+8:]    # Flags + entities
 		lst = []
 		header = Header()
 		i = header.readBinary(data)
@@ -466,13 +469,6 @@ class SegmentReader(object):
 				break
 		i = self.skipBlockSize(i)
 		resolveEntityReferences(entities, lst)
-		sat = '%d' %(vrs)
-		sat += '\n%s' %(header)
-		sat += ''.join(['%s' %(r) for r in lst])
-		try:
-			node.content += ' SAT="\n%s\n"' %(sat)
-		except:
-			pass
 		node.set('SAT', [header, lst])
 		node.segment.AcisList.append(node)
 		dumpSat(node)

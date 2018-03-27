@@ -379,7 +379,7 @@ def getFormatCurve(chunks, index):
 		return val, number, i
 	raise Exception("Unknown FORMAT '%s'!" %(val))
 
-def getFormatSurface(chunks, index, version):
+def getFormatSurface(chunks, index):
 	# Syntax: [:FORMAT:] [:FORMAT:] [:FULL:] [:FULL:] [:NUMBER:] [:NUMBER:]
 	# FORMAT = (open=0|closed=1|periodic=2)
 	# FULL   = (full=0|none=1)
@@ -398,25 +398,20 @@ def getFormatSurface(chunks, index, version):
 
 	raise Exception("Unknown FORMAT '%s'!" %(val1))
 
-def addPoint2D(entity, chunks, index):
-	try:
-		u, i  = getFloat(chunks, index)
-		v, i  = getFloat(chunks, i)
-		scale = getScale()
-		if (entity.dimName == 'nurbs'):
-			d, i = getFloat(chunks, i)
-		entity.points.append([u * scale, v * scale])
-		return i
-	except:
-		return index
+def addPoint2D(nubs, chunks, index):
+	p, i  = getFloats(chunks, index, 2)
+	if (nubs.rational):
+		weight, i = getFloat(chunks, i)
+		nubs.weights.append(weight)
+	nubs.poles.append(VEC(p[0], p[1], 0) * getScale())
+	return i
 
-def addPoint3D(entity, chunks, index):
-	x, i = getFloat(chunks, index)
-	y, i = getFloat(chunks, i)
-	z, i = getFloat(chunks, i)
-	if (entity.dimName == 'nurbs'):
-		d, i = getFloat(chunks, i)
-	entity.points.append(VEC(x, y, z) * getScale())
+def addPoleXYZ(nubs, chunks, index):
+	p, i = getFloats(chunks, index, 3)
+	if (nubs.rational):
+		weight, i = getFloat(chunks, i)
+		nubs.weights.append(weight)
+	nubs.poles.append(VEC(p[0], p[1], p[2]) * getScale())
 	return i
 
 def isPoint(chunks, index, size):
@@ -429,103 +424,56 @@ def isPoint(chunks, index, size):
 		i += 1
 	return True
 
-def readPoints2DList(entity, chunks, index):
-	j = 0
-	i = index
-	counts = []
-	while (j < entity.frmCount):
-		d, i = getFloat(chunks, i)
-		n, i = getInteger(chunks, i)
-		counts.append(n)
-		j += 1
+def readKnotsMults(count, chunks, index):
+	knots = []
+	mults = []
+	i     = index
+	j     = 0
 
-	vrs = entity.version
-	#off = 0 if ((vrs < 16.0) and (vrs < 22)) else 1
-	off = 0 if (vrs < 16.0) else 1
-	if (len(counts) > 0):
-		if (vrs > 15):
-			size = 3 if (entity.dimName == 'nubs') else 4
-		else:
-			size = 2 if (entity.dimName == 'nubs') else 3
-		while (isPoint(chunks, i, size)):
-			i = addPoint2D(entity, chunks, i)
-	else:
-		logWarning("%s" %(entity))
+	while (j < count):
+		knot, i = getFloat(chunks, i)
+		mult, i = getInteger(chunks, i)
+		knots.append(knot)
+		mults.append(mult)
+		j += 1
+	return knots, mults, i
+
+def readPoints2DList(nubs, count, chunks, index, version):
+	nubs.uKnots, nubs.uMults, i = readKnotsMults(count, chunks, index)
+
+	size = 3 if (nubs.rational) else 2
+	if (version > 15.0):
+		size += 1
+	while (isPoint(chunks, i, size)):
+		i = addPoint2D(nubs, chunks, i)
 
 	return i
 
-def readPoints3DList(entity, chunks, index):
-	i = index
-	counts = []
-	j = 0
-	while (j < entity.frmCount):
-		d, i = getFloat(chunks, i)
-		n, i = getInteger(chunks, i)
-		counts.append(n)
-		j += 1
+def readPoints3DList(nubs, count, chunks, index):
+	nubs.uKnots, nubs.uMults, i = readKnotsMults(count, chunks, index)
 
-
-	if (len(counts) > 1):
-		size = 3 if (entity.dimName == 'nubs') else 4
-		while (isPoint(chunks, i, size)):
-			i = addPoint3D(entity, chunks, i)
-	else:
-		logWarning("%s" %(entity))
+	size = 4 if (nubs.rational) else 3
+	while (isPoint(chunks, i, size)):
+		i = addPoleXYZ(nubs, chunks, i)
 
 	return i
 
-def readPoints3DMap(entity, chunks, index):
-	i = index
-	countsX = []
-	j = 0
-	while (j < entity.frmCount[0]):
-		d, i = getFloat(chunks, i)
-		n, i = getInteger(chunks, i)
-		countsX.append(n)
-		j += 1
-	countsY = []
-	j = 0
-	while (j < entity.frmCount[1]):
-		d, i = getFloat(chunks, i)
-		n, i = getInteger(chunks, i)
-		countsY.append(n)
-		j += 1
+def readPoints3DMap(nubs, count, chunks, index):
+	nubs.uKnots, nubs.uMults, i = readKnotsMults(count[0], chunks, index)
+	nubs.vKnots, nubs.vMults, i = readKnotsMults(count[1], chunks, i)
 
-	if ((len(countsX) > 0) and (len(countsY) > 0)):
-		size = 3 if (entity.dimName == 'nubs') else 4
-		while (isPoint(chunks, i, size)):
-			i = addPoint3D(entity, chunks, i)
-	else:
-		logWarning("%s" %(entity))
+	size = 4 if (nubs.rational) else 2
+	while (isPoint(chunks, i, size)):
+		i = addPoleXYZ(nubs, chunks, i)
 
 	return i
 
 def readBlend(chunks, index, version):
-	dimName, dimType, i = getDimensionCurve(chunks, index)
-	if (dimName== 'nullbs'):
-		return None, i
-	if (dimName == 'nubs') or (dimName=='nurbs'):
-		p = CurveP()
-		p.dimName = dimName
-		p.dimType = dimType
-		p.frmName, p.frmCount, i = getFormatCurve(chunks, i)
-		i = readPoints2DList(p, chunks, i)
-		p.sense, i = getSense(chunks, i)
-		p.factor, i = getFloat(chunks, i)
-		return p, i
-	return None, index
-
-def readCurveP(chunks, index):
-	dimName, dimType, i = getDimensionCurve(chunks, index)
-	if (dimName== 'nullbs'):
-		return None, i
-	if (dimName == 'nubs') or (dimName=='nurbs'):
-		p = CurveP()
-		p.dimName = dimName
-		p.dimType = dimType
-		p.frmName, p.frmCount, i = getFormatCurve(chunks, i)
-		i = readPoints2DList(p, chunks, i)
-		return p, i
+	nubs, i = readNubsP(chunks, index, version)
+	if (nubs is not None):
+		nubs.sense, i = getSense(chunks, i)
+		nubs.factor, i = getFloat(chunks, i)
+		return nubs, i
 	return None, index
 
 def readUnknown(chunks, index, version):
@@ -555,7 +503,7 @@ def readUnknown(chunks, index, version):
 	elif (val == 'torus'):
 		obj = SurfaceTorus()
 	elif ((val == 'nubs') or (val =='nurbs')):
-		curve, i = readCurveP(chunks, index)
+		curve, i = readNubsP(chunks, index, version)
 		curve.sense, i = getSense(chunks, i)
 		curve.factor, i = getFloat(chunks, i)
 		return curve, i
@@ -738,9 +686,140 @@ def createPolygon(points):
 	lines = [createLine(points[i], points[i+1]) for i in range(l-1)]
 	return Part.Wire(lines)
 
-def createBSplines(points):
-	splines = Part.BSplineCurve(points)
-	return splines.toShape()
+def createBSplinesCurve(nubs):
+	bsc = Part.BSplineCurve()
+
+	poles = nubs.poles
+	weights = nubs.weights
+	number_of_poles = len(poles)
+	sum_of_mults    = sum(nubs.uMults)
+	degree          = nubs.uDegree
+	periodic        = nubs.uPeriodic
+	if (periodic):
+		assert (number_of_poles == sum_of_mults), "number of poles (%d) <> sum(mults) (%d)" %(number_of_poles, sum_of_mults)
+	else:
+		size = sum_of_mults - degree - 1
+		if (number_of_poles > size):
+			poles   = poles[0:size]
+			weights = weights[0:size]
+		else:
+			assert (number_of_poles == (sum_of_mults - degree - 1)), "number of poles<>sum(mults)-degree-1: %d != %d - %d - 1" %(number_of_poles, sum_of_mults, degree)
+
+	print "num = %d, sum = %s, deg = %d, periodic = %s" %(len(poles), sum_of_mults, degree, periodic)
+	if (nubs.rational):
+		bsc.buildFromPolesMultsKnots(     \
+			poles         = poles,        \
+			mults         = nubs.uMults,  \
+			knots         = nubs.uKnots,  \
+			periodic      = periodic,     \
+			degree        = degree,       \
+			weights       = weights, \
+			CheckRational = nubs.rational
+		)
+	else:
+		bsc.buildFromPolesMultsKnots(     \
+			poles         = poles,        \
+			mults         = nubs.uMults,  \
+			knots         = nubs.uKnots,  \
+			periodic      = periodic,     \
+			degree        = degree,       \
+			CheckRational = nubs.rational
+		)
+	return bsc.toShape()
+
+def createBSplinesSurface(nubs):
+	bss = Part.BSplineSurface()
+	if (nubs.rational):
+		bss.buildFromPolesMultsKnots(       \
+			poles     = nubs.poles,     \
+			umults    = nubs.uMults,    \
+			vmults    = nubs.uMults,    \
+			uknots    = nubs.uKnots,    \
+			vknots    = nubs.uKnots,    \
+			uperiodic = nubs.uPeriodic, \
+			vperiodic = nubs.uPeriodic, \
+			uDegree   = nubs.uDegree,   \
+			vdegree   = nubs.vDegree,   \
+			weights   = nubs.weights    \
+		)
+	else:
+		bss.buildFromPolesMultsKnots(       \
+			poles     = nubs.poles,     \
+			umults    = nubs.uMults,    \
+			vmults    = nubs.uMults,    \
+			uknots    = nubs.uKnots,    \
+			vknots    = nubs.uKnots,    \
+			uperiodic = nubs.uPeriodic, \
+			vperiodic = nubs.uPeriodic, \
+			uDegree   = nubs.uDegree,   \
+			vdegree   = nubs.vDegree,   \
+		)
+	return bss.toShape()
+
+def readNubsP(chunks, index, version):
+	nbs, dgr, i = getDimensionCurve(chunks, index)
+	if (nbs == 'nullbs'):
+		return None, i
+	if ((nbs == 'nubs') or (dimName=='nurbs')):
+		fmt, cnt, i = getFormatCurve(chunks, i)
+		nubs = NUBS_1D(nbs == 'nurbs', fmt == 'periodic', dgr)
+		i = readPoints2DList(nubs, cnt, chunks, i, version)
+		return nubs, i
+	return None, index
+
+def readNubsCurve(chunks, index):
+	nbs, dgr, i = getDimensionCurve(chunks, index)
+	if (nbs == 'nullbs'):
+		return None, i
+	if ((nbs == 'nubs') or (nbs == 'nurbs')):
+		fmt, cnt, i = getFormatCurve(chunks, i)
+		nubs = NUBS_1D(nbs == 'nurbs', fmt == 'periodic', dgr)
+		i = readPoints3DList(nubs, cnt, chunks, i)
+		return nubs, i
+	return None, index
+
+def readNubsSurface(chunks, index):
+	nbs, dgr, i = getDimensionSurface(chunks, index)
+	if (nbs == 'nullbs'):
+		return None, i
+	if ((val == 'nurbs') or (val == 'nubs')):
+		fmt, typ, cnt, i = getFormatSurface(chunks, i)
+		nubs = NUBS_2D(nbs == 'nurbs', fmt[0] == 'periodic', fmt[1] == 'periodic', dgr[0], dgr[1])
+		i = readPoints3DMap(nubs, cnt, chunks, i)
+	return nubs, i
+
+class VBL():
+	def __init__(self):
+		self.n  = ''
+		self.r  = None
+		self.v  = CENTER
+		self.a  = 0x0B
+		self.b  = 0x0B
+		self.c  = 0.0
+		self.s  = None
+		self.p  = None
+		self.d  = None
+		self.e  = 0.0
+		self.c1 = None
+		self.c2 = None
+class NUBS_1D(object):
+	def __init__(self, rational, periodic, degree):
+		self.poles     = []       # sequence of VEC
+		self.uMults    = ()       # tuple of int, e.g.  (3, 1,  3)
+		self.uKnots    = ()       # tuple of float, eg. (0, 0.5, 1)
+		self.uPeriodic = periodic # boolean
+		self.uDegree   = degree   # int
+		self.weights   = []       # sequence of float, e.g. (1, 0.8, 0.2), must have the same length as poles
+		self.rational  = rational # boolean: False for nubs, True for nurbs
+class NUBS_2D(NUBS_1D):
+	def __init__(self, rational, uPeriodic, vPeriodic, uDegree, vDegree):
+		super(NubsSurface, self).__init__(rational, uPeriodic, uDegree)
+		self.poles     = [[]]      # sequence of sequence ofVEC
+		self.weights   = [[]]      # sequence of sequence float
+		self.vMults    = ()        # tuple of int, ref. umults
+		self.vKnots    = ()        # tuple of float
+		self.vPeriodic = vPeriodic # boolean
+		self.vDegree   = vDegree          # int
 
 class Range():
 	def __init__(self, type, limit, scale = 1.0):
@@ -1035,7 +1114,7 @@ class Face(Topology):
 			# edges can be empty because not all edges can be created right now :(
 			return [surface]
 		logWarning("    ...Don't know how to build surface '%s' - only edges displayed!" %(s.getType()))
-		#self.showEdges(wires)
+		self.showEdges(wires)
 		return []
 
 class Loop(Topology):
@@ -1287,16 +1366,15 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setCurve(self, chunks, index):
 		self.interval, i = getFull(chunks, index, self.version)
 		if (self.interval == 'full'):
-			self.dimName, self.dimType, i = getDimensionCurve(chunks, i)
-			self.frmName, self.frmCount, i = getFormatCurve(chunks, i)
-			i = readPoints3DList(self, chunks, i)
-			self.factor, i = getFloat(chunks, i)
-			self.factor *= getScale()
+			nubs, i = readNubsCurve(chunks, i)
+			nubs.factor, i = getFloat(chunks, i)
+			nubs.factor *= getScale()
+			self.shape = createBSplinesCurve(nubs)
 		elif (self.interval == 'none'):
 			self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			self.factor, i = getFloat(chunks, i)
 		elif (self.interval == 'summary'):
-			if (self.version > 17):
+			if (self.version > 17.0):
 				i += 1
 			arr, i = getFloatArray(chunks, i)
 			fac, i = getFloat(chunks, i)
@@ -1306,9 +1384,9 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		i = self.setCurve(chunks, index)
 		surface1, i = readSurface(chunks, i, self.version)
 		surface2, i = readSurface(chunks, i, self.version)
-		curve1, i   = readCurveP(chunks, i)
-		curve2, i   = readCurveP(chunks, i)
-		if (self.version > 15):
+		curve1, i   = readNubsP(chunks, i, self.version)
+		curve2, i   = readNubsP(chunks, i, self.version)
+		if (self.version > 15.0):
 			i += 2
 		range2, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		a1, i       = getFloatArray(chunks, i)
@@ -1333,7 +1411,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		i = self.setSurfaceCurve(chunks, index)
 		if (asm):
 			x3, i = getFloat(chunks, i)
-		if (self.version > 15):
+		if (self.version > 15.0):
 			i += 2
 		uknown, i = getUnknownFT(chunks, i, self.version)
 		range2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -1349,8 +1427,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.helixDir, i   = getVector(chunks, i)
 		surface1, i        = readSurface(chunks, i, self.version)
 		surface2, i        = readSurface(chunks, i, self.version)
-		curve1, i          = readCurveP(chunks, i)
-		curve2, i          = readCurveP(chunks, i)
+		curve1, i          = readNubsP(chunks, i, self.version)
+		curve2, i          = readNubsP(chunks, i, self.version)
 		return i
 	def setInt(self, chunks, index):
 		i = self.setSurfaceCurve(chunks, index)
@@ -1358,6 +1436,14 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setLaw(self, chunks, index):
 		i = index + 1
+		nubs, i = readNubsCurve(chunks, i)
+		self.shape = createBSplinesCurve(nubs)
+		fac, i  = getFloat(chunks, i)
+		s1, i   = readSurface(chunks, i, self.version)
+		s2, i   = readSurface(chunks, i, self.version)
+		c1, i   = readNubsP(chunks, i, self.version)
+		c2, i   = readNubsP(chunks, i, self.version)
+		r, i    = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		# Laws:
 		#	trigonometric:
 		#		cos(x), cosh(x), cot(x) = cos(x)/sin(x), coth(x)
@@ -1383,7 +1469,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setParameter(self, chunks, index):
 		i = self.setSurfaceCurve(chunks, index)
-		if (self.version > 15):
+		if (self.version > 15.0):
 			i += 1
 		n, i        = getText(chunks, i)
 		return i
@@ -1459,7 +1545,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			elif len(self.points) == 2:
 				self.shape = createLine(self.points[0], self.points[1])
 			elif (len(self.points) > 2):
-				self.shape = createBSplines(self.points)
+				bsc = Part.BSplineCurve(self.points)
+				self.shape = bsc.toShape()
 #			else:
 #				print self
 			if (self.shape is not None):
@@ -1483,7 +1570,7 @@ class CurveIntInt(Curve):  # interpolated curve "intcurve-intcurve-curve"
 		i = super(CurveIntInt, self).set(entity, version)
 		i = self.setSubtype(entity.chunks, i)
 		return i
-class CurveP(Curve):    # projected curve "pcurve"
+class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: point3D = surface.value(u, v)
 	'''An approximation to a curve lying on a surface, defined in terms of the surface’s u-v parameters.'''
 	def __init__(self):
 		super(CurveP, self).__init__()
@@ -1497,11 +1584,9 @@ class CurveP(Curve):    # projected curve "pcurve"
 		# EXPPC = exppc ([:NUMBER:]?/*version > 22.0*/) [:DIMENSION:] [:NUMBER:dim] [:FORMAT:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:]){n}
 		#                  [:FLOAT:] ([:FLOAT:] [:SURFACE:]
 		i = index if (self.version <= 22.0) else index + 1
-		self.dimName, self.dimType, i = getDimensionCurve(chunks, i)
-		self.frmName, self.frmCount, i = getFormatCurve(chunks, i)
-		i = readPoints2DList(self, chunks, i)
+		nubs, i = readNubsP(chunks, i, self.version)
 		self.factor, i = getFloat(chunks, i)
-		if (self.version > 15):
+		if (self.version > 15.0):
 			i += 1
 		self.surface, i = readSurface(chunks, i, self.version)
 		return i
@@ -1701,21 +1786,6 @@ class SurfaceSphere(Surface):
 			sphere.Radius = self.radius
 			self.shape = sphere.toShape()
 		return self.shape
-class VBL():
-	def __init__(self):
-		self.n  = ''
-		self.r  = None
-		self.v  = CENTER
-		self.a  = 0x0B
-		self.b  = 0x0B
-		self.c  = 0.0
-		self.s  = None
-		self.p  = None
-		self.d  = None
-		self.e  = 0.0
-		self.c1 = None
-		self.c2 = None
-
 class SurfaceSpline(Surface):
 	def __init__(self):
 		super(SurfaceSpline, self).__init__()
@@ -1724,19 +1794,17 @@ class SurfaceSpline(Surface):
 	def setSurface(self, chunks, index):
 		self.interval, i = getFull(chunks, index, self.version)
 		if (self.interval == 'full'):
-			self.dimName, self.dimType, i = getDimensionSurface(chunks, i)
-			self.frmName, self.frmFull, self.frmCount, i = getFormatSurface(chunks, i, self.version)
-			i = readPoints3DMap(self, chunks, i)
+			nubs, i = readNubsSurface(chunks, i)
+			self.shape = createBSplinesSurface(nubs)
 		elif (self.interval == 'none'):
 			self.rangeU = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			self.rangeV = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			# OPEN OPEN SINGULAR_BOTH NON_SINGULAR
 		return i
-	def setSubCurve(self, chunks, index):
-		curve, i = readCurve(chunks, index, self.version)
-		return i
 	def setSubSurface(self, chunks, index):
 		surface, i = readSurface(chunks, index, self.version)
+		if (surface is not None):
+			self.shape = surface.build()
 		return i
 	def setClLoft(self, chunks, index):
 		i = self.setSurface(chunks, index)
@@ -1766,8 +1834,8 @@ class SurfaceSpline(Surface):
 		x5, i     = getVector(chunks, i)
 		s1, i     = readSurface(chunks, i, self.version)
 		s2, i     = readSurface(chunks, i, self.version)
-		c1, i     = readCurveP(chunks, i)
-		c2, i     = readCurveP(chunks, i)
+		c1, i     = readNubsP(chunks, i, self.version)
+		c2, i     = readNubsP(chunks, i, self.version)
 		fac2, i   = getFloat(chunks, i)
 		return i
 	def setLoft(self, chunks, index):
@@ -1775,7 +1843,8 @@ class SurfaceSpline(Surface):
 		b, i = getInteger(chunks, i)
 		c, i = getInteger(chunks, i)
 		d, i = getInteger(chunks, i)
-		return self.setSubCurve(chunks, i)
+		curve, i = readCurve(chunks, i, self.version)
+		return i
 	def setOffset(self, chunks, index):
 		surface, i = readSurface(chunks, index, self.version)
 		return i
@@ -1805,7 +1874,8 @@ class SurfaceSpline(Surface):
 		a5, i  = getInteger(chunks, i)
 		if (asm):
 			 i += 2
-		return self.setSubCurve(chunks, i)
+		curve, i = readCurve(chunks, i, self.version)
+		return i
 	def setBlendSupport(self, chunks, index):
 		name, i = getValue(chunks, index)
 		return self.setSubSurface(chunks, i)
@@ -1823,7 +1893,17 @@ class SurfaceSpline(Surface):
 		return i
 	def setSweepSpline(self, chunks, index):
 		type, i = getSurfSweep(chunks, index)
-		self.setSubCurve(chunks, i)
+		profile, i = readCurve(chunks, i, self.version)
+		path, i = readCurve(chunks, i, self.version)
+		if (profile is not None):
+			edgeProfile = profile.build(None, None)
+			if (edgeProfile is not None):
+				if (path is not None):
+					edgePath = path.build(None, None)
+					if (edgePath is not None):
+						surface = sweep = Part.Wire(edgePath).makePipeShell([Part.Wire(edgePath)], False, False)
+						self.shape = surface
+		return i
 	def setScaleClft(self, chunks, index):
 		return self.setSurface(chunks, index)
 	def setRef(self, chunks, index):
@@ -1841,7 +1921,7 @@ class SurfaceSpline(Surface):
 			vbl.v, i  = getCircleSmoothing(chunks, i)
 			vbl.a, i  = getFloat(chunks, i)
 			if (vbl.n == 'non_cross'):
-				if (self.version > 3):
+				if (self.version > 3.0):
 					vbl.s, i  = readSurface(chunks, i, self.version)
 					vbl.c, i  = readUnknown(chunks, i, self.version)
 				else:
@@ -1859,7 +1939,7 @@ class SurfaceSpline(Surface):
 					b.append(dummy)
 					dummy, i = getVector(chunks, i)
 					b.append(dummy)
-				if (self.version < 7):
+				if (self.version < 7.0):
 					c, i = getVector(chunks, i)
 				d, i = getFloat(chunks, i)
 				e, i = getFloat(chunks, i)
@@ -1911,11 +1991,12 @@ class SurfaceSpline(Surface):
 		self.range1, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		self.range2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
-
 	def set(self, entity, version):
 		i = super(SurfaceSpline, self).set(entity, version)
 		i = self.setSubtype(entity.chunks, i)
 		return i
+	def build(self):
+		return self.shape
 class SurfaceTorus(Surface):
 	'''
 	The torus surface is defined by the center point, normal vector, the major
