@@ -46,6 +46,11 @@ except:
 	missingDependency("xlrd", "https://pypi.python.org/pypi/xlrd", "xlrd-1.1.0")
 
 try:
+	import xlwt
+except:
+	missingDependency("xlwt", "https://pypi.python.org/pypi/xlwt", "xlwt-1.3.0")
+
+try:
 	import xlutils
 except:
 	missingDependency("xlutils", "http://pypi.python.org/pypi/xlutils", "xlutils-2.0.0")
