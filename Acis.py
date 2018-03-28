@@ -705,7 +705,6 @@ def createBSplinesCurve(nubs):
 		else:
 			assert (number_of_poles == (sum_of_mults - degree - 1)), "number of poles<>sum(mults)-degree-1: %d != %d - %d - 1" %(number_of_poles, sum_of_mults, degree)
 
-	print "num = %d, sum = %s, deg = %d, periodic = %s" %(len(poles), sum_of_mults, degree, periodic)
 	if (nubs.rational):
 		bsc.buildFromPolesMultsKnots(     \
 			poles         = poles,        \

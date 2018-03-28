@@ -4,44 +4,41 @@
 InitGui.py
 Assumes Import_IPT.py is the file that has the code for opening and reading .ipt files
 '''
-import traceback, importerUtils
+import os, traceback, importerUtils, FreeCAD, FreeCADGui, importerSAT
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-#try:
-#	addinpath = os.path.dirname(os.path.abspath(__file__))
-#	if (not hasattr(FreeCADGui, 'InventorLoaderPrefs')):
-#		FreeCADGui.addIconPath(addinpath + '/Resources')
-#		FreeCADGui.addPreferencePage(addinpath + '/Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
-#		FreeCADGui.InventorImporterPrefs = True
-#except:
-#	FreeCAD.Console.PrintError(">E: %s\n"% traceback.format_exc())
+
+# Where is this file located?
+# => get it from a module located in the same folder (thanks to DeepSOIC's "ugly hack")
+f = importerSAT.__file__ # hope that no other will name a module like this ;>
+addinpath = os.path.abspath(os.path.dirname(f)) + os.path.sep
+try:
+	if (not hasattr(FreeCADGui, 'InventorLoaderPrefs')):
+		FreeCADGui.addIconPath(addinpath + 'Resources')
+		FreeCADGui.addPreferencePage(addinpath + 'Resources/ui/PrefsInventorLoader.ui', 'Import-Export')
+		FreeCADGui.InventorImporterPrefs = True
+except:
+	FreeCAD.Console.PrintError(">E: %s\n"% traceback.format_exc())
 
 def missingDependency(module, url, folder):
-	import os, subprocess, importerUtils
-
-	# Where is this file located???
-	addinpath = FreeCAD.getHomePath() + "Mod/InventorLoader/"
-	#addinpath = FreeCAD.getUserAppDataDir() + "Mod/InventorLoader/"
+	global addinpath
+	import os, subprocess, importerUtils, FreeCAD
 	if (not os.path.exists(addinpath + "libs")):
-		print "Libs does not exists will try to unpack them ... "
+		FreeCAD.Console.PrintWarning("Unpacking required site-packages ... ")
 		import zipfile
 		zip = zipfile.ZipFile(addinpath + "libs.zip", 'r')
 		zip.extractall(addinpath)
 		zip.close()
 		FreeCAD.Console.PrintWarning("DONE!\n")
+	from libs import installLibs
 	FreeCAD.Console.PrintWarning("Trying to install missing site-package '%s' ... " %(module))
-	os.chdir(addinpath + "libs")
-	subprocess.call(['python', 'installLibs.py', FreeCAD.getHomePath(), url, folder])
+	installLibs.installLib(addinpath + "libs" + os.path.sep, folder, url)
 	FreeCAD.Console.PrintWarning("DONE!\n")
 	importerUtils.setCanImport(False)
-
-try:
-	import xlwt
-except:
-	missingDependency("xlrd", "https://pypi.python.org/pypi/xlwt", "xlwt-1.3.0")
+	FreeCAD.Console.PrintWarning("RESTART REQUIRED!\n")
 
 try:
 	import xlrd
