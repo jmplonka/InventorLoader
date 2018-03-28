@@ -1412,8 +1412,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			x3, i = getFloat(chunks, i)
 		if (self.version > 15.0):
 			i += 2
-		uknown, i = getUnknownFT(chunks, i, self.version)
-		range2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+		unknown, i = getUnknownFT(chunks, i, self.version)
+		range2, i  = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def setHelix(self, chunks, index):
 		i = index + 1
@@ -2353,7 +2353,7 @@ class AcisChunk():
 		if (self.tag == 0x11): return "%s\n"     %(self.val)                         # TERMINATOR
 		if (self.tag == 0x12): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
 		if (self.tag == 0x13): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == 0x14): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val])) # somthing to do with scale
+		if (self.tag == 0x14): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
 		if (self.tag == 0x15): return "%d "      %(self.val)
 		if (self.tag == 0x16): return "(%s) "      %(" ".join(["%g" %(f) for f in self.val]))
 		return ''

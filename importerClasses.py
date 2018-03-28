@@ -1087,7 +1087,7 @@ class FeatureNode(DataNode):
 		elif (p0 == 'SurfaceSelection'):            return 'Thicken'
 		elif (p0 == 'Transformation'):
 			if (p1 == '8D6EF0BE'):                  return 'PatternRectangular'
-			# FIXME: This only works for the intersection example (e.g. Shaft1.ipt has other proeprties)!!!!
+			# FIXME: This only works for the intersection example (e.g. Shaft1.ipt has other properties)!!!!
 			return 'iFeature'
 		elif (p0 is None):
 			p10 = self._getPropertyName(10)

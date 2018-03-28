@@ -72,9 +72,9 @@ _entities = None
 def getEntities():
 	global _entities
 	return _entities
-def setEntities(entites):
+def setEntities(entities):
 	global _entities
-	_entities = entites
+	_entities = entities
 
 _header = None
 def getHeader():
@@ -233,7 +233,7 @@ def resolveNode(entity, version):
 		if (len(entity.name) > 0):
 			Acis.createNode(entity.index, entity.name, entity, version)
 	except Exception as e:
-		logError("Can't resolve '%s' - %s" %(entity, e))
+#		logError("Can't resolve '%s' - %s" %(entity, e))
 		logError('>E: ' + traceback.format_exc())
 	return
 
