@@ -34,9 +34,7 @@ def missingDependency(module, url, folder):
 		zip.close()
 		FreeCAD.Console.PrintWarning("DONE!\n")
 	from libs import installLibs
-	FreeCAD.Console.PrintWarning("Trying to install missing site-package '%s' ... " %(module))
 	installLibs.installLib(addinpath + "libs" + os.path.sep, folder, url)
-	FreeCAD.Console.PrintWarning("DONE!\n")
 	importerUtils.setCanImport(False)
 	FreeCAD.Console.PrintWarning("RESTART REQUIRED!\n")
 
@@ -69,11 +67,9 @@ except:
 if (not importerUtils.canImport()):
 	from PySide import QtCore, QtGui
 	msgBox = QtGui.QMessageBox()
-	msgBox.setIcon(QtGui.QMessageBox.Question)
+	msgBox.setIcon(QtGui.QMessageBox.Warning)
 	msgBox.setText("Dependencies updated!!")
-	msgBox.setInformativeText("To use Inventor-AddOn, restart of FreeCAD required.\nQuit FreeCAD now?")
-	msgBox.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
-	msgBox.setDefaultButton(QtGui.QMessageBox.Yes)
+	msgBox.setInformativeText("To use Inventor-AddOn, restart of FreeCAD is required!")
 	ret = msgBox.exec_()
 	if (ret == QtGui.QMessageBox.Yes):
 		FreeCADGui.getMainWindow().close()
