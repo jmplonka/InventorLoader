@@ -112,8 +112,8 @@ SURF_SWEEP = {0x0B: 'angled',     0x0A: 'normal'}
 CIRC_TYP  = {0x0B: 'non_cross',   0x0A: 'cross'}
 CIRC_SMTH = {0x0B: 'normal',      0x0A: 'smooth'}
 
-FORMAT = {0: 'open', 1: 'closed', 2: 'periodic'}
-FULLL  = {0: 'full', 1: 'v',      2: 'none'}
+CLOSURE     = {0: 'open', 1: 'closed', 2: 'periodic'}
+SINGULARITY = {0: 'full', 1: 'v',      2: 'none'}
 
 scale = 1.0
 
@@ -267,12 +267,12 @@ def getSides(chunks, index):
 def getSide(chunks, index):
 	return getEnumByTag(chunks, index, SIDE)
 
-def checkFormat(chunks, index):
-	return getEnumByValue(chunks, index, FORMAT)
+def checkClosure(chunks, index):
+	return getEnumByValue(chunks, index, CLOSURE)
 
-def getFull(chunks, index, version):
+def getSingularity(chunks, index, version):
 	if (version > 4):
-		return getEnumByValue(chunks, index, FULLL)
+		return getEnumByValue(chunks, index, SINGULARITY)
 	return 'full', index
 
 def getSurfBool(chunks, index):
@@ -366,37 +366,37 @@ def getDimensionSurface(chunks, index):
 	if (val == 'nullbs'):
 		return val, None, i
 	if ((val == 'nurbs') or (val == 'nubs') or (val == 'summary')):
-		number1, i = getInteger(chunks, i)
-		number2, i = getInteger(chunks, i)
-		return val, [number1, number2], i
+		knotsU, i = getInteger(chunks, i)
+		knotsV, i = getInteger(chunks, i)
+		return val, knotsU, knotsV, i
 	raise Exception("Unknown DIMENSION '%s'" %(val))
 
-def getFormatCurve(chunks, index):
-	# FORMAT = (open=0|closed=1|periodic=2)
-	val, i = checkFormat(chunks, index)
-	if ((val == 'open') or (val == 'closed') or (val == 'periodic')):
-		number, i = getInteger(chunks, i)
-		return val, number, i
-	raise Exception("Unknown FORMAT '%s'!" %(val))
+def getClosureCurve(chunks, index):
+	# CLOSURE = (open=0|closed=1|periodic=2)
+	closure, i = checkClosure(chunks, index)
+	if ((closure == 'open') or (closure == 'closed') or (closure == 'periodic')):
+		knots, i = getInteger(chunks, i)
+		return closure, knots, i
+	raise Exception("Unknown closure '%s'!" %(closure))
 
-def getFormatSurface(chunks, index):
-	# Syntax: [:FORMAT:] [:FORMAT:] [:FULL:] [:FULL:] [:NUMBER:] [:NUMBER:]
-	# FORMAT = (open=0|closed=1|periodic=2)
+def getClosureSurface(chunks, index):
+	# Syntax: [:CLOSURE:] [:CLOSURE:] [:FULL:] [:FULL:] [:NUMBER:] [:NUMBER:]
+	# CLOSURE = (open=0|closed=1|periodic=2)
 	# FULL   = (full=0|none=1)
 
-	val1, i = checkFormat(chunks, index)
-	if ((val1 == 'both') or (val1 == 'u') or (val1 == 'v')):
-		val1, i = checkFormat(chunks, i)
-	if ((val1 == 'open') or (val1 == 'closed') or (val1 == 'periodic')):
+	closureU, i = checkClosure(chunks, index)
+	if ((closureU == 'both') or (closureU == 'u') or (closureU == 'v')):
+		closureU, i = checkClosure(chunks, i)
+	if ((closureU == 'open') or (closureU == 'closed') or (closureU == 'periodic')):
 		# open none none 2 2
-		val2, i = checkFormat(chunks, i)
-		ful1, i = getFull(chunks, i, 7.0)
-		ful2, i = getFull(chunks, i, 7.0)
-		number1, i = getInteger(chunks, i)
-		number2, i = getInteger(chunks, i)
-		return [val1, val2], [ful1, ful2], [number1, number2], i
+		closureV, i = checkClosure(chunks, i)
+		singularityU, i = getSingularity(chunks, i, 7.0)
+		singularityV, i = getSingularity(chunks, i, 7.0)
+		knotsU, i = getInteger(chunks, i)
+		knotsV, i = getInteger(chunks, i)
+		return closureU, closureV, singularityU, singularityV, knotsU, knotsV, i
 
-	raise Exception("Unknown FORMAT '%s'!" %(val1))
+	raise Exception("Unknown closure '%s'!" %(closureU))
 
 def addPoint2D(nubs, chunks, index):
 	p, i  = getFloats(chunks, index, 2)
@@ -458,9 +458,9 @@ def readPoints3DList(nubs, count, chunks, index):
 
 	return i
 
-def readPoints3DMap(nubs, count, chunks, index):
-	nubs.uKnots, nubs.uMults, i = readKnotsMults(count[0], chunks, index)
-	nubs.vKnots, nubs.vMults, i = readKnotsMults(count[1], chunks, i)
+def readPoints3DMap(nubs, knotsU, knotsV, chunks, index):
+	nubs.uKnots, nubs.uMults, i = readKnotsMults(knotsU, chunks, index)
+	nubs.vKnots, nubs.vMults, i = readKnotsMults(knotsV, chunks, i)
 
 	size = 4 if (nubs.rational) else 2
 	while (isPoint(chunks, i, size)):
@@ -760,9 +760,9 @@ def readNubsP(chunks, index, version):
 	if (nbs == 'nullbs'):
 		return None, i
 	if ((nbs == 'nubs') or (dimName=='nurbs')):
-		fmt, cnt, i = getFormatCurve(chunks, i)
-		nubs = NUBS_1D(nbs == 'nurbs', fmt == 'periodic', dgr)
-		i = readPoints2DList(nubs, cnt, chunks, i, version)
+		closure, knots, i = getClosureCurve(chunks, i)
+		nubs = NUBS_1D(nbs == 'nurbs', closure == 'periodic', dgr)
+		i = readPoints2DList(nubs, knots, chunks, i, version)
 		return nubs, i
 	return None, index
 
@@ -771,20 +771,20 @@ def readNubsCurve(chunks, index):
 	if (nbs == 'nullbs'):
 		return None, i
 	if ((nbs == 'nubs') or (nbs == 'nurbs')):
-		fmt, cnt, i = getFormatCurve(chunks, i)
-		nubs = NUBS_1D(nbs == 'nurbs', fmt == 'periodic', dgr)
-		i = readPoints3DList(nubs, cnt, chunks, i)
+		closure, knots, i = getClosureCurve(chunks, i)
+		nubs = NUBS_1D(nbs == 'nurbs', closure == 'periodic', dgr)
+		i = readPoints3DList(nubs, knots, chunks, i)
 		return nubs, i
 	return None, index
 
 def readNubsSurface(chunks, index):
-	nbs, dgr, i = getDimensionSurface(chunks, index)
+	nbs, degreeU, degreeV, i = getDimensionSurface(chunks, index)
 	if (nbs == 'nullbs'):
 		return None, i
 	if ((val == 'nurbs') or (val == 'nubs')):
-		fmt, typ, cnt, i = getFormatSurface(chunks, i)
-		nubs = NUBS_2D(nbs == 'nurbs', fmt[0] == 'periodic', fmt[1] == 'periodic', dgr[0], dgr[1])
-		i = readPoints3DMap(nubs, cnt, chunks, i)
+		closureU, closureV, singularityU, singularityV, knotsU, knotsV, i = getClosureSurface(chunks, i)
+		nubs = NUBS_2D(nbs == 'nurbs', closureU == 'periodic', closureV == 'periodic', degreeU, degreeV)
+		i = readPoints3DMap(nubs, knotsU, knotsV, chunks, i)
 	return nubs, i
 
 class VBL():
@@ -1363,21 +1363,21 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.type   = ''
 	def __str__(self): return "-%d Curve-Int: type=%s, points=%s" %(self.getIndex(), self.type, len(self.points))
 	def setCurve(self, chunks, index):
-		self.interval, i = getFull(chunks, index, self.version)
-		if (self.interval == 'full'):
+		self.singularity, i = getSingularity(chunks, index, self.version)
+		if (self.singularity == 'full'):
 			nubs, i = readNubsCurve(chunks, i)
 			nubs.factor, i = getFloat(chunks, i)
 			nubs.factor *= getScale()
 			self.shape = createBSplinesCurve(nubs)
-		elif (self.interval == 'none'):
+		elif (self.singularity == 'none'):
 			self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			self.factor, i = getFloat(chunks, i)
-		elif (self.interval == 'summary'):
+		elif (self.singularity == 'summary'):
 			if (self.version > 17.0):
 				i += 1
-			arr, i = getFloatArray(chunks, i)
-			fac, i = getFloat(chunks, i)
-			fmt, i = checkFormat(chunks, i)
+			arr, i  = getFloatArray(chunks, i)
+			fac, i  = getFloat(chunks, i)
+			clsr, i = checkClosure(chunks, i)
 		return i
 	def setSurfaceCurve(self, chunks, index):
 		i = self.setCurve(chunks, index)
@@ -1490,14 +1490,14 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setBulk(self, chunks, index):
 		# data syntax
 		# DATA = ([:EXACTCUR:]|[:PARCUR:]|[:REF:]|[:PROJ_INT_CUR:]|[:SPRING_INT_CUR:]|[:SURFINTCUR:])
-		# EXACTCUR       = exactcur (full)? [:DIMENSION:] [:FORMAT:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:]){n}
+		# EXACTCUR       = exactcur (full)? [:DIMENSION:] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:]){n}
 		#                  [:FLOAT:] [:SURFACE:] [:SURFACE:] [:DIMENSION:] [:DIMENSION:] [:RANGE:] .*
-		# PARCUR         = ([:DIMENSION:]) [:FLOAT:] [:FORMAT:]
+		# PARCUR         = ([:DIMENSION:]) [:FLOAT:] [:CLOSURE:]
 
-		# PROJ_INT_CUR   = proj_int_cur [:NUMBER:] (full|0)? [:DIMENSION:] [:FORMAT:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
+		# PROJ_INT_CUR   = proj_int_cur [:NUMBER:] (full|0)? [:DIMENSION:] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
 		# REF            = ref [:NUMBER:]
-		# SPRING_INT_CUR = spring_int_cur [:NUMBER:] (full|0)? [:DIMENSION:] [:FORMAT:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
-		# SURFINTCUR     = surfintcur (full|0)? [:DIMENSION:] [:FORMAT:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
+		# SPRING_INT_CUR = spring_int_cur [:NUMBER:] (full|0)? [:DIMENSION:] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
+		# SURFINTCUR     = surfintcur (full|0)? [:DIMENSION:] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
 
 		# VECTOR         = [:FLOAT:] [:FLOAT:] [:FLOAT:]
 		self.type, i = getValue(chunks, index)
@@ -1580,7 +1580,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.space   = None  # Parmeter space vector
 		self.points = []
 	def setExpPar(self, chunks, index):
-		# EXPPC = exppc ([:NUMBER:]?/*version > 22.0*/) [:DIMENSION:] [:NUMBER:dim] [:FORMAT:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:]){n}
+		# EXPPC = exppc ([:NUMBER:]?/*version > 22.0*/) [:DIMENSION:] [:NUMBER:dim] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:]){n}
 		#                  [:FLOAT:] ([:FLOAT:] [:SURFACE:]
 		i = index if (self.version <= 22.0) else index + 1
 		nubs, i = readNubsP(chunks, i, self.version)
@@ -1791,11 +1791,11 @@ class SurfaceSpline(Surface):
 		self.data = None # The spline's data
 		self.points = []
 	def setSurface(self, chunks, index):
-		self.interval, i = getFull(chunks, index, self.version)
-		if (self.interval == 'full'):
+		self.singularity, i = getSingularity(chunks, index, self.version)
+		if (self.singularity == 'full'):
 			nubs, i = readNubsSurface(chunks, i)
 			self.shape = createBSplinesSurface(nubs)
-		elif (self.interval == 'none'):
+		elif (self.singularity == 'none'):
 			self.rangeU = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			self.rangeV = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			# OPEN OPEN SINGULAR_BOTH NON_SINGULAR
@@ -1987,8 +1987,8 @@ class SurfaceSpline(Surface):
 		self.sense, i  = getSense(chunks, index)
 		block, i       = getBlock(chunks, i)
 		self.setBulk(block, 0)
-		self.range1, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		self.range2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+		self.rangeU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+		self.rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def set(self, entity, version):
 		i = super(SurfaceSpline, self).set(entity, version)
@@ -2152,6 +2152,14 @@ class AttribStRgbColor(AttribSt):
 	def set(self, entity, version):
 		i = super(AttribStRgbColor, self).set(entity, version)
 		self.color, i = getPoint(entity.chunks, i)
+		return i
+class AttribStDisplay(AttribSt):
+	def __init__(self):
+		super(AttribStRgbColor, self).__init__()
+		self.revision = 0
+	def set(self, entity, version):
+		i = super(AttribStRgbColor, self).set(entity, version)
+		self.revision, i = getInteger(entity.chunks, i)
 		return i
 class AttribSys(Attrib):
 	def __init__(self): super(AttribSys, self).__init__()
@@ -2542,6 +2550,7 @@ TYPES = {
 	"no_merge_attribute-st-attrib":                                                                AttribStNoMerge,
 	"no_combine_attribute-st-attrib":                                                              AttribStNoCombine,
 	"rgb_color-st-attrib":                                                                         AttribStRgbColor,
+	"display_attribute-st-attrib":                                                                 AttribStDisplay,
 	"sys-attrib":                                                                                  AttribSys,
 	"convexity-sys-attrib":                                                                        AttribSysConvexity,
 	"attrib_annotation-sys-attrib":                                                                AttribSysAnnotationAttrib,
