@@ -1,11 +1,11 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 '''
 importer.py:
 Collection of 3D Mesh importers
 '''
 
-import os, FreeCAD, importerSAT, Import_IPT
+import os, sys, FreeCAD, importerSAT, Import_IPT
 from importerUtils import canImport, logMessage, LOG
 
 __author__     = "Jens M. Plonka"
@@ -15,12 +15,12 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 def decode(name):
 	"decodes encoded strings"
 	try:
-		decodedName = (name.decode("utf8"))
-	except UnicodeDecodeError:
+		decodedName = name.encode("utf8")
+	except UnicodeEncodeError:
 		try:
-			decodedName = (name.decode("latin1"))
-		except UnicodeDecodeError:
-			FreeCAD.Console.PrintError("Error: Couldn't determine character encoding")
+			decodedName = name.encode(sys.getfilesystemencoding())
+		except UnicodeEncodeError:
+			FreeCAD.Console.PrintError("Error: Couldn't determine character encoding!\n")
 			decodedName = name
 	return decodedName
 

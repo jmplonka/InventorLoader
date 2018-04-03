@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 '''
 InitGui.py
@@ -71,5 +71,3 @@ if (not importerUtils.canImport()):
 	msgBox.setText("Dependencies updated!!")
 	msgBox.setInformativeText("To use Inventor-AddOn, restart of FreeCAD is required!")
 	ret = msgBox.exec_()
-	if (ret == QtGui.QMessageBox.Yes):
-		FreeCADGui.getMainWindow().close()

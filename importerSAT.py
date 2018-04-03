@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 '''
 importerSAT.py:
@@ -159,6 +159,9 @@ def getNextToken(data):
 		if (token.startswith('{') and (len(token) > 1)):
 			remaining = token[1:] + ' ' + m.group(2)
 			token = '{'
+		elif (token.startswith('}') and (len(token) > 1)):
+			remaining = token[1:] + ' ' + m.group(2)
+			token = '}'
 		elif (token.endswith('}') and (len(token) > 1)):
 			token = token[0:-1]
 			remaining = '} ' + m.group(2)
@@ -168,6 +171,9 @@ def getNextToken(data):
 		elif (token.endswith(')') and (len(token) > 1)):
 			token = token[0:-1]
 			remaining = ') ' + m.group(2)
+		elif (token.startswith(')') and (len(token) > 1)):
+			remaining = token[1:] + ' ' + m.group(2)
+			token = ')'
 		else:
 			remaining = m.group(2)
 		return token, remaining
@@ -224,8 +230,11 @@ def resolveEntityReferences(entities, lst):
 		for chunk in entity.chunks:
 			if (chunk.tag == 0x0C):
 				ref = chunk.val
-				if (ref.index >= 0):
-					ref.entity = entities[ref.index]
+				try:
+					if (ref.index >= 0):
+						ref.entity = entities[ref.index]
+				except:
+					pass
 	return
 
 def resolveNode(entity, version):

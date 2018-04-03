@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 '''
 importerDC.py:
@@ -569,7 +569,7 @@ class DCReader(SegmentReader):
 			j += 1
 		node.content += ' lst0={%s}' %(','.join(["('%s': '%s')" %(k, v) for k, v in lst0.items()]))
 		node.set('lst0', lst0)
- 		i = node.ReadUInt16(i, 'u16_1')
+		i = node.ReadUInt16(i, 'u16_1')
 		return i
 
 	def Read_033E027B(self, node):
@@ -817,7 +817,7 @@ class DCReader(SegmentReader):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
- 		i = self.ReadRefU32List(node, i, 'lst2')
+		i = self.ReadRefU32List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt8A(i, 4, 'a0')
@@ -1172,13 +1172,13 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
 		i = node.ReadUInt32(i, 'u32_3')
- 		if (node.get('u32_1') == 1):
- 			i = node.ReadCrossRef(i, 'ref_1')
- 			i = node.ReadUInt32(i, 'u32_2')
- 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 2)
+		if (node.get('u32_1') == 1):
+			i = node.ReadCrossRef(i, 'ref_1')
+			i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 2)
 		i = node.ReadCrossRef(i, 'ref_3')
 		i = node.ReadUInt32(i, 'u32_4')
- 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 7)
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 7)
 		return i
 
 	def Read_1488B839(self, node):
@@ -1192,14 +1192,14 @@ class DCReader(SegmentReader):
 		i = self.ReadHeadersss2S16s(node)
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt32(i, 'u32_2')
- 		if (getFileVersion() > 2017):
- 			i += 4
- 		else:
- 			i = self.skipBlockSize(i)
- 			i = self.skipBlockSize(i)
- 		i = node.ReadUInt8(i, 'u8_0')
- 		i = node.ReadUInt32(i, 'u32_3')
- 		cnt, i = getUInt32(node.data, i)
+		if (getFileVersion() > 2017):
+			i += 4
+		else:
+			i = self.skipBlockSize(i)
+			i = self.skipBlockSize(i)
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt32(i, 'u32_3')
+		cnt, i = getUInt32(node.data, i)
 		if (cnt == 1):
 			i = node.ReadUInt32(i, 'u32_4')
 			i = node.ReadFloat64A(i, 19, 'a1')
@@ -1429,7 +1429,7 @@ class DCReader(SegmentReader):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
- 		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadRefU32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
@@ -2816,7 +2816,7 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
- 		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadRefU32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
 		i = node.ReadCrossRef(i, 'ref_3')
@@ -2951,7 +2951,7 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		if (node.get('ref_2') is not None):
 			if ((getFileVersion() > 2011) and (self.type == DCReader.DOC_PART)):
- 				i += 4
+				i += 4
 			i = node.ReadUInt32(i, 'u32_1')
 			i = node.ReadList6(i, AbstractNode._TYP_MAP_MDL_TXN_MGR_1_)
 			i = node.ReadUInt32(i, 'u32_2')
@@ -5030,7 +5030,7 @@ class DCReader(SegmentReader):
 	def Read_896A9790(self, node):
 		i = self.ReadList2U32(node)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
- 		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadRefU32U8List(node, i, 'lst2')
 		return i
 
 	def Read_8AF0E725(self, node):
@@ -5976,7 +5976,7 @@ class DCReader(SegmentReader):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
- 		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadRefU32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
 		i = node.ReadUInt8(i, 'u8_0')
@@ -6552,10 +6552,10 @@ class DCReader(SegmentReader):
 		i = self.ReadList2U32(node)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
 		i = node.ReadUInt32(i, 'u32_1')
- 		if (node.get('u32_1') == 1):
- 			i = node.ReadCrossRef(i, 'ref_1')
- 			i = node.ReadUInt32(i, 'u32_2')
- 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2')
+		if (node.get('u32_1') == 1):
+			i = node.ReadCrossRef(i, 'ref_1')
+			i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2')
 		return i
 
 	def Read_AFD8A8E0(self, node):
@@ -6663,7 +6663,7 @@ class DCReader(SegmentReader):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
- 		i = self.ReadRefU32U8List(node, i, 'lst2')
+		i = self.ReadRefU32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 2, 'a1')
 		return i
