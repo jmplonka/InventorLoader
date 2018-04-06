@@ -18,6 +18,64 @@ NEXT_TOKEN  = re.compile('[ \t]*([^ \t]+) +(.*)')
 lumps = 0
 wires = 0
 
+class Tokenizer():
+	def __init__(self, content):
+		self.content = content
+		self.pos = 0
+	def hasNext(self):
+		return self.pos < len(self.content)
+	def skipWhiteSpace(self):
+		while (self.hasNext()):
+			if (not self.content[self.pos] in ' \t\n\b\f'):
+				break
+			self.pos += 1
+	def findEnd(self):
+		while (self.hasNext()):
+			if (self.content[self.pos] in ' \t\n\b\f#(){}'):
+				break
+			self.pos += 1
+	def isSingleChar(self):
+		if (self.hasNext()):
+			return (self.content[self.pos] in '#(){}')
+		return False
+	def getNextToken(self):
+		self.skipWhiteSpace()
+		if (self.isSingleChar()):
+			token = self.content[self.pos]
+			self.pos += 1
+		else:
+			start = self.pos
+			self.findEnd()
+			token = self.content[start:self.pos] if (start < self.pos) else None
+		return token
+	def translateToken(self, token):
+		if (token.startswith('@')):
+			count = int(token[1:])
+			self.skipWhiteSpace()
+			text = self.content[self.pos:self.pos+count]
+			self.pos += count + 1
+			return 0x08, text
+		if (token.startswith('$')):
+			ref = int(token[1:])
+			return 0x0C, AcisRef(ref)
+		if (token == '('):
+			tokX  = self.getNextToken()
+			tokY  = self.getNextToken()
+			tokZ  = self.getNextToken()
+			dummy = self.getNextToken()
+			assert (dummy == ')'), "Expected ')' but found '%s'!" %(dummy)
+			return 0x13, [float(tokX), float(tokY), float(tokZ)]
+		tag = TokenTranslations.get(token, None)
+		val = token
+		if (tag is None):
+			tag = 0x07
+			try:
+				val = float(val)
+				tag = 0x06
+			except:
+				pass
+		return tag, val
+
 TokenTranslations = {
 	'0x0A':       0x0A,
 	'0x0B':       0x0B,
@@ -41,32 +99,6 @@ TokenTranslations = {
 	'}':          0x10,
 	'#':          0x11
 }
-def translateToken(data, token):
-	if (token.startswith('@')):
-		count = int(token[1:])
-		text = data[0:count]
-		data = data[count + 1:]
-		return data, 0x08, text
-	if (token.startswith('$')):
-		ref = int(token[1:])
-		return data, 0x0C, AcisRef(ref)
-	if (token == '('):
-		tokX, data  = getNextToken(data)
-		tokY, data  = getNextToken(data)
-		tokZ, data  = getNextToken(data)
-		dummy, data = getNextToken(data)
-		assert (dummy == ')'), "Expected ')' but found '%s'!" %(dummy)
-		return data, 0x13, [float(tokX), float(tokY), float(tokZ)]
-	tag = TokenTranslations.get(token, None)
-	val = token
-	if (tag is None):
-		tag = 0x07
-		try:
-			val = float(val)
-			tag = 0x06
-		except:
-			pass
-	return data, tag, val
 
 _entities = None
 def getEntities():
@@ -152,33 +184,6 @@ def getNextText(data):
 	remaining = m.group(2)[count+1:]
 	return text, remaining
 
-def getNextToken(data):
-	m = NEXT_TOKEN.match(data)
-	if (m is not None):
-		token = m.group(1)
-		if (token.startswith('{') and (len(token) > 1)):
-			remaining = token[1:] + ' ' + m.group(2)
-			token = '{'
-		elif (token.startswith('}') and (len(token) > 1)):
-			remaining = token[1:] + ' ' + m.group(2)
-			token = '}'
-		elif (token.endswith('}') and (len(token) > 1)):
-			token = token[0:-1]
-			remaining = '} ' + m.group(2)
-		elif (token.startswith('(') and (len(token) > 1)):
-			remaining = token[1:] + ' ' + m.group(2)
-			token = '('
-		elif (token.endswith(')') and (len(token) > 1)):
-			token = token[0:-1]
-			remaining = ') ' + m.group(2)
-		elif (token.startswith(')') and (len(token) > 1)):
-			remaining = token[1:] + ' ' + m.group(2)
-			token = ')'
-		else:
-			remaining = m.group(2)
-		return token, remaining
-	return '', ''
-
 def readChunkBinary(data, index):
 	try:
 		return readNextSabChunk(data, index)
@@ -206,41 +211,45 @@ def readEntityBinary(data, index, end):
 			entity.add(tag, val)
 	return entity, i
 
-def readEntityText(line, i):
-	index = i
-	token, data = getNextToken(line)
-	if (token.startswith('-')):
-		index = int(token[1:])
-		name, data = getNextToken(data)
-	else:
-		name = token
+def readEntityText(tokenizer, index):
+	id = index
+	name = tokenizer.getNextToken()
+	if (name is None):
+		return None, id
+	if (name.startswith('-')):
+		id = int(name[1:])
+		name = tokenizer.getNextToken()
 	entity = AcisEntity(name)
-	entity.index = index
-	while (len(data) > 0):
-		token, data = getNextToken(data)
-		data, tag, val = translateToken(data, token)
-		entity.add(tag, val)
+	entity.index = id
+	while (tokenizer.hasNext()):
+		token = tokenizer.getNextToken()
+		if (token):
+			tag, val = tokenizer.translateToken(token)
+			entity.add(tag, val)
+			if (tag == 0x11):
+				break;
 
-	entity.add(0x11, '#')
-
-	return entity, index + 1
+	return entity, id + 1
 
 def resolveEntityReferences(entities, lst):
+	progress = FreeCAD.Base.ProgressIndicator()
+	progress.start("Resolving references...", len(lst))
 	for entity in lst:
+		progress.next()
 		for chunk in entity.chunks:
 			if (chunk.tag == 0x0C):
 				ref = chunk.val
 				try:
-					if (ref.index >= 0):
-						ref.entity = entities[ref.index]
+					ref.entity = entities[ref.index]
 				except:
-					pass
+					ref.entity = None
+	progress.stop()
 	return
 
 def resolveNode(entity, version):
 	try:
 		if (len(entity.name) > 0):
-			Acis.createNode(entity.index, entity.name, entity, version)
+			Acis.createNode(entity, version)
 	except Exception as e:
 #		logError("Can't resolve '%s' - %s" %(entity, e))
 		logError('>E: ' + traceback.format_exc())
@@ -358,13 +367,18 @@ def readText(doc, fileName):
 
 	with open(fileName, 'rU') as file:
 		header.readText(file)
-		data = file.read()
-		lines = re.sub('[ \t\r\n]+', ' ', data).split('#')
-
-		for line in lines:
-			entity, index = readEntityText(line, index)
-			lst.append(entity)
-			entities[entity.index] = entity
+		content   = file.read()
+		#TODO: add progress indicator for reading file for len(content)
+		#progress = FreeCAD.Base.ProgressIndicator()
+		#progress.start("Reading file...", len(content)) # that locks python console, so use with scripts only
+		tokenizer = Tokenizer(content)
+		while (tokenizer.hasNext()):
+			entity, index = readEntityText(tokenizer, index)
+			#TODO: update progress indocator for tokenizer.pos
+			if (entity):
+				lst.append(entity)
+				entities[entity.index] = entity
+		#progress.stop() # DONE reading file
 	resolveEntityReferences(entities, lst)
 	setHeader(header)
 	setEntities(lst)

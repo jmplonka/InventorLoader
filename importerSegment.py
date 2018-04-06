@@ -9,7 +9,7 @@ import re, traceback
 from importerClasses   import *
 from importerSegNode   import isList, BinaryNode, NodeRef
 from importerUtils     import *
-from Acis              import clearEntities, AcisChunk, AcisEntity, AcisRef
+from Acis              import clearEntities
 from importerSAT       import readEntityBinary, Header
 
 
@@ -33,7 +33,7 @@ def resolveEntityReferences(entities, lst):
 			entity.index = -1 # mark as deleted
 
 		try:
-			# delete history reference!
+			# clear history reference!
 			entity.chunks[1].val = -1
 		except:
 			pass

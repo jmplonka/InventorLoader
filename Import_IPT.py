@@ -239,9 +239,10 @@ def create3dModel(root, doc):
 				creator.importModel(root, doc, dc)
 		elif (strategy == STRATEGY_SAT):
 			brep = FreeCADImporter.findBRep(storage)
-			for asm in brep.AcisList:
-				importerSAT.readEntities(asm)
-				importerSAT.importModel(root, doc)
+			if (brep):
+				for asm in brep.AcisList:
+					importerSAT.readEntities(asm)
+					importerSAT.importModel(root, doc)
 		else:
 			logError("WRONG STRATEGY!")
 
