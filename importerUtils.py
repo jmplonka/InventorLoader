@@ -5,15 +5,62 @@ importerUtils.py:
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys, datetime, FreeCADGui
-from uuid    import UUID
-from struct  import Struct, unpack_from
-from FreeCAD import Vector as VEC, Console, GuiUp
+import sys, datetime, FreeCAD, FreeCADGui
+from PySide.QtCore import *
+from PySide.QtGui  import *
+from uuid          import UUID
+from struct        import Struct, unpack_from
+from FreeCAD       import Vector as VEC, Console, GuiUp, ParamGet
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
+UUID_NAMES = {
+	'21e870bb11d0d2d000d8ccbc0663dc09': 'BRxEntry',
+	'6759d86f11d27838600094b70b02ecb0': 'FWxRenderingStyle',
+	'f645595c11d51333100060a6bba647b5': 'MIxTransactablePartition',
+	'd81cde4711d265f760005dbead9287b0': 'NBxEntry',
+	'dbbad87b11d228b0600052bead9287b0': 'NBxItem',
+	'3c95b7ce11d13388000820a5b17adc09': 'NBxNotebook',
+	'9a676a5011d45da66000e3b81269f1b0': 'PMxBodyNode',
+	'af48560f11d48dc71000d58dc04a0ab5': 'PMxColorStylePrimAttr',
+	'b251bfc011d24761a0001580d694c7c9': 'PMxEntryManager',
+	'022ac1b511d20d356000f99ac5361ab0': 'PMxPartDrawAttr',
+	'a94779e111d438066000b1b7b035f1b0': 'PMxPatternOutline',
+	'a94779e011d438066000b1b7b035f1b0': 'PMxSingleFeatureOutline',
+	'590d0a1011d1e6ca80006fb1e13554c7': 'RDxAngle2',
+	'ce52df3b11d0d2d00008ccbc0663dc09': 'RDxArc2',
+	'90874d4711d0d1f80008cabc0663dc09': 'RDxBody',
+	'2b24130911d272cc60007bb79b49ebb0': 'RDxBrowserFolder',
+	'26287e9611d490bd1000e2962dba09b5': 'RDxDeselTableNode',
+	'74df96e011d1e069800066b1e13554c7': 'RDxDiameter2',
+	'1105855811d295e360000cb38932edb0': 'RDxDistanceDimension2',
+	'90874d9111d0d1f80008cabc0663dc09': 'RDxFeature',
+	'00acc00011d1e05f800066b1e13554c7': 'RDxHorizontalDistance2',
+	'ce52df3a11d0d2d00008ccbc0663dc09': 'RDxLine2',
+	'8ef06c8911d1043c60007cb801f31bb0': 'RDxLine3',
+	'fad9a9b511d2330560002cab01f31bb0': 'RDxMirrorPattern',
+	'452121b611d514d6100061a6bba647b5': 'RDxModelerTxnMgr',
+	'90874d1611d0d1f80008cabc0663dc09': 'RDxPart',
+	'90874d1111d0d1f80008cabc0663dc09': 'RDxPlanarSketch',
+	'ce52df4211d0d2d00008ccbc0663dc09': 'RDxPlane',
+	'ce52df3511d0d2d00008ccbc0663dc09': 'RDxPoint2',
+	'ce52df3e11d0d2d00008ccbc0663dc09': 'RDxPoint3',
+	'671bb70011d1e068800066b1e13554c7': 'RDxRadius2',
+	'2067324411d21dc560002aab01f31bb0': 'RDxRectangularPattern',
+	'2d86fc2642dfe34030c08ab05ef9bfc5': 'RDxReferenceEdgeLoopId',
+	'8f41fd2411d26eac00082aab32a3dc09': 'RDxStopNode',
+	'1fbb3c0111d2684da0009e9a3c3aa076': 'RDxString',
+	'3683ff4011d1e05f800066b1e13554c7': 'RDxVerticalDistance2',
+	'cc0f752111d18027e38619962259017a': 'RSeAcisEntityWrapper',
+	'60fd184511d0d79d0008bfbb21eddc09': 'SCx2dSketchNode',
+	'da58aa0e11d43cb1c000ae967a14684f': 'SCx3dSketchNode',
+	'ca7163a111d0d3b20008bfbb21eddc09': 'UCxComponentNode',
+	'2c7020f611d1b3c06000b1b801f31bb0': 'UCxWorkaxisNode',
+	'14533d8211d1087100085ba406e5dc09': 'UCxWorkplaneNode',
+	'2c7020f811d1b3c06000b1b801f31bb0': 'UCxWorkpointNode',
+}
 ENCODING_FS      = 'utf8'
 
 _dumpLineLength  = 0x20
@@ -27,6 +74,46 @@ _inventor_file = None
 
 # The dictionary of all found UUIDs and their origin
 foundUids = {}
+
+STRATEGY_SAT    = 0
+STRATEGY_NATIVE = 1
+
+def getStrategy():
+	if getFileVersion() < 2010: return STRATEGY_SAT
+	return FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetInt("strategy", STRATEGY_SAT)
+
+def isStrategySat():
+	return getStrategy() == STRATEGY_SAT
+
+def isStrategyNative():
+	return getStrategy() == STRATEGY_NATIVE
+
+def chooseImportStrategy():
+	btnSat   = QPushButton('&SAT')
+	btnNativ = QPushButton('&nativ')
+	msgBox   = QMessageBox()
+	data = getThumbnailData()
+	if (data is not None):
+		png = QPixmap()
+		if (png.loadFromData(getThumbnailData())):
+			msgBox.setIconPixmap(png)
+		else:
+			msgBox.setIcon(QMessageBox.Question)
+	else:
+		msgBox.setIcon(QMessageBox.Question)
+	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
+	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
+	msgBox.addButton(btnSat, QMessageBox.YesRole)
+	msgBox.addButton(btnNativ, QMessageBox.NoRole)
+	param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
+	if (param.GetInt("strategy") == 0):
+		msgBox.setDefaultButton(btnSat)
+	else:
+		msgBox.setDefaultButton(btnNativ)
+	strategy = msgBox.exec_()
+
+	param.SetInt("strategy", strategy)
+	return STRATEGY_SAT if (strategy == 0) else STRATEGY_NATIVE
 
 def setCanImport(canImport):
 	global _can_import
@@ -391,69 +478,13 @@ def getLen32Text16(data, offset):
 		txt = txt[:-1]
 	return txt, end
 
-def getText1(uid):
+def getUidText(uid):
 	b = uid.hex
-
-	if (b == '90874d1611d0d1f80008cabc0663dc09'): return 'RDxPart'
-	if (b == 'ce52df4211d0d2d00008ccbc0663dc09'): return 'RDxPlane'
-	if (b == '8ef06c8911d1043c60007cb801f31bb0'): return 'RDxLine3'
-	if (b == 'ce52df3e11d0d2d00008ccbc0663dc09'): return 'RDxPoint3'
-	if (b == '90874d4711d0d1f80008cabc0663dc09'): return 'RDxBody'
-	if (b == '90874d1111d0d1f80008cabc0663dc09'): return 'RDxPlanarSketch'
-	if (b == 'ce52df3b11d0d2d00008ccbc0663dc09'): return 'RDxArc2'
-	if (b == '74df96e011d1e069800066b1e13554c7'): return 'RDxDiameter2'
-
-	if (b == 'ce52df3511d0d2d00008ccbc0663dc09'): return 'RDxPoint2'
-	if (b == 'ce52df3a11d0d2d00008ccbc0663dc09'): return 'RDxLine2'
-
-	if (b == '1105855811d295e360000cb38932edb0'): return 'RDxDistanceDimension2'
-	if (b == '00acc00011d1e05f800066b1e13554c7'): return 'RDxHorizontalDistance2'
-	if (b == '3683ff4011d1e05f800066b1e13554c7'): return 'RDxVerticalDistance2'
-	if (b == '90874d9111d0d1f80008cabc0663dc09'): return 'RDxFeature'
-	if (b == '2067324411d21dc560002aab01f31bb0'): return 'RDxRectangularPattern'
-	if (b == 'fad9a9b511d2330560002cab01f31bb0'): return 'RDxMirrorPattern'
-	if (b == '6759d86f11d27838600094b70b02ecb0'): return 'FWxRenderingStyle'
-	if (b == 'f645595c11d51333100060a6bba647b5'): return 'MIxTransactablePartition'
-	if (b == 'cc0f752111d18027e38619962259017a'): return 'RSeAcisEntityWrapper'
-	if (b == '26287e9611d490bd1000e2962dba09b5'): return 'RDxDeselTableNode'
-	if (b == '2d86fc2642dfe34030c08ab05ef9bfc5'): return 'RDxReferenceEdgeLoopId'
-	if (b == '8f41fd2411d26eac00082aab32a3dc09'): return 'RDxStopNode'
-	if (b == '2b24130911d272cc60007bb79b49ebb0'): return 'RDxBrowserFolder'
-	if (b == '3c95b7ce11d13388000820a5b17adc09'): return 'NBxNotebook'
-	if (b == 'd81cde4711d265f760005dbead9287b0'): return 'NBxEntry'
-
-	if (b == '671bb70011d1e068800066b1e13554c7'): return 'RDxRadius2'
-	if (b == '590d0a1011d1e6ca80006fb1e13554c7'): return 'RDxAngle2'
-
-	if (b == '1fbb3c0111d2684da0009e9a3c3aa076'): return 'RDxString'
-
-	# logError("\tWARNING - can't find name for type %s" %(b))
-
-	return uid
-
-def getText2(uid):
-	b = uid.hex
-
-	if (b == 'ca7163a111d0d3b20008bfbb21eddc09'): return 'UCxComponentNode'
-	if (b == '14533d8211d1087100085ba406e5dc09'): return 'UCxWorkplaneNode'
-	if (b == '2c7020f611d1b3c06000b1b801f31bb0'): return 'UCxWorkaxisNode'
-	if (b == '2c7020f811d1b3c06000b1b801f31bb0'): return 'UCxWorkpointNode'
-	if (b == '9a676a5011d45da66000e3b81269f1b0'): return 'PMxBodyNode'
-	if (b == 'da58aa0e11d43cb1c000ae967a14684f'): return 'SCx3dSketchNode'
-	if (b == '60fd184511d0d79d0008bfbb21eddc09'): return 'SCx2dSketchNode'
-	if (b == 'a94779e011d438066000b1b7b035f1b0'): return 'PMxSingleFeatureOutline'
-	if (b == 'a94779e111d438066000b1b7b035f1b0'): return 'PMxPatternOutline'
-	if (b == '022ac1b511d20d356000f99ac5361ab0'): return 'PMxPartDrawAttr'
-	if (b == 'af48560f11d48dc71000d58dc04a0ab5'): return 'PMxColorStylePrimAttr'
-	if (b == '452121b611d514d6100061a6bba647b5'): return 'RDxModelerTxnMgr'
-	if (b == '90874d4711d0d1f80008cabc0663dc09'): return 'RDxBody'
-	if (b == 'b251bfc011d24761a0001580d694c7c9'): return 'PMxEntryManager'
-	if (b == '21e870bb11d0d2d000d8ccbc0663dc09'): return 'BRxEntry'
-	if (b == 'dbbad87b11d228b0600052bead9287b0'): return 'NBxItem'
-
-	# logError("\tWARNING - can't find name for node %s" %(b))
-
-	return uid
+	try:
+		return UUID_NAMES[b]
+	except:
+		# logError("\tWARNING - can't find name for type %s" %(b))
+		return uid
 
 def FloatArr2Str(arr):
 	return (', '.join(['%g' %(f) for f in arr]))
@@ -509,17 +540,17 @@ def decode(filename, utf=False):
 	return filename
 
 def isEmbeddings(names):
-	embedding = False
-	for name in names:
-		if (name == 'RSeEmbeddings'):
-			embedding = True
-
-	return embedding
+	return 'RSeEmbeddings' in names
 
 def isEqual(a, b):
 	if (a is None): return isEqual(b, VEC())
 	if (b is None): return isEqual(a, VEC())
 	return ((a - b).Length < 0.0001)
+
+def isEqual1D(a, b):
+	if (a is None): return isEqual1D(b, 0.0)
+	if (b is None): return isEqual1D(a, 0.0)
+	return abs(a - b) < 0.0001
 
 def logWarning(msg):
 	logMessage(msg, LOG.LOG_WARNING)

@@ -406,32 +406,6 @@ def getClosureSurface(chunks, index):
 
 	raise Exception("Unknown closure '%s'!" %(closureU))
 
-def addPoint2D(nubs, chunks, index):
-	p, i  = getFloats(chunks, index, 2)
-	if (nubs.rational):
-		weight, i = getFloat(chunks, i)
-		nubs.weights.append(weight)
-	nubs.poles.append(VEC(p[0], p[1], 0) * getScale())
-	return i
-
-def addPoleXYZ(nubs, chunks, index):
-	p, i = getLocation(chunks, index)
-	if (nubs.rational):
-		weight, i = getFloat(chunks, i)
-		nubs.weights.append(weight)
-	nubs.poles.append(p)
-	return i
-
-def isPoint(chunks, index, size):
-	if (index >= len(chunks) + size):
-		return False
-	i = 0
-	while (i < size):
-		if (type(chunks[index + i].val) != float):
-			return False
-		i += 1
-	return True
-
 def readKnotsMults(count, chunks, index):
 	knots = []
 	mults = []
@@ -446,24 +420,41 @@ def readKnotsMults(count, chunks, index):
 		j += 1
 	return knots, mults, i
 
+def adjustMultsKnots(knots, mults, periodic, degree):
+	if (periodic):
+		mults[0] = degree + 1
+		mults[-1] = degree + 1
+		return knots, mults, False
+	knot_0 = 2 * knots[0]  - knots[1]
+	knot_n = 2 * knots[-1] - knots[-2]
+	return [knot_0] + knots + [knot_n], [1] + mults + [1], False
+
 def readPoints2DList(nubs, count, chunks, index, version):
 	nubs.uKnots, nubs.uMults, i = readKnotsMults(count, chunks, index)
+	us = sum(nubs.uMults) - (nubs.uDegree - 1)
+	nubs.poles   = [None for r in range(0, us)]
+	nubs.weights = [1 for r in range(0, us)] if (nubs.rational) else None
 
-	size = 3 if (nubs.rational) else 2
-	if (version > 15.0):
-		size += 1
-	while (isPoint(chunks, i, size)):
-		i = addPoint2D(nubs, chunks, i)
+	for u in range(0, us):
+		p, i  = getFloats(chunks, i, 2)
+		nubs.poles[u] = VEC(p[0], p[1], 0) * getScale()
+		if (nubs.rational): nubs.weights[u], i = getFloat(chunks, i)
+
+	nubs.uKnots, nubs.uMults, nubs.uPeriodic = adjustMultsKnots(nubs.uKnots, nubs.uMults, nubs.uPeriodic, nubs.uDegree)
 
 	return i
 
 def readPoints3DList(nubs, count, chunks, index):
 	nubs.uKnots, nubs.uMults, i = readKnotsMults(count, chunks, index)
+	us = sum(nubs.uMults) - (nubs.uDegree - 1)
+	nubs.poles   = [None for r in range(0, us)]
+	nubs.weights = [1 for r in range(0, us)] if (nubs.rational) else None
 
-	size = 4 if (nubs.rational) else 3
-	while (isPoint(chunks, i, size)):
-		i = addPoleXYZ(nubs, chunks, i)
+	for u in range(0, us):
+		nubs.poles[u], i = getLocation(chunks, i)
+		if (nubs.rational): nubs.weights[u], i = getFloat(chunks, i)
 
+	nubs.uKnots, nubs.uMults, nubs.uPeriodic = adjustMultsKnots(nubs.uKnots, nubs.uMults, nubs.uPeriodic, nubs.uDegree)
 	return i
 
 def readPoints3DMap(nubs, knotsU, knotsV, chunks, index):
@@ -481,12 +472,10 @@ def readPoints3DMap(nubs, knotsU, knotsV, chunks, index):
 		for u in range(0, us):
 			nubs.poles[u][v], i  = getLocation(chunks, i)
 			if (nubs.rational): nubs.weights[u][v], i = getFloat(chunks, i)
-	if (not nubs.uPeriodic):
-		# we have to do some adjustments
-		pass
-	if (not nubs.vPeriodic):
-		# we have to do some adjustments
-		pass
+
+	nubs.uKnots, nubs.uMults, nubs.uPeriodic = adjustMultsKnots(nubs.uKnots, nubs.uMults, nubs.uPeriodic, nubs.uDegree)
+	nubs.vKnots, nubs.vMults, nubs.vPeriodic = adjustMultsKnots(nubs.vKnots, nubs.vMults, nubs.vPeriodic, nubs.vDegree)
+
 	return i
 
 def readBlend(chunks, index, version):
@@ -729,37 +718,36 @@ def createPolygon(points):
 	return Part.Wire(lines)
 
 def createBSplinesCurve(nubs):
-	bsc = Part.BSplineCurve()
+	number_of_poles = len(nubs.poles)
+	if (number_of_poles == 2): # if there are only two poles we can simply draw a line
+		return createLine(nubs.poles[0], nubs.poles[1])
 
-	poles = nubs.poles
-	weights = nubs.weights
-	number_of_poles = len(poles)
 	sum_of_mults    = sum(nubs.uMults)
 	degree          = nubs.uDegree
 	periodic        = nubs.uPeriodic
-	if (periodic):
-		assert (number_of_poles == sum_of_mults), "number of poles (%d) <> sum(mults) (%d)" %(number_of_poles, sum_of_mults)
-	else:
-		size = sum_of_mults - degree - 1
-		if (number_of_poles > size):
-			poles   = poles[0:size]
-			weights = weights[0:size]
-		else:
-			assert (number_of_poles == (sum_of_mults - degree - 1)), "number of poles<>sum(mults)-degree-1: %d != %d - %d - 1" %(number_of_poles, sum_of_mults, degree)
+#	if (periodic):
+#		# For a periodic curve the relation is:
+#		# number_of_knot_values = number_of_poles - multiplicity[1] + 2 * (degree + 1)
+#		assert (sum_of_mults == number_of_poles), "number of poles (%d) <> sum(mults) (%d)" %(number_of_poles, sum_of_mults)
+#	else:
+#		# For a non-periodic curve the relation is:
+#		# number_of_knot_values = number_of_poles + degree + 1
+#		assert (sum_of_mults == (number_of_poles + degree + 1)), "number of poles<>sum(mults)-degree-1: %d != %d - %d + 1" %(number_of_poles, sum_of_mults, degree)
 
+	bsc = Part.BSplineCurve()
 	if (nubs.rational):
 		bsc.buildFromPolesMultsKnots(     \
-			poles         = poles,        \
+			poles         = nubs.poles,   \
 			mults         = nubs.uMults,  \
 			knots         = nubs.uKnots,  \
 			periodic      = periodic,     \
 			degree        = degree,       \
-			weights       = weights, \
+			weights       = nubs.weights, \
 			CheckRational = nubs.rational
 		)
 	else:
 		bsc.buildFromPolesMultsKnots(     \
-			poles         = poles,        \
+			poles         = nubs.poles,   \
 			mults         = nubs.uMults,  \
 			knots         = nubs.uKnots,  \
 			periodic      = periodic,     \
@@ -1465,7 +1453,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			try:
 				self.shape = createBSplinesCurve(nubs)
 			except Exception as e:
-				logWarning('>E: %s' %(e))
+				logError('>E: ' + traceback.format_exc())
 		elif (self.singularity == 'none'):
 			self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			val, i= getValue(chunks, i)
@@ -1759,24 +1747,23 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			if (self.shape is not None):
 				self.shape.Orientation = 'Reversed' if (self.sense == 'reversed') else 'Forward'
 		return self.shape
-class CurveIntInt(Curve):  # interpolated curve "intcurve-intcurve-curve"
+class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 	def __init__(self):
 		super(CurveIntInt, self).__init__()
 		self.sens = 'forward' # The IntCurve's reversal flag
 		self.data = None  #
 		self.range = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
-	def setBulk(curve, chunks, index):
-		pass
-	def setSubtype(self, data, index):
-		self.sens, i  = getSense(data, index)
-		block, i      = getBlock(data, i)
-		self.setBulk(block, 0)
-		self.range, i = getInterval(data, i, MIN_INF, MAX_INF, getScale())
+		self.points = []
+		self.type   = ''
+		self.curve  = None
+	def setLaw(self, chunks, index, inventor):
+		i = self.setCurve(chunks, index)
 		return i
-	def set(self, entity, version):
-		i = super(CurveIntInt, self).set(entity, version)
-		i = self.setSubtype(entity.chunks, i)
-		return i
+	def setBulk(self, chunks, index):
+		self.type, i = getValue(chunks, index)
+		if (self.type == 'law_int_cur'):      return self.setLaw(chunks, i + 1, True)
+		logError("    Curve-Int-Int: unknown subtype %s !" %(self.type))
+		return self.setCurve(chunks, i)
 class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: point3D = surface.value(u, v)
 	'''An approximation to a curve lying on a surface, defined in terms of the surface’s u-v parameters.'''
 	def __init__(self):
@@ -1792,10 +1779,12 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		#                  [:FLOAT:] ([:FLOAT:] [:SURFACE:]
 		i = index if (self.version <= 22.0) else index + 1
 		nubs, i = readBS2Curve(chunks, i, self.version)
-		self.factor, i = getFloat(chunks, i)
+		factor, i = getFloat(chunks, i)
 		if (self.version > 15.0):
 			i += 1
-		self.surface, i = readSurface(chunks, i, self.version)
+		surface, i = readSurface(chunks, i, self.version)
+		if (surface is not None):
+			s = surface.build()
 		return i
 	def setRef(self, chunks, index):
 		ref, i = getInteger(chunks, index)

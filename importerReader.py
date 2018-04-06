@@ -580,7 +580,7 @@ def ReadRSeSegInfo1F(data):
 	logMessage('\tList 1')
 	while (idx < cnt):
 		uid, i = getUUID(data, i,'RSeSegInfo.List1[%X].uid' % idx)
-		txt = getText1(uid)
+		txt = getUidText(uid)
 		model.RSeSegInfo.uidList1.append(txt)
 		logMessage('\t\t%02X: %r' % (idx, txt))
 		idx += 1
@@ -590,7 +590,7 @@ def ReadRSeSegInfo1F(data):
 	logMessage('\tList 2')
 	while (idx < cnt):
 		uid, i = getUUID(data, i, 'RSeSegInfo.List2[%X].uid' % idx)
-		txt = getText2(uid)
+		txt = getUidText(uid)
 		model.RSeSegInfo.uidList2.append(txt)
 		logMessage('\t\t%02X: %r' % (idx, txt))
 		idx += 1
@@ -988,7 +988,7 @@ def getReader(seg):
 		# reader = AppReader()
 		pass
 	elif (RSeMetaData.isBRep(seg)): # BoundaryRepresentation
-		if (Import_IPT.isStrategySat()):
+		if (isStrategySat()):
 			reader = BRepReader()
 		pass
 	elif (RSeMetaData.isBrowser(seg)):
@@ -998,7 +998,7 @@ def getReader(seg):
 		# reader = DefaultReader()
 		pass
 	elif (RSeMetaData.isDC(seg)):
-		if (Import_IPT.isStrategyNative()):
+		if (isStrategyNative()):
 			reader = DCReader()
 	elif (RSeMetaData.isGraphics(seg)):
 		# reader = GraphicsReader()
@@ -1067,7 +1067,7 @@ def ReadRSeMetaDataM(dataM, name):
 		value.name = name
 		value.segRef = None
 		value.arr2 = []
-		return value, len(dataM)
+		return value
 
 	if (value.ver < 0x07):
 		value.val1, i = getUInt32(dataM, i)
@@ -1130,7 +1130,7 @@ def ReadRSeMetaDataM(dataM, name):
 	setDumpLineLength(bak)
 	model.RSeStorageData[value.name] = value
 	logMessage('\t>>> SEE %s\\%sM.txt <<<' % (folder, value.name), LOG.LOG_DEBUG)
-	return value, len(dataM)
+	return value
 
 def ReadRSeEmbeddingsDatabaseInterfaces(data):
 	global model

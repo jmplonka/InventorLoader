@@ -4,7 +4,7 @@
 importerFreeCAD.py
 '''
 import sys, Draft, Part, Sketcher, traceback, re
-from importerUtils   import logMessage, logWarning, logError, LOG, IntArr2Str, FloatArr2Str, getFileVersion, isEqual
+from importerUtils   import logMessage, logWarning, logError, LOG, IntArr2Str, FloatArr2Str, getFileVersion, isEqual, isEqual1D
 from importerClasses import RSeMetaData, Scalar, Angle, Length, ParameterNode, ParameterTextNode, ValueNode, FeatureNode, AbstractValue, DataNode
 from importerSegNode import AbstractNode, NodeRef
 from math            import sqrt, fabs, tan, degrees, pi
@@ -46,7 +46,9 @@ INVALID_NAME = re.compile('^[0-9].*')
 #SKIP_CONSTRAINTS_DEFAULT = 0b00000000000000000001000 # Only geometric coincidens
 SKIP_CONSTRAINTS_DEFAULT  = 0b01110101011111011011111 # default values: no workarounds, nor unsupported constraints!
 SKIP_CONSTRAINTS = SKIP_CONSTRAINTS_DEFAULT # will be updated by stored preferences!
-PART_LINE = Part.Line if (Version()[1] < 17) else Part.LineSegment
+PART_LINE = Part.Line
+if (hasattr(Part, "LineSegment")):
+	PART_LINE = Part.LineSegment
 
 def _enableConstraint(name, bit, preset):
 	global SKIP_CONSTRAINTS
@@ -373,15 +375,9 @@ def replaceEntity(edges, node, geo):
 	edges[node.index] = geo
 	return geo
 
-def isStartPoint(pt, line):
-	if (isEqual(getX(pt), line.StartPoint.x) == False): return False
-	if (isEqual(getY(pt), line.StartPoint.y) == False): return False
-	if (isEqual(getZ(pt), line.StartPoint.z) == False): return False
-	return True
-
 def replacePoint(edges, pOld, line, pNew):
 	l = line.sketchEntity
-	if (isStartPoint(pOld, l)):
+	if (isEqual(p2v(pOld), l.StartPoint)):
 		return replaceEntity(edges, line, createLine(p2v(pNew), l.EndPoint))
 	return replaceEntity(edges, line, createLine(l.StartPoint, p2v(pNew)))
 
@@ -607,7 +603,7 @@ class FreeCADImporter:
 			points = data.get('points')
 			for ref in points:
 				if (ref):
-					if (isEqual(ref.get('x'), x) and isEqual(ref.get('y'), y) and (ref.sketchIndex != -1)):
+					if (isEqual1D(ref.get('x'), x) and isEqual1D(ref.get('y'), y) and (ref.sketchIndex != -1)):
 						if (ref.sketchIndex is not None):
 							index = ref.sketchIndex
 						pos = ref.sketchPos
@@ -910,9 +906,9 @@ class FreeCADImporter:
 		node = self.getBodyNode(body)
 		if (node):
 			box = node.sketchEntity.Shape.BoundBox
-			if (not isEqual(dirX, 0)): lx = box.XLength
-			if (not isEqual(dirY, 0)): ly = box.YLength
-			if (not isEqual(dirZ, 0)): lz = box.ZLength
+			if (not isEqual1D(dirX, 0)): lx = box.XLength
+			if (not isEqual1D(dirY, 0)): ly = box.YLength
+			if (not isEqual1D(dirZ, 0)): lz = box.ZLength
 		return sqrt(lx*lx + ly*ly + lz*lz)
 
 ########################
@@ -1364,7 +1360,7 @@ class FreeCADImporter:
 
 		a = ellipseNode.get('alpha')
 		b = ellipseNode.get('beta')
-		if (isEqual(a, b)):
+		if (isEqual1D(a, b)):
 			logMessage('        ... added 2D-Ellipse  c=(%g,%g) a=(%g,%g) b=(%g,%g) ...' %(c_x, c_y, a_x, a_y, b_x, b_y), LOG.LOG_DEBUG)
 		else:
 			a = Angle(a, pi/180.0, u'\xb0')
@@ -1382,7 +1378,7 @@ class FreeCADImporter:
 
 		a1 = ellipseNode.get('startAngle')
 		a2 = ellipseNode.get('sweepAngle')
-		if (isEqual(a1, b1)):
+		if (isEqual1D(a1, b1)):
 			logMessage("        ... added 3D-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) ..." %(c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z), LOG.LOG_DEBUG)
 		else:
 			a1 = Angle(a1, pi/180.0, u'\xb0')
@@ -1757,7 +1753,7 @@ class FreeCADImporter:
 		len1 = getMM(dimLength)
 		pad = None
 		if (extend == 5): # 'ALL'
-			if (isEqual(len1, 0)):
+			if (isEqual1D(len1, 0)):
 				if (solid is not None):
 					len1 = self.getLength(solid, dirX, dirY, dirZ)
 				else:

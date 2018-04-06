@@ -71,7 +71,7 @@ def open(filename, skip = [], only = [], root = None):
 	opens an Autodesk Inventor file in a new document
 	In addition to insert (import), the iProperties are as well added to the document.
 	'''
-	if (canImport()):
+	if (canImport() and os.path.exists(filename)):
 		logMessage("Reading: %s" %(filename), LOG.LOG_ALWAYS)
 		name = os.path.splitext(os.path.basename(filename))[0]
 		name = decode(name)

@@ -1173,10 +1173,16 @@ class LineNode(DataNode):
 
 	def getRefText(self): # return unicode
 		if (self.typeName[-2:] == '2D'):
-			x0 = self.get('points')[0].get('x')
-			y0 = self.get('points')[0].get('y')
-			x1 = self.get('points')[1].get('x')
-			y1 = self.get('points')[1].get('y')
+			p0 = self.get('points')[0]
+			if (p0 is None):
+				x0 = self.get('x')
+				y0 = self.get('y')
+			else:
+				x0 = p0.get('x')
+				y0 = p0.get('y')
+			p1 = self.get('points')[1]
+			x1 = p1.get('x')
+			y1 = p1.get('y')
 			return u'(%04X): %s - (%g,%g) - (%g,%g)' %(self.index, self.typeName, x0, y0, x1, y1)
 		x0 = self.get('x')
 		y0 = self.get('y')
