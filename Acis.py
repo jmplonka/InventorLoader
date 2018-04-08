@@ -421,13 +421,9 @@ def readKnotsMults(count, chunks, index):
 	return knots, mults, i
 
 def adjustMultsKnots(knots, mults, periodic, degree):
-	if (periodic):
-		mults[0] = degree + 1
-		mults[-1] = degree + 1
-		return knots, mults, False
-	knot_0 = 2 * knots[0]  - knots[1]
-	knot_n = 2 * knots[-1] - knots[-2]
-	return [knot_0] + knots + [knot_n], [1] + mults + [1], False
+	mults[0] = degree + 1
+	mults[-1] = degree + 1
+	return knots, mults, False # Force periodic to False!!!
 
 def readPoints2DList(nubs, count, chunks, index, version):
 	nubs.uKnots, nubs.uMults, i = readKnotsMults(count, chunks, index)
@@ -943,9 +939,9 @@ class Transform(Entity):
 		p, i          = getPoint(chunks, i)
 		a13, a23, a33 = p
 		p, i          = getLocation(chunks, i)
-		a14 = p.X
-		a24 = p.Y
-		a34 = p.Z
+		a14 = p.x
+		a24 = p.y
+		a34 = p.z
 		a44, i        = getFloat(chunks, i)
 		self.rotation, i             = getRotation(chunks, i)
 		self.reflection, i           = getReflection(chunks, i)
@@ -1044,6 +1040,13 @@ class Shell(Topology):
 			faces.append(f)
 			f = f.getNext()
 		return faces
+	def getWires(self):
+		wires = []
+		w = self.getWire()
+		while (w is not None):
+			wires.append(w)
+			w = w.getNext()
+		return wires
 	def getSubShells(self):
 		shells = []
 		s = self.shell

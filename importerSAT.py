@@ -295,6 +295,8 @@ def buildFaces(shells, doc, root, name, transform):
 			for f in surfaces:
 				createBody(doc, root, "%s_%d" %(name, i), f, transform)
 				i += 1
+		for wire in shell.getWires():
+			buildWire(root, doc, wire, transform)
 
 	if (len(faces) > 0):
 		logMessage("    ... %d face(s)!" %(len(faces)), LOG.LOG_INFO)
@@ -308,10 +310,11 @@ def buildWires(coedges, doc, root, name, transform):
 
 	for coedge in coedges:
 		edge = coedge.build(doc)
-		if (edge is not None): edges.append(edge)
+		if (edge is not None):
+			edges.append(edge)
 
 	if (len(edges) > 0):
-		logMessage("    ... %d edges!" %(len(edges)), LOG.LOG_INFO)
+		logMessage("        ... %d edges!" %(len(edges)), LOG.LOG_INFO)
 		wires = [Part.Wire(cluster) for cluster in Part.getSortedClusters(edges)]
 		createBody(doc, root, name, wires[0].fuse(wires[1:]) if (len(wires) > 1) else wires[0], transform)
 
