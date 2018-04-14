@@ -5,7 +5,7 @@ importerUtils.py:
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys, datetime, FreeCAD, FreeCADGui
+import sys, datetime, FreeCAD, FreeCADGui, numpy
 from PySide.QtCore import *
 from PySide.QtGui  import *
 from uuid          import UUID
@@ -93,14 +93,20 @@ def chooseImportStrategy():
 	btnNativ = QPushButton('&nativ')
 	msgBox   = QMessageBox()
 	data = getThumbnailData()
+	msgBox.setIcon(QMessageBox.Question)
 	if (data is not None):
-		png = QPixmap()
-		if (png.loadFromData(getThumbnailData())):
-			msgBox.setIconPixmap(png)
+		if (data[1:4] == 'PNG'):
+			png = QPixmap()
+			png.loadFromData(data)
 		else:
-			msgBox.setIcon(QMessageBox.Question)
-	else:
-		msgBox.setIcon(QMessageBox.Question)
+			# flip the image! as mirrored or scaled didn't work.
+			m = numpy.reshape(map(ord, list(data[0x63:-7])), (180, 180*3))
+			m = map(chr, m[::-1].reshape(1,-1)[0])
+			data = QByteArray("".join(m))
+			img = QImage(data, 180, 180, QImage.Format_RGB888)
+			png = QPixmap(img)
+		msgBox.setIconPixmap(png)
+
 	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
 	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
 	msgBox.addButton(btnSat, QMessageBox.YesRole)

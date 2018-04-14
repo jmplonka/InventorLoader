@@ -30,6 +30,7 @@ def writeThumbnail(data):
 	thmb = Thumbnail()
 	thmb.width, i = getUInt16(data, 10)
 	thmb.height, i = getUInt16(data, i)
+	thmb.type = 'PNG' if (buffer[1:4] == 'PNG') else 'RAW'
 	setThumbnailData(buffer)
 	return thmb
 
@@ -425,7 +426,7 @@ class Thumbnail():
 		self.data        = None
 
 	def __str__(self):
-		return '%s width=%d, height=%d' % (self.type, self.width, self.height)
+		return '%s: %d x %d' % (self.type, self.width, self.height)
 
 class BrowserNodeHandler():
 	def __init__(self):

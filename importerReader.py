@@ -36,7 +36,7 @@ KEY_SUM_INFO_MODIFYER    = 0x08
 KEY_THUMBNAIL_1          = 0x11
 KEY_THUMBNAIL_2          = 0x1C
 
-KEY_DOC_SUM_INFO_COMPANY = 0x15
+KEY_DOC_SUM_INFO_COMPANY = 0x0F
 
 KEY_CODEPAGE             = 0x01
 KEY_SET_NAME             = 0xFF
@@ -45,6 +45,108 @@ KEY_LANGUAGE_CODE        = 0x80000000
 KEY_DTP_VERSION          = 43
 KEY_DTP_BUILD            = 0
 
+# F29F85E0-4FF9-1068-AB91-08002B27B3D9
+Inventor_Summary_Information = {
+	 2: "Title",
+	 3: "Subject",
+	 4: "Author",
+	 5: "Keywords",
+	 6: "Comments",
+	 8: "LastSavedBy",
+	 9: "Revision",
+	12: "CreationTime",
+	17: "Thumbnail",
+}
+# D5CDD502-2E9C-101B-9397-08002B2CF9AE
+Inventor_Document_Summary_Information = {
+	 2: "Category",
+	14: "Manager",
+	15: "Company",
+}
+
+Design_Tracking_Control = {
+	 5: "CheckedOutBy",
+	 6: "CheckedOutDate",
+	 7: "CheckInBy",
+	 8: "CheckInDate",
+	 9: "CheckOutWorkGroup",
+	11: "CheckOutWorkSpace",
+	12: "CheckOutVersion",
+	13: "NextVersion",
+	14: "CurrentVersion",
+	15: "PreviousVersion",
+	16: "LastSavedBy",
+	17: "LastSavedDate",
+	19: "DrawingDeferUpdate",
+	22: "BuildVersion"
+}
+# 32853F0F-3444-11D1-9E93-0060B03C1CA6
+Design_Tracking_Properties = {
+	 4: "CreationDate",
+	 5: "PartNumber",
+	 7: "Project",
+	 9: "CostCenter",
+	10: "CheckedBy",
+	11: "DateChecked",
+	12: "EngrApprovedBy",
+	13: "DateEngrApproved",
+	17: "UserStatus",
+	20: "Material",
+	21: "PartPropRevId",
+	23: "CatalogWebLink",
+	28: "PartIcon",
+	29: "Description",
+	30: "Vendor",
+	31: "DocSubType",
+	32: "DocSubTypeName",
+	33: "ProxyRefreshDate",
+	34: "MfgApprovedBy",
+	35: "DateMfgApproved",
+	36: "Cost",
+	37: "Standard",
+	40: "DesignStatus",
+	41: "Designer",
+	42: "Engineer",
+	43: "Authority",
+	44: "ParameterizedTemplate",
+	45: "TemplateRow",
+	46: "ExternalPropRevId",
+	47: "StandardRevision",
+	48: "Manufacturer",
+	49: "StandardsOrganization",
+	50: "Language",
+	51: "DrawingDeferUpdate",
+	52: "DesignationSize",
+	55: "StockNumber",
+	56: "Categories",
+	57: "WeldMaterial",
+	58: "Mass",
+	59: "SurfaceArea",
+	60: "Volume",
+	61: "Density",
+	62: "ValidMassProps",
+	63: "FlatPatternExtentsWidth",
+	64: "FlatPatternExtentsLength",
+	65: "FlatPatternExtentsArea",
+	66: "SheetMetalRule",
+	67: "LastUpdatedWith",
+	71: "MaterialIdentifier",
+	72: "Appearance",
+	73: "FlatPatternDeferUpdate",
+}
+Private_Model_Information = {
+	 8: "LengthUnits",
+	 9: "AngleUnits",
+	11: "MassUnits",
+	10: "TimeUnits",
+	12: "LengthDisplayPrecision",
+	13: "AngleDisplayPrecision",
+	14: "Compacted",
+	15: "AssemblyAvailablePvs",
+	16: "PartActiveColorStyle",
+}
+Inventor_User_Defined_Properties = {
+}
 def getProperty(properties, key):
 	value = properties.get(key, '')
 	if (type(value) is str):
@@ -52,80 +154,72 @@ def getProperty(properties, key):
 			value = value[0:-1]
 	return value
 
-def getPropertySetName(properties, path):
+def getPropertySetName(properties, path, model):
 	name = getProperty(properties, KEY_SET_NAME)
 
 	if (len(name)==0):
 		name = path[-1][1:]
 
-	return name
+	languageCode = properties[KEY_LANGUAGE_CODE] if (KEY_LANGUAGE_CODE in properties) else 1031 # en_EN
+	logMessage("\t'%s': (LC = %X)" %(name, languageCode), LOG.LOG_ALWAYS)
+
+	if (name not in model.iProperties):
+		model.iProperties[name] = {}
+
+	keys = properties.keys()
+	keys.sort()
+
+	return name, keys
 
 def ReadInventorSummaryInformation(doc, properties, path):
 	global model
 
-	name = getPropertySetName(properties, path)
+	name, keys = getPropertySetName(properties, path, model)
 
-	logMessage('\t\'%s\': LC=%s)' %(name, hex(properties[KEY_LANGUAGE_CODE])))
 	if (doc):
 		doc.CreatedBy = getProperty(properties, KEY_SUM_INFO_AUTHOR)
 		doc.Comment = getProperty(properties, KEY_SUM_INFO_COMMENT)
 		doc.LastModifiedBy = getProperty(properties, KEY_SUM_INFO_MODIFYER)
 
-	if (name not in model.iProperties):
-		model.iProperties[name] = {}
-
-	for key in properties:
+	for key in keys:
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
-			if (key == KEY_THUMBNAIL_1):
-				val = writeThumbnail(val)
-			elif (key == KEY_THUMBNAIL_2):
-				val = writeThumbnail(val)
-			model.iProperties[name][key] = val
+			if (val is not None):
+				if (key == KEY_THUMBNAIL_1):
+					val = writeThumbnail(val)
+				elif (key == KEY_THUMBNAIL_2):
+					val = writeThumbnail(val)
+				logMessage("\t\t%s = %s" %(Inventor_Summary_Information.get(key, key), val), LOG.LOG_DEBUG)
+				model.iProperties[name][key] = (Inventor_Summary_Information.get(key, key), val)
 	return
 
 def ReadInventorDocumentSummaryInformation(doc, properties, path):
 	global model
 
-	name = getPropertySetName(properties, path)
+	name, keys = getPropertySetName(properties, path, model)
 
-	logMessage('\t\'%s\': (LC=%s)' %(name, hex(properties[KEY_LANGUAGE_CODE])))
 	if (doc):
 		doc.Company = getProperty(properties, KEY_DOC_SUM_INFO_COMPANY)
 
-	if (name not in model.iProperties):
-		model.iProperties[name] = {}
-
-	for key in properties:
-		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
-			val = getProperty(properties, key)
-			model.iProperties[name][key] = val
-	return
-
-def ReadOtherProperties(properties, path):
-	global model
-
-	languageCode = 1031 # en_EN
-
-	name = getPropertySetName(properties, path)
-	if (KEY_LANGUAGE_CODE in properties):
-		languageCode = properties[KEY_LANGUAGE_CODE]
-	logMessage('\t\'%s\': (LC = %X)' %(name, languageCode))
-
-	props = {}
-
-	keys = properties.keys()
-	keys.sort()
 	for key in keys:
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
-			if (type(val) is str):
-				logMessage('\t%02X = %r' %(key, val))
-			else:
-				logMessage('\t%02X = %s' %(key, val))
-			props[key] = val
+			if (val is not None):
+				logMessage("\t\t%s = %s" %(Inventor_Document_Summary_Information.get(key, key), val), LOG.LOG_DEBUG)
+				model.iProperties[name][key] = (Inventor_Document_Summary_Information.get(key, key), val)
+	return
 
-	model.iProperties[name] = props
+def ReadOtherProperties(properties, path, keynames={}):
+	global model
+
+	name, keys = getPropertySetName(properties, path, model)
+
+	for key in keys:
+		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
+			val = getProperty(properties, key)
+			if (val is not None):
+				logMessage("\t\t%s = %s" %(keynames.get(key, key), val), LOG.LOG_DEBUG)
+				model.iProperties[name][key] = (keynames.get(key, key), val)
 
 	return
 

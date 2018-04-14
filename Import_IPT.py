@@ -46,12 +46,21 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 			logMessage("%2d: %s" % (counter, path), LOG.LOG_DEBUG)
 			if (name.startswith('\x05')):
 				if (readProperties):
+					props = ole.getproperties(fname, convert_time=True)
 					if (name == '\x05Aaalpg0m0wzvuhc41dwauxbwJc'):
-						ReadInventorDocumentSummaryInformation(doc, ole.getproperties(fname, convert_time=True), fname)
+						ReadInventorDocumentSummaryInformation(doc, props, fname)
 					elif (name == '\x05Zrxrt4arFafyu34gYa3l3ohgHg'):
-						ReadInventorSummaryInformation(doc, ole.getproperties(fname, convert_time=True), fname)
+						ReadInventorSummaryInformation(doc, props, fname)
+					elif (name == '\x05Qz4dgm1gRjudbpksAayal4qdGf'):
+						ReadOtherProperties(props, fname, Design_Tracking_Control)
+					elif (name == '\x05PypkizqiUjudbposAayal4qdGf'):
+						ReadOtherProperties(props, fname, Design_Tracking_Properties)
+					elif (name == '\x05Qm0qv30hP3udrkgvAaitm1o20d'):
+						ReadOtherProperties(props, fname, Private_Model_Information)
+					elif (name == '\x05Ynltsm4aEtpcuzs1Lwgf30tmXf'):
+						ReadOtherProperties(props, fname, Inventor_User_Defined_Properties)
 					else:
-						ReadOtherProperties(ole.getproperties(fname, convert_time=True), fname)
+						ReadOtherProperties(props, fname)
 			elif (name == 'UFRxDoc'):
 				ReadUFRxDoc(stream)
 			elif (name == 'Protein'):

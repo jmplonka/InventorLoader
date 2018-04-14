@@ -34,7 +34,11 @@ That allows it to embed Excel workboos e.g.
 | Workbook | Spreadsheet | done | done | done |
 
 ## History:
-- 0.7: added ACIS file format reading for IPT and SAT files
+- 0.7.2 added interpolated surfaces for SAT files.
+
+- 0.7.1 added interpolated curves for SAT files.
+
+- 0.7: added ACIS file format reading for IPT and SAT files.
 	* IPT: during import user selectable strategy with thumbnail.
 
 - 0.6: continued working on Features

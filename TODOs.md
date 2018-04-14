@@ -32,14 +32,14 @@
 
 # SAT files
 ## Incomplete Features
-	* int- and p-curves
-	* spline-surfaces
+	* p-curves
+	* resolving references
 	
 
 ## missing Features
 	* mesh-surfaces
-	* compcu-, intint-curves
-	* resolving references
+	* compu-, int-int-curves
 
 ## unsupported
 	* attributes
+	* annotations

@@ -6,7 +6,7 @@ Collection of 3D Mesh importers
 '''
 
 import os, sys, FreeCAD, importerSAT, Import_IPT
-from importerUtils import canImport, logMessage, LOG
+from importerUtils import canImport, logMessage, logError, LOG
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -48,11 +48,20 @@ def read(doc, filename, readProperties):
 			return importerSAT
 	return None
 
+def checkfile(filename):
+	if (not os.path.exists(filename)):
+		logError("File doesn't exists!")
+		return False
+	if (not os.path.isfile(filename)):
+		logError("Can't import folders!")
+		return False
+	return canImport()
+
 def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
 	'''
-	if (canImport()):
+	if (checkfile(filename)):
 		try:
 			doc = FreeCAD.getDocument(docname)
 			logMessage("Importing: %s" %(filename), LOG.LOG_ALWAYS)
@@ -71,7 +80,7 @@ def open(filename, skip = [], only = [], root = None):
 	opens an Autodesk Inventor file in a new document
 	In addition to insert (import), the iProperties are as well added to the document.
 	'''
-	if (canImport() and os.path.exists(filename)):
+	if (checkfile(filename)):
 		logMessage("Reading: %s" %(filename), LOG.LOG_ALWAYS)
 		name = os.path.splitext(os.path.basename(filename))[0]
 		name = decode(name)

@@ -424,10 +424,10 @@ class SegmentReader(object):
 		return i
 
 	def dumpRawData(self, seg, data):
-		filename = '%s\\%sB.bin' %(getInventorFile()[0:-4], seg.name)
-		newFileRaw = open (filename, 'wb')
-		newFileRaw.write(data)
-		newFileRaw.close()
+#		filename = '%s\\%sB.bin' %(getInventorFile()[0:-4], seg.name)
+#		newFileRaw = open (filename, 'wb')
+#		newFileRaw.write(data)
+#		newFileRaw.close()
 		return
 
 	def Read_F645595C(self, node):
