@@ -8,7 +8,7 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 import traceback, FreeCAD, math, Part, Draft
 from importerUtils import LOG, logMessage, logWarning, logError, isEqual, getUInt8, getUInt16, getSInt32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
 from FreeCAD       import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT
-from math          import pi
+from math          import pi, fabs
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -451,7 +451,7 @@ def readPoints2DList(nubs, count, chunks, index, version):
 	nubs.weights = [1 for r in range(0, us)] if (nubs.rational) else None
 
 	for u in range(0, us):
-		p, i  = getFloats(chunks, i, 2)
+		p, i  = getFloats(chunks, i, 2) # u, v
 		nubs.poles[u] = VEC(p[0], p[1], 0) * getScale()
 		if (nubs.rational): nubs.weights[u], i = getFloat(chunks, i)
 
@@ -1628,7 +1628,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.singularity, i = getSingularity(chunks, index, self.version)
 		if (self.singularity == 'full'):
 			nubs, i = readBS3Curve(chunks, i)
-			tolerance, i = getFloat(chunks, i)
+			self.tolerance, i = getFloat(chunks, i)
 			self.shape = createBSplinesCurve(nubs, self.sens)
 		elif (self.singularity == 'none'):
 			self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -1892,7 +1892,6 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				curve = getSubtypeNode('intcurve', self.ref)
 				if (curve is not None):
 					self.shape = curve.build(None, None)
-
 		return self.shape
 class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 	def __init__(self):
@@ -2135,7 +2134,7 @@ class SurfaceSphere(Surface):
 			sphere = Part.Sphere()
 			rotateShape(sphere, self.pole)
 			sphere.Center = self.center
-			sphere.Radius = self.radius
+			sphere.Radius = fabs(self.radius)
 			self.shape = sphere.toShape()
 		return self.shape
 class SurfaceSpline(Surface):
@@ -2143,9 +2142,8 @@ class SurfaceSpline(Surface):
 		super(SurfaceSpline, self).__init__()
 		self.surface = None
 	def setSurfaceShape(self, chunks, index, inventor):
-		bs3Surface, tol, i = readSplineSurface(chunks, index, self.version, True)
-		if (bs3Surface):
-			self.shape = createBSplinesSurface(bs3Surface)
+		spline, tol, i = readSplineSurface(chunks, index, self.version, True)
+		self.shape = createBSplinesSurface(spline)
 		a1, i = getFloatArray(chunks, i)
 		a2, i = getFloatArray(chunks, i)
 		a3, i = getFloatArray(chunks, i)
@@ -2432,9 +2430,6 @@ class SurfaceSpline(Surface):
 		n, i  = getInteger(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
-	def setSum(self, chunks, index):
-		curve, i = readCurve(chunks, index, self.version)
-		return i
 	def setSweep(self, chunks, index, inventor):
 		# Syntax:
 		# STR?v>16 SWEEP CURVE CURVE SWEEP VEC RIGID?v>16 VEC{4} f f i i FORMULA n FRML_VAR{n} STR n STR n SINGULARITY (BS3SURFACE|NONE) [float]{6}
@@ -2593,8 +2588,11 @@ class SurfaceSpline(Surface):
 		i4, i = getInteger(chunks, i)
 		p3, i = readBS3Curve(chunks, i)
 		return i
-	def setSum(self, chunks, index):
-		curve, i = readCurve(chunks, index, self.version)
+	def setSum(self, chunks, index, inventor):
+		c1, i = readCurve(chunks, index, self.version)
+		c2, i = readCurve(chunks, i, self.version)
+		vec, i = getVector(chunks, i)
+		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setShadowTpr(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index, self.version)
@@ -2644,10 +2642,25 @@ class SurfaceSpline(Surface):
 		a1, i = getFloats(chunks, i, 2) # int, float
 		return i
 	def setRuledTpr(self, chunks, index, inventor):
-		self.surface, i = readSurface(chunks, index, self.version)
+		surf, i = readSurface(chunks, index, self.version)
+		curv, i = readCurve(chunks, i, self.version)
+		bs2curf, i = readBS2Curve(chunks, i, self.version)
+		f1, i = getFloat(chunks, i)
+		i = self.setSurfaceShape(chunks, i, inventor)
+		vec, i = getVector(chunks, i)
+		f2, i = getFloat(chunks, i)
+		f3, i = getFloat(chunks, i)
+		f4, i = getFloat(chunks, i)
 		return i
-	def setSweptTpr(self, chunks, index):
-		self.surface, i = readSurface(chunks, index, self.version)
+	def setSweptTpr(self, chunks, index, inventor):
+		surf, i = readSurface(chunks, index, self.version)
+		curv, i = readCurve(chunks, i, self.version)
+		bs2curf, i = readBS2Curve(chunks, i, self.version)
+		f1, i = getFloat(chunks, i)
+		i = self.setSurfaceShape(chunks, i, inventor)
+		vec, i = getVector(chunks, i)
+		f2, i = getFloat(chunks, i)
+		f3, i = getFloat(chunks, i)
 		return i
 	def setRef(self, chunks, index):
 		self.ref, i = getInteger(chunks, index)
@@ -2691,15 +2704,14 @@ class SurfaceSpline(Surface):
 		if (self.type == 't_spl_sur'):            return self.setTSpline(chunks, i + 1, True)
 		if (self.type == 'vertexblendsur'):       return self.setVertexBlend(chunks, i, False)
 		if (self.type == 'VBL_SURF'):             return self.setVertexBlend(chunks, i + 1, True)
-
 		if (self.type == 'srfsrfblndsur'):        return self.setBlendSupply(chunks, i)
 		if (self.type == 'srf_srf_v_bl_spl_sur'): return self.setBlendSupply(chunks, i + 1)
 		if (self.type == 'sssblndsur'):           return self.setBlendSupply(chunks, i)
 		if (self.type == 'sss_blend_spl_sur'):    return self.setBlendSupply(chunks, i + 1)
-		if (self.type == 'sumsur'):               return self.setSum(chunks, i)
-		if (self.type == 'sum_spl_sur'):          return self.setSum(chunks, i + 1)
+		if (self.type == 'sumsur'):               return self.setSum(chunks, i, False)
+		if (self.type == 'sum_spl_sur'):          return self.setSum(chunks, i + 1, True)
 		if (self.type == 'ruled_tpr_spl_sur'):    return self.setRuledTpr(chunks, i + 1, True)
-		if (self.type == 'swept_tpr_spl_sur'):    return self.setSweptTpr(chunks, i + 1)
+		if (self.type == 'swept_tpr_spl_sur'):    return self.setSweptTpr(chunks, i + 1, True)
 		raise Exception("Unknown SplineSurface '%s'!"%(self.type))
 	def setSubtype(self, chunks, index):
 		self.sense, i  = getSense(chunks, index)
