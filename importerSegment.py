@@ -67,6 +67,7 @@ def dumpSat(node):
 	content += ''.join(['%s' %(ntt) for ntt in entities])
 	with open(filename, 'w') as sat:
 		sat.write(content)
+		sat.write("End-of-ACIS-data\n")
 
 def checkReadAll(node, i, l):
 	assert (i == l), '%s: Have not read all data (%d <> %d)' %(node.typeID, i, l)

@@ -106,6 +106,10 @@ def getEntities():
 	return _entities
 def setEntities(entities):
 	global _entities
+	if (entities is None):
+		if (_entities is not None):
+			del _entities[:]
+		Acis.clearEntities()
 	_entities = entities
 
 _header = None
@@ -159,6 +163,7 @@ class Header():
 			logMessage("    product: '%s'" %(self.prodId), LOG.LOG_INFO)
 			logMessage("    version: '%s'" %(self.prodVer), LOG.LOG_INFO)
 			logMessage("    date:    %s" %(self.date), LOG.LOG_INFO)
+		Acis.setVersion(self.version)
 		return
 	def readBinary(self, data):
 		tag, self.version, i = readChunkBinary(data, 0)
@@ -175,6 +180,7 @@ class Header():
 		logMessage("    product: '%s'" %(self.prodId), LOG.LOG_INFO)
 		logMessage("    version: '%s'" %(self.prodVer), LOG.LOG_INFO)
 		logMessage("    date:    %s" %(self.date), LOG.LOG_INFO)
+		Acis.setVersion(self.version)
 		return i
 
 def getNextText(data):
@@ -246,10 +252,10 @@ def resolveEntityReferences(entities, lst):
 	progress.stop()
 	return
 
-def resolveNode(entity, version):
+def resolveNode(entity):
 	try:
 		if (len(entity.name) > 0):
-			Acis.createNode(entity, version)
+			Acis.createNode(entity)
 	except Exception as e:
 #		logError("Can't resolve '%s' - %s" %(entity, e))
 		logError('>E: ' + traceback.format_exc())
@@ -258,10 +264,9 @@ def resolveNode(entity, version):
 def resolveNodes():
 	Acis.references = {}
 	bodies = []
-	header = getHeader()
 	model = getEntities()
 	for entity in model:
-		resolveNode(entity, header.version)
+		resolveNode(entity)
 		if (entity.name == "body"):
 			bodies.append(entity)
 	return bodies
@@ -398,7 +403,6 @@ def readBinary(doc, fileName):
 		data = file.read()
 		header.readBinary(data)
 		index = 0
-		clearEntities()
 		entities = {}
 		while (i < e):
 			entity, i = readEntityBinary(data, i, e)
@@ -417,6 +421,8 @@ def readBinary(doc, fileName):
 def create3dModel(group, doc):
 	importModel(group, doc)
 	viewAxonometric(doc)
+	setEntities(None)
+	setHeader(None)
 	return
 
 def readEntities(asm):

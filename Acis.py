@@ -118,7 +118,10 @@ CIRC_SMTH = {0x0B: 'normal',      0x0A: 'smooth'}
 CLOSURE     = {0: 'open', 1: 'closed', 2: 'periodic', '0x0B': 'open', '0x0A': 'periodic'}
 SINGULARITY = {0: 'full', 1: 'v',      2: 'none',     '0x0B': 'none', '0x0A': 'full'}
 VBL_CIRLE   = {0: 'circle', 1: 'ellipse', 3: 'unknown', 'cylinder': 'circle'}
-scale = 1.0
+
+scale   = 1.0
+
+version = 7.0
 
 subtypeTable = {}
 
@@ -162,7 +165,15 @@ def getScale():
 	global scale
 	return scale
 
-def createNode(entity, version):
+def setVersion(vers):
+	global version
+	version = vers
+
+def getVersion():
+	global version
+	return version
+
+def createNode(entity):
 	global references
 
 	try:
@@ -193,7 +204,7 @@ def createNode(entity, version):
 		if (entity.index >= 0):
 			references[entity.index] = node
 		if (hasattr(node, 'set')):
-			node.set(entity, version)
+			node.set(entity)
 
 def getValue(chunks, index):
 	val = chunks[index].val
@@ -298,8 +309,8 @@ def getClosure(chunks, index):
 	closure = closure.lower()
 	return closure, i
 
-def getSingularity(chunks, index, version):
-	if (version > 4):
+def getSingularity(chunks, index):
+	if (getVersion() > 4):
 		return getEnumByValue(chunks, index, SINGULARITY)
 	return 'full', index
 
@@ -324,10 +335,10 @@ def getCircleType(chunks, index):
 def getCircleSmoothing(chunks, index):
 	return getEnumByTag(chunks, index, CIRC_SMTH)
 
-def getUnknownFT(chunks, index, version):
+def getUnknownFT(chunks, index):
 	i = index
 	val = 'F'
-	if (version > 7.0):
+	if (getVersion() > 7.0):
 		val, i = getValue(chunks, i)
 		if (val == 'T'):
 			arr, i = getFloats(chunks, i, 7)
@@ -420,8 +431,8 @@ def getClosureSurface(chunks, index):
 	if (closureU in ('open', 'closed', 'periodic')):
 		# open none none 2 2
 		closureV, i = getClosure(chunks, i)
-		singularityU, i = getSingularity(chunks, i, 7.0)
-		singularityV, i = getSingularity(chunks, i, 7.0)
+		singularityU, i = getSingularity(chunks, i)
+		singularityV, i = getSingularity(chunks, i)
 		knotsU, i = getInteger(chunks, i)
 		knotsV, i = getInteger(chunks, i)
 		return closureU, closureV, singularityU, singularityV, knotsU, knotsV, i
@@ -447,7 +458,7 @@ def adjustMultsKnots(knots, mults, periodic, degree):
 	mults[-1] = degree + 1
 	return knots, mults, False # Force periodic to False!!!
 
-def readPoints2DList(nubs, count, chunks, index, version):
+def readPoints2DList(nubs, count, chunks, index):
 	nubs.uKnots, nubs.uMults, i = readKnotsMults(count, chunks, index)
 	us = sum(nubs.uMults) - (nubs.uDegree - 1)
 	nubs.poles   = [None for r in range(0, us)]
@@ -496,15 +507,15 @@ def readPoints3DMap(nubs, knotsU, knotsV, chunks, index):
 
 	return i
 
-def readBlend(chunks, index, version):
-	nubs, i = readBS2Curve(chunks, index, version)
+def readBlend(chunks, index):
+	nubs, i = readBS2Curve(chunks, index)
 	if (nubs is not None):
 		nubs.sense, i = getSense(chunks, i)
 		nubs.factor, i = getFloat(chunks, i)
 		return nubs, i
 	return None, index
 
-def readLaw(chunks, index, version):
+def readLaw(chunks, index):
 	# Laws:
 	#	trigonometric:
 	#		cos(x), cosh(x), cot(x) = cos(x)/sin(x), coth(x)
@@ -529,7 +540,7 @@ def readLaw(chunks, index, version):
 		v = Transform()
 		i = v.setBulk(chunks, i)
 	elif (n == 'EDGE'):
-		c, i = readCurve(chunks, i, version)
+		c, i = readCurve(chunks, i)
 		f, i = getFloats(chunks, i, 2)
 		v = (c, f)
 	elif (n == 'SPLINE_LAW'):
@@ -549,7 +560,7 @@ def newInstance(CLASSES, key):
 		return None
 	return cls()
 
-def readCurve(chunks, index, version):
+def readCurve(chunks, index):
 	val, i = getValue(chunks, index)
 	curve = None
 	try:
@@ -557,11 +568,10 @@ def readCurve(chunks, index, version):
 	except:
 		raise Exception("Unknown curve-type '%s'!" % (val))
 	if (curve):
-		curve.version = version
 		i = curve.setSubtype(chunks, i)
 	return curve, i
 
-def readSurface(chunks, index, version):
+def readSurface(chunks, index):
 	chunk = chunks[index]
 	i = index + 1
 	subtype = chunk.val
@@ -573,7 +583,6 @@ def readSurface(chunks, index, version):
 		except:
 			raise Exception("Unknown surface-type '%s'!" % (subtype))
 		if (surface):
-			surface.version = version
 			i = surface.setSubtype(chunks, i)
 		return surface, i
 #FIXME: this is a dirty hack :(
@@ -813,14 +822,14 @@ def createHelix(data):
 
 	return None
 
-def readBS2Curve(chunks, index, version):
+def readBS2Curve(chunks, index):
 	nbs, dgr, i = getDimensionCurve(chunks, index)
 	if (nbs == 'nullbs'):
 		return None, i
 	if (nbs in ('nubs', 'nurbs')):
 		closure, knots, i = getClosureCurve(chunks, i)
 		nubs = BS3_Curve(nbs == 'nurbs', closure == 'periodic', dgr)
-		i = readPoints2DList(nubs, knots, chunks, i, version)
+		i = readPoints2DList(nubs, knots, chunks, i)
 		return nubs, i
 	return None, index
 
@@ -845,8 +854,8 @@ def readBS3Surface(chunks, index):
 		i = readPoints3DMap(nubs, knotsU, knotsV, chunks, i)
 	return nubs, i
 
-def readSplineSurface(chunks, index, version, tolerance):
-	singularity, i = getSingularity(chunks, index, version)
+def readSplineSurface(chunks, index, tolerance):
+	singularity, i = getSingularity(chunks, index)
 	if (singularity == 'full'):
 		spline, i = readBS3Surface(chunks, i)
 		if ((spline is not None) and tolerance):
@@ -858,8 +867,8 @@ def readSplineSurface(chunks, index, version, tolerance):
 		rV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		closureU, i = getClosure(chunks, i)
 		closureV, i = getClosure(chunks, i)
-		singularityU, i = getSingularity(chunks, i, version)
-		singularityV, i = getSingularity(chunks, i, version)
+		singularityU, i = getSingularity(chunks, i)
+		singularityV, i = getSingularity(chunks, i)
 		return None, (rU, rV, closureU, closureV, singularityU, singularityV), i
 	elif (singularity == 'v'):
 		a11, i = getFloatArray(chunks, i)
@@ -867,15 +876,15 @@ def readSplineSurface(chunks, index, version, tolerance):
 		f, i = getFloat(chunks, i)
 		closureU, i = getClosure(chunks, i)
 		closureV, i = getClosure(chunks, i)
-		singularityU, i = getSingularity(chunks, i, version)
-		singularityV, i = getSingularity(chunks, i, version)
+		singularityU, i = getSingularity(chunks, i)
+		singularityV, i = getSingularity(chunks, i)
 		return None, (a11, a12, f, closureU, closureV, singularityU, singularityV), i
 	raise Exception("Unknown spline singularity '%s'" %(singularity))
 
-def readLoftData(chunks, index, version):
+def readLoftData(chunks, index):
 	ld = LoftData()
-	ld.surface, i = readSurface(chunks, index, version)
-	ld.bs2cur, i  = readBS2Curve(chunks, i, version)
+	ld.surface, i = readSurface(chunks, index)
+	ld.bs2cur, i  = readBS2Curve(chunks, i)
 	ld.e1, i      = getEnum(chunks, i)
 	ld.type, i    = getInteger(chunks, i)
 	ld.n, i       = getInteger(chunks, i)
@@ -905,18 +914,18 @@ def readLoftData(chunks, index, version):
 		ld.dir, i = getVector(chunks, i)
 	return ld, i
 
-def readLoftProfile(chunks, index, version):
+def readLoftProfile(chunks, index):
 	m, i = getInteger(chunks, index)
 	section = []
 	for l in range(0, m):
 		t, i = getInteger(chunks, i)
-		ck, i = readCurve(chunks, i, version)
-		lk, i = readLoftData(chunks, i, version)
+		ck, i = readCurve(chunks, i)
+		lk, i = readLoftData(chunks, i)
 		section.append((t, ck, lk))
 	return section, i
 
-def readLoftPath(chunks, index, version):
-	cur, i = readCurve(chunks, index, version)
+def readLoftPath(chunks, index):
+	cur, i = readCurve(chunks, index)
 	n, i = getInteger(chunks, i)
 	paths = []
 	for k in range(0, n):
@@ -925,17 +934,17 @@ def readLoftPath(chunks, index, version):
 	f, i = getInteger(chunks, i)
 	return (cur, paths, f), i
 
-def readLofSection(chunks, index, version):
+def readLofSection(chunks, index):
 	n, i = getInteger(chunks, index)
 	loft = []
 	for k in range(0, n):
 		fk, i = getFloat(chunks, i)
-		profile, i = readLoftProfile(chunks, i, version)
-		path, i = readLoftPath(chunks, i, version)
+		profile, i = readLoftProfile(chunks, i)
+		path, i = readLoftPath(chunks, i)
 		loft.append((fk, profile, path))
 	return loft, i
 
-def readScaleClLoft(chunks, index, version):
+def readScaleClLoft(chunks, index):
 	if (chunks[index].tag in (0x0A, 0x0B)):
 		## fixme!
 		return None, index
@@ -943,56 +952,56 @@ def readScaleClLoft(chunks, index, version):
 	lofts = []
 	for k in range(0, n):
 		nk, i = getInteger(chunks, i)
-		ck, i = readCurve(chunks, i, version)
-		lk, i = readLoftData(chunks, i, version)
+		ck, i = readCurve(chunks, i)
+		lk, i = readLoftData(chunks, i)
 		lofts.append([nk, ck, lk])
 	if (not chunks[i].tag in (0x07, 0x0D, 0x0E)):
 		## fixme!
 		return None, index
-	cur, i = readCurve(chunks, i, version)
+	cur, i = readCurve(chunks, i)
 	arr, i = getIntegers(chunks, i, 3)
 	return (lofts, cur, arr), i
 
-def readSkin(chunks, index, version, inventor):
+def readSkin(chunks, index, inventor):
 	skin = Skin()
 	skin.a1, i   = getIntegers(chunks, index, 4)
 	skin.f1, i   = getFloat(chunks, i)
 	if (inventor):
 		i += 2 # 1, 1
-		skin.cur, i = readCurve(chunks, i, version)
-		skin.loft, i = readLoftData(chunks, i, version)
-		skin.cur2, i  = readCurve(chunks, i, version)
+		skin.cur, i = readCurve(chunks, i)
+		skin.loft, i = readLoftData(chunks, i)
+		skin.cur2, i  = readCurve(chunks, i)
 		i += 2 # 0, -1
 		skin.vec, i  = getVector(chunks, i)
 	else:
-		skin.cur, i  = readCurve(chunks, i, version)
+		skin.cur, i  = readCurve(chunks, i)
 		skin.vec, i  = getVector(chunks, i)
-		skin.surf, i = readSurface(chunks, i, version)
+		skin.surf, i = readSurface(chunks, i)
 	skin.f2, i    = getFloat(chunks, i)
-	skin.law, i  = readFormula(chunks, i, version)
-	skin.pcur, i = readCurve(chunks, i, version)
+	skin.law, i  = readFormula(chunks, i)
+	skin.pcur, i = readCurve(chunks, i)
 	return skin, i
 
-def readFormula(chunks, index, version):
+def readFormula(chunks, index):
 	frml, i = getValue(chunks, index)
 	if (frml == 'null_law'):
 		return (None, []), i
 	vars = []
 	n, i = getInteger(chunks, i)
 	for k in range(0, n):
-		var, i = readLaw(chunks, i, version)
+		var, i = readLaw(chunks, i)
 		vars.append(var)
 	return (frml, vars), i
 
-def readRbBlend(chunks, index, version, inventor):
+def readRbBlend(chunks, index, inventor):
 	txt, i = getText(chunks, index)
-	srf, i = readSurface(chunks, i, version)
-	cur, i = readCurve(chunks, i, version)
-	bs2, i = readBS2Curve(chunks, i, version)
+	srf, i = readSurface(chunks, i)
+	cur, i = readCurve(chunks, i)
+	bs2, i = readBS2Curve(chunks, i)
 	vec, i = getVector(chunks, i)
 	if (inventor):
-		dummy, i = readBS2Curve(chunks, i, version)
-		spline, tol, i = readSplineSurface(chunks, i, version, False)
+		dummy, i = readBS2Curve(chunks, i)
+		spline, tol, i = readSplineSurface(chunks, i, False)
 		return (txt, srf, cur, bs2, vec, (dummy, spline, tol)), i
 	return (txt, srf, cur, bs2, vec, None), i
 
@@ -1000,7 +1009,7 @@ class VBL():
 	def __init__(self):
 		self.t  = ''
 		self.n  = 'cross'
-	def read(self, chunks, index, version, inventor):
+	def read(self, chunks, index, inventor):
 		self.t, i  = getText(chunks, index)
 		self.n, i  = getCircleType(chunks, i)
 		self.p, i  = getLocation(chunks, i)
@@ -1008,7 +1017,7 @@ class VBL():
 		self.v, i  = getCircleSmoothing(chunks, i)
 		self.a, i  = getFloat(chunks, i)
 		if (self.t == 'circle'):
-			self.o, i = readCurve(chunks, i, version)
+			self.o, i = readCurve(chunks, i)
 			self.type, i = getVblCirleType(chunks, i)
 			if (self.type == 'circle'):
 				v1 = v2 = None
@@ -1026,10 +1035,10 @@ class VBL():
 		elif (self.t == 'plane'):
 			self.v, i = getLocation(chunks, i)
 			self.a, i = getFloats(chunks, i, 2)
-			self.o, i = readCurve(chunks, i, version)
+			self.o, i = readCurve(chunks, i)
 		elif (self.t == 'pcurve'):
-			self.o, i  = readSurface(chunks, i, version)
-			self.c, i  = readBS2Curve(chunks, i, version)
+			self.o, i  = readSurface(chunks, i)
+			self.c, i  = readBS2Curve(chunks, i)
 			self.e6, i = getSense(chunks, i)
 			self.f, i  = getFloat(chunks, i)
 		else:
@@ -1108,30 +1117,20 @@ class AsmHeader(): pass
 # abstract super class
 class Entity(object):
 	def __init__(self):
-		self.index   = -1
-		self._attrib = None # Attrib
-		self.history = -1  # from Version 6.0 on
+		self._attrib = None
 		self.entity  = None
-		self.done    = False
-		self.version = 1.0
-	def set(self, entity, version):
-		self.version = version
-		if (not self.done):
-			# prevent endless loops
-			self.done = True
-			entity.node = self
-			self.entity = entity
-			addNode(self)
+	def set(self, entity):
+		entity.node = self
+		self.entity = entity
+		addNode(self)
 
-			try:
-				references[entity.index] = self
-				self._attrib, i = getRefNode(entity, 0, None)
-				if (version > 6):
-					i += 1 # skip history!
-			except Exception as e:
-				logError('>E: ' + traceback.format_exc())
-		else:
-			i = 2 if (version > 6) else 1 # skip history!
+		try:
+			references[entity.index] = self
+			self._attrib, i = getRefNode(entity, 0, None)
+			if (getVersion() > 6):
+				i += 1 # skip history!
+		except Exception as e:
+			logError('>E: ' + traceback.format_exc())
 		return i
 	def getIndex(self):  return -1   if (self.entity is None)  else self.entity.index
 	def getType(self):   return -1   if (self.entity is None)  else self.entity.name
@@ -1173,8 +1172,8 @@ class Transform(Entity):
 		self.shear, i                = getShear(chunks, i)
 		self.matrix = MAT(a11, a12, a13, a14, a21, a22, a23, a24, a31, a32, a33, a34, 0.0, 0.0, 0.0, a44)
 		return i
-	def set(self, entity, version):
-		i = super(Transform, self).set(entity, version)
+	def set(self, entity):
+		i = super(Transform, self).set(entity)
 		i = self.setBulk(entity.chunks, i)
 		return i
 	def getPlacement(self):
@@ -1182,11 +1181,11 @@ class Transform(Entity):
 # abstract super class for all topologies
 class Topology(Entity):
 	def __init__(self): super(Topology, self).__init__()
-	def set(self, entity, version):
-		i = super(Topology, self).set(entity, version)
-		if (version > 10.0):
+	def set(self, entity):
+		i = super(Topology, self).set(entity)
+		if (getVersion() > 10.0):
 			i += 1 # skip ???
-		if (version > 6.0):
+		if (getVersion() > 6.0):
 			i += 1 # skip ???
 		return i
 class Body(Topology):
@@ -1195,12 +1194,12 @@ class Body(Topology):
 		self._lump      = None # Pointer to LUMP object
 		self._wire      = None # Pointer to Wire object
 		self._transform = None # Pointer to Transform object
-	def set(self, entity, version):
-		i = super(Body, self).set(entity, version)
+	def set(self, entity):
+		i = super(Body, self).set(entity)
 		self._lump, i      = getRefNode(entity, i, 'lump')
 		self._wire, i      = getRefNode(entity, i, 'wire')
 		self._transform, i = getRefNode(entity, i, 'transform')
-		self.unknown1, i   = getUnknownFT(entity.chunks, i, version)
+		self.unknown1, i   = getUnknownFT(entity.chunks, i)
 		return i
 	def getLumps(self):
 		lumps = []
@@ -1225,12 +1224,12 @@ class Lump(Topology):
 		self._next  = None # The next LUMP
 		self._shell = None # The first of shells of the LUMP
 		self._owner = None # The lump's body
-	def set(self, entity, version):
-		i = super(Lump, self).set(entity, version)
+	def set(self, entity):
+		i = super(Lump, self).set(entity)
 		self._next, i    = getRefNode(entity, i, 'lump')
 		self._shell, i   = getRefNode(entity, i, 'shell')
 		self._owner, i   = getRefNode(entity, i, 'body')
-		self.unknown1, i = getUnknownFT(entity.chunks, i, version)
+		self.unknown1, i = getUnknownFT(entity.chunks, i)
 		return i
 	def getShells(self):
 		shells = []
@@ -1250,8 +1249,8 @@ class Shell(Topology):
 		self._face  = None # The first of faces of the shell
 		self._wire  = None # The shell's wire
 		self._lump  = None # The shell's lump
-	def set(self, entity, version):
-		i = super(Shell, self).set(entity, version)
+	def set(self, entity):
+		i = super(Shell, self).set(entity)
 		self._next, i  = getRefNode(entity, i, 'shell')
 		self._shell, i = getRefNode(entity, i, None)
 		self._face, i  = getRefNode(entity, i, 'face')
@@ -1292,8 +1291,8 @@ class SubShell(Topology):
 		self._child = None # The child subshell
 		self._face  = None # The first face of the subshell
 		self._wire  = None # The subshell's wire
-	def set(self, entity, version):
-		i = super(SubShell, self).set(entity, version)
+	def set(self, entity):
+		i = super(SubShell, self).set(entity)
 		self._owner = getRefNode(entity, i, 'shell')
 		self._next  = getRefNode(entity, i, None)
 		self._child = getRefNode(entity, i, None)
@@ -1317,8 +1316,8 @@ class Face(Topology):
 		self.sides       = 'single'  # Flag defining face is single or double sided
 		self.side        = None      # Flag defining face is single or double sided
 		self.containment = False     # Flag defining face is containment of double-sided faces
-	def set(self, entity, version):
-		i = super(Face, self).set(entity, version)
+	def set(self, entity):
+		i = super(Face, self).set(entity)
 		self._next, i                   = getRefNode(entity, i, 'face')
 		self._loop, i                   = getRefNode(entity, i, 'loop')
 		self._parent, i                 = getRefNode(entity, i, None)
@@ -1326,8 +1325,8 @@ class Face(Topology):
 		self._surface, i                = getRefNode(entity, i, 'surface')
 		self.sense, i                   = getSense(entity.chunks, i)
 		self.sides, self.containment, i = getSides(entity.chunks, i)
-		if (version > 9.0):
-			self.unknown2, i = getUnknownFT(entity.chunks, i, version)
+		if (getVersion() > 9.0):
+			self.unknown2, i = getUnknownFT(entity.chunks, i)
 		return i
 	def getLoops(self):
 		loops = []
@@ -1394,13 +1393,13 @@ class Loop(Topology):
 		self._next   = None # The next loop
 		self._coedge = None # The first coedge in the loop
 		self._face   = None # The first coedge in the face
-	def set(self, entity, version):
-		i = super(Loop, self).set(entity, version)
+	def set(self, entity):
+		i = super(Loop, self).set(entity)
 		self._next, i   = getRefNode(entity, i, 'loop')
 		self._coedge, i = getRefNode(entity, i, 'coedge')
 		self._face, i   = getRefNode(entity, i, 'face')
-		self.unknown, i = getUnknownFT(entity.chunks, i, version)
-		if (version > 9.0):
+		self.unknown, i = getUnknownFT(entity.chunks, i)
+		if (getVersion() > 9.0):
 			i += 1
 		return i
 	def getNext(self):   return None if (self._next is None)   else self._next.node
@@ -1424,20 +1423,20 @@ class Edge(Topology):
 		self._parent = None # The edge's coedge
 		self._curve  = None # Lying on one the Adjacent faces
 		self.text   = ''
-	def set(self, entity, version):
-		i = super(Edge, self).set(entity, version)
+	def set(self, entity):
+		i = super(Edge, self).set(entity)
 		self._start, i  = getRefNode(entity, i, 'vertex')
-		if (version > 4.0):
+		if (getVersion() > 4.0):
 			i += 1 # skip double
 		self._end, i    = getRefNode(entity, i, 'vertex')
-		if (version > 4.0):
+		if (getVersion() > 4.0):
 			i += 1 # skip double
 		self._parent, i = getRefNode(entity, i, 'coedge')
 		self._curve, i  = getRefNode(entity, i, 'curve')
 		self.sense, i  = getSense(entity.chunks, i)
-		if (version > 5.0):
+		if (getVersion() > 5.0):
 			self.text, i = getText(entity.chunks, i)
-		self.unknown, i = getUnknownFT(entity.chunks, i, version)
+		self.unknown, i = getUnknownFT(entity.chunks, i)
 		return i
 	def getStart(self):
 		try:
@@ -1451,8 +1450,8 @@ class EdgeTolerance(Edge):
 	def __init__(self):
 		super(EdgeTolerance, self).__init__()
 		self.tolerance = 0.0
-	def set(self, entity, version):
-		i = super(EdgeTolerance, self).set(entity, version)
+	def set(self, entity):
+		i = super(EdgeTolerance, self).set(entity)
 		return i
 class CoEdge(Topology):
 	def __init__(self):
@@ -1465,8 +1464,8 @@ class CoEdge(Topology):
 		self._owner    = None      # The coedge's owner
 		self._curve    = None
 		self.shape     = None      # Will be created in build function
-	def set(self, entity, version):
-		i = i = super(CoEdge, self).set(entity, version)
+	def set(self, entity):
+		i = i = super(CoEdge, self).set(entity)
 		self._next, i     = getRefNode(entity, i, 'coedge')
 		self._previous, i = getRefNode(entity, i, 'coedge')
 		self._partner, i  = getRefNode(entity, i, 'coedge')
@@ -1499,8 +1498,8 @@ class CoEdgeTolerance(CoEdge):
 		super(CoEdgeTolerance, self).__init__()
 		self.tStart = 0.0
 		self.tEnd = 0.0
-	def set(self, entity, version):
-		i = super(CoEdgeTolerance, self).set(entity, version)
+	def set(self, entity):
+		i = super(CoEdgeTolerance, self).set(entity)
 		self.tStart, i  = getFloat(entity.chunks, i)
 		self.tEnd, i    = getFloat(entity.chunks, i)
 		return i
@@ -1510,8 +1509,8 @@ class Vertex(Topology):
 		self._parent = None # One of the vertex' owners
 		self._point = None  # The vertex' location
 		self.count = -1    # Number of edges using this vertex
-	def set(self, entity, version):
-		i = super(Vertex, self).set(entity, version)
+	def set(self, entity):
+		i = super(Vertex, self).set(entity)
 		self._parent, i = getRefNode(entity, i, 'edge')
 		# inventor-version: 2010 -> workaround
 		if (entity.chunks[i].tag != 0xC):
@@ -1527,8 +1526,8 @@ class VertexTolerance(Vertex):
 	def __init__(self):
 		super(VertexTolerance, self).__init__()
 		self.tolerance = 0.0
-	def set(self, entity, version):
-		i = super(VertexTolerance, self).set(entity, version)
+	def set(self, entity):
+		i = super(VertexTolerance, self).set(entity)
 		self.tolerance, i = getFloat(entity.chunks, i)
 		return i
 class Wire(Topology):
@@ -1538,14 +1537,14 @@ class Wire(Topology):
 		self._coedge = None
 		self._shell = None
 		self.side = False
-	def set(self, entity, version):
-		i = super(Wire, self).set(entity, version)
+	def set(self, entity):
+		i = super(Wire, self).set(entity)
 		self._next, i   = getRefNode(entity, i, 'wire')
 		self._coedge, i = getRefNode(entity, i, 'coedge')
 		self._owner, i  = getRefNode(entity, i, None)
 		self.unknown, i = getRefNode(entity, i, None)
 		self.side, i    = getSide(entity.chunks, i)
-		self.ft, i      = getUnknownFT(entity.chunks, i, version)
+		self.ft, i      = getUnknownFT(entity.chunks, i)
 		return i
 	def getNext(self):   return None if (self._next is None)   else self._next.node
 	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.node
@@ -1573,11 +1572,11 @@ class Wire(Topology):
 # abstract super class for all geometries
 class Geometry(Entity):
 	def __init__(self): super(Geometry, self).__init__()
-	def set(self, entity, version):
-		i = super(Geometry, self).set(entity, version)
-		if (version > 10.0):
+	def set(self, entity):
+		i = super(Geometry, self).set(entity)
+		if (getVersion() > 10.0):
 			i += 1 # skip ???
-		if (version > 6.0):
+		if (getVersion() > 6.0):
 			i += 1 # skip ???
 		return i
 class Curve(Geometry):
@@ -1586,8 +1585,8 @@ class Curve(Geometry):
 		self.shape = None
 	def setSubtype(self, chunks, index):
 		return index
-	def set(self, entity, version):
-		i = super(Curve, self).set(entity, version)
+	def set(self, entity):
+		i = super(Curve, self).set(entity)
 		i = self.setSubtype(entity.chunks, i)
 		return i
 	def build(self, start, end): # by default: return a line-segment!
@@ -1642,7 +1641,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.curve  = None
 	def __str__(self): return "-%d Curve-Int: type=%s, points=%s" %(self.getIndex(), self.type, len(self.points))
 	def setCurve(self, chunks, index):
-		self.singularity, i = getSingularity(chunks, index, self.version)
+		self.singularity, i = getSingularity(chunks, index)
 		if (self.singularity == 'full'):
 			nubs, i = readBS3Curve(chunks, i)
 			self.tolerance, i = getFloat(chunks, i)
@@ -1653,7 +1652,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			if (type(val) == float):
 				self.tolerance = val
 		elif (self.singularity == 'summary'):
-			if (self.version > 17.0):
+			if (getVersion() > 17.0):
 				i += 1
 			arr, i  = getFloatArray(chunks, i)
 			fac, i  = getFloat(chunks, i)
@@ -1667,11 +1666,11 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setSurfaceCurve(self, chunks, index):
 		i = self.setCurve(chunks, index)
-		surface1, i = readSurface(chunks, i, self.version)
-		surface2, i = readSurface(chunks, i, self.version)
-		curve1, i   = readBS2Curve(chunks, i, self.version)
-		curve2, i   = readBS2Curve(chunks, i, self.version)
-		if (self.version > 15.0):
+		surface1, i = readSurface(chunks, i)
+		surface2, i = readSurface(chunks, i)
+		curve1, i   = readBS2Curve(chunks, i)
+		curve2, i   = readBS2Curve(chunks, i)
+		if (getVersion() > 15.0):
 			i += 2
 		range2, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		a1, i       = getFloatArray(chunks, i)
@@ -1692,23 +1691,23 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		a5, i       = getFloatArray(chunks, i)
 		if (inventor):
 			i += 1
-		c1, i = readCurve(chunks, i, self.version)
-		c2, i = readCurve(chunks, i, self.version)
-		c3, i = readCurve(chunks, i, self.version)
+		c1, i = readCurve(chunks, i)
+		c2, i = readCurve(chunks, i)
+		c3, i = readCurve(chunks, i)
 		return i
 	def setDefm(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
 		if (inventor):
 			x3, i = getFloat(chunks, i)
-		bend, i = readCurve(chunks, i, self.version)
+		bend, i = readCurve(chunks, i)
 		return i
 	def setExact(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
 		if (inventor):
 			x3, i = getFloat(chunks, i)
-		if (self.version > 15.0):
+		if (getVersion() > 15.0):
 			i += 2
-		unknown, i = getUnknownFT(chunks, i, self.version)
+		unknown, i = getUnknownFT(chunks, i)
 		range2, i  = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def setHelix(self, chunks, index):
@@ -1722,10 +1721,10 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		helix.alpha, i      = getFloat(chunks, i)           # pitch ???
 		helix.axisEnd, i    = getLocation(chunks, i)        # axis end
 		self.shape = createHelix(helix)
-		surface1, i = readSurface(chunks, i, self.version)  # None
-		surface2, i = readSurface(chunks, i, self.version)  # None
-		curve1, i   = readBS2Curve(chunks, i, self.version) # None
-		curve2, i   = readBS2Curve(chunks, i, self.version) # None
+		surface1, i = readSurface(chunks, i)  # None
+		surface2, i = readSurface(chunks, i)  # None
+		curve1, i   = readBS2Curve(chunks, i) # None
+		curve2, i   = readBS2Curve(chunks, i) # None
 		return i
 	def setInt(self, chunks, index):
 		i = self.setSurfaceCurve(chunks, index)
@@ -1737,13 +1736,13 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		laws = []
 		if (inventor):
 			n, i   = getInteger(chunks, i) # 0
-		l, i  = readLaw(chunks, i, self.version)
+		l, i  = readLaw(chunks, i)
 		laws.append(l)
 		subLaws = []
 		laws.append(subLaws)
 		n, i   = getInteger(chunks, i) # 0..n
 		for cnt in range(0, n):
-			l, i  = readLaw(chunks, i, self.version)
+			l, i  = readLaw(chunks, i)
 			subLaws .append(l)
 		n, i   = getInteger(chunks, i) #4
 		if (n == 0):
@@ -1751,7 +1750,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		subLaws = []
 		laws.append(subLaws)
 		while (True):
-			l, i  = readLaw(chunks, i, self.version) # null_law
+			l, i  = readLaw(chunks, i) # null_law
 			subLaws.append(l)
 			if (l[0] != 'null_law'):
 				break
@@ -1760,19 +1759,19 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		while (i < len(chunks)):
 			n, i   = getInteger(chunks, i) #0
 			if (n == 0):
-				l, i  = readLaw(chunks, i, self.version)
+				l, i  = readLaw(chunks, i)
 				subLaws.append(l)
 			elif (n == 1):
-				l, i  = readLaw(chunks, i, self.version)
+				l, i  = readLaw(chunks, i)
 				subLaws.append(l)
 				break
 			elif (n == 2):
-				l, i  = readLaw(chunks, i, self.version)
+				l, i  = readLaw(chunks, i)
 				subLaws.append(l)
-				l, i  = readLaw(chunks, i, self.version)
+				l, i  = readLaw(chunks, i)
 				subLaws.append(l)
 				while (True):
-					l, i  = readLaw(chunks, i, self.version)
+					l, i  = readLaw(chunks, i)
 					subLaws.append(l)
 					if (l[0] != 'null_law'):
 						break
@@ -1787,7 +1786,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		i = self.setSurfaceCurve(chunks, index)
 		if (inventor):
 			i += 1
-		curve, i = readCurve(chunks, i, self.version)
+		curve, i = readCurve(chunks, i)
 		return i
 	def setOffsetSurface(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
@@ -1795,16 +1794,16 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			i += 1
 		rngU, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		rngV, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
-		curve, i = readCurve(chunks, i, self.version)
+		curve, i = readCurve(chunks, i)
 		rng, i  = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		# x, y, z ???
 		return i
 	def setParameter(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
-		if (self.version > 15.0):
+		if (getVersion() > 15.0):
 			i += 1
 		if (not inventor):
-			if (self.version > 17.0):
+			if (getVersion() > 17.0):
 				i += 2 # 'none', F ???
 			txt, i = getText(chunks, i)
 		return i
@@ -1818,7 +1817,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		i = self.setSurfaceCurve(chunks, index)
 		if (inventor):
 			i += 1
-		curve, i = readCurve(chunks, i, self.version)
+		curve, i = readCurve(chunks, i)
 		if (inventor):
 			i += 1
 		return i
@@ -1827,16 +1826,16 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setSpring(self, chunks, index, inventor):
 		i = self.setCurve(chunks, index)
-		surface1, i = readSurface(chunks, i, self.version)
+		surface1, i = readSurface(chunks, i)
 		if (surface1 is None):
 			rangeU, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 			rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
-		surface2, i = readSurface(chunks, i, self.version)
-		curve1, i   = readBS2Curve(chunks, i, self.version)
-		if (self.version == 18.0):
+		surface2, i = readSurface(chunks, i)
+		curve1, i   = readBS2Curve(chunks, i)
+		if (getVersion() == 18.0):
 			i += 2
-		curve2, i   = readBS2Curve(chunks, i, self.version)
-		if (self.version > 15.0):
+		curve2, i   = readBS2Curve(chunks, i)
+		if (getVersion() > 15.0):
 			i += 2
 		range2, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		a1, i       = getFloatArray(chunks, i)
@@ -1947,12 +1946,12 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 	def setExpPar(self, chunks, index):
 		# EXPPC = exppc ([:NUMBER:]?/*version > 22.0*/) [:DIMENSION:] [:NUMBER:dim] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:]){n}
 		#                  [:FLOAT:] ([:FLOAT:] [:SURFACE:]
-		i = index if (self.version <= 22.0) else index + 1
-		self.pcurve, i = readBS2Curve(chunks, i, self.version)
+		i = index if (getVersion() <= 22.0) else index + 1
+		self.pcurve, i = readBS2Curve(chunks, i)
 		factor, i = getFloat(chunks, i)
-		if (self.version > 15.0):
+		if (getVersion() > 15.0):
 			i += 1
-		self.surface, i = readSurface(chunks, i, self.version)
+		self.surface, i = readSurface(chunks, i)
 		self.type = 'exppc'
 		return i
 	def setRef(self, chunks, index):
@@ -1979,8 +1978,8 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.u, i = getFloat(chunks, i)
 		self.v, i = getFloat(chunks, i)
 		return i
-	def set(self, entity, version):
-		i = super(Curve, self).set(entity, version)
+	def set(self, entity):
+		i = super(Curve, self).set(entity)
 		self.type, i = getInteger(entity.chunks, i)
 		if (self.type == 0):
 			i = self.setSubtype(entity.chunks, i)
@@ -2020,8 +2019,8 @@ class Surface(Geometry):
 	def __init__(self):
 		super(Surface, self).__init__()
 		self.shape = None
-	def set(self, entity, version):
-		i = super(Surface, self).set(entity, version)
+	def set(self, entity):
+		i = super(Surface, self).set(entity)
 		return i
 	def build(self): return None
 class SurfaceCone(Surface):
@@ -2047,7 +2046,7 @@ class SurfaceCone(Surface):
 		self.range, i  = getInterval(chunks, i, MIN_INF, MIN_INF, getScale())
 		self.sine, i   = getFloat(chunks, i)
 		self.cosine, i = getFloat(chunks, i)
-		if (self.version >= ENTIY_VERSIONS.get('CONE_SCALING_VERSION')):
+		if (getVersion() >= ENTIY_VERSIONS.get('CONE_SCALING_VERSION')):
 			self.scale, i = getLength(chunks, i)
 		else:
 			self.scale = getScale()
@@ -2055,8 +2054,8 @@ class SurfaceCone(Surface):
 		self.urange, i = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		self.vrange, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
-	def set(self, entity, version):
-		i = super(SurfaceCone, self).set(entity, version)
+	def set(self, entity):
+		i = super(SurfaceCone, self).set(entity)
 		i = self.setSubtype(entity.chunks, i)
 		return i
 	def build(self):
@@ -2088,8 +2087,8 @@ class SurfaceMesh(Surface):
 		super(SurfaceMesh, self).__init__()
 	def setSubtype(self, chunks, index):
 		return index
-	def set(self, entity, version):
-		i = super(SurfaceMesh, self).set(entity, version)
+	def set(self, entity):
+		i = super(SurfaceMesh, self).set(entity)
 		i = self.setSubtype(entity.chunks, i)
 		return i
 class SurfacePlane(Surface):
@@ -2110,8 +2109,8 @@ class SurfacePlane(Surface):
 		self.urange, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		self.vrange, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
-	def set(self, entity, version):
-		i = super(SurfacePlane, self).set(entity, version)
+	def set(self, entity):
+		i = super(SurfacePlane, self).set(entity)
 		i = self.setSubtype(entity.chunks, i)
 		return i
 	def build(self):
@@ -2141,8 +2140,8 @@ class SurfaceSphere(Surface):
 		self.urange, i   = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		self.vrange, i   = getInterval(chunks, i, MIN_PI2, MAX_PI2, 1.0)
 		return i
-	def set(self, entity, version):
-		i = super(SurfaceSphere, self).set(entity, version)
+	def set(self, entity):
+		i = super(SurfaceSphere, self).set(entity)
 		i = self.setSubtype(entity.chunks, i)
 		return i
 	def build(self):
@@ -2158,40 +2157,40 @@ class SurfaceSpline(Surface):
 		super(SurfaceSpline, self).__init__()
 		self.surface = None
 	def setSurfaceShape(self, chunks, index, inventor):
-		spline, tol, i = readSplineSurface(chunks, index, self.version, True)
+		spline, tol, i = readSplineSurface(chunks, index, True)
 		self.shape = createBSplinesSurface(spline)
 		arr, i  = readArrayFloats(chunks, i, inventor)
 		return i
 	def setBlendSupply(self, chunks, index):
 		name, i = getValue(chunks, index)
-		self.surface, i = readSurface(chunks, i, self.version)
+		self.surface, i = readSurface(chunks, i)
 		return i
 	def setClLoft(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
-		scl1, i = readScaleClLoft(chunks, i, self.version)
-		scl2, i = readScaleClLoft(chunks, i, self.version)
-		scl3, i = readScaleClLoft(chunks, i, self.version)
-		scl3, i = readScaleClLoft(chunks, i, self.version)
+		scl1, i = readScaleClLoft(chunks, i)
+		scl2, i = readScaleClLoft(chunks, i)
+		scl3, i = readScaleClLoft(chunks, i)
+		scl3, i = readScaleClLoft(chunks, i)
 		e1, i = getEnum(chunks, i)
 		e2, i = getEnum(chunks, i)
 		n1, i = getInteger(chunks, i) # 7
 		e2, i = getEnum(chunks, i)
-		scl3, i = readScaleClLoft(chunks, i, self.version)
+		scl3, i = readScaleClLoft(chunks, i)
 		e2, i = getEnum(chunks, i)
-		scl3, i = readScaleClLoft(chunks, i, self.version)
+		scl3, i = readScaleClLoft(chunks, i)
 		n1, i = getInteger(chunks, i) # 0
 		v1, i = getVector(chunks, i)
 		e1, i = getEnum(chunks, i)
 		e2, i = getEnum(chunks, i)
 		return i
 	def setCylinder(self, chunks, index, inventor):
-		c1, i = readCurve(chunks, index, self.version)
+		c1, i = readCurve(chunks, index)
 		v1, i = getVector(chunks, i)
 		v2, i = getVector(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setDefm(self, chunks, index, inventor):
-		self.surface, i = readSurface(chunks, index, self.version)
+		self.surface, i = readSurface(chunks, index)
 		a1, i = getInteger(chunks, i) # 3, 8
 		v11, i = getVector(chunks, i)
 		v12, i = getVector(chunks, i)
@@ -2231,22 +2230,22 @@ class SurfaceSpline(Surface):
 		t11, i = getValue(chunks, index)
 		while (type(t11) != str):
 			t11, i = getValue(chunks, i)
-		s11, i = readSurface(chunks, i, self.version)
-		c11, i = readCurve(chunks, i, self.version)
-		p11, i = readBS2Curve(chunks, i, self.version)
+		s11, i = readSurface(chunks, i)
+		c11, i = readCurve(chunks, i)
+		p11, i = readBS2Curve(chunks, i)
 		v11, i = getVector(chunks, i)
-		p12, i = readBS2Curve(chunks, i, self.version)
-		s12, tol11, i = readSplineSurface(chunks, i, self.version, True)
+		p12, i = readBS2Curve(chunks, i)
+		s12, tol11, i = readSplineSurface(chunks, i, True)
 
 		t21, i = getValue(chunks, i)
-		s21, i = readSurface(chunks, i, self.version)
-		c21, i = readCurve(chunks, i, self.version)
-		p21, i = readBS2Curve(chunks, i, self.version)
+		s21, i = readSurface(chunks, i)
+		c21, i = readCurve(chunks, i)
+		p21, i = readBS2Curve(chunks, i)
 		v21, i = getVector(chunks, i)
-		p22, i = readBS2Curve(chunks, i, self.version)
-		s22, tol21, i = readSplineSurface(chunks, i, self.version, True)
+		p22, i = readBS2Curve(chunks, i)
+		s22, tol21, i = readSplineSurface(chunks, i, True)
 
-		c1, i = readCurve(chunks, i, self.version)
+		c1, i = readCurve(chunks, i)
 		a1, i = getFloats(chunks, i, 2)
 		l1, i = getLong(chunks, i) # non_
 		rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
@@ -2269,10 +2268,10 @@ class SurfaceSpline(Surface):
 		x4, i     = getLocation(chunks, i)
 		fac1, i   = getFloat(chunks, i)
 		x5, i     = getVector(chunks, i)
-		s1, i     = readSurface(chunks, i, self.version)
-		s2, i     = readSurface(chunks, i, self.version)
-		c1, i     = readBS2Curve(chunks, i, self.version)
-		c2, i     = readBS2Curve(chunks, i, self.version)
+		s1, i     = readSurface(chunks, i)
+		s2, i     = readSurface(chunks, i)
+		c1, i     = readBS2Curve(chunks, i)
+		c2, i     = readBS2Curve(chunks, i)
 		fac2, i   = getFloat(chunks, i)
 		return i
 	def setHelixLine(self, chunks, index):
@@ -2285,22 +2284,22 @@ class SurfaceSpline(Surface):
 		x4, i     = getLocation(chunks, i)
 		fac1, i   = getFloat(chunks, i)
 		x5, i     = getVector(chunks, i)
-		s1, i     = readSurface(chunks, i, self.version)
-		s2, i     = readSurface(chunks, i, self.version)
-		c1, i     = readBS2Curve(chunks, i, self.version)
-		c2, i     = readBS2Curve(chunks, i, self.version)
+		s1, i     = readSurface(chunks, i)
+		s2, i     = readSurface(chunks, i)
+		c1, i     = readBS2Curve(chunks, i)
+		c2, i     = readBS2Curve(chunks, i)
 		x6, i     = getVector(chunks, i)
 		return i
 	def setLoft(self, chunks, index, inventor):
-		ls1, i = readLofSection(chunks, index, self.version)
-		ls2, i = readLofSection(chunks, i, self.version)
+		ls1, i = readLofSection(chunks, index)
+		ls2, i = readLofSection(chunks, i)
 
 		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		r2, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		clsr1, i = getClosure(chunks, i)
 		clsr2, i = getClosure(chunks, i)
-		sng1, i = getSingularity(chunks, i, self.version)
-		sng2, i = getSingularity(chunks, i, self.version)
+		sng1, i = getSingularity(chunks, i)
+		sng2, i = getSingularity(chunks, i)
 		# 1|2, 0?, 0, nubs
 		b, i = getInteger(chunks, i)
 		while (not chunks[i+1].tag in (0x07, 0x0D, 0x0E)):
@@ -2308,22 +2307,22 @@ class SurfaceSpline(Surface):
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setNet(self, chunks, index, inventor):
-		ls1, i = readLofSection(chunks, index, self.version)
-		ls2, i = readLofSection(chunks, i, self.version)
+		ls1, i = readLofSection(chunks, index)
+		ls2, i = readLofSection(chunks, i)
 		a1, i = getFloats(chunks, i, 12)
 		a2, i = getInteger(chunks, i)
 		v1, i = getVector(chunks, i)
 		v2, i = getVector(chunks, i)
 		v3, i = getVector(chunks, i)
 		v4, i = getVector(chunks, i)
-		frml1, i = readFormula(chunks, i, self.version)
-		frml2, i = readFormula(chunks, i, self.version)
-		frml3, i = readFormula(chunks, i, self.version)
-		frml4, i = readFormula(chunks, i, self.version)
+		frml1, i = readFormula(chunks, i)
+		frml2, i = readFormula(chunks, i)
+		frml3, i = readFormula(chunks, i)
+		frml4, i = readFormula(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setOffset(self, chunks, index, inventor):
-		self.surface, i = readSurface(chunks, index, self.version)
+		self.surface, i = readSurface(chunks, index)
 		f1, i = getFloat(chunks, i)
 		senseU, i = getSense(chunks, i)
 		senseV, i = getSense(chunks, i)
@@ -2334,11 +2333,11 @@ class SurfaceSpline(Surface):
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setOrtho(self, chunks, index, inventor):
-		self.surface, i = readSurface(chunks, index, self.version)
-		curve, i = readCurve(chunks, i, self.version)
-		p1, i = readBS2Curve(chunks, i, self.version)
+		self.surface, i = readSurface(chunks, index)
+		curve, i = readCurve(chunks, i)
+		p1, i = readBS2Curve(chunks, i)
 		i += 1 # float=1.0
-		singularity, i = getSingularity(chunks, i, self.version)
+		singularity, i = getSingularity(chunks, i)
 		if (singularity == 'full'):
 			nubs, i = readBS3Surface(chunks, i)
 			self.shape = createBSplinesSurface(nubs)
@@ -2357,11 +2356,11 @@ class SurfaceSpline(Surface):
 		return i
 	def setRbBlend(self, chunks, index, inventor):
 		i = index
-		rb1, i = readRbBlend(chunks, i, self.version, inventor)
-		rb2, i = readRbBlend(chunks, i, self.version, inventor)
+		rb1, i = readRbBlend(chunks, i, inventor)
+		rb2, i = readRbBlend(chunks, i, inventor)
 
 		# read remaining data
-		c3, i = readCurve(chunks, i, self.version)
+		c3, i = readCurve(chunks, i)
 		a1, i = getFloats(chunks, i, 2)
 		i += 1 # no_radius,  -1
 		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
@@ -2375,7 +2374,7 @@ class SurfaceSpline(Surface):
 			a9, i = getFloatArray(chunks, i)
 		return i
 	def setRotation(self, chunks, index, inventor):
-		profile, i = readCurve(chunks, index, self.version)
+		profile, i = readCurve(chunks, index)
 		loc, i     = getLocation(chunks, i)
 		dir, i     = getVector(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
@@ -2387,7 +2386,7 @@ class SurfaceSpline(Surface):
 		dir, i  = getSurfDir(chunks, i)
 		n, i  = getInteger(chunks, i)
 		for k in range(0, n):
-			skin, i = readSkin(chunks, i, self.version, inventor)
+			skin, i = readSkin(chunks, i, inventor)
 			skins.append(skin)
 		n, i  = getInteger(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
@@ -2399,14 +2398,14 @@ class SurfaceSpline(Surface):
 		# CLOSURE_E = {CLOSURE_UNSET, }
 		# SINGULARITY_E = {'SINGULARITY_UNKNOWN', }
 		i = index
-		if (self.version > 16.0): # ??? correct ???
+		if (getVersion() > 16.0): # ??? correct ???
 			txt, i = getText(chunks, i)
 		sw1, i = getSurfSweep(chunks, i)
-		c1, i = readCurve(chunks, i, self.version) # prfile[0]
-		c2, i = readCurve(chunks, i, self.version) # sweep-path
+		c1, i = readCurve(chunks, i) # prfile[0]
+		c2, i = readCurve(chunks, i) # sweep-path
 		sw2, i = getSurfSweep(chunks, i)
 		v1, i = getVector(chunks, i)
-		if (self.version > 16.0):
+		if (getVersion() > 16.0):
 			i += 1 # skip rigid/non-rigid
 		v2, i = getVector(chunks, i)
 		v3, i = getVector(chunks, i)
@@ -2417,15 +2416,15 @@ class SurfaceSpline(Surface):
 			a1, i = getFloats(chunks, i, 4) # -8.0, 0.0, 0.0, -0.559
 		else:
 			a1, i = getFloats(chunks, i, 1) # 0.0
-		frm1l, i = readFormula(chunks, i, self.version)
-		frm12, i = readFormula(chunks, i, self.version)
-		frm13, i = readFormula(chunks, i, self.version)
+		frm1l, i = readFormula(chunks, i)
+		frm12, i = readFormula(chunks, i)
+		frm13, i = readFormula(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setSweepSpline(self, chunks, index, inventor):
 		sw1, i = getSurfSweep(chunks, index)
 		n1, i  = getInteger(chunks, i)
-		c1, i  = readCurve(chunks, i, self.version)
+		c1, i  = readCurve(chunks, i)
 		r1, i  = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		e0, i  = getEnum(chunks, i)
 		v1, i  = getVector(chunks, i)
@@ -2438,63 +2437,63 @@ class SurfaceSpline(Surface):
 		except:
 			pass
 		if (n1 == -2):
-			frml1, i = readFormula(chunks, i, self.version)
+			frml1, i = readFormula(chunks, i)
 			r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			v1, i = getVector(chunks, i)
 			n2, i = getInteger(chunks, i)
 			e1, i = getEnum(chunks, i)
-			c2, i = readCurve(chunks, i, self.version)
+			c2, i = readCurve(chunks, i)
 			r2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			n3, i = getInteger(chunks, i)
 			e2, i = getEnum(chunks, i)
-			frml2, i = readFormula(chunks, i, self.version)
-			frml3, i = readFormula(chunks, i, self.version)
+			frml2, i = readFormula(chunks, i)
+			frml3, i = readFormula(chunks, i)
 			e7, i = getEnum(chunks, i)
 		elif (n1 == -1):
 			n2, i = getInteger(chunks, i)	  # 2, 3
 			e1, i = getEnum(chunks, i)	      # 0x0B
-			c2, i = readCurve(chunks, i, self.version)
+			c2, i = readCurve(chunks, i)
 			r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			n3, i = getFloat(chunks, i)     # 0
 			e2, i = getEnum(chunks, i)	      # 0x0B
 			if (chunks[i].tag == 0x0A):
 				i += 1
-				c2, i = readCurve(chunks, i, self.version)
+				c2, i = readCurve(chunks, i)
 				r2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			else:
 				try:
-					c2, i = readSurface(chunks, i, self.version) # 3, hB, 0, hB
+					c2, i = readSurface(chunks, i) # 3, hB, 0, hB
 					try:
 						r2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 					except:
 						# 0A PCurve 0B
 						e4, i = getEnum(chunks, i)
-						pc2, i = readCurve(chunks, i, self.version)
+						pc2, i = readCurve(chunks, i)
 						e5, i = getEnum(chunks, i)
 				except: # dirty hack!!!
-					frml1, i = readFormula(chunks, i, self.version)
+					frml1, i = readFormula(chunks, i)
 					e3, i = getEnum(chunks, i)
 
 		elif (n1 == 1):
 			n2, i  = getInteger(chunks, i)
 			e1, i  = getEnum(chunks, i)
-			c2, i  = readCurve(chunks, i, self.version)
+			c2, i  = readCurve(chunks, i)
 			r2, i  = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 			f3, i  = getFloat(chunks, i)
 			e2, i  = getEnum(chunks, i)
 			if (n2 == 2):
 				e3, i = getEnum(chunks, i)
-				c3, i = readCurve(chunks, i, self.version)
+				c3, i = readCurve(chunks, i)
 				r3, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 				a1, i = getIntegers(chunks, i, 2)
 				a2, i = getFloats(chunks, i, 6)
 			elif (n2 == 3):
-				s1, i = readSurface(chunks, i, self.version)
+				s1, i = readSurface(chunks, i)
 			else:
 				raise Exception()
 			e4, i = getEnum(chunks, i)
 			if (e4 == 0x0A):
-				c4, i = readCurve(chunks, i, self.version)
+				c4, i = readCurve(chunks, i)
 			else:
 				e5, i = getEnum(chunks, i)
 			e6, i = getEnum(chunks, i)
@@ -2509,7 +2508,7 @@ class SurfaceSpline(Surface):
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setScaleClft(self, chunks, index, inventor):
-		singularity, i = getSingularity(chunks, index, self.version)
+		singularity, i = getSingularity(chunks, index)
 		if (singularity == 'full'):
 			spline, i = readBS3Surface(chunks, i)
 			tol, i = getFloat(chunks, i)
@@ -2520,9 +2519,9 @@ class SurfaceSpline(Surface):
 			a12, i = getFloatArray(chunks, i)
 		arr, i  = readArrayFloats(chunks, i, inventor)
 
-		l1, i = readScaleClLoft(chunks, i, self.version)
-		l2, i = readScaleClLoft(chunks, i, self.version)
-		l2, i = readScaleClLoft(chunks, i, self.version)
+		l1, i = readScaleClLoft(chunks, i)
+		l2, i = readScaleClLoft(chunks, i)
+		l2, i = readScaleClLoft(chunks, i)
 
 		e1, i = getEnum(chunks, i)
 		e2, i = getEnum(chunks, i)
@@ -2544,15 +2543,15 @@ class SurfaceSpline(Surface):
 		p3, i = readBS3Curve(chunks, i)
 		return i
 	def setSum(self, chunks, index, inventor):
-		c1, i = readCurve(chunks, index, self.version)
-		c2, i = readCurve(chunks, i, self.version)
+		c1, i = readCurve(chunks, index)
+		c2, i = readCurve(chunks, i)
 		vec, i = getVector(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setShadowTpr(self, chunks, index, inventor):
-		self.surface, i = readSurface(chunks, index, self.version)
-		c1, i = readCurve(chunks, i, self.version)
-		c2, i = readBS2Curve(chunks, i, self.version)
+		self.surface, i = readSurface(chunks, index)
+		c1, i = readCurve(chunks, i)
+		c2, i = readBS2Curve(chunks, i)
 		f1, i = getFloat(chunks, i)
 		i1, i = getInteger(chunks, i) #0
 		if (i1 == 0):
@@ -2586,14 +2585,14 @@ class SurfaceSpline(Surface):
 		arr  = []
 		for j in range(0, n):
 			vbl = VBL()
-			i = vbl.read(chunks, i, self.version, inventor)
+			i = vbl.read(chunks, i, inventor)
 			arr.append(vbl)
 		a1, i = getFloats(chunks, i, 2) # int, float
 		return i
 	def setRuledTpr(self, chunks, index, inventor):
-		surf, i = readSurface(chunks, index, self.version)
-		curv, i = readCurve(chunks, i, self.version)
-		bs2curf, i = readBS2Curve(chunks, i, self.version)
+		surf, i = readSurface(chunks, index)
+		curv, i = readCurve(chunks, i)
+		bs2curf, i = readBS2Curve(chunks, i)
 		f1, i = getFloat(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		vec, i = getVector(chunks, i)
@@ -2602,9 +2601,9 @@ class SurfaceSpline(Surface):
 		f4, i = getFloat(chunks, i)
 		return i
 	def setSweptTpr(self, chunks, index, inventor):
-		surf, i = readSurface(chunks, index, self.version)
-		curv, i = readCurve(chunks, i, self.version)
-		bs2curf, i = readBS2Curve(chunks, i, self.version)
+		surf, i = readSurface(chunks, index)
+		curv, i = readCurve(chunks, i)
+		bs2curf, i = readBS2Curve(chunks, i)
 		f1, i = getFloat(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		vec, i = getVector(chunks, i)
@@ -2669,8 +2668,8 @@ class SurfaceSpline(Surface):
 		self.rangeU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		self.rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
-	def set(self, entity, version):
-		i = super(SurfaceSpline, self).set(entity, version)
+	def set(self, entity):
+		i = super(SurfaceSpline, self).set(entity)
 		i = self.setSubtype(entity.chunks, i)
 		return i
 	def build(self):
@@ -2713,8 +2712,8 @@ class SurfaceTorus(Surface):
 		self.urange, i   = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		self.vrange, i   = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		return i
-	def set(self, entity, version):
-		i = super(SurfaceTorus, self).set(entity, version)
+	def set(self, entity):
+		i = super(SurfaceTorus, self).set(entity)
 		i = self.setSubtype(entity.chunks, i)
 		return i
 	def build(self):
@@ -2736,8 +2735,8 @@ class Point(Geometry):
 		super(Point, self).__init__()
 		self.position = CENTER
 		self.count    = -1 # Number of references
-	def set(self, entity, version):
-		i = super(Point, self).set(entity, version)
+	def set(self, entity):
+		i = super(Point, self).set(entity)
 		self.position, i = getLocation(entity.chunks, i)
 		return i
 
@@ -2748,12 +2747,12 @@ class Attributes(Entity):
 		self._next     = None
 		self._previous = None
 		self._owner    = None
-	def set(self, entity, version):
-		i = super(Attributes, self).set(entity, version)
+	def set(self, entity):
+		i = super(Attributes, self).set(entity)
 		self._next, i     = getRefNode(entity, i, 'attrib')
 		self._previous, i = getRefNode(entity, i, 'attrib')
 		self._owner, i    = getRefNode(entity, i, None)
-		if (version > 15.0):
+		if (getVersion() > 15.0):
 			i += 17 # skip ???
 		return i
 	def getNext(self):     return None if (self._next is None)     else self._next.node
@@ -2761,13 +2760,13 @@ class Attributes(Entity):
 	def getOwner(self):    return None if (self._owner is None)    else self._owner.node
 class Attrib(Attributes):
 	def __init__(self): super(Attrib, self).__init__()
-	def set(self, entity, version): return super(Attrib, self).set(entity, version)
+	def set(self, entity): return super(Attrib, self).set(entity)
 class AttribADesk(Attrib):
 	def __init__(self): super(AttribADesk, self).__init__()
 class AttribADeskColor(AttribADesk):
 	def __init__(self): super(AttribADeskColor, self).__init__()
-	def set(self, entity, version):
-		i = super(Attrib, self).set(entity, version)
+	def set(self, entity):
+		i = super(Attrib, self).set(entity)
 		self.color, i = getText(entity.chunks, i)
 		return i
 class AttribAnsoft(Attrib):
@@ -2796,9 +2795,9 @@ class AttribGenName(AttribGen):
 	def __init__(self):
 		super(AttribGenName, self).__init__()
 		self.text = ''
-	def set(self, entity, version):
-		i = super(AttribGenName, self).set(entity, version)
-		if (self.version < 16.0):
+	def set(self, entity):
+		i = super(AttribGenName, self).set(entity)
+		if (getVersion() < 16.0):
 			i += 4 # [(keep|copy) , (keep_keep), (ignore), (copy)]
 		self.text, i = getText(entity.chunks, i)
 		return i
@@ -2806,9 +2805,9 @@ class AttribGenNameInteger(AttribGenName):
 	def __init__(self):
 		super(AttribGenNameInteger, self).__init__()
 		self.value = 0
-	def set(self, entity, version):
-		i = super(AttribGenNameInteger, self).set(entity, version)
-		if (version > 10):
+	def set(self, entity):
+		i = super(AttribGenNameInteger, self).set(entity)
+		if (getVersion() > 10):
 			self.name, i  = getText(entity.chunks, i)
 		self.value, i = getInteger(entity.chunks, i)
 		return i
@@ -2816,8 +2815,8 @@ class AttribGenNameString(AttribGenName):
 	def __init__(self):
 		super(AttribGenNameString, self).__init__()
 		self.value = ''
-	def set(self, entity, version):
-		i = super(AttribGenNameString, self).set(entity, version)
+	def set(self, entity):
+		i = super(AttribGenNameString, self).set(entity)
 		self.value, i = getText(entity.chunks, i)
 		return i
 class AttribRfBase(Attrib):
@@ -2844,16 +2843,16 @@ class AttribStRgbColor(AttribSt):
 	def __init__(self):
 		super(AttribStRgbColor, self).__init__()
 		self.color = (0.5, 0.5, 0.5)
-	def set(self, entity, version):
-		i = super(AttribStRgbColor, self).set(entity, version)
+	def set(self, entity):
+		i = super(AttribStRgbColor, self).set(entity)
 		self.color, i = getPoint(entity.chunks, i)
 		return i
 class AttribStDisplay(AttribSt):
 	def __init__(self):
 		super(AttribStRgbColor, self).__init__()
 		self.revision = 0
-	def set(self, entity, version):
-		i = super(AttribStRgbColor, self).set(entity, version)
+	def set(self, entity):
+		i = super(AttribStRgbColor, self).set(entity)
 		self.revision, i = getInteger(entity.chunks, i)
 		return i
 class AttribSys(Attrib):
