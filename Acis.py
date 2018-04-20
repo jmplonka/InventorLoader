@@ -341,8 +341,10 @@ def getUnknownFT(chunks, index):
 	if (getVersion() > 7.0):
 		val, i = getValue(chunks, i)
 		if (val == 'T'):
-			arr, i = getFloats(chunks, i, 7)
-	return val, i
+			arr, i = getFloats(chunks, i, 6)
+			val2, i = getValue(chunks, i)
+			return (val, arr, val2), i
+	return (val, [], 'F'), i
 
 def getRange(chunks, index, default, scale):
 	type, i = getEnumByTag(chunks, index, RANGE)
@@ -431,8 +433,8 @@ def getClosureSurface(chunks, index):
 	if (closureU in ('open', 'closed', 'periodic')):
 		# open none none 2 2
 		closureV, i = getClosure(chunks, i)
-		singularityU, i = getSingularity(chunks, i)
-		singularityV, i = getSingularity(chunks, i)
+		singularityU, i = getEnumByValue(chunks, i, SINGULARITY)
+		singularityV, i = getEnumByValue(chunks, i, SINGULARITY)
 		knotsU, i = getInteger(chunks, i)
 		knotsV, i = getInteger(chunks, i)
 		return closureU, closureV, singularityU, singularityV, knotsU, knotsV, i
@@ -464,10 +466,11 @@ def readPoints2DList(nubs, count, chunks, index):
 	nubs.poles   = [None for r in range(0, us)]
 	nubs.weights = [1 for r in range(0, us)] if (nubs.rational) else None
 
-	for u in range(0, us):
-		p, i  = getFloats(chunks, i, 2) # u, v
-		nubs.poles[u] = V2D(p[0] * getScale(), p[1] * getScale())
-		if (nubs.rational): nubs.weights[u], i = getFloat(chunks, i)
+	for k in range(0, us):
+		u, i  = getLength(chunks, i)
+		v, i  = getLength(chunks, i)
+		nubs.poles[k] = V2D(u, v)
+		if (nubs.rational): nubs.weights[k], i = getFloat(chunks, i)
 
 	nubs.uKnots, nubs.uMults, nubs.uPeriodic = adjustMultsKnots(nubs.uKnots, nubs.uMults, nubs.uPeriodic, nubs.uDegree)
 
@@ -600,7 +603,7 @@ def readArrayFloats(chunks, index, inventor):
 	a4, i = getFloatArray(chunks, i)
 	a5, i = getFloatArray(chunks, i)
 	a6, i = getFloatArray(chunks, i)
-	if (inventor):
+	if (inventor and chunks[i].tag in (0x0A, 0x0B)):
 		e, i = getEnum(chunks, i)
 	else:
 		e = 0x0B
@@ -879,16 +882,21 @@ def readSplineSurface(chunks, index, tolerance):
 		singularityU, i = getSingularity(chunks, i)
 		singularityV, i = getSingularity(chunks, i)
 		return None, (a11, a12, f, closureU, closureV, singularityU, singularityV), i
+	elif (singularity == 4): # TODO what the heck is this???
+		rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+		rV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+		closureU, i = getClosure(chunks, i)
+		closureV, i = getClosure(chunks, i)
+		singularityU, i = getSingularity(chunks, i)
+		singularityV, i = getSingularity(chunks, i)
+		return None, (rU, rV, closureU, closureV, singularityU, singularityV), i
+
 	raise Exception("Unknown spline singularity '%s'" %(singularity))
 
-def readLoftData(chunks, index):
-	ld = LoftData()
-	ld.surface, i = readSurface(chunks, index)
-	ld.bs2cur, i  = readBS2Curve(chunks, i)
-	ld.e1, i      = getEnum(chunks, i)
-	ld.type, i    = getInteger(chunks, i)
-	ld.n, i       = getInteger(chunks, i)
-	ld.m, i       = getInteger(chunks, i)
+def readLofSubdata(chunks, i):
+	type, i    = getInteger(chunks, i)
+	n, i       = getInteger(chunks, i)
+	m, i       = getInteger(chunks, i)
 	# 0x0B 213 1 0 (0.0, 1.0 0.0, 1.0                                                  0x0B
 	# 0x0B 212 1 0 (0.0, 1.0 0.0, 2.34107                                              0x0B
 	# 0x0B 213 1 1 (0.0, 0.5 0.5, 0.75     0.5      0.5                                0x0B
@@ -896,20 +904,30 @@ def readLoftData(chunks, index):
 	# 0x0B 212 1 2 (0.0, 1.0 0.0, 1.0      1.0      1.0      0.0 0.0                   0x0B
 	# 0x0B 213 2 1 (0.0, 0.5 0.0, 0.5      1.0 1.0  0.5      1.0  0.5      1.0 1.0 1.0 0x0B
 	# 0x0B 211 0 0 ()                                             2*PI, 0, 0, 1, 0x0B
-	if (ld.type == 211):
+	v = []
+	if (type == 211):
 		a, i = getFloats(chunks, i, 2)
 		b, i = getFloats(chunks, i, 2)
-		ld.v.append((a, b, None))
+		v.append((a, b, None))
 	else:
-		for k in range(0, ld.n):
+		for k in range(0, n):
 			a, i =  getFloats(chunks, i , 2)
 			b, i =  getFloats(chunks, i , 2)
 			p = []
-			for l in range(0, ld.m):
+			for l in range(0, m):
 				c, i = getFloats(chunks, i, 2)
 				p.append(c)
-			ld.v.append((a, b, p))
-	ld.e2, i  = getEnum(chunks, i)
+			v.append((a, b, p))
+	return (type, n, m, v), i
+
+def readLoftData(chunks, index):
+	ld = LoftData()
+	ld.surface, i = readSurface(chunks, index)
+	ld.bs2cur, i  = readBS2Curve(chunks, i)
+	ld.e1, i      = getEnum(chunks, i)
+	subdata, i    = readLofSubdata(chunks, i)
+	(ld.type, n, m, v) = subdata
+	ld.e2, i      = getEnum(chunks, i)
 	if (ld.e2 == 0x0A):
 		ld.dir, i = getVector(chunks, i)
 	return ld, i
@@ -959,19 +977,33 @@ def readScaleClLoft(chunks, index):
 		## fixme!
 		return None, index
 	cur, i = readCurve(chunks, i)
-	arr, i = getIntegers(chunks, i, 3)
-	return (lofts, cur, arr), i
+	n, i = getInteger(chunks, i) # 1
+	bs3 = []
+	for k in range(0, n):
+		bs3c, i = readBS3Curve(chunks, i)
+		bs3.append(bs3c)
+	arr, i = getIntegers(chunks, i, 2) # BS3_CURVE,
+	return (lofts, cur, bs3, arr), i
 
 def readSkin(chunks, index, inventor):
 	skin = Skin()
 	skin.a1, i   = getIntegers(chunks, index, 4)
 	skin.f1, i   = getFloat(chunks, i)
 	if (inventor):
-		i += 2 # 1, 1
-		skin.cur, i = readCurve(chunks, i)
-		skin.loft, i = readLoftData(chunks, i)
-		skin.cur2, i  = readCurve(chunks, i)
-		i += 2 # 0, -1
+		n, i = getInteger(chunks, i)
+		if (not chunks[i].tag in (0x07, 0x0D, 0x0E)):
+			for k in range(0, n):
+				i += 1
+				skin.cur, i = readCurve(chunks, i)
+				skin.loft, i = readLoftData(chunks, i)
+			skin.cur2, i  = readCurve(chunks, i)
+			i += 2 # 0, -1
+		else:
+			skin.cur, i = readCurve(chunks, i)
+			skin.loft, i = readLofSubdata(chunks, i)
+			i += 1
+			skin.cur2, i  = readCurve(chunks, i)
+			i += 1
 		skin.vec, i  = getVector(chunks, i)
 	else:
 		skin.cur, i  = readCurve(chunks, i)
@@ -1644,7 +1676,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.singularity, i = getSingularity(chunks, index)
 		if (self.singularity == 'full'):
 			nubs, i = readBS3Curve(chunks, i)
-			self.tolerance, i = getFloat(chunks, i)
+			self.tolerance, i = getLength(chunks, i)
 			self.shape = createBSplinesCurve(nubs, self.sens)
 		elif (self.singularity == 'none'):
 			self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -1658,8 +1690,10 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			fac, i  = getFloat(chunks, i)
 			clsr, i = getClosure(chunks, i)
 		elif (self.singularity == 'v'):
-			arr, i = getFloatArray(chunks, i)
-			f1, i = getFloat(chunks, i)
+			nubs = BS3_Curve(False, False, 3)
+			nubs.uKnots, i = getFloatArray(chunks, i) # nubs 3 0 n
+			nubs.uMults = [3] * len(nubs.uKnots)
+			self.tolerance, i = getLength(chunks, i)
 			f2, i = getFloat(chunks, i)
 		else:
 			raise Exception("Unknwon Surface-singularity '%s'" %(self.singularity))
@@ -2235,7 +2269,19 @@ class SurfaceSpline(Surface):
 		p11, i = readBS2Curve(chunks, i)
 		v11, i = getVector(chunks, i)
 		p12, i = readBS2Curve(chunks, i)
-		s12, tol11, i = readSplineSurface(chunks, i, True)
+		singularity, i = getSingularity(chunks, i)
+		if (singularity == 'full'):
+			s12, i = readBS3Surface(chunks, i)
+			if (s12):
+				tol11, i = getLength(chunks, i)
+		elif (singularity == 'none'):
+			s12, i = getFloats(chunks, i, 9)
+			tol11, i = getLength(chunks, i)
+			if (not chunks[i].tag in (0x07, 0x0D, 0x0E)):
+				i += 1 # newer Inventor versions (>2017
+			p13, i = readBS2Curve(chunks, i)
+		else:
+			raise AssertionError("wrong singularity %s" %(singularity))
 
 		t21, i = getValue(chunks, i)
 		s21, i = readSurface(chunks, i)
@@ -2511,7 +2557,8 @@ class SurfaceSpline(Surface):
 		singularity, i = getSingularity(chunks, index)
 		if (singularity == 'full'):
 			spline, i = readBS3Surface(chunks, i)
-			tol, i = getFloat(chunks, i)
+			self.shape = createBSplinesSurface(spline)
+			tol, i = getLength(chunks, i)
 		elif (singularity == 'none'):
 			r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			r2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -2519,27 +2566,40 @@ class SurfaceSpline(Surface):
 			a12, i = getFloatArray(chunks, i)
 		arr, i  = readArrayFloats(chunks, i, inventor)
 
-		l1, i = readScaleClLoft(chunks, i)
-		l2, i = readScaleClLoft(chunks, i)
-		l2, i = readScaleClLoft(chunks, i)
+		l1, i = readScaleClLoft(chunks, i) # ([1], None, [0], (-1, 2))
+		l2, i = readScaleClLoft(chunks, i) # ([1], None, [0], ( 1, 0))
+		l3, i = readScaleClLoft(chunks, i) # ([4], None, [0], ( 1, 1))
 
-		e1, i = getEnum(chunks, i)
-		e2, i = getEnum(chunks, i)
-		i1, i = getInteger(chunks, i)
+		e1, i = getEnum(chunks, i)    # 0x0B
+		e2, i = getEnum(chunks, i)    # 0x0B
+		i1, i = getInteger(chunks, i) # 0
 
-		e3, i = getEnum(chunks, i)
 		e4, i = getEnum(chunks, i)
-		i2, i = getInteger(chunks, i)
-		if (i2 == 1):
-			p1, i = readBS3Curve(chunks, i)
-		elif (i2 == 0):
-			p1, i = getVector(chunks, i)
-		e5, i = getEnum(chunks, i)
-		e6, i = getEnum(chunks, i)
-		i3, i = getInteger(chunks, i)
+		if (e4 == 0x0A):
+			l4, i = readScaleClLoft(chunks, i)
+			e5, i = getEnum(chunks, i)
+			if (e5 == 0x0A):
+				l5, i = readScaleClLoft(chunks, i)
+				i2, i = getInteger(chunks, i) # 0
+				p1, i = getVector(chunks, i)
+			else:
+				e4, i = getEnum(chunks, i)
+				i1, i = getInteger(chunks, i)
+				l5, i = readBS3Curve(chunks, i)
+		else:
+			e4, i = getEnum(chunks, i) # 0x0B
+			i1, i = getInteger(chunks, i)
+			if (i1 == 0):
+				l5, i = getVector(chunks, i)
+			else:
+				l5, i = readBS3Curve(chunks, i)
+
+		e5, i = getEnum(chunks, i)    # 0x0B
+		e6, i = getEnum(chunks, i)    # 0x0B
+		i3, i = getInteger(chunks, i) # 2
 		v1, i = getVector(chunks, i)
 		v2, i = getVector(chunks, i)
-		i4, i = getInteger(chunks, i)
+		i4, i = getInteger(chunks, i) # 11
 		p3, i = readBS3Curve(chunks, i)
 		return i
 	def setSum(self, chunks, index, inventor):
@@ -2550,25 +2610,14 @@ class SurfaceSpline(Surface):
 		return i
 	def setShadowTpr(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index)
-		c1, i = readCurve(chunks, i)
-		c2, i = readBS2Curve(chunks, i)
-		f1, i = getFloat(chunks, i)
-		i1, i = getInteger(chunks, i) #0
-		if (i1 == 0):
-			s2, i = readBS3Surface(chunks, i)
-			f2, i = getFloat(chunks, i)
-		if (i1 == 1):
-			a00, i = getFloatArray(chunks, i)
-			a01, i = getFloatArray(chunks, i)
-			f2, i = getFloat(chunks, i)
-			i2, i = getInteger(chunks, i) #0
-			i3, i = getInteger(chunks, i) #0
-			i4, i = getInteger(chunks, i) #0
-			i5, i = getInteger(chunks, i) #0
-		arr, i = readArrayFloats(chunks, i, inventor)
-		v1, i = getVector(chunks, i)
-		u, i = getFloat(chunks, i)
-		v, i = getFloat(chunks, i)
+		c1, i     = readCurve(chunks, i)
+		c2, i     = readBS2Curve(chunks, i)
+		f1, i     = getFloat(chunks, i)
+		s1, t1, i = readSplineSurface(chunks, i, True)
+		arr, i    = readArrayFloats(chunks, i, inventor)
+		v1, i     = getVector(chunks, i)
+		u, i      = getFloat(chunks, i)
+		v, i      = getFloat(chunks, i)
 		return i
 	def setTSpline(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
