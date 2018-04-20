@@ -162,7 +162,7 @@ class Thumbnail(object):
 		return '%s: %d x %d' % (self.type, self.width, self.height)
 	def getIcon(self):
 		icon = QPixmap()
-		icon.loadFromData(QByteArray(self.data))
+		icon.loadFromData(QByteArray(self.getData()))
 		return icon
 
 _thumbnail = None
