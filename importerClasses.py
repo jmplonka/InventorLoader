@@ -6,33 +6,13 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import sys
-from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion, setThumbnailData
+from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
 from math          import degrees, radians, pi
 from FreeCAD       import ParamGet
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
-
-def writeThumbnail(data):
-	folder = getInventorFile()[0:-4]
-	filename = folder + '/_.png'
-	# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
-	buffer = data[0x10:]
-	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumpnails', False)):
-		with open(filename, 'wb') as thumbnail:
-			thumbnail.write(buffer)
-		filename = folder + '/_.log'
-		with open(filename, 'wb') as thumbnail:
-			# skip thumbnail class header (-1, -1, 03, 00, 08, width, height, 00)
-			arr, i = getUInt16A(data, 0, 8)
-			thumbnail.write(IntArr2Str(arr, 2))
-	thmb = Thumbnail()
-	thmb.width, i = getUInt16(data, 10)
-	thmb.height, i = getUInt16(data, i)
-	thmb.type = 'PNG' if (buffer[1:4] == 'PNG') else 'RAW'
-	setThumbnailData(buffer)
-	return thmb
 
 class UFRxDocument():
 	def __init__(self):
@@ -417,16 +397,6 @@ class RSeDbRevisionInfo():
 			return '%s,%s,[%s]' % (self.ID, v, IntArr2Str(self.data, 8))
 		else:
 			return '%s,%s)' % (self.ID, v)
-
-class Thumbnail():
-	def __init__(self):
-		self.type        = 'PNG'
-		self.width       = 0
-		self.height      = 0
-		self.data        = None
-
-	def __str__(self):
-		return '%s: %d x %d' % (self.type, self.width, self.height)
 
 class BrowserNodeHandler():
 	def __init__(self):

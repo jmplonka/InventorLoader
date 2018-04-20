@@ -5,11 +5,11 @@ importerUtils.py:
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys, datetime, FreeCAD, FreeCADGui, numpy
+import os, sys, datetime, FreeCAD, FreeCADGui, numpy
 from PySide.QtCore import *
 from PySide.QtGui  import *
 from uuid          import UUID
-from struct        import Struct, unpack_from
+from struct        import Struct, unpack_from, pack
 from FreeCAD       import Vector as VEC, Console, GuiUp, ParamGet
 
 __author__     = 'Jens M. Plonka'
@@ -67,7 +67,6 @@ _dumpLineLength  = 0x20
 _fileVersion     = None
 _can_import      = True
 _use_sheet_metal = True
-_thumbnailData   = None
 
 # The file the be imported
 _inventor_file = None
@@ -92,21 +91,12 @@ def chooseImportStrategy():
 	btnSat   = QPushButton('&SAT')
 	btnNativ = QPushButton('&nativ')
 	msgBox   = QMessageBox()
-	data = getThumbnailData()
+	thmnl    = getThumbnailImage()
 	msgBox.setIcon(QMessageBox.Question)
-	if (data is not None):
-		if (data[1:4] == 'PNG'):
-			png = QPixmap()
-			png.loadFromData(data)
-		else:
-			# flip the image! as mirrored or scaled didn't work.
-			m = numpy.reshape(map(ord, list(data[0x63:-7])), (180, 180*3))
-			m = map(chr, m[::-1].reshape(1,-1)[0])
-			data = QByteArray("".join(m))
-			img = QImage(data, 180, 180, QImage.Format_RGB888)
-			png = QPixmap(img)
-		msgBox.setIconPixmap(png)
-
+	if (thmnl is not None):
+		icon = thmnl.getIcon()
+		if (icon):
+			msgBox.setIconPixmap(icon)
 	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
 	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
 	msgBox.addButton(btnSat, QMessageBox.YesRole)
@@ -139,14 +129,62 @@ def useSheetMetal():
 	global _use_sheet_metal
 	return _use_sheet_metal
 
-def setThumbnailData(data):
-	from PySide.QtCore import QByteArray
-	global _thumbnailData
-	_thumbnailData = QByteArray(data)
+class Thumbnail(object):
+	def __init__(self, data):
+		self.setData(data)
+	def getData(self):
+		return self._data
+	def setData(self, data):
+		# skip thumbnail class header (-1, -1, 3, 0, bpp, width, height, 0)
+		buffer = data[0x10:]
+		self.width, i = getUInt16(data, 0x0A)
+		self.height, i = getUInt16(data, i)
 
-def getThumbnailData():
-	global _thumbnailData
-	return _thumbnailData
+		if (buffer[0x1:0x4] == 'PNG'):
+			self.type = 'PNG'
+			self.data_ = buffer
+		else: # it's old BMP => rebuild header
+			self.type = 'BMP'
+			fmt, dummy = getUInt32(buffer, 0x12)
+			if (fmt == 3):
+				offset = 0x50
+			elif (fmt == 5):
+				offset = 0x4C
+			else:
+				raise AssertionError("Unkown thumbnail format %d" %(fmt))
+			size, dummy = getUInt32(data, offset + 20)
+			buffer = 'BM' + pack('LLL', size + 0x36, 0, 0x36)
+			buffer += data[offset:]
+		self._data = buffer
+	def length(self):
+		return len(self.data)
+	def __str__(self):
+		return '%s: %d x %d' % (self.type, self.width, self.height)
+	def getIcon(self):
+		icon = QPixmap()
+		icon.loadFromData(QByteArray(self.data))
+		return icon
+
+_thumbnail = None
+def writeThumbnail(data):
+	global _thumbnail
+	_thumbnail = Thumbnail(data)
+
+	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', False)):
+		filename = "%s/_.%s" %(getInventorFile()[0:-4], _thumbnail.type.lower())
+		with open(filename, 'wb') as thumbnail:
+			thumbnail.write(_thumbnail.getData())
+
+	return _thumbnail
+
+def getThumbnailImage():
+	global _thumbnail
+	return _thumbnail
+
+def setThumbnail(ole):
+	t = getProperty(ole, '\x05Zrxrt4arFafyu34gYa3l3ohgHg', 0x11)
+	if (t is not None):
+		writeThumbnail(t)
 
 class LOG():
 	LOG_DEBUG   = 1
@@ -619,11 +657,6 @@ def setFileVersion(ole):
 			_fileVersion = 2010
 	logMessage('Autodesk Inventor %s (Build %d) file' %(_fileVersion, b), LOG.LOG_ALWAYS)
 
-def setThumbnail(ole):
-	t = getProperty(ole, '\x05Zrxrt4arFafyu34gYa3l3ohgHg', 0x11)
-	if (t is not None):
-		setThumbnailData(t[0x10:])
-
 def getInventorFile():
 	global _inventor_file
 	return _inventor_file
@@ -631,6 +664,9 @@ def getInventorFile():
 def setInventorFile(file):
 	global _inventor_file
 	_inventor_file = file
+	folder   = _inventor_file[0:-4]
+	if (not os.path.exists(os.path.abspath(folder))):
+		os.mkdir(folder)
 
 def translate(str):
 	res = str.replace(u'Ä', 'Ae')
