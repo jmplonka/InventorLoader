@@ -3151,6 +3151,7 @@ TAG_READER = {
 	0x06: getFloat64,
 	0x07: readStr1,
 	0x08: readStr2,
+	0x09: readStr4,
 	0x0A: readTagA,
 	0x0B: readTagB,
 	0x0C: readEntityRef,
