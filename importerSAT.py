@@ -76,6 +76,9 @@ class Tokenizer():
 				pass
 		return tag, val
 
+def int2version(num):
+	return float("%d.%d" %(num / 100, num % 100))
+
 TokenTranslations = {
 	'0x0A':       0x0A,
 	'0x0B':       0x0B,
@@ -142,12 +145,12 @@ class Header():
 	def readText(self, file):
 		data   = file.readline()
 		tokens   = data.replace('\r', '').replace('\n', '').split(' ')
-		self.version = float(tokens[0]) / 100.0
+		self.version = int2version(int(tokens[0]))
 		self.records = int(tokens[1])
 		self.bodies  = int(tokens[2])
 		self.flags   = int(tokens[3])
 		logMessage("Reading ACIS file version %s" %(self.version), LOG.LOG_INFO)
-		if (self.version > 1.0):
+		if (self.version >= 2.0):
 			data = file.readline()
 			self.prodId, data = getNextText(data)
 			self.prodVer, data = getNextText(data)
@@ -166,17 +169,17 @@ class Header():
 		Acis.setVersion(self.version)
 		return
 	def readBinary(self, data):
-		tag, self.version, i = readChunkBinary(data, 0)
-		tag, self.records, i = readChunkBinary(data, i)
-		tag, self.bodies, i  = readChunkBinary(data, i)
-		tag, self.flags, i   = readChunkBinary(data, i)
-		tag, self.prodId, i  = readChunkBinary(data, i)
-		tag, self.prodVer, i = readChunkBinary(data, i)
-		tag, self.date, i    = readChunkBinary(data, i)
-		tag, self.scale, i   = readChunkBinary(data, i)
-		tag, self.resabs, i  = readChunkBinary(data, i)
-		tag, self.resnor, i  = readChunkBinary(data, i)
-		self.version /= 100.0
+		tag, self.version, i = readNextSabChunk(data, 0)
+		tag, self.records, i = readNextSabChunk(data, i)
+		tag, self.bodies, i  = readNextSabChunk(data, i)
+		tag, self.flags, i   = readNextSabChunk(data, i)
+		tag, self.prodId, i  = readNextSabChunk(data, i)
+		tag, self.prodVer, i = readNextSabChunk(data, i)
+		tag, self.date, i    = readNextSabChunk(data, i)
+		tag, self.scale, i   = readNextSabChunk(data, i)
+		tag, self.resabs, i  = readNextSabChunk(data, i)
+		tag, self.resnor, i  = readNextSabChunk(data, i)
+		self.version = int2version(self.version)
 		logMessage("    product: '%s'" %(self.prodId), LOG.LOG_INFO)
 		logMessage("    version: '%s'" %(self.prodVer), LOG.LOG_INFO)
 		logMessage("    date:    %s" %(self.date), LOG.LOG_INFO)
@@ -190,31 +193,26 @@ def getNextText(data):
 	remaining = m.group(2)[count+1:]
 	return text, remaining
 
-def readChunkBinary(data, index):
-	try:
-		return readNextSabChunk(data, index)
-	except Exception as e:
-		buf, dummy = getUInt8A(data, index, 64)
-		assert (False), "%04X: %s- [%s]" %(index, e, IntArr2Str(buf, 2))
-
 def readEntityBinary(data, index, end):
-	name = ""
-	i = index
-	entity = None
-	while (i < end):
-		tag, val, i = readChunkBinary(data, i)
+	names = []
+	eIndex = -1
+	tag, val, i = readNextSabChunk(data, index)
+	if (not tag in (0x0D, 0x0E)):
+		eIndex = val
+		tag, val, i = readNextSabChunk(data, i)
+	names.append(val)
+	while (tag != 0x0D):
+		tag, val, i = readNextSabChunk(data, i)
+		if (val == 'ASM'): val = 'ACIS'
+		names.append(val)
 
-		name += val if (val != "ASM") else "ACIS"
-
-		if (tag == 0x0D):
-			break
-		name += "-"
-
-	entity = AcisEntity(name)
-	if ((name != "End-of-ACIS-History-Section") and (name != 'End-of-ACIS-data')):
+	entity = AcisEntity("-".join(names))
+	entity.index = eIndex
+	if (not entity.name.startswith('End-of-')):
 		while ((tag != 0x11) and (i < end)):
-			tag, val, i = readChunkBinary(data, i)
+			tag, val, i = readNextSabChunk(data, i)
 			entity.add(tag, val)
+
 	return entity, i
 
 def readEntityText(tokenizer, index):
@@ -320,9 +318,7 @@ def buildWires(coedges, doc, root, name, transform):
 
 	if (len(edges) > 0):
 		logMessage("        ... %d edges!" %(len(edges)), LOG.LOG_INFO)
-		wires = [Part.Wire(cluster) for cluster in Part.getSortedClusters(edges)]
-		createBody(doc, root, name, wires[0].fuse(wires[1:]) if (len(wires) > 1) else wires[0], transform)
-
+		createBody(doc, root, name, edges[0].fuse(edges[1:]) if (len(edges) > 1) else edges[0], transform)
 	return
 
 def buildLump(root, doc, lump, transform):

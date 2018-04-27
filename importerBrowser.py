@@ -158,8 +158,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_1B16984A(self, node):
 		i = node.ReadUInt16A(0, 3, 'a0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 
@@ -238,8 +237,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadChildRef(i)
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i)
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		i = node.ReadParentRef(i)
 
 		return i

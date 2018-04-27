@@ -1378,13 +1378,13 @@ class FreeCADImporter:
 
 		a1 = ellipseNode.get('startAngle')
 		a2 = ellipseNode.get('sweepAngle')
-		if (isEqual1D(a1, b1)):
+		if (isEqual1D(a1, a2)):
 			logMessage("        ... added 3D-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) ..." %(c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z), LOG.LOG_DEBUG)
 		else:
 			a1 = Angle(a1, pi/180.0, u'\xb0')
 			a2 = Angle(a2, pi/180.0, u'\xb0')
 			logMessage("        ... added 3D-Arc-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) from %s to %s ..." %(c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z, a1, a2), LOG.LOG_DEBUG)
-			arc = Part.ArcOfEllipse(part, a.getGRAD(), b.getGRAD())
+			arc = Part.ArcOfEllipse(part, a1.getGRAD(), a2.getGRAD())
 			addSketch3D(edges, arc, isConstructionMode(ellipseNode), ellipseNode)
 		return
 
@@ -1883,7 +1883,6 @@ class FreeCADImporter:
 			obj3D = None
 			if (typ):
 				# Operation new (0x0001), cut/difference (0x002), join/union (0x003) intersection (0x0004) or surface(0x0005)
-				properties = extrudeNode.get('properties')
 				operation = getPropertyValue(properties, 0x00, 'value')
 				if (operation == FreeCADImporter.FX_EXTRUDE_NEW):
 					padGeo = self.Create_FxExtrude_New(extrudeNode, sectionNode, name)
@@ -2841,7 +2840,7 @@ class FreeCADImporter:
 			root = dc.tree.getFirstChild('Document')
 			label = root.get('label')
 			self.createParameterTable(root.get('refElements').node)
-			lst = label.get('lst0')
+			lst = label.get('lst0') or []
 			for ref in lst:
 				self.getEntity(ref)
 			if (self.doc):

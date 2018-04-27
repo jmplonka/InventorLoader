@@ -418,10 +418,10 @@ class SegmentReader(object):
 	def skipDumpRawData(self):
 		return False
 
-	def skipBlockSize(self, offset):
+	def skipBlockSize(self, offset, l = 4):
 		i = offset
 		if (self.fmt_old):
-			i += 4
+			i += l
 		return i
 
 	def dumpRawData(self, seg, data):
@@ -438,12 +438,10 @@ class SegmentReader(object):
 		# [2]	[STR_LEN] [STRING:PRODUCT] [STR_LEN] [STRING:PRODUCER] [STR_LEN] [STRING:DATE]
 		# [3]	[UNIT_LENGTH] [FAC_RES_ABS] [FAC_RES_NOR]
 		node.typeName = 'ASM'
-		l = len(node.data)
-		e = (l - 17) if (getFileVersion() > 2010) else (l - 25)
 		i = node.Read_Header0()
 		i = node.ReadUInt16A(i, 2, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 2, 'u32_1')
+		i = node.ReadUInt32(i, 'lenFooter')
 		txt, i = getText8(node.data, i, 15)
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
@@ -458,6 +456,8 @@ class SegmentReader(object):
 		index = 0
 		clearEntities()
 		entities = {}
+		l = len(data)
+		e = (l - 17) if (getFileVersion() > 2010) else (l - 25)
 		while (i < e):
 			entity, i = readEntityBinary(data, i, e)
 			entity.index = index
@@ -468,6 +468,7 @@ class SegmentReader(object):
 			if (entity.name == "End-of-ACIS-data"):
 				entity.index = -2
 				break
+		i = len(node.data) - node.get('lenFooter') + 0x18
 		i = self.skipBlockSize(i)
 		resolveEntityReferences(entities, lst)
 		node.set('SAT', [header, lst])

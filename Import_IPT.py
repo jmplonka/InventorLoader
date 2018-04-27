@@ -138,10 +138,6 @@ def read(doc, filename, readProperties):
 
 		elements = ole.listdir(streams=True, storages=False)
 
-		folder = filename[0:-4]
-		if not os.path.exists(folder):
-			os.makedirs(folder)
-
 		counter = 1
 		list = []
 		for fname in elements:
@@ -167,7 +163,7 @@ def read(doc, filename, readProperties):
 			doc.Comment += '\n'
 		doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), filename)
 
-		logMessage("Dumped data to folder: '%s'" %(folder), LOG.LOG_INFO)
+		logMessage("Dumped data to folder: '%s'" %(filename[0:-4]), LOG.LOG_INFO)
 
 		return True
 	logError("Error - '%s' is not a valid Autodesk Inventor file." %(filename))

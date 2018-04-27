@@ -99,7 +99,7 @@ class BRepReader(SegmentReader):
 
 	def Read_632A4BBA(self, node):
 		i = self.skipBlockSize(0)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadCrossRef(i, 'refRoot')
 		i = node.ReadUInt16A(i, 4, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_0')
@@ -121,7 +121,7 @@ class BRepReader(SegmentReader):
 
 	def Read_6D0B7807(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_X_REF_, 'lst0')
+		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
 		return i
 
 	def Read_6F891B34(self, node): return 0
@@ -139,6 +139,13 @@ class BRepReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 10, 'a0')
+		return i
+
+	def Read_77D10C74(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_7E5D2868(self, node): return 0
@@ -179,7 +186,7 @@ class BRepReader(SegmentReader):
 
 	def Read_BA0B8C23(self, node):
 		i = self.skipBlockSize(0)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadCrossRef(i, 'refRoot')
 		i = node.ReadUInt16A(i, 4, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_0')
@@ -261,4 +268,5 @@ class BRepReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst0')
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst1')
+		i = node.ReadChildRef(i, 'ref_1')
 		return i

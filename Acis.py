@@ -404,7 +404,7 @@ def getDimensionCurve(chunks, index):
 	raise Exception("Unknown DIMENSION '%s'" %(val))
 
 def getDimensionSurface(chunks, index):
-	# DIMENSION      = (nullbs|nurbs [:NUMBER:]|nubs [:NUMBER:]|summary [:NUMBER: Version > 17])
+	# DIMENSION = (nullbs|nurbs [:NUMBER:]|nubs [:NUMBER:]|summary [:NUMBER: Version > 17])
 	val, i = getValue(chunks, index)
 	if (val == 'nullbs'):
 		return val, None, None, i
@@ -425,7 +425,7 @@ def getClosureCurve(chunks, index):
 def getClosureSurface(chunks, index):
 	# Syntax: [:CLOSURE:] [:CLOSURE:] [:FULL:] [:FULL:] [:NUMBER:] [:NUMBER:]
 	# CLOSURE = (open=0|closed=1|periodic=2)
-	# FULL   = (full=0|none=1)
+	# FULL    = (full=0|none=1)
 
 	closureU, i = getClosure(chunks, index)
 	if (closureU in ('both', 'u', 'v')):
@@ -1042,12 +1042,12 @@ class VBL():
 		self.t  = ''
 		self.n  = 'cross'
 	def read(self, chunks, index, inventor):
-		self.t, i  = getText(chunks, index)
-		self.n, i  = getCircleType(chunks, i)
-		self.p, i  = getLocation(chunks, i)
-		self.u, i  = getCircleSmoothing(chunks, i)
-		self.v, i  = getCircleSmoothing(chunks, i)
-		self.a, i  = getFloat(chunks, i)
+		self.t, i = getText(chunks, index)
+		self.n, i = getCircleType(chunks, i)
+		self.p, i = getLocation(chunks, i)
+		self.u, i = getCircleSmoothing(chunks, i)
+		self.v, i = getCircleSmoothing(chunks, i)
+		self.a, i = getFloat(chunks, i)
 		if (self.t == 'circle'):
 			self.o, i = readCurve(chunks, i)
 			self.type, i = getVblCirleType(chunks, i)
@@ -1063,7 +1063,7 @@ class VBL():
 				raise Exception("Unknown VBL-Circle:form '%s'" %(self.type))
 			self.v = (v1, v2)
 			self.angles, i = getFloats(chunks, i, 2)
-			self.sens, i = getSense(chunks, i)
+			self.sense, i  = getSense(chunks, i)
 		elif (self.t == 'plane'):
 			self.v, i = getLocation(chunks, i)
 			self.a, i = getFloats(chunks, i, 2)
@@ -1130,12 +1130,14 @@ class Range():
 		self.limit = limit
 		self.scale = scale
 	def __str__(self): return 'I' if (self.type == 'I') else "F %g" %(self.getLimit())
+	def __repr__(self): return 'I' if (self.type == 'I') else "%g" %(self.getLimit())
 	def getLimit(self): return self.limit if (self.type == 'I') else self.limit * self.scale
 class Intervall():
 	def __init__(self, upper, lower):
 		self.lower = upper
 		self.upper = lower
 	def __str__(self): return "%s %s" %(self.lower, self.upper)
+	def __repr__(self): return "[%r-%r]" %(self.lower, self.upper)
 	def getLowerType(self):  return self.lower.type
 	def getLowerLimit(self): return self.lower.getLimit()
 	def getUpperType(self):  return self.upper.type
@@ -1168,6 +1170,7 @@ class Entity(object):
 	def getType(self):   return -1   if (self.entity is None)  else self.entity.name
 	def getAttrib(self): return None if (self._attrib is None) else self._attrib.node
 	def __str__(self):   return "%s" % (self.entity)
+	def __repr__(self): return self.__str__()
 
 class EyeRefinement(Entity):
 	def __init__(self): super(EyeRefinement, self).__init__()
@@ -1210,8 +1213,8 @@ class Transform(Entity):
 		return i
 	def getPlacement(self):
 		return PLC(self.matrix)
-# abstract super class for all topologies
 class Topology(Entity):
+	'''Abstract super class for all topology entities.'''
 	def __init__(self): super(Topology, self).__init__()
 	def set(self, entity):
 		i = super(Topology, self).set(entity)
@@ -1286,7 +1289,8 @@ class Shell(Topology):
 		self._next, i  = getRefNode(entity, i, 'shell')
 		self._shell, i = getRefNode(entity, i, None)
 		self._face, i  = getRefNode(entity, i, 'face')
-		self._wire, i  = getRefNode(entity, i, 'wire')
+		if (getVersion() > 1.07):
+			self._wire, i  = getRefNode(entity, i, 'wire')
 		self._lump, i  = getRefNode(entity, i, 'lump')
 		return i
 	def getFaces(self):
@@ -1586,10 +1590,12 @@ class Wire(Topology):
 		coedges = []
 		ce = self.getCoEdge()
 		index = -1 if (ce is None) else ce.getIndex()
+		idxLst = []
 		while (ce is not None):
 			coedges.append(ce)
+			idxLst.append(ce.getIndex())
 			ce = ce.getNext()
-			if ((ce is not None) and (ce.getIndex() == index)):
+			if (ce.getIndex() in idxLst):
 				ce = None
 		return coedges
 	def getShells(self):
@@ -1641,10 +1647,10 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 		self.center = CENTER
 		self.normal = DIR_Z
 		self.major  = DIR_X
-		self.ratio  = 0.0
+		self.ratio  = MIN_0
 		self.range  = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
-	def __str__(self):
-		return "Curve-Ellipse: center=%s, dir=%s, major=%s, ratio=%g, range=%s" %(self.center, self.normal, self.major, self.ratio, self.range)
+	def __str__(self): return "Curve-Ellipse: center=%s, dir=%s, major=%s, ratio=%g, range=%s" %(self.center, self.normal, self.major, self.ratio, self.range)
+	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i = getLocation(chunks, index)
 		self.normal, i = getVector(chunks, i)
@@ -1666,18 +1672,17 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def __init__(self):
 		super(CurveInt, self).__init__()
 		self.sense  = 'forward' # The IntCurve's reversal flag
-		self.data   = None  #
 		self.range  = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
-		self.points = []
 		self.type   = ''
 		self.curve  = None
-	def __str__(self): return "-%d Curve-Int: type=%s, points=%s" %(self.getIndex(), self.type, len(self.points))
+	def __str__(self): return "-%d Curve-Int: type=%s" %(self.getIndex(), self.type)
+	def __repr__(self): return self.__str__()
 	def setCurve(self, chunks, index):
 		self.singularity, i = getSingularity(chunks, index)
 		if (self.singularity == 'full'):
 			nubs, i = readBS3Curve(chunks, i)
 			self.tolerance, i = getLength(chunks, i)
-			self.shape = createBSplinesCurve(nubs, self.sens)
+			self.shape = createBSplinesCurve(nubs, self.sense)
 		elif (self.singularity == 'none'):
 			self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			val, i= getValue(chunks, i)
@@ -1707,15 +1712,16 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		if (getVersion() > 15.0):
 			i += 2
 		range2, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		a1, i       = getFloatArray(chunks, i)
-		a2, i       = getFloatArray(chunks, i)
-		a3, i       = getFloatArray(chunks, i)
+		if (getVersion() >= 2.0):
+			a1, i       = getFloatArray(chunks, i)
+			a2, i       = getFloatArray(chunks, i)
+			a3, i       = getFloatArray(chunks, i)
 		return i
 	def setBlend(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
 		txt, i      = getText(chunks, i)
 		return i
-	def setBlendSprng(self, chunks, index):
+	def setBlendSprng(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
 		txt, i      = getText(chunks, i)
 		return i
@@ -1724,10 +1730,11 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		a4, i       = getFloatArray(chunks, i)
 		a5, i       = getFloatArray(chunks, i)
 		if (inventor):
-			i += 1
-		c1, i = readCurve(chunks, i)
-		c2, i = readCurve(chunks, i)
-		c3, i = readCurve(chunks, i)
+			i += 1 # 0x0A
+		self.curves = []
+		for k in range(0, len(a5)):
+			c, i = readCurve(chunks, i)
+			self.curves.append(c)
 		return i
 	def setDefm(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
@@ -1737,14 +1744,15 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setExact(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
-		if (inventor):
-			x3, i = getFloat(chunks, i)
-		if (getVersion() > 15.0):
-			i += 2
-		unknown, i = getUnknownFT(chunks, i)
-		range2, i  = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+		if (getVersion() >= 2.0):
+			if (inventor):
+				x3, i = getFloat(chunks, i)
+			if (getVersion() > 15.0):
+				i += 2
+			unknown, i = getUnknownFT(chunks, i)
+			range2, i  = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
-	def setHelix(self, chunks, index):
+	def setHelix(self, chunks, index, inventor):
 		helix = Helix()
 		helix.angleStart, i = getRange(chunks, index, MIN_0, 1.0)
 		helix.angleEnd, i   = getRange(chunks, i, MAX_2PI, 1.0)
@@ -1760,7 +1768,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		curve1, i   = readBS2Curve(chunks, i) # None
 		curve2, i   = readBS2Curve(chunks, i) # None
 		return i
-	def setInt(self, chunks, index):
+	def setInt(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
 		x, i = getFloat(chunks, i)
 		return i
@@ -1856,7 +1864,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			i += 1
 		return i
 	def setRef(self, chunks, index):
-		self.ref, i = getInteger(chunks, index)
+		self.curve, i = getInteger(chunks, index)
 		return i
 	def setSpring(self, chunks, index, inventor):
 		i = self.setCurve(chunks, index)
@@ -1881,77 +1889,47 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		i = self.setSurfaceCurve(chunks, index)
 		return i
 	def setBulk(self, chunks, index):
-		# data syntax
-		# DATA = ([:EXACTCUR:]|[:PARCUR:]|[:REF:]|[:PROJ_INT_CUR:]|[:SPRING_INT_CUR:]|[:SURFINTCUR:])
-		# EXACTCUR       = exactcur (full)? [:DIMENSION:] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:]){n}
-		#                  [:FLOAT:] [:SURFACE:] [:SURFACE:] [:DIMENSION:] [:DIMENSION:] [:RANGE:] .*
-		# PARCUR         = ([:DIMENSION:]) [:FLOAT:] [:CLOSURE:]
-
-		# PROJ_INT_CUR   = proj_int_cur [:NUMBER:] (full|0)? [:DIMENSION:] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
-		# REF            = ref [:NUMBER:]
-		# SPRING_INT_CUR = spring_int_cur [:NUMBER:] (full|0)? [:DIMENSION:] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
-		# SURFINTCUR     = surfintcur (full|0)? [:DIMENSION:] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:] [:FLOAT:]?/* dimension == nurbs */){n}
-
-		# VECTOR         = [:FLOAT:] [:FLOAT:] [:FLOAT:]
 		self.type, i = getValue(chunks, index)
 
 		if (self.type == 'ref'):               return self.setRef(chunks, i)
 
 		addSubtypeNode('intcurve', self)
 
-		if (self.type == 'bldcur'):            return self.setBlend(chunks, i, False)
-		if (self.type == 'blend_int_cur'):     return self.setBlend(chunks, i + 1, True)
-		if (self.type == 'blndsprngcur'):      return self.setBlendSprng(chunks, i)
-		if (self.type == 'comp_int_cur'):      return self.setComp(chunks, i + 1, True)
-		if (self.type == 'defm_int_cur'):      return self.setDefm(chunks, i + 1, True)
-		if (self.type == 'exactcur'):          return self.setExact(chunks, i, False)
-		if (self.type == 'exact_int_cur'):     return self.setExact(chunks, i + 1, True)
-		if (self.type == 'helix_int_cur'):     return self.setHelix(chunks, i + 1)
-		if (self.type == 'int_int_cur'):       return self.setInt(chunks, i + 1)
-		if (self.type == 'lawintcur'):         return self.setLaw(chunks, i, False)
-		if (self.type == 'law_int_cur'):       return self.setLaw(chunks, i + 1, True)
-		if (self.type == 'offintcur'):         return self.setOff(chunks, i, False)
-		if (self.type == 'off_int_cur'):       return self.setOff(chunks, i + 1, True)
-		if (self.type == 'offsetintcur'):      return self.setOffset(chunks, i, False)
-		if (self.type == 'offset_int_cur'):    return self.setOffset(chunks, i + 1, True)
-		if (self.type == 'offsurfintcur'):     return self.setOffsetSurface(chunks, i, False)
-		if (self.type == 'off_surf_int_cur'):  return self.setOffsetSurface(chunks, i + 1, True)
-		if (self.type == 'parcur'):            return self.setParameter(chunks, i, False)
-		if (self.type == 'par_int_cur'):       return self.setParameter(chunks, i + 1, True)
-		if (self.type == 'para_silh_int_cur'): return self.setParameterSilhouette(chunks, i + 1, True)
-		if (self.type == 'proj_int_cur'):      return self.setProject(chunks, i + 1, True)
-		if (self.type == 'spring_int_cur'):    return self.setSpring(chunks, i + 1, True)
-		if (self.type == 'surfintcur'):        return self.setSurface(chunks, i)
-		if (self.type == 'surf_int_cur'):      return self.setSurface(chunks, i + 1)
-		logError("    Curve-Int: unknown subtype %s !" %(self.type))
-		return i
+		try:
+			prm = CURVE_TYPES[self.type]
+			fkt = getattr(self, prm[0])
+			return fkt(chunks, i + prm[1], prm[2])
+		except KeyError as ke:
+			raise Exception("Curve-Int: unknown subtype '%s'!" %(self.type))
 	def setSubtype(self, chunks, index):
-		self.sens, i  = getSense(chunks, index)
+		self.sense, i  = getSense(chunks, index)
 		block, i      = getBlock(chunks, i)
 		self.setBulk(block, 0)
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		if (self.shape is None):
-			if (self.curve is not None):
-				start = None
-				end   = None
-				self.shape = self.curve.build(start, end)
 		return i
 	def build(self, start, end):
 		if (self.shape is None):
-			if (self.type == 'ref'):
-				curve = getSubtypeNode('intcurve', self.ref)
-				if (curve is not None):
+			if (hasattr(self, 'curves')):
+				curve = self.curves[0].build(None, None)
+				others = []
+				for c in self.curves[1:]:
+					shp = c.build(None, None)
+					if (shp): others.append(shp)
+				self.shape = curve.multifuse(others)
+			else:
+				if (not self.curve is None):
+					if (type(self.curve) == int):
+						self.curve = getSubtypeNode('intcurve', self.curve)
+				if (not self.curve is None):
 					self.shape = curve.build(None, None)
 		return self.shape
 class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 	def __init__(self):
 		super(CurveIntInt, self).__init__()
-		self.sens = 'forward' # The IntCurve's reversal flag
-		self.data = None  #
+		self.sense = 'forward' # The IntCurve's reversal flag
 		self.range = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
-		self.points = []
-		self.type   = ''
-		self.curve  = None
+		self.type  = ''
+		self.curve = None
 	def setLaw(self, chunks, index, inventor):
 		i = self.setCurve(chunks, index)
 		return i
@@ -1962,7 +1940,7 @@ class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 		logError("    Curve-Int-Int: unknown subtype %s !" %(self.type))
 		return self.setCurve(chunks, i)
 	def setSubtype(self, chunks, index):
-		self.sens, i  = getSense(chunks, index)
+		self.sense, i  = getSense(chunks, index)
 		block, i      = getBlock(chunks, i)
 		self.setBulk(block, 0)
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -1971,15 +1949,10 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 	'''An approximation to a curve lying on a surface, defined in terms of the surface’s u-v parameters.'''
 	def __init__(self):
 		super(CurveP, self).__init__()
-		self.type    = -1    # The PCurve's type
-		self.sense   = 'forward'
-		self._curve  = None  # The PCurve's curve
-		self.negated = False # The PCurve's negated flag
-		self.space   = None  # Parmeter space vector
-		self.points = []
+		self.type   = -1    # The PCurve's type
+		self.sense  = 'forward'
+		self._curve = None  # The PCurve's curve
 	def setExpPar(self, chunks, index):
-		# EXPPC = exppc ([:NUMBER:]?/*version > 22.0*/) [:DIMENSION:] [:NUMBER:dim] [:CLOSURE:] [:NUMBER: count] ([:FLOAT:] [:NUMBER:]){count} ([:VECTOR:]){n}
-		#                  [:FLOAT:] ([:FLOAT:] [:SURFACE:]
 		i = index if (getVersion() <= 22.0) else index + 1
 		self.pcurve, i = readBS2Curve(chunks, i)
 		factor, i = getFloat(chunks, i)
@@ -1992,10 +1965,6 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.ref, i = getInteger(chunks, index)
 		return i
 	def setBulk(self, chunks, index):
-		# data syntax
-		# DATA = ([:EXPPC:]|[:REF:])
-		# REF            = ref [:NUMBER:]
-		# VECTOR         = [:FLOAT:] [:FLOAT:]
 		self.type, i = getValue(chunks, index)
 		if (self.type == 'ref'):         return self.setRef(chunks, i)
 
@@ -2003,8 +1972,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 
 		if (self.type == 'exp_par_cur'): return self.setExpPar(chunks, i)
 		if (self.type == 'exppc'):       return self.setExpPar(chunks, i)
-		logError("    PCurve: unknown subtype %s !" %(self.type))
-		return i
+		raise Exception("PCurve: unknown subtype '%s'!" %(self.type))
 	def setSubtype(self, chunks, index):
 		self.sense, i = getSense(chunks, index)
 		block, i = getBlock(chunks, i)
@@ -2040,6 +2008,7 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 		self.dir   = CENTER
 		self.range = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 	def __str__(self): return "Curve-Straight: root=%s, dir=%s, range=%s" %(self.root, self.dir, self.range)
+	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.root, i  = getLocation(chunks, index)
 		self.dir, i   = getVector(chunks, i)
@@ -2072,6 +2041,7 @@ class SurfaceCone(Surface):
 		self.urange = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 	def __str__(self): return "Surface-Cone: center=%s, axis=%s, radius=%g, ratio=%g, semiAngle=%g" %(self.center, self.axis, self.major.Length, self.ratio, math.degrees(math.asin(self.sine)))
+	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i = getLocation(chunks, index)
 		self.axis, i   = getVector(chunks, i)
@@ -2135,6 +2105,7 @@ class SurfacePlane(Surface):
 		self.urange   = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.vrange   = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 	def __str__(self): return "Surface-Plane: root=%s, normal=%s, uvorigin=%s" %(self.root, self.normal, self.uvorigin)
+	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.root, i     = getLocation(chunks, index)
 		self.normal, i   = getVector(chunks, i)
@@ -2165,6 +2136,7 @@ class SurfaceSphere(Surface):
 		self.urange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange   = Intervall(Range('I', MIN_PI2), Range('I', MAX_PI2))
 	def __str__(self): return "Surface-Sphere: center=%s, radius=%g, uvorigin=%s, pole=%s" %(self.center, self.radius, self.uvorigin, self.pole)
+	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i   = getLocation(chunks, index)
 		self.radius, i   = getLength(chunks, i)
@@ -2193,9 +2165,10 @@ class SurfaceSpline(Surface):
 	def setSurfaceShape(self, chunks, index, inventor):
 		spline, tol, i = readSplineSurface(chunks, index, True)
 		self.shape = createBSplinesSurface(spline)
-		arr, i  = readArrayFloats(chunks, i, inventor)
+		if (getVersion() >= 2.0):
+			arr, i  = readArrayFloats(chunks, i, inventor)
 		return i
-	def setBlendSupply(self, chunks, index):
+	def setBlendSupply(self, chunks, index, inventor):
 		name, i = getValue(chunks, index)
 		self.surface, i = readSurface(chunks, i)
 		return i
@@ -2216,6 +2189,14 @@ class SurfaceSpline(Surface):
 		v1, i = getVector(chunks, i)
 		e1, i = getEnum(chunks, i)
 		e2, i = getEnum(chunks, i)
+		return i
+	def setCompound(self, chunks, index, inventor):
+		i = self.setSurfaceShape(chunks, index, inventor)
+		d, i  = getFloatArray(chunks, i)
+		e = []
+		for k in range(0, len(d)):
+			f, i = readSurface(chunks, i)
+			e.append(f)
 		return i
 	def setCylinder(self, chunks, index, inventor):
 		c1, i = readCurve(chunks, index)
@@ -2255,10 +2236,11 @@ class SurfaceSpline(Surface):
 		return i
 	def setExact(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
-		rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		rV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		if (inventor):
-			ft, i = getInteger(chunks, i)
+		if (getVersion() > 2.0):
+			rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+			rV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+			if (inventor):
+				ft, i = getInteger(chunks, i)
 		return i
 	def setG2Blend(self, chunks, index, inventor):
 		t11, i = getValue(chunks, index)
@@ -2303,7 +2285,7 @@ class SurfaceSpline(Surface):
 			a31, i = getFloatArray(chunks, i)
 			a31, i = getFloatArray(chunks, i)
 		return i
-	def setHelixCircle(self, chunks, index):
+	def setHelixCircle(self, chunks, index, inventor):
 		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
 		dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
 		length, i = getLength(chunks, i)
@@ -2320,7 +2302,7 @@ class SurfaceSpline(Surface):
 		c2, i     = readBS2Curve(chunks, i)
 		fac2, i   = getFloat(chunks, i)
 		return i
-	def setHelixLine(self, chunks, index):
+	def setHelixLine(self, chunks, index, inventor):
 		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
 		dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
 		dime2, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
@@ -2668,48 +2650,12 @@ class SurfaceSpline(Surface):
 
 		addSubtypeNode('spline', self)
 
-		if (self.type == 'cl_loft_spl_sur'):      return self.setClLoft(chunks, i + 1, True)
-		if (self.type == 'cylsur'):               return self.setCylinder(chunks, i, False)
-		if (self.type == 'cyl_spl_sur'):          return self.setCylinder(chunks, i + 1, True)
-		if (self.type == 'defmsur'):              return self.setDefm(chunks, i, False)
-		if (self.type == 'defm_spl_sur'):         return self.setDefm(chunks, i + 1, True)
-		if (self.type == 'exactsur'):             return self.setExact(chunks, i, False)
-		if (self.type == 'exact_spl_sur'):        return self.setExact(chunks, i + 1, True)
-		if (self.type == 'g2blnsur'):             return self.setG2Blend(chunks, i, False)
-		if (self.type == 'g2_blend_spl_sur'):     return self.setG2Blend(chunks, i + 1, True)
-		if (self.type == 'helix_spl_circ'):       return self.setHelixCircle(chunks, i + 1)
-		if (self.type == 'helix_spl_line'):       return self.setHelixLine(chunks, i + 1)
-		if (self.type == 'loftsur'):              return self.setLoft(chunks, i, False)
-		if (self.type == 'loft_spl_sur'):         return self.setLoft(chunks, i + 1, True)
-		if (self.type == 'net_spl_sur'):          return self.setNet(chunks, i + 1, True)
-		if (self.type == 'offsur'):               return self.setOffset(chunks, i, False)
-		if (self.type == 'off_spl_sur'):          return self.setOffset(chunks, i + 1, True)
-		if (self.type == 'orthosur'):             return self.setOrtho(chunks, i, False)
-		if (self.type == 'ortho_spl_sur'):        return self.setOrtho(chunks, i + 1, True)
-		if (self.type == 'rbblnsur'):             return self.setRbBlend(chunks, i, False)
-		if (self.type == 'rb_blend_spl_sur'):     return self.setRbBlend(chunks, i + 1, True)
-		if (self.type == 'rotsur'):               return self.setRotation(chunks, i, False)
-		if (self.type == 'rot_spl_sur'):          return self.setRotation(chunks, i + 1,  True)
-		if (self.type == 'sclclftsur'):           return self.setScaleClft(chunks, i, False)
-		if (self.type == 'scaled_cloft_spl_sur'): return self.setScaleClft(chunks, i + 1, True)
-		if (self.type == 'shadow_tpr_spl_sur'):   return self.setShadowTpr(chunks, i + 1, True)
-		if (self.type == 'skinsur'):              return self.setSkin(chunks, i, False)
-		if (self.type == 'skin_spl_sur'):         return self.setSkin(chunks, i + 1, True)
-		if (self.type == 'sweepsur'):             return self.setSweep(chunks, i, False)
-		if (self.type == 'sweep_spl_sur'):        return self.setSweep(chunks, i + 1, True)
-		if (self.type == 'sweep_sur'):            return self.setSweepSpline(chunks, i + 1, True)
-		if (self.type == 't_spl_sur'):            return self.setTSpline(chunks, i + 1, True)
-		if (self.type == 'vertexblendsur'):       return self.setVertexBlend(chunks, i, False)
-		if (self.type == 'VBL_SURF'):             return self.setVertexBlend(chunks, i + 1, True)
-		if (self.type == 'srfsrfblndsur'):        return self.setBlendSupply(chunks, i)
-		if (self.type == 'srf_srf_v_bl_spl_sur'): return self.setBlendSupply(chunks, i + 1)
-		if (self.type == 'sssblndsur'):           return self.setBlendSupply(chunks, i)
-		if (self.type == 'sss_blend_spl_sur'):    return self.setBlendSupply(chunks, i + 1)
-		if (self.type == 'sumsur'):               return self.setSum(chunks, i, False)
-		if (self.type == 'sum_spl_sur'):          return self.setSum(chunks, i + 1, True)
-		if (self.type == 'ruled_tpr_spl_sur'):    return self.setRuledTpr(chunks, i + 1, True)
-		if (self.type == 'swept_tpr_spl_sur'):    return self.setSweptTpr(chunks, i + 1, True)
-		raise Exception("Unknown SplineSurface '%s'!"%(self.type))
+		try:
+			prm = SURFACE_TYPES[self.type]
+			fkt = getattr(self, prm[0])
+			return fkt(chunks, i + prm[1], prm[2])
+		except KeyError as ke:
+			raise Exception("Spline-Surface: Unknown subtype '%s'!" %(self.type))
 	def setSubtype(self, chunks, index):
 		self.sense, i  = getSense(chunks, index)
 		block, i       = getBlock(chunks, i)
@@ -2751,6 +2697,7 @@ class SurfaceTorus(Surface):
 		self.urange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 	def __str__(self): return "Surface-Torus: center=%s, normal=%s, R=%g, r=%g, uvorigin=%s" %(self.center, self.axis, self.major, self.minor, self.uvorigin)
+	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i   = getLocation(chunks, index)
 		self.axis, i     = getVector(chunks, i)
@@ -2788,7 +2735,8 @@ class Point(Geometry):
 		i = super(Point, self).set(entity)
 		self.position, i = getLocation(entity.chunks, i)
 		return i
-
+class Refinement(Entity):
+	def __init__(self): return super(Refinement, self).__init__()
 # abstract super class for all attributes
 class Attributes(Entity):
 	def __init__(self):
@@ -2814,10 +2762,6 @@ class AttribADesk(Attrib):
 	def __init__(self): super(AttribADesk, self).__init__()
 class AttribADeskColor(AttribADesk):
 	def __init__(self): super(AttribADeskColor, self).__init__()
-	def set(self, entity):
-		i = super(Attrib, self).set(entity)
-		self.color, i = getText(entity.chunks, i)
-		return i
 class AttribAnsoft(Attrib):
 	def __init__(self): super(AttribAnsoft, self).__init__()
 class AttribAnsoftId(AttribAnsoft):
@@ -2826,6 +2770,8 @@ class AttribAnsoftProperties(AttribAnsoft):
 	def __init__(self): super(AttribAnsoftProperties, self).__init__()
 class AttribDxid(Attrib):
 	def __init__(self): super(AttribDxid, self).__init__()
+class AttribCustom(Attrib):
+	def __init__(self): super(AttribCustom, self).__init__()
 class AttribEye(Attrib):
 	def __init__(self): super(AttribEye, self).__init__()
 class AttribEyeFMesh(AttribEye):
@@ -2868,6 +2814,14 @@ class AttribGenNameString(AttribGenName):
 		i = super(AttribGenNameString, self).set(entity)
 		self.value, i = getText(entity.chunks, i)
 		return i
+class AttribLwd(Attrib):
+	def __init__(self): super(AttribLwd, self).__init__()
+class AttribLwdFMesh(Attrib): # color face mapping
+	def __init__(self): super(AttribLwdFMesh, self).__init__()
+class AttribLwdPtList(Attrib): # Refinement-VertexTemplate mapping for body
+	def __init__(self): super(AttribLwdPtList, self).__init__()
+class AttribLwdRefVT(Attrib): # Refinement-VertexTemplate mapping for body
+	def __init__(self): super(AttribLwdRefVT, self).__init__()
 class AttribRfBase(Attrib):
 	def __init__(self): super(AttribRfBase, self).__init__()
 class AttribRfBaseFaceTracker(AttribRfBase):
@@ -2882,8 +2836,6 @@ class AttribSnlCubitOwner(AttribSnl):
 	def __init__(self):super(AttribSnlCubitOwner, self).__init__()
 class AttribSt(Attrib):
 	def __init__(self): super(AttribSt, self).__init__()
-class AttribSysConvexity(AttribSt):
-	def __init__(self): super(AttribSysConvexity, self).__init__()
 class AttribStNoMerge(AttribSt):
 	def __init__(self): super(AttribStNoMerge, self).__init__()
 class AttribStNoCombine(AttribSt):
@@ -2897,17 +2849,15 @@ class AttribStRgbColor(AttribSt):
 		self.color, i = getPoint(entity.chunks, i)
 		return i
 class AttribStDisplay(AttribSt):
-	def __init__(self):
-		super(AttribStRgbColor, self).__init__()
-		self.revision = 0
-	def set(self, entity):
-		i = super(AttribStRgbColor, self).set(entity)
-		self.revision, i = getInteger(entity.chunks, i)
-		return i
+	def __init__(self): super(AttribStDisplay, self).__init__()
+class AttribStId(AttribSt):
+	def __init__(self): super(AttribStId, self).__init__()
 class AttribSys(Attrib):
 	def __init__(self): super(AttribSys, self).__init__()
 class AttribSysAnnotationAttrib(AttribSys):
 	def __init__(self): super(AttribSysAnnotationAttrib, self).__init__()
+class AttribSysConvexity(AttribSt):
+	def __init__(self): super(AttribSysConvexity, self).__init__()
 class AttribSysStichHint(AttribSys):
 	def __init__(self): super(AttribSysStichHint, self).__init__()
 class AttribSysTag(AttribSys):
@@ -3062,6 +3012,8 @@ class AttribNamingMatchingNMxBrepTagNameSplitEdge(AttribNamingMatchingNMxBrepTag
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSplitEdge, self).__init__()
 class AttribAtUfld(Attrib):
 	def __init__(self): super(AttribAtUfld, self).__init__()
+class AttribAtUfldDefmData(AttribAtUfld):
+	def __init__(self): super(AttribAtUfldDefmData, self).__init__()
 class AttribAtUfldDevPair(AttribAtUfld):
 	def __init__(self): super(AttribAtUfldDevPair, self).__init__()
 class AttribAtUfldFfldPosTransf(AttribAtUfld):
@@ -3095,27 +3047,43 @@ class AcisChunk():
 	def __init__(self, key, val):
 		self.tag = key
 		self.val = val
-		self.typ = '@'
-
 	def __str__(self):
-		if (self.tag == 0x04): return "%d "      %(self.val)
-		if (self.tag == 0x06): return "%g "      %(self.val)
-		if (self.tag == 0x07): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
-		if (self.tag == 0x08): return "%s"       %(self.val)                         # STRING
-		if (self.tag == 0x0A): return "%s "      %(self.val)
-		if (self.tag == 0x0B): return "%s "      %(self.val)
-		if (self.tag == 0x0C): return "%s "      %(self.val)                         # ENTITY_POINTER
-		if (self.tag == 0x0D): return "%s "      %(self.val)                         # CLASS_IDENTIFYER
-		if (self.tag == 0x0E): return "%s-"      %(self.val)                         # SUBCLASS_IDENTIFYER
-		if (self.tag == 0x0F): return "%s "      %(self.val)                         # SUBTYP_START
-		if (self.tag == 0x10): return "%s "      %(self.val)                         # SUBTYP_END
-		if (self.tag == 0x11): return "%s\n"     %(self.val)                         # TERMINATOR
-		if (self.tag == 0x12): return "%s%d %s " %(self.typ, len(self.val), self.val)# STRING
-		if (self.tag == 0x13): return "(%s) "    %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == 0x14): return "(%s) "    %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
-		if (self.tag == 0x15): return "%d "      %(self.val)
-		if (self.tag == 0x16): return "(%s) "    %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == 0x04): return "%d "     %(self.val)
+		if (self.tag == 0x06): return "%g "     %(self.val)
+		if (self.tag == 0x07): return "@%d %s " %(len(self.val), self.val)                 # STRING
+		if (self.tag == 0x08): return "%s"      %(self.val)                                # STRING
+		if (self.tag == 0x0A): return "%s "     %(self.val)
+		if (self.tag == 0x0B): return "%s "     %(self.val)
+		if (self.tag == 0x0C): return "%s "     %(self.val)                                # ENTITY_POINTER
+		if (self.tag == 0x0D): return "%s "     %(self.val)                                # CLASS_IDENTIFYER
+		if (self.tag == 0x0E): return "%s-"     %(self.val)                                # SUBCLASS_IDENTIFYER
+		if (self.tag == 0x0F): return "%s "     %(self.val)                                # SUBTYP_START
+		if (self.tag == 0x10): return "%s "     %(self.val)                                # SUBTYP_END
+		if (self.tag == 0x11): return "%s\n"    %(self.val)                                # TERMINATOR
+		if (self.tag == 0x12): return "@%d %s " %(len(self.val), self.val)                 # STRING
+		if (self.tag == 0x13): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == 0x14): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
+		if (self.tag == 0x15): return "%d "     %(self.val)
+		if (self.tag == 0x16): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		return ''
+	def __repr__(self):
+		if (self.tag == 0x04): return "%d "   %(self.val)
+		if (self.tag == 0x06): return "%g "   %(self.val)
+		if (self.tag == 0x07): return "'%s' " %(self.val)                                # STRING
+		if (self.tag == 0x08): return "'%s' " %(self.val)                                # STRING
+		if (self.tag == 0x0A): return '0x0A '
+		if (self.tag == 0x0B): return '0x0B '
+		if (self.tag == 0x0E): return "%s-"   %(self.val)                                # SUBCLASS_IDENTIFYER
+		if (self.tag == 0x0F): return '{ '
+		if (self.tag == 0x10): return '} '
+		if (self.tag == 0x11): return '#'
+		if (self.tag == 0x12): return "'%s' " %(self.val)                                # STRING
+		if (self.tag == 0x11): return "%s "   %(self.val)                                # TERMINATOR
+		if (self.tag == 0x13): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == 0x14): return "(%s) " %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
+		if (self.tag == 0x15): return "%d "   %(self.val)
+		if (self.tag == 0x16): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		return "%s " %(self.val)
 
 class AcisEntity():
 	def __init__(self, name):
@@ -3126,8 +3094,8 @@ class AcisEntity():
 
 	def add(self, key, val):
 		self.chunks.append(AcisChunk(key, val))
-	def getStr(self):
-		return "-%d %s %s" %(self.index, self.name,''.join('%s' %c for c in self.chunks))
+	def getStr(self): return "-%d %s %s" %(self.index, self.name, ''.join('%s' %c for c in self.chunks))
+	def __repr__(self): return "%s %s" %(self.name, ''.join('%r' %c for c in self.chunks))
 	def __str__(self):
 		if (self.index < 0):
 			if (self.index == -2):
@@ -3144,6 +3112,8 @@ class AcisRef():
 		if (self.entity is None or self.entity.index < 0):
 			return "$%d" % self.index
 		return "$%d" %(self.entity.index)
+	def __repr__(self):
+		return self.__str__()
 
 def readStr1(data, offset):
 	l, i = getUInt8(data, offset)
@@ -3167,29 +3137,41 @@ def readEntityRef(data, offset):
 	index, i = getSInt32(data, offset)
 	return AcisRef(index), i
 
+def readTagA(data, index):         return '0x0A', index
+def readTagB(data, index):         return '0x0B', index
+def readTagOpen(data, index):      return '{', index
+def readTagClose(data, index):     return '}', index
+def readTagTerminate(data, index): return '#', index
+def readTagFloats3D(data, index):  return getFloat64A(data, index, 3)
+def readTagFloats2D(data, index):  return getFloat64A(data, index, 2)
+
+TAG_READER = {
+	0x04: getSInt32,
+	0x06: getFloat64,
+	0x07: readStr1,
+	0x08: readStr2,
+	0x0A: readTagA,
+	0x0B: readTagB,
+	0x0C: readEntityRef,
+	0x0D: readStr1,
+	0x0E: readStr1,
+	0x0F: readTagOpen,
+	0x10: readTagClose,
+	0x11: readTagTerminate,
+	0x12: readStr4,
+	0x13: readTagFloats3D,
+	0x14: readTagFloats3D,
+	0x15: getUInt32,
+	0x16: readTagFloats2D,
+}
+
 def readNextSabChunk(data, index):
 	tag, i = getUInt8(data, index)
-
-	if (tag == 0x04):   val, i = getSInt32(data, i)
-	elif (tag == 0x06): val, i = getFloat64(data, i)
-	elif (tag == 0x07): val, i = readStr1(data, i)
-	elif (tag == 0x08): val, i = readStr2(data, i)
-	elif (tag == 0x0A): val    = '0x0A'
-	elif (tag == 0x0B): val    = '0x0B'
-	elif (tag == 0x0C): val, i = readEntityRef(data, i) # ENTITY_POINTER
-	elif (tag == 0x0D): val, i = readStr1(data, i)
-	elif (tag == 0x0E): val, i = readStr1(data, i)
-	elif (tag == 0x0F): val    = '{'
-	elif (tag == 0x10): val    = '}'
-	elif (tag == 0x11): val    = '#'
-	elif (tag == 0x12): val, i = readStr4(data, i)
-	elif (tag == 0x13): val, i = getFloat64A(data, i, 3) # normalized direction
-	elif (tag == 0x14): val, i = getFloat64A(data, i, 3) # position that needs to be scaled
-	elif (tag == 0x15): val, i = getUInt32(data, i)
-	elif (tag == 0x16): val, i = getFloat64A(data, i, 2)
-	else:
+	try:
+		reader = TAG_READER[tag]
+		return (tag, ) + reader(data, i)
+	except KeyError as ke:
 		raise Exception("Don't know to read TAG %X" %(tag))
-	return tag, val, i
 
 CURVES = {
 	'compcurv':          CurveComp,
@@ -3213,6 +3195,78 @@ SURFACES = {
 	'null_surface': None,
 }
 
+CURVE_TYPES = {
+	'bldcur':            ('setBlend', 0, False),
+	'blend_int_cur':     ('setBlend', 1, True),
+	'blndsprngcur':      ('setBlendSprng', 0, False),
+	'comp_int_cur':      ('setComp', 1, True),
+	'defm_int_cur':      ('setDefm', 1, True),
+	'exactcur':          ('setExact', 0, False),
+	'exact_int_cur':     ('setExact', 1, True),
+	'helix_int_cur':     ('setHelix', 1, True),
+	'int_int_cur':       ('setInt', 1, True),
+	'lawintcur':         ('setLaw', 0, False),
+	'law_int_cur':       ('setLaw', 1, True),
+	'offintcur':         ('setOff', 0, False),
+	'off_int_cur':       ('setOff', 1, True),
+	'offsetintcur':      ('setOffset', 0, False),
+	'offset_int_cur':    ('setOffset', 1, True),
+	'offsurfintcur':     ('setOffsetSurface', 0, False),
+	'off_surf_int_cur':  ('setOffsetSurface', 1, True),
+	'parcur':            ('setParameter', 0, False),
+	'par_int_cur':       ('setParameter', 1, True),
+	'para_silh_int_cur': ('setParameterSilhouette', 1, True),
+	'proj_int_cur':      ('setProject', 1, True),
+	'spring_int_cur':    ('setSpring', 1, True),
+	'surfintcur':        ('setSurface', 0, False),
+	'surf_int_cur':      ('setSurface', 1, True),
+}
+
+SURFACE_TYPES = {
+	'cl_loft_spl_sur':      ('setClLoft', 1, True),
+	'comp_spl_sur':         ('setCompound', 1, True),
+	'cylsur':               ('setCylinder', 0, False),
+	'cyl_spl_sur':          ('setCylinder', 1, True),
+	'defmsur':              ('setDefm', 0, False),
+	'defm_spl_sur':         ('setDefm', 1, True),
+	'exactsur':             ('setExact', 0, False),
+	'exact_spl_sur':        ('setExact', 1, True),
+	'g2blnsur':             ('setG2Blend', 0, False),
+	'g2_blend_spl_sur':     ('setG2Blend', 1, True),
+	'helix_spl_circ':       ('setHelixCircle', 1, True),
+	'helix_spl_line':       ('setHelixLine', 1, True),
+	'loftsur':              ('setLoft', 0, False),
+	'loft_spl_sur':         ('setLoft', 1, True),
+	'net_spl_sur':          ('setNet', 1, True),
+	'offsur':               ('setOffset', 0, False),
+	'off_spl_sur':          ('setOffset', 1, True),
+	'orthosur':             ('setOrtho', 0, False),
+	'ortho_spl_sur':        ('setOrtho', 1, True),
+	'rbblnsur':             ('setRbBlend', 0, False),
+	'rb_blend_spl_sur':     ('setRbBlend', 1, True),
+	'rotsur':               ('setRotation', 0, False),
+	'rot_spl_sur':          ('setRotation', 1,  True),
+	'sclclftsur':           ('setScaleClft', 0, False),
+	'scaled_cloft_spl_sur': ('setScaleClft', 1, True),
+	'shadow_tpr_spl_sur':   ('setShadowTpr', 1, True),
+	'skinsur':              ('setSkin', 0, False),
+	'skin_spl_sur':         ('setSkin', 1, True),
+	'sweepsur':             ('setSweep', 0, False),
+	'sweep_spl_sur':        ('setSweep', 1, True),
+	'sweep_sur':            ('setSweepSpline', 1, True),
+	't_spl_sur':            ('setTSpline', 1, True),
+	'vertexblendsur':       ('setVertexBlend', 0, False),
+	'VBL_SURF':             ('setVertexBlend', 1, True),
+	'srfsrfblndsur':        ('setBlendSupply', 0, False),
+	'srf_srf_v_bl_spl_sur': ('setBlendSupply', 1, True),
+	'sssblndsur':           ('setBlendSupply', 0, False),
+	'sss_blend_spl_sur':    ('setBlendSupply', 1, True),
+	'sumsur':               ('setSum', 0, False),
+	'sum_spl_sur':          ('setSum', 1, True),
+	'ruled_tpr_spl_sur':    ('setRuledTpr', 1, True),
+	'swept_tpr_spl_sur':    ('setSweptTpr', 1, True),
+}
+
 ENTITY_TYPES = {
 	"annotation":                                                                                  Annotation,
 	"primitive_annotation-annotation":                                                             AnnotationPrimitive,
@@ -3228,6 +3282,7 @@ ENTITY_TYPES = {
 	"id-ansoft-attrib":                                                                            AttribAnsoftId,
 	"properties-ansoft-attrib":                                                                    AttribAnsoftProperties,
 	"at_ufld-attrib":                                                                              AttribAtUfld,
+	"ufld_defm_data_attrib-at_ufld-attrib":                                                        AttribAtUfldDefmData,
 	"ufld_dev_pair_attrib-at_ufld-attrib":                                                         AttribAtUfldDevPair,
 	"ufld_pos_transf_attrib-at_ufld-attrib":                                                       AttribAtUfldFfldPosTransf,
 	"mix_UF_ContourRoll_Track-ufld_pos_transf_attrib-at_ufld-attrib":                              AttribAtUfldFfldPosTransfMixUfContourRollTrack,
@@ -3236,6 +3291,7 @@ ENTITY_TYPES = {
 	"mix_UF_RobustPositionTrack-ufld_pos_track_attrib-at_ufld-attrib":                             AttribAtUfldPosTrackMixUfRobustPositionTrack,
 	"ufld_surf_simp_attrib-ufld_pos_track_attrib-at_ufld-attrib":                                  AttribAtUfldPosTrackSurfSimp,
 	"DXID-attrib":                                                                                 AttribDxid,
+	"ATTRIB_CUSTOM-attrib":                                                                        AttribCustom,
 	"eye-attrib":                                                                                  AttribEye,
 	"fmesh-eye-attrib":                                                                            AttribEyeFMesh,
 	"ptlist-eye-attrib":                                                                           AttribEyePtList,
@@ -3246,6 +3302,10 @@ ENTITY_TYPES = {
 	"name_attrib-gen-attrib":                                                                      AttribGenName,
 	"integer_attrib-name_attrib-gen-attrib":                                                       AttribGenNameInteger,
 	"string_attrib-name_attrib-gen-attrib":                                                        AttribGenNameString,
+	"lwd-attrib":                                                                                  AttribLwd,
+	"fmesh-lwd-attrib":                                                                            AttribLwdFMesh,
+	"ptlist-lwd-attrib":                                                                           AttribLwdPtList,
+	"ref_vt-lwd-attrib":                                                                           AttribLwdRefVT,
 	"mix_Organizaion-attrib":                                                                      AttribMixOrganization,
 	"mix_BendExtendPlane-mix_Organizaion-attrib":                                                  AttribMixOrganizationBendExtendPlane,
 	"mix_CornerEdge-mix_Organizaion-attrib":                                                       AttribMixOrganizationCornerEdge,
@@ -3328,6 +3388,7 @@ ENTITY_TYPES = {
 	"no_combine_attribute-st-attrib":                                                              AttribStNoCombine,
 	"rgb_color-st-attrib":                                                                         AttribStRgbColor,
 	"display_attribute-st-attrib":                                                                 AttribStDisplay,
+	"id_attribute-st-attrib":                                                                      AttribStId,
 	"sys-attrib":                                                                                  AttribSys,
 	"convexity-sys-attrib":                                                                        AttribSysConvexity,
 	"attrib_annotation-sys-attrib":                                                                AttribSysAnnotationAttrib,
@@ -3358,6 +3419,7 @@ ENTITY_TYPES = {
 	"loop":                                                                                        Loop,
 	"lump":                                                                                        Lump,
 	"point":                                                                                       Point,
+	"refinement":                                                                                  Refinement,
 	"shell":                                                                                       Shell,
 	"subshell":                                                                                    SubShell,
 	"surface":                                                                                     Surface,

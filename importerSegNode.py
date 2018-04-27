@@ -662,13 +662,13 @@ class AbstractNode(AbstractData):
 					i =  self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'tmp')
 					val.lst = self.get('tmp')
 					val.u8_0, i  = getUInt8(self.data, i)
-					if (skipBlockSize):
-						i += 4
+					if (skipBlockSize): i += 4
+					if (getFileVersion() > 2018): i += 1
 					val.u32_1, i = getUInt32(self.data, i)
 					val.u8_1, i  = getUInt8(self.data, i)
 					val.s32_0, i  = getSInt32(self.data, i)
-					if (skipBlockSize):
-						i += 8
+					if (skipBlockSize): i += 8
+					if (getFileVersion() > 2018): i += 1
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_2_):
 					key = len(lst)
@@ -680,8 +680,8 @@ class AbstractNode(AbstractData):
 					val.lst = self.get('tmp')
 					val.u8_0, i  = getUInt8(self.data, i)
 					val.s32_0, i  = getSInt32(self.data, i)
-					if (skipBlockSize):
-						i += 8
+					if (skipBlockSize): i += 8
+					if (getFileVersion() > 2018): i += 1
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
 				elif (typ == AbstractNode._TYP_MAP_TEXT16_X_REF_):
 					key, i = getLen32Text16(self.data, i)
@@ -1061,3 +1061,6 @@ class NodeRef():
 
 	def __str__(self): # return unicode
 		return u'[%04X,%X]' %(self.index, self.mask)
+
+	def __repr__(self):
+		return self.__str__()

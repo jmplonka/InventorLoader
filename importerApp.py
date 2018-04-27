@@ -88,8 +88,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_3214005D(self, node):
@@ -167,16 +166,14 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_5C30CDF6(self, node):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_5C30CE1D(self, node):
@@ -197,8 +194,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_5F9D0026(self, node):
@@ -209,22 +205,19 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_5F9D002B(self, node):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_61B5E2D1(self, node):
 		i = node.ReadList2(0, AbstractNode._TYP_NODE_REF_, 'lst0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
@@ -422,8 +415,7 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_958DB976(self, node):
-		# i = self.skipBlockSize(i)
-		# i = self.skipBlockSize(i)
+		# i = self.skipBlockSize(i, 8)
 		i = 0
 		return i
 
@@ -487,8 +479,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_D0A64ABB(self, node):
@@ -527,8 +518,7 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_D8577FC4(self, node):
-		i = self.skipBlockSize(0)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(0, 8)
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt8A(i, 9, 'a0')
 		i = node.ReadLen32Text8(i, 'txt_0')
@@ -604,32 +594,28 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_F8A779F3(self, node):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_F8A779F5(self, node):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_F8A779F6(self, node):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_F8A779F8(self, node):
@@ -711,8 +697,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'vec2d_0')
-		i = self.skipBlockSize(i)
-		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i, 8)
 		return i
 
 	def Read_FD1E8992(self, node): return 0

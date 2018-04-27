@@ -7,18 +7,18 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 
 import sys, os, uuid, datetime, re, zlib, operator, glob, struct, codecs, xlrd, FreeCAD, Import_IPT
 from importerClasses     import *
-from importerSegment     import SegmentReader
-from importerApp         import AppReader
+#from importerSegment     import SegmentReader
 from importerBRep        import BRepReader
-from importerBrowser     import BrowserReader
 from importerDC          import DCReader
-from importerDesignView  import DesignViewReader
-from importerEeData      import EeDataReader
-from importerEeScene     import EeSceneReader
-from importerFBAttribute import FBAttributeReader
-from importerGraphics    import GraphicsReader
-from importerNotebook    import NotebookReader
-from importerResults     import ResultReader
+#from importerApp         import AppReader
+#from importerBrowser     import BrowserReader
+#from importerDesignView  import DesignViewReader
+#from importerEeData      import EeDataReader
+#from importerEeScene     import EeSceneReader
+#from importerFBAttribute import FBAttributeReader
+#from importerGraphics    import GraphicsReader
+#from importerNotebook    import NotebookReader
+#from importerResults     import ResultReader
 from importerUtils       import *
 from xlutils.copy        import copy
 
@@ -1078,45 +1078,34 @@ def findSegment(segRef):
 def getReader(seg):
 	reader = None
 	seg.AcisList = []
-	if (RSeMetaData.isApp(seg)): # ApplicationSettings
-		# reader = AppReader()
-		pass
-	elif (RSeMetaData.isBRep(seg)): # BoundaryRepresentation
+	if (RSeMetaData.isBRep(seg)): # BoundaryRepresentation
 		if (isStrategySat()):
 			reader = BRepReader()
-		pass
-	elif (RSeMetaData.isBrowser(seg)):
-		# reader = BrowserReader()
-		pass
-	elif (RSeMetaData.isDefault(seg)):
-		# reader = DefaultReader()
-		pass
 	elif (RSeMetaData.isDC(seg)):
 		if (isStrategyNative()):
 			reader = DCReader()
-	elif (RSeMetaData.isGraphics(seg)):
-		# reader = GraphicsReader()
-		pass
-	elif (RSeMetaData.isResult(seg)):
-		# reader = ResultReader()
-		pass
-	elif (RSeMetaData.isDesignView(seg)):
-		# reader = DesignViewReader()
-		pass
-	elif (RSeMetaData.isEeData(seg)):
-		# reader = EeDataReader()
-		pass
-	elif (RSeMetaData.isEeScene(seg)):
-		# reader = EeSceneReader()
-		pass
-	elif (RSeMetaData.isFBAttribute(seg)):
-		# reader = FBAttributeReader()
-		pass
-	elif (RSeMetaData.isNBNotebook(seg)):
-		# reader = NotebookReader()
-		pass
-	elif (seg.segRef is not None):
-		logWarning('>W: %s will be read, but not considered!' %(seg.name))
+#	elif (RSeMetaData.isApp(seg)): # ApplicationSettings
+#		reader = AppReader()
+#	elif (RSeMetaData.isBrowser(seg)):
+#		reader = BrowserReader()
+#	elif (RSeMetaData.isDefault(seg)):
+#		reader = DefaultReader()
+#	elif (RSeMetaData.isGraphics(seg)):
+#		reader = GraphicsReader()
+#	elif (RSeMetaData.isResult(seg)):
+#		reader = ResultReader()
+#	elif (RSeMetaData.isDesignView(seg)):
+#		reader = DesignViewReader()
+#	elif (RSeMetaData.isEeData(seg)):
+#		reader = EeDataReader()
+#	elif (RSeMetaData.isEeScene(seg)):
+#		reader = EeSceneReader()
+#	elif (RSeMetaData.isFBAttribute(seg)):
+#		reader = FBAttributeReader()
+#	elif (RSeMetaData.isNBNotebook(seg)):
+#		reader = NotebookReader()
+#	elif (seg.segRef is not None):
+#		logWarning('>W: %s will be read, but not considered!' %(seg.name))
 	return reader
 
 def ReadRSeMetaDataB(dataB, seg):

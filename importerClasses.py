@@ -451,22 +451,19 @@ class AbstractValue():
 		self.unit   = unit
 
 	def __str__(self): # return unicode
-		s = self.unit
-		s = '%g%s' %(self.x / self.factor - self.offset, s)
-		return s
-	def toStandard(self):  return self.__str__
+		return '%g%s' %(self.x / self.factor - self.offset, self.unit)
+	def __repr__(self): return self.toStandard()
+	def toStandard(self):  return self.__str__()
 
 class Length(AbstractValue):
 	def __init__(self, x, factor = 0.1, unit = 'mm'):
 		AbstractValue.__init__(self, x, factor, 0.0, unit)
-
 	def getMM(self):      return self.x / 0.1
 	def toStandard(self): return '%g mm' %(self.x / 0.1)
 
 class Angle(AbstractValue):
 	def __init__(self, a, factor, unit):
 		AbstractValue.__init__(self, a, factor, 0.0, unit)
-
 	def getRAD(self):     return self.x
 	def getGRAD(self):    return degrees(self.x)
 	def toStandard(self): return '%g\xC2\xB0' %(self.getGRAD())
@@ -474,7 +471,6 @@ class Angle(AbstractValue):
 class Mass(AbstractValue):
 	def __init__(self, m, factor, unit):
 		AbstractValue.__init__(self, m, factor, 0.0, unit)
-
 	def getGram(self):    return self.x
 	def toStandard(self): return '%ggr' %(self.getGram())
 
@@ -485,7 +481,6 @@ class Time(AbstractValue):
 class Temperature(AbstractValue):
 	def __init__(self, t, factor, offset, unit):
 		AbstractValue.__init__(self, t, factor, offset, unit)
-
 	def toStandard(self): return '%g K' %(self.x)
 
 class Velocity(AbstractValue):
@@ -1262,6 +1257,7 @@ class Header0():
 
 	def __str__(self):
 		return 'm=%X x=%04X' %(self.m, self.x)
+	def __repr__(self): return self.__str__()
 
 class _32RRR2():
 	def __init__(self, i, f, n):
