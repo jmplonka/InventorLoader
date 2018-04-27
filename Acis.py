@@ -1524,10 +1524,11 @@ class CoEdge(Topology):
 			c = e.getCurve()
 			if (c is not None):
 				if (c.shape is None):
-					c.build(e.getStart(), e.getEnd())
+					p1 = e.getStart() if (e.sense == 'forward') else e.getEnd()
+					p2 = e.getEnd() if (e.sense == 'forward') else e.getStart()
+					c.build(p1, p2)
 				if (c.shape is not None):
 					self.shape = c.shape.copy()
-					self.shape.Orientation = 'Reversed' if (self.sense == 'reversed') else 'Forward'
 		return self.shape
 class CoEdgeTolerance(CoEdge):
 	def __init__(self):
@@ -1921,7 +1922,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 					if (type(self.curve) == int):
 						self.curve = getSubtypeNode('intcurve', self.curve)
 				if (not self.curve is None):
-					self.shape = curve.build(None, None)
+					self.shape = self.curve.build(start, end)
 		return self.shape
 class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 	def __init__(self):
