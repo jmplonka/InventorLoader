@@ -151,7 +151,7 @@ class Thumbnail(object):
 			elif (fmt == 5):
 				offset = 0x4C
 			else:
-				raise AssertionError("Unkown thumbnail format %d" %(fmt))
+				raise AssertionError("Unknown thumbnail format %d" %(fmt))
 			size, dummy = getUInt32(data, offset + 20)
 			buffer = 'BM' + pack('LLL', size + 0x36, 0, 0x36)
 			buffer += data[offset:]

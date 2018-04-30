@@ -1696,7 +1696,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			self.tolerance, i = getLength(chunks, i)
 			f2, i = getFloat(chunks, i)
 		else:
-			raise Exception("Unknwon Surface-singularity '%s'" %(self.singularity))
+			raise Exception("Unknown Surface-singularity '%s'" %(self.singularity))
 		return i
 	def setSurfaceCurve(self, chunks, index):
 		i = self.setCurve(chunks, index)
