@@ -34,6 +34,8 @@ That allows it to embed Excel workboos e.g.
 | Workbook | Spreadsheet | done | done | done |
 
 ## History:
+- 0.8 Added handling of Inventor 2019 file format.
+
 - 0.7.2 added interpolated surfaces for SAT files.
 
 - 0.7.1 added interpolated curves for SAT files.

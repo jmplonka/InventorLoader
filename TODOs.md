@@ -32,9 +32,7 @@
 
 # SAT files
 ## Incomplete Features
-	* p-curves
-	* resolving references
-	
+	* spline-surface - missing creation of Helix surface.
 
 ## missing Features
 	* mesh-surfaces
