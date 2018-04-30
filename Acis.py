@@ -641,7 +641,7 @@ def isOnLine(sEdge, fEdge):
 def isOnCircle(sc, fc):
 	if (isEqual(fc.Location, sc.Location)):
 		if (isEqual(fc.Axis, sc.Axis) or isEqual(-1 * fc.Axis, sc.Axis)):
-			return isEqual1D(fc.Radius, sc.Radius):
+			return isEqual1D(fc.Radius, sc.Radius)
 	return False
 
 def isOnEllipse(sc, fc):
