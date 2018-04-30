@@ -292,12 +292,10 @@ def buildFaces(shells, doc, root, name, transform):
 	i = 1
 	for shell in shells:
 		for face in shell.getFaces():
-			surfaces = face.build(doc)
-			if (len(surfaces) > 0):
-				faces += surfaces
-			for f in surfaces:
-				createBody(doc, root, "%s_%d" %(name, i), f, transform)
-				i += 1
+			surface = face.build(doc)
+			if (surface is not None):
+				faces.append(surface)
+				createBody(doc, root, "%s_%d" %(name, i), surface, transform)
 		for wire in shell.getWires():
 			buildWire(root, doc, wire, transform)
 

@@ -6,9 +6,10 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 '''
 
 import traceback, FreeCAD, math, Part, Draft
-from importerUtils import LOG, logMessage, logWarning, logError, isEqual, getUInt8, getUInt16, getSInt32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
-from FreeCAD       import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
-from math          import pi, fabs
+from importerUtils              import LOG, logMessage, logWarning, logError, isEqual, isEqual1D, getUInt8, getUInt16, getSInt32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
+from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
+from math                       import pi, fabs
+from BOPTools.GeneralFuseResult import GeneralFuseResult
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -629,30 +630,29 @@ def isBetween(a, c, b):
 	ab = a.distanceToPoint(b)
 	return ac + cb == ab
 
-def isOnLine(fEdge, sEdge):
+def isOnLine(sEdge, fEdge):
 	sv = sEdge.Vertexes
 	fv = fEdge.Vertexes
-	s0 = sv[0].Point
-	s1 = sv[1].Point
-	result = (isBetween(s0, fv[0].Point, s1) and isBetween(s0, fv[1].Point, s1))
+	f0 = fv[0].Point
+	f1 = fv[1].Point
+	result = (isBetween(f0, sv[0].Point, f1) and isBetween(f0, sv[1].Point, f1))
 	return result
-def isOnCircle(fEdge, sEdge):
-	fc = fEdge.Curve
-	sc = sEdge.Curve
+
+def isOnCircle(sc, fc):
 	if (isEqual(fc.Location, sc.Location)):
 		if (isEqual(fc.Axis, sc.Axis) or isEqual(-1 * fc.Axis, sc.Axis)):
-			return (fc.Radius == sc.Radius)
+			return isEqual1D(fc.Radius, sc.Radius):
 	return False
-def isOnEllipse(fEdge, sEdge):
-	fc = fEdge.Curve
-	sc = sEdge.Curve
+
+def isOnEllipse(sc, fc):
 	if (isEqual(fc.Location, sc.Location)):
 		if (isEqual(fc.Axis, sc.Axis)):
 			if (isEqual(fc.Focus1, sc.Focus1)):
 				if (fc.MajorRadius == sc.MajorRadius):
 					return (fc.MinorRadius == sc.MinorRadius)
 	return False
-def isOnBSplineCurve(fEdge, sEdge):
+
+def isOnBSplineCurve(sEdge, fEdge):
 	sp = [v.Point for v in sEdge.Vertexes]
 	fp = [v.Point for v in fEdge.Vertexes]
 	if (len(sp) != len(fp)):
@@ -661,44 +661,48 @@ def isOnBSplineCurve(fEdge, sEdge):
 		if (not isEqual(p, fp[i])):
 			return False
 	return True
-def isSeam(edge, edges):
-	seam = False
-	for sEdge in edges:
+
+def isSeam(edge, face):
+	c = edge.Curve
+	for fEdge in face.Edges:
 		try:
-			if (isinstance(edge.Curve, sEdge.Curve.__class__)):
-				if (isinstance(edge.Curve, Part.Line) or isinstance(edge.Curve, Part.LineSegment)):
-					seam |= isOnLine(edge, sEdge)
-				elif (isinstance(edge.Curve, Part.Circle)):
-					seam |= isOnCircle(edge, sEdge)
-				elif (isinstance(edge.Curve, Part.Ellipse)):
-					seam |= isOnEllipse(edge, sEdge)
-				elif (isinstance(edge.Curve, Part.BSplineCurve)):
-					seam |= isOnBSplineCurve(edge, sEdge)
-		except:
+			if (isinstance(c, fEdge.Curve.__class__)):
+				if (isinstance(c, Part.Line) or isinstance(c, Part.LineSegment)):
+					if isOnLine(edge, fEdge): return True
+				elif (isinstance(c, Part.Circle)):
+					if isOnCircle(c, fEdge.Curve): return True
+				elif (isinstance(c, Part.Ellipse)):
+					if isOnEllipse(c, fEdge.Curve): return True
+				elif (isinstance(c, Part.BSplineCurve)):
+					if isOnBSplineCurve(edge, fEdge): return True
+		except Exception as e:
 			pass
-	return seam
+	return False
 
 def isValid(face):
 	for edge in face.Edges:
 		for v in edge.Vertexes:
-			if (v.Point.Length >= 0.4e+07):
+			if (v.Point.Length >= 0.4e+7):
 				return False
 	return True
 
 def eliminateOuterFaces(faces, wires):
+	_faces = [f for f in faces if f.isValid()]
+	if (len(_faces) == 1):
+		return _faces[0]
 	edges = getEdges(wires)
 	result = []
-	for i, face in enumerate(faces):
+	for face in _faces:
 		if (isValid(face)):
-			matches = 0
-			for fEdge in face.Edges:
-				if (isSeam(fEdge, edges)):
-					matches += 1
-			if ((matches == len(edges)) and (matches == len(face.Edges))):
-				return [face] #Teminator: "There Can Be Only One!"
-			if (matches > 1):
-				result.append(face)
-	return result
+			matches = True
+			for e in edges:
+				matches = matches and isSeam(e, face)
+			if (matches):
+				return face
+			result.append(face)
+	logWarning("Something went wrong!")
+	for f in _faces: Part.show(f)
+	return None
 
 def createEllipse(center, normal, major, ratio):
 	radius = major.Length
@@ -1385,44 +1389,34 @@ class Face(Topology):
 					edges += edge.Edges
 			loop = loop.getNext()
 		return edges
-	def showEdges(self, wires):
-		for wire in wires:
-			Part.show(wire)
+	def showEdges(self, edges):
+		for edge in edges:
+			Part.show(edge)
 		return None
-	def buildWires(self, doc):
-		wires    = []
-		edges    = self.buildCoEdges(doc)
-		for cluster in Part.getSortedClusters(edges):
-			for edge in cluster:
-				for vertex in edge.Vertexes:
-					vertex.Tolerance = 0.025
-				edge.Tolerance = 0.025
-			try:
-				wires.append(Part.Wire(cluster))
-			except:
-				wires += [Part.Wire(edge) for edge in cluster]
-
-		return wires
 	def build(self, doc):
-		wires = self.buildWires(doc)
+		edges = self.buildCoEdges(doc)
 		s     = self.getSurface()
 		face = None
 		surface = s.build() if (s is not None) else None
 		if (surface is not None):
-			if (len(wires) > 0):
+			if (len(edges) > 0):
 				# got from Part.BOPTools.SplitAPI.slice()
-				compound, map = surface.generalFuse(wires, 0.05)
-				# eliminate faces with vertexes outside wires
-				return eliminateOuterFaces(map[0], wires)
+				shapes = [surface] + edges
+				compound, map = surface.generalFuse(edges, 0.05)
+				map = [x for x in map if len(x) > 0]
+				if ( len(map)) > 0:
+					gr = GeneralFuseResult(shapes, (compound, map))
+					gr.splitAggregates(gr.piecesFromSource(surface))
+					result = gr.piecesFromSource(surface)
+					return eliminateOuterFaces(result, edges)
 			# edges can be empty because not all edges can be created right now :(
-			return [surface]
+			return surface
 		if (hasattr(s, 'type')):
 			if (s.type != 'ref'):
 				logWarning("    ... Don't know how to build surface '%s::%s' - only edges displayed!" %(s.__class__.__name__, s.type))
 		else:
 			logWarning("    ... Don't know how to build surface '%s' - only edges displayed!" %(s.__class__.__name__))
-		self.showEdges(wires)
-		return []
+		return self.showEdges(edges)
 class Loop(Topology):
 	def __init__(self):
 		super(Loop, self).__init__()
@@ -2121,9 +2115,7 @@ class SurfacePlane(Surface):
 		return i
 	def build(self):
 		if (self.shape is None):
-			plane = Part.Plane()
-			plane.Axis = self.normal
-			plane.Position = self.root
+			plane = Part.Plane(self.root, self.normal)
 			self.shape = plane.toShape()
 		return self.shape
 class SurfaceSphere(Surface):
@@ -3116,55 +3108,60 @@ class AcisRef():
 	def __repr__(self):
 		return self.__str__()
 
-def readStr1(data, offset):
+def getStr1(data, offset):
 	l, i = getUInt8(data, offset)
 	end = i + l
 	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
 	return txt, end
 
-def readStr2(data, offset):
+def getStr2(data, offset):
 	l, i = getUInt16(data, offset)
 	end = i + l
 	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
 	return txt, end
 
-def readStr4(data, offset):
+def getStr4(data, offset):
 	l, i = getUInt32(data, offset)
 	end = i + l
 	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
 	return txt, end
 
-def readEntityRef(data, offset):
+def getEntityRef(data, offset):
 	index, i = getSInt32(data, offset)
 	return AcisRef(index), i
 
-def readTagA(data, index):         return '0x0A', index
-def readTagB(data, index):         return '0x0B', index
-def readTagOpen(data, index):      return '{', index
-def readTagClose(data, index):     return '}', index
-def readTagTerminate(data, index): return '#', index
-def readTagFloats3D(data, index):  return getFloat64A(data, index, 3)
-def readTagFloats2D(data, index):  return getFloat64A(data, index, 2)
+def getTagA(data, index):         return '0x0A', index
+def getTagB(data, index):         return '0x0B', index
+def getTagOpen(data, index):      return '{', index
+def getTagClose(data, index):     return '}', index
+def getTagTerminate(data, index): return '#', index
+def getTagFloats3D(data, index):  return getFloat64A(data, index, 3)
+def getTagFloats2D(data, index):  return getFloat64A(data, index, 2)
 
 TAG_READER = {
-	0x04: getSInt32,
-	0x06: getFloat64,
-	0x07: readStr1,
-	0x08: readStr2,
-	0x09: readStr4,
-	0x0A: readTagA,
-	0x0B: readTagB,
-	0x0C: readEntityRef,
-	0x0D: readStr1,
-	0x0E: readStr1,
-	0x0F: readTagOpen,
-	0x10: readTagClose,
-	0x11: readTagTerminate,
-	0x12: readStr4,
-	0x13: readTagFloats3D,
-	0x14: readTagFloats3D,
-	0x15: getUInt32,
-	0x16: readTagFloats2D,
+#   0x00: get?????		   #
+#   0x01: get?????		   #
+#   0x02: get?????		   #
+#   0x03: get?????		   #
+	0x04: getSInt32,	   # 32Bit signed value
+#   0x05: get?????		   #
+	0x06: getFloat64,	   # 64Bit IEEE Float value
+	0x07: getStr1,		   # 8Bit length + UTF8-Char
+	0x08: getStr2,		   # 16Bit length + UTF8-Char
+	0x09: getStr4,		   # 32Bit length + UTF8-Char
+	0x0A: getTagA,		   # False
+	0x0B: getTagB,		   # True
+	0x0C: getEntityRef,    # Entity reference
+	0x0D: getStr1,		   # Sub-Class-Name
+	0x0E: getStr1,		   # Base-Class-Namme
+	0x0F: getTagOpen,	   # Opening block tag
+	0x10: getTagClose,	   # Closing block tag
+	0x11: getTagTerminate, # '#' sign
+	0x12: getStr4,		   # 32Bit length + UTF8-Char
+	0x13: getTagFloats3D,  # 3D-Vector scaled
+	0x14: getTagFloats3D,  # 3D-Vector normalized
+	0x15: getUInt32,	   # 32Bit unsigned value
+	0x16: getTagFloats2D,  # U-V-Vector
 }
 
 def readNextSabChunk(data, index):
