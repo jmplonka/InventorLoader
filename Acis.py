@@ -680,6 +680,8 @@ def isSeam(edge, face):
 	return False
 
 def isValid(face):
+	if (not face.isValid()):
+		return False
 	for edge in face.Edges:
 		for v in edge.Vertexes:
 			if (v.Point.Length >= 0.4e+7):
@@ -687,20 +689,18 @@ def isValid(face):
 	return True
 
 def eliminateOuterFaces(faces, wires):
-	_faces = [f for f in faces if f.isValid()]
+	_faces = [f for f in faces if isValid(f)]
 	if (len(_faces) == 1):
 		return _faces[0]
 	edges = getEdges(wires)
 	result = []
 	for face in _faces:
-		if (isValid(face)):
-			matches = True
-			for e in edges:
-				matches = matches and isSeam(e, face)
-			if (matches):
-				return face
-			result.append(face)
-	logWarning("Something went wrong!")
+		matches = True
+		for e in edges:
+			matches = matches and isSeam(e, face)
+		if (matches):
+			return face
+		result.append(face)
 	for f in _faces: Part.show(f)
 	return None
 
@@ -1403,12 +1403,10 @@ class Face(Topology):
 				# got from Part.BOPTools.SplitAPI.slice()
 				shapes = [surface] + edges
 				compound, map = surface.generalFuse(edges, 0.05)
-				map = [x for x in map if len(x) > 0]
-				if ( len(map)) > 0:
-					gr = GeneralFuseResult(shapes, (compound, map))
-					gr.splitAggregates(gr.piecesFromSource(surface))
-					result = gr.piecesFromSource(surface)
-					return eliminateOuterFaces(result, edges)
+				gr = GeneralFuseResult(shapes, (compound, map))
+				gr.splitAggregates(gr.piecesFromSource(surface))
+				result = gr.piecesFromSource(surface)
+				return eliminateOuterFaces(result, edges)
 			# edges can be empty because not all edges can be created right now :(
 			return surface
 		if (hasattr(s, 'type')):
@@ -1880,7 +1878,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		a3, i       = getFloatArray(chunks, i)
 		# n, m ???
 		return i
-	def setSurface(self, chunks, index):
+	def setSurface(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index)
 		return i
 	def setBulk(self, chunks, index):
