@@ -1,7 +1,6 @@
 # InventorLoader
-Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD. Until now only
-the structure of IPD, IAM and IDW files can be dumped, but neither parts (IPT)
-nor assemblies (IAM), nor drawings (IDW) can be displayed.
+Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD (min. Version 0.17). Until now only
+Parts (IPT) but nor assemblies (IAM) nor drawings (IDW) can be displayed.
 
 ## Prerequisites
 - The AddON requires additional python packages in the FreeCAD python installation:
@@ -11,6 +10,7 @@ nor assemblies (IAM), nor drawings (IDW) can be displayed.
   - https://pypi.python.org/pypi/xlwt - for writing embedded Excel workbooks
   - http://www.decalage.info/python/olefileio - olefile for reading Microsoft OLE(2)
   	files.
+- Minimum Version 0.17 of FreeCAD is required!
 
 ## Status:
 > Alpha!
@@ -18,22 +18,16 @@ nor assemblies (IAM), nor drawings (IDW) can be displayed.
 Autodesk Inventor files have a OLE2 files.
 That allows it to embed Excel workboos e.g.
 
-- The addon is able to read (not analyze) Inventor files from 2003 till 2017 (RSe
-  Meta Stream Version Version 3 till 8)
-- Read the iProperties (only a few can be set in FreeCAD)
+- The addon is able to read Inventor files from 2010 till 2019.
+- Read the iProperties (only a few can be applied in FreeCAD)
 - Display embedded workbooks as a new spreadsheet
-- Read BrowserView structure (started V2015 & IPT files only)
-
-| File | Description | IPT | IAM | IDW |
-| --- | --- | --- | --- | --- |
-| [5]xyz | iProperties | done | done | done |
-| RSeDb | Database | done | done | done |
-| RSeSegInfo | Content Structure | structure | structure | structure |
-| M... | Segment Structure info | started | started | started | started |
-| B... | Segment Data | done | started | started |
-| Workbook | Spreadsheet | done | done | done |
+- Two strategies are provided:
+ -- feature base: the addon tries to rebuild all the features.
+ -- SAT based: like STEP file, model will be imported based on FACE, EDGES and VERTICES.
 
 ## History:
+- 0.8.1 Fixed support of cone surfaces.
+
 - 0.8 Added handling of Inventor 2019 file format.
 
 - 0.7.2 added interpolated surfaces for SAT files.
