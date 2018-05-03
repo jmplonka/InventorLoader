@@ -614,15 +614,9 @@ def rotateShape(shape, dir):
 	# Setting the axis directly doesn't work for directions other than x-axis!
 	angle = math.degrees(DIR_Z.getAngle(dir))
 	if (angle != 0):
-		axis = DIR_Z.cross(dir) if angle != 180 else DIR_Z
+		axis = DIR_Z.cross(dir) if angle != 180 else DIR_X
 		shape.rotate(PLC(CENTER, axis, angle))
 	return
-
-def getEdges(wires):
-	edges = []
-	for wire in wires:
-		edges += wire.Edges
-	return edges
 
 def isBetween(a, c, b):
 	ac = a.distanceToPoint(c)
@@ -688,11 +682,10 @@ def isValid(face):
 				return False
 	return True
 
-def eliminateOuterFaces(faces, wires):
+def eliminateOuterFaces(faces, edges):
 	_faces = [f for f in faces if isValid(f)]
 	if (len(_faces) == 1):
 		return _faces[0]
-	edges = getEdges(wires)
 	result = []
 	for face in _faces:
 		matches = True
@@ -703,6 +696,11 @@ def eliminateOuterFaces(faces, wires):
 		result.append(face)
 	for f in _faces: Part.show(f)
 	return None
+
+def applyBoundary(face, edges):
+	shapes = [face] + edges
+	compound, elements = face.generalFuse(edges, 0.05)
+	return eliminateOuterFaces(elements[0], edges)
 
 def createEllipse(center, normal, major, ratio):
 	radius = major.Length
@@ -1401,12 +1399,7 @@ class Face(Topology):
 		if (surface is not None):
 			if (len(edges) > 0):
 				# got from Part.BOPTools.SplitAPI.slice()
-				shapes = [surface] + edges
-				compound, map = surface.generalFuse(edges, 0.05)
-				gr = GeneralFuseResult(shapes, (compound, map))
-				gr.splitAggregates(gr.piecesFromSource(surface))
-				result = gr.piecesFromSource(surface)
-				return eliminateOuterFaces(result, edges)
+				return applyBoundary(surface, edges)
 			# edges can be empty because not all edges can be created right now :(
 			return surface
 		if (hasattr(s, 'type')):
@@ -2036,17 +2029,17 @@ class SurfaceCone(Surface):
 	def __str__(self): return "Surface-Cone: center=%s, axis=%s, radius=%g, ratio=%g, semiAngle=%g" %(self.center, self.axis, self.major.Length, self.ratio, math.degrees(math.asin(self.sine)))
 	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
-		self.center, i = getLocation(chunks, index)
-		self.axis, i   = getVector(chunks, i)
-		self.major, i  = getLocation(chunks, i)
+		self.center, i = getLocation(chunks, index) # Cartesian Point 'Origin'
+		self.axis, i   = getVector(chunks, i)       # Direction 'Center Axis'
+		self.major, i  = getLocation(chunks, i)     # Direction 'Ref Axis'
 		self.ratio, i  = getFloat(chunks, i)
 		self.range, i  = getInterval(chunks, i, MIN_INF, MIN_INF, getScale())
 		self.sine, i   = getFloat(chunks, i)
 		self.cosine, i = getFloat(chunks, i)
 		if (getVersion() >= ENTIY_VERSIONS.get('CONE_SCALING_VERSION')):
-			self.scale, i = getLength(chunks, i)
+			self.r1, i = getLength(chunks, i)
 		else:
-			self.scale = getScale()
+			self.r1 = self.major.Length
 		self.sense, i  = getSense(chunks, i)
 		self.urange, i = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		self.vrange, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -2065,19 +2058,15 @@ class SurfaceCone(Surface):
 				cyl.translate((-MAX_LEN) * self.axis)
 				self.shape = cyl.Faces[0]
 			elif (self.ratio == 1):
-				# TODO: elliptical cones not yet supported!
-				cone = Part.Cone()
-				rotateShape(cone, self.axis)
-				cone.Center = self.center
-				semiAngle = math.asin(self.sine)
-				try:
-					cone.SemiAngle = semiAngle
-				except Exception as e:
-					logError("    Can't set cone.SemiAngle=%s - %s" %(math.degrees(semiAngle), e))
-#				cone.Radius = self.major.Length
-				# = self.ratio
-				# = self.major
-				self.shape = cone.toShape()
+				# Workaround: can't generalFuse Part.Cone!
+				height = self.major.Length / math.tan(math.asin(self.sine))
+				apex  = self.center - self.axis * height
+				l = Part.Line(apex, self.center + self.major)
+				e = Part.LineSegment(apex, l.value(MAX_LEN)).toShape()
+				self.shape = e.revolve(self.center, self.axis, 360.0)
+				# TODO: apply scaling for ratios != 1.0!
+			else:
+				logWarning("    ... Can't create cone surface with elliptical base - skipped!")
 		return self.shape
 class SurfaceMesh(Surface):
 	def __init__(self):
@@ -2713,7 +2702,7 @@ class SurfaceTorus(Surface):
 				torus.Center = self.center
 				torus.MajorRadius = math.fabs(self.major)
 				torus.MinorRadius = math.fabs(self.minor)
-				self.shape = torus.toShape()
+				self.shape = Part.Face(torus)
 			except Exception as e:
 				logError("    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s:\n\t%s" %(major, minor, self.center, self.axis, e))
 		return self.shape
