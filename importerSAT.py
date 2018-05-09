@@ -296,6 +296,7 @@ def buildFaces(shells, doc, root, name, transform):
 			if (surface is not None):
 				faces.append(surface)
 				createBody(doc, root, "%s_%d" %(name, i), surface, transform)
+				i += 1
 		for wire in shell.getWires():
 			buildWire(root, doc, wire, transform)
 

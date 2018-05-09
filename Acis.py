@@ -625,25 +625,35 @@ def isBetween(a, c, b):
 	return ac + cb == ab
 
 def isOnLine(sEdge, fEdge):
-	sv = sEdge.Vertexes
-	fv = fEdge.Vertexes
-	f0 = fv[0].Point
-	f1 = fv[1].Point
-	result = (isBetween(f0, sv[0].Point, f1) and isBetween(f0, sv[1].Point, f1))
-	return result
+	# either start- or endpoint mus be same!
+	sp = [v.Point for v in sEdge.Vertexes]
+	fp = [v.Point for v in fEdge.Vertexes]
+#	if (isEqual(sp[0], fp[0]) or isEqual(sp[1], fp[0])): return isBetween(sp[0], fp[1], sp[1])
+#	if (isEqual(sp[0], fp[1]) or isEqual(sp[1], fp[1])): return isBetween(sp[0], fp[0], sp[1])
+	if (isEqual(sp[0], fp[0])): return isBetween(sp[0], fp[1], sp[1])
+	if (isEqual(sp[1], fp[1])): return isBetween(sp[0], fp[0], sp[1])
+	return False
 
-def isOnCircle(sc, fc):
-	if (isEqual(fc.Location, sc.Location)):
-		if (isEqual(fc.Axis, sc.Axis) or isEqual(-1 * fc.Axis, sc.Axis)):
+def isOnCircle(sEdge, fEdge):
+	sp = [v.Point for v in sEdge.Vertexes]
+	fp = [v.Point for v in fEdge.Vertexes]
+	sc = sEdge.Curve
+	fe = fEdge.Curve
+	if (isEqual(sp[0], fp[0])):
+		return
+#		if (isEqual(fc.Axis, sc.Axis) or isEqual(-1 * fc.Axis, sc.Axis)):
+		if (isEqual(fc.Axis, sc.Axis)):
 			return isEqual1D(fc.Radius, sc.Radius)
 	return False
 
-def isOnEllipse(sc, fc):
+def isOnEllipse(se, fe):
+	sc = se.Curve
+	fe = fe.Curve
 	if (isEqual(fc.Location, sc.Location)):
 		if (isEqual(fc.Axis, sc.Axis)):
 			if (isEqual(fc.Focus1, sc.Focus1)):
-				if (fc.MajorRadius == sc.MajorRadius):
-					return (fc.MinorRadius == sc.MinorRadius)
+				if (isEqual1D(fc.MajorRadius, sc.MajorRadius)):
+					return isEqual1D(fc.MinorRadius, sc.MinorRadius)
 	return False
 
 def isOnBSplineCurve(sEdge, fEdge):
@@ -661,14 +671,22 @@ def isSeam(edge, face):
 	for fEdge in face.Edges:
 		try:
 			if (isinstance(c, fEdge.Curve.__class__)):
-				if (isinstance(c, Part.Line) or isinstance(c, Part.LineSegment)):
+				if (isinstance(c, Part.Line)):
+					if isOnLine(edge, fEdge): return True
+				elif (isinstance(c, Part.LineSegment)):
 					if isOnLine(edge, fEdge): return True
 				elif (isinstance(c, Part.Circle)):
-					if isOnCircle(c, fEdge.Curve): return True
+					if isOnCircle(edge, fEdge): return True
 				elif (isinstance(c, Part.Ellipse)):
-					if isOnEllipse(c, fEdge.Curve): return True
+					if isOnEllipse(edge, fEdge): return True
 				elif (isinstance(c, Part.BSplineCurve)):
 					if isOnBSplineCurve(edge, fEdge): return True
+				elif (isinstance(c, Part.ArcOfCircle)):
+					if isOnCircle(c.Circle, fEdge.Curve.Circle): return True
+				elif (isinstance(c, Part.ArcOfEllipse)):
+					if isOnEllipse(c.Ellipse, fEdge.Curve.Ellipse): return True
+				else:
+					logError("Unknown edge type '%s'!" %(c.__class__.__name))
 		except Exception as e:
 			pass
 	return False
@@ -682,20 +700,39 @@ def isValid(face):
 				return False
 	return True
 
+def findMostMatches(faces):
+	if (len(faces) > 0):
+		matches = faces.keys()
+		matches.sort()
+		return faces[matches[-1]]
+	return []
+
 def eliminateOuterFaces(faces, edges):
 	_faces = [f for f in faces if isValid(f)]
+
+	if (len(_faces) == 0):
+		logError("No valid faces found (len(faces) = %d)!" % (len(faces)))
+		return None
+
 	if (len(_faces) == 1):
 		return _faces[0]
-	result = []
+
+	result = {}
 	for face in _faces:
-		matches = True
+		matches = 0
 		for e in edges:
-			matches = matches and isSeam(e, face)
-		if (matches):
-			return face
-		result.append(face)
-	for f in _faces: Part.show(f)
-	return None
+			if (isSeam(e, face)):
+				matches += 1
+		try:
+			lst = result[matches]
+		except:
+			lst = []
+			result[matches] = lst
+		lst.append(face)
+	faces = findMostMatches(result)
+	if (len(faces) == 1):
+		return faces[0]
+	return faces[0].multiFuse(faces[1:])
 
 def applyBoundary(face, edges):
 	shapes = [face] + edges
@@ -1381,10 +1418,11 @@ class Face(Topology):
 		edges = []
 		loop = self.getLoop()
 		while (loop is not None):
-			for coedge in loop.getCoEdges():
+			coedges = loop.getCoEdges()
+			for coedge in coedges:
 				edge = coedge.build(doc)
 				if (edge is not None):
-					edges += edge.Edges
+					edges.append(edge)
 			loop = loop.getNext()
 		return edges
 	def showEdges(self, edges):
@@ -1398,7 +1436,6 @@ class Face(Topology):
 		surface = s.build() if (s is not None) else None
 		if (surface is not None):
 			if (len(edges) > 0):
-				# got from Part.BOPTools.SplitAPI.slice()
 				return applyBoundary(surface, edges)
 			# edges can be empty because not all edges can be created right now :(
 			return surface
@@ -1484,7 +1521,6 @@ class CoEdge(Topology):
 		self.sense     = 'forward' # The relative sense
 		self._owner    = None      # The coedge's owner
 		self._curve    = None
-		self.shape     = None      # Will be created in build function
 	def set(self, entity):
 		i = i = super(CoEdge, self).set(entity)
 		self._next, i     = getRefNode(entity, i, 'coedge')
@@ -1504,17 +1540,13 @@ class CoEdge(Topology):
 	def getOwner(self):    return None if (self._owner is None)    else self._owner.node
 	def getCurve(self):    return None if (self._curve is None)    else self._curve.node
 	def build(self, doc):
-		if (self.shape is None):
-			e = self.getEdge()
-			c = e.getCurve()
-			if (c is not None):
-				if (c.shape is None):
-					p1 = e.getStart() if (e.sense == 'forward') else e.getEnd()
-					p2 = e.getEnd() if (e.sense == 'forward') else e.getStart()
-					c.build(p1, p2)
-				if (c.shape is not None):
-					self.shape = c.shape.copy()
-		return self.shape
+		e = self.getEdge()
+		c = e.getCurve()
+		if (c is not None):
+			p1 = e.getStart() if (e.sense == 'forward') else e.getEnd()
+			p2 = e.getEnd() if (e.sense == 'forward') else e.getStart()
+			return c.build(p1, p2)
+		return None
 class CoEdgeTolerance(CoEdge):
 	def __init__(self):
 		super(CoEdgeTolerance, self).__init__()
@@ -1645,15 +1677,13 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 		self.range, i  = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		return i
 	def build(self, start, end):
-		if (self.shape is None):
-			ellipse = createEllipse(self.center, self.normal, self.major, self.ratio)
-			if (start != end):
-				a = ellipse.parameter(start)
-				b = ellipse.parameter(end)
-				self.range = Intervall(Range('F', a), Range('F', b))
-				ellipse = Part.ArcOfCircle(ellipse, a, b) if (self.ratio == 1) else Part.ArcOfEllipse(ellipse, a, b)
-			self.shape = ellipse.toShape()
-		return self.shape
+		ellipse = createEllipse(self.center, self.normal, self.major, self.ratio)
+		if (start != end):
+			a = ellipse.parameter(start)
+			b = ellipse.parameter(end)
+			self.range = Intervall(Range('F', a), Range('F', b))
+			ellipse = Part.ArcOfCircle(ellipse, a, b) if (self.ratio == 1) else Part.ArcOfEllipse(ellipse, a, b)
+		return ellipse.toShape()
 class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def __init__(self):
 		super(CurveInt, self).__init__()
@@ -2001,9 +2031,7 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, start, end):
-		if (self.shape is None):
-			self.shape = createLine(start, end)
-		return self.shape
+		return createLine(start, end)
 class Surface(Geometry):
 	def __init__(self):
 		super(Surface, self).__init__()
@@ -2057,16 +2085,16 @@ class SurfaceCone(Surface):
 				cyl = ellipse.toShape().extrude((2*MAX_LEN) * self.axis)
 				cyl.translate((-MAX_LEN) * self.axis)
 				self.shape = cyl.Faces[0]
-			elif (self.ratio == 1):
+			else:
 				# Workaround: can't generalFuse Part.Cone!
 				height = self.major.Length / math.tan(math.asin(self.sine))
 				apex  = self.center - self.axis * height
 				l = Part.Line(apex, self.center + self.major)
 				e = Part.LineSegment(apex, l.value(MAX_LEN)).toShape()
 				self.shape = e.revolve(self.center, self.axis, 360.0)
-				# TODO: apply scaling for ratios != 1.0!
-			else:
-				logWarning("    ... Can't create cone surface with elliptical base - skipped!")
+				if (self.ratio != 1):
+					# TODO: apply scaling for ratios != 1.0!
+					logWarning("    ... Can't create cone surface with elliptical base - skipped!")
 		return self.shape
 class SurfaceMesh(Surface):
 	def __init__(self):
