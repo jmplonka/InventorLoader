@@ -710,7 +710,6 @@ def eliminateOuterFaces(faces, edges):
 	_faces = [f for f in faces if isValid(f)]
 
 	if (len(_faces) == 0):
-		logError("No valid faces found (len(faces) = %d)!" % (len(faces)))
 		return None
 
 	if (len(_faces) == 1):
@@ -728,7 +727,6 @@ def eliminateOuterFaces(faces, edges):
 			lst = []
 			result[matches] = lst
 		lst.append(face)
-		logError("DBG> Edges(face)=%d, edges=%d, matches=%d" %(len(face.Edges), len(edges), matches))
 	faces = findMostMatches(result)
 	if (len(faces) == 1):
 		return faces[0]
