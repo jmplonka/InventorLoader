@@ -638,9 +638,8 @@ def isOnCircle(sEdge, fEdge):
 	sp = [v.Point for v in sEdge.Vertexes]
 	fp = [v.Point for v in fEdge.Vertexes]
 	sc = sEdge.Curve
-	fe = fEdge.Curve
+	fc = fEdge.Curve
 	if (isEqual(sp[0], fp[0])):
-		return
 #		if (isEqual(fc.Axis, sc.Axis) or isEqual(-1 * fc.Axis, sc.Axis)):
 		if (isEqual(fc.Axis, sc.Axis)):
 			return isEqual1D(fc.Radius, sc.Radius)
@@ -648,7 +647,7 @@ def isOnCircle(sEdge, fEdge):
 
 def isOnEllipse(se, fe):
 	sc = se.Curve
-	fe = fe.Curve
+	fc = fe.Curve
 	if (isEqual(fc.Location, sc.Location)):
 		if (isEqual(fc.Axis, sc.Axis)):
 			if (isEqual(fc.Focus1, sc.Focus1)):
@@ -729,6 +728,7 @@ def eliminateOuterFaces(faces, edges):
 			lst = []
 			result[matches] = lst
 		lst.append(face)
+		logError("DBG> Edges(face)=%d, edges=%d, matches=%d" %(len(face.Edges), len(edges), matches))
 	faces = findMostMatches(result)
 	if (len(faces) == 1):
 		return faces[0]
