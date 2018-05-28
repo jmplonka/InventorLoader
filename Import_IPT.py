@@ -14,10 +14,11 @@ from olefile           import isOleFile, OleFileIO
 from importerUtils     import *
 from importerReader    import *
 from importerFreeCAD   import FreeCADImporter, createGroup
+from importerSAT       import readEntities, importModel, convertModel
 
 def ReadIgnorable(fname, data):
-	logMessage("\t>>> IGNORED: %r" % ('/'.join(fname)))
-#	logMessage(HexAsciiDump(data), LOG.LOG_DEBUG)
+	logInfo(u"\t>>> IGNORED: %r", '/'.join(fname))
+#	logDebug(HexAsciiDump(data))
 	return len(data)
 
 def skip(data):
@@ -35,15 +36,8 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 	folder = getInventorFile()[0:-4]
 
 	if (len(stream)>0):
-#		if (name.startswith('\x01') or name.startswith('\x02') or name.startswith('\x05')):
-#			binFile = open ('%s\\%s.bin' %(folder, name[1:]), 'wb')
-#		else:
-#			binFile = open ('%s\\%s.bin' %(folder, name), 'wb')
-#			binFile.write(stream)
-#			binFile.close()
-
 		if (len(fname) == 1):
-			logMessage("%2d: %s" % (counter, path), LOG.LOG_DEBUG)
+			logDebug(u"%2d: %s",counter, path)
 			if (name.startswith('\x05')):
 				if (readProperties):
 					props = ole.getproperties(fname, convert_time=True)
@@ -121,7 +115,7 @@ def ListElement(ole, fname, counter):
 
 	path = PrintableName(fname)
 	stream = ole.openstream(fname).read()
-	logMessage("%2d: %s size=%s" % (counter, path, len(stream)), LOG.LOG_ALWAYS)
+	logAlways(u"%2d: %s size=%s", counter, path, len(stream))
 
 def read(doc, filename, readProperties):
 	first = 0
@@ -163,10 +157,10 @@ def read(doc, filename, readProperties):
 			doc.Comment += '\n'
 		doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), filename)
 
-		logMessage("Dumped data to folder: '%s'" %(filename[0:-4]), LOG.LOG_INFO)
+		logInfo(u"Dumped data to folder: '%s'", filename[0:-4])
 
 		return True
-	logError("Error - '%s' is not a valid Autodesk Inventor file." %(filename))
+	logError(u"ERROR> '%s' is not a valid Autodesk Inventor file!", filename)
 	return False
 
 def create3dModel(root, doc):
@@ -179,14 +173,16 @@ def create3dModel(root, doc):
 			if (dc is not None):
 				creator = FreeCADImporter()
 				creator.importModel(root, doc, dc)
-		elif (strategy == STRATEGY_SAT):
-			brep = FreeCADImporter.findBRep(storage)
-			if (brep):
-				for asm in brep.AcisList:
-					importerSAT.readEntities(asm)
-					importerSAT.importModel(root, doc)
 		else:
-			logError("WRONG STRATEGY!")
+			brep = FreeCADImporter.findBRep(storage)
+			importerSAT._fileName = getInventorFile()
+			if (brep is not None):
+				for asm in brep.AcisList:
+					readEntities(asm)
+					if (strategy == STRATEGY_SAT):
+						importModel(root, doc)
+					elif (strategy == STRATEGY_STEP):
+						convertModel(root, doc)
 
 	viewAxonometric(doc)
 

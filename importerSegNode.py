@@ -251,7 +251,7 @@ class AbstractNode(AbstractData):
 		if (ref.index > 0):
 			ref.number = number
 			if (ref.index == self.index):
-				logError('ERROR: Found self-ref \'%s\' for (%04X): %s' %(name, self.index, self.typeName))
+				logError(u"ERROR> Found self-ref '%s' for (%04X): %s", name, self.index, self.typeName)
 			else:
 				if (type == NodeRef.TYPE_PARENT):
 					self.parentIndex = ref
@@ -269,7 +269,7 @@ class AbstractNode(AbstractData):
 		ref = self.get(name)
 		if (ref):
 			if (self.index > ref.index):
-				#logError('    >FATAL: child \'%s\' (%04X) is smaller - (%04X): %s!' %(name, ref.index, self.index, self.typeName))
+				#logError(u"ERROR> child '%s' (%04X) is smaller (%04X) - %s!", name, ref.index, self.index, self.typeName)
 				ref.type = NodeRef.TYPE_CROSS
 		return i
 
@@ -783,7 +783,7 @@ class AbstractNode(AbstractData):
 			magniture  = unit.get('magnitude')
 			unitFactor = unit.get('UnitFactor')
 			if (unitFactor is None):
-				logError('>ERROR: (%04X): %s has no UnitFactor defined!' %(unit.index, unit.typeName))
+				logError(u"ERROR> (%04X) - %s has no UnitFactor defined!", unit.index, unit.typeName)
 			factor *= magniture * unitFactor
 			j += 1
 

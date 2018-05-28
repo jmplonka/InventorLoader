@@ -6,7 +6,7 @@ Collection of 3D Mesh importers
 '''
 
 import os, sys, FreeCAD, importerSAT, Import_IPT
-from importerUtils import canImport, logMessage, logError, LOG
+from importerUtils import canImport, logAlways, logError
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -42,7 +42,7 @@ def read(doc, filename, readProperties):
 		if (importerSAT.readText(doc, filename)):
 			return importerSAT
 	elif (ext == '.iam'):
-		logError("Sorry, AUTODESK assembly files not yet supported!")
+		logError(u"Sorry, AUTODESK assembly files not yet supported!")
 	elif (ext == '.sab'):
 		if (importerSAT.readBinary(doc, filename)):
 			return importerSAT
@@ -50,10 +50,10 @@ def read(doc, filename, readProperties):
 
 def checkfile(filename):
 	if (not os.path.exists(filename)):
-		logError("File doesn't exists!")
+		logError(u"File doesn't exists!")
 		return False
 	if (not os.path.isfile(filename)):
-		logError("Can't import folders!")
+		logError(u"Can't import folders!")
 		return False
 	return canImport()
 
@@ -64,7 +64,7 @@ def insert(filename, docname, skip = [], only = [], root = None):
 	if (checkfile(filename)):
 		try:
 			doc = FreeCAD.getDocument(docname)
-			logMessage("Importing: %s" %(filename), LOG.LOG_ALWAYS)
+			logAlways(u"Importing: %s", filename)
 			reader = read(doc, filename, False)
 			if (reader is not None):
 				name = os.path.splitext(os.path.basename(filename))[0]
@@ -81,7 +81,7 @@ def open(filename, skip = [], only = [], root = None):
 	In addition to insert (import), the iProperties are as well added to the document.
 	'''
 	if (checkfile(filename)):
-		logMessage("Reading: %s" %(filename), LOG.LOG_ALWAYS)
+		logAlways(u"Reading: %s", filename)
 		name = os.path.splitext(os.path.basename(filename))[0]
 		name = decode(name)
 		doc = FreeCAD.newDocument(name)

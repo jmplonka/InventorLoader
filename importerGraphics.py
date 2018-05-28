@@ -96,7 +96,7 @@ class GraphicsReader(SegmentReader):
 				lst0.append(a0)
 				node.content += ' %d: (%s)' %(j, FloatArr2Str(a0))
 			else:
-				logError('>E0001: Don\'t know how to handle %X in {%s}!' %(t, node.typeID))
+				logError(u"ERROR> Don't know how to handle %X in {%s}!", t, node.typeID)
 		node.content += '}'
 		node.set('TypedFloat.lst0', lst0)
 		return i
@@ -1596,9 +1596,9 @@ class GraphicsReader(SegmentReader):
 			readType = getattr(self, 'Read_%08X' %(ntid))
 			i = readType(node)
 		except AttributeError:
-			logError("ERROR: %s.Read_%08X not defined!"  %(self.__class__.__name__, ntid))
+			logError(u"ERROR> %s.Read_%08X not defined!", self.__class__.__name__, ntid)
 		except:
-			logError('>E: ' + traceback.format_exc())
+			logError(traceback.format_exc())
 
 		if (i < len(node.data)):
 			i = node.ReadUInt8A(i, len(node.data) - i, '\taX')

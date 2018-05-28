@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 '''
 
 import traceback, FreeCAD, math, Part, Draft
-from importerUtils              import LOG, logMessage, logWarning, logError, isEqual, isEqual1D, getUInt8, getUInt16, getSInt32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
+from importerUtils              import logWarning, logError, isEqual, isEqual1D, getUInt8, getUInt16, getSInt32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
 from math                       import pi, fabs
 from BOPTools.GeneralFuseResult import GeneralFuseResult
@@ -182,7 +182,7 @@ def createNode(entity):
 			return
 		node = references[entity.index]
 		# this entity is overwriting a previus entity with the same index -> ignore it
-		logWarning("    Found 2nd '-%d %s' - IGNORED!" %(entity.index, entity.name))
+		logWarning(u"    Found 2nd '-%d %s' - IGNORED!", entity.index, entity.name)
 		entity.node = node
 	except:
 		try:
@@ -200,7 +200,7 @@ def createNode(entity):
 					i = len(types)
 				except Exception as e:
 					i += 1
-			logError("TypeError: Can't find class for '%s' - using '%s'!" %(entity.name, t))
+			logError(u"TypeError: Can't find class for '%s' - using '%s'!", entity.name, t)
 
 		if (entity.index >= 0):
 			references[entity.index] = node
@@ -459,7 +459,8 @@ def readKnotsMults(count, chunks, index):
 def adjustMultsKnots(knots, mults, periodic, degree):
 	mults[0] = degree + 1
 	mults[-1] = degree + 1
-	return knots, mults, False # Force periodic to False!!!
+#	return knots, mults, False # Force periodic to False!!!
+	return knots, mults, periodic
 
 def readPoints2DList(nubs, count, chunks, index):
 	nubs.uKnots, nubs.uMults, i = readKnotsMults(count, chunks, index)
@@ -685,7 +686,7 @@ def isSeam(edge, face):
 				elif (isinstance(c, Part.ArcOfEllipse)):
 					if isOnEllipse(c.Ellipse, fEdge.Curve.Ellipse): return True
 				else:
-					logError("Unknown edge type '%s'!" %(c.__class__.__name))
+					logError(u"Unknown edge type '%s'!", c.__class__.__name)
 		except Exception as e:
 			pass
 	return False
@@ -786,6 +787,7 @@ def createBSplinesCurve(nubs, sense):
 	if (number_of_poles == 2): # if there are only two poles we can simply draw a line
 		shape = createLine(nubs.poles[0], nubs.poles[1])
 	else:
+		shape = None
 		try:
 			bsc = Part.BSplineCurve()
 			if (nubs.rational):
@@ -809,7 +811,8 @@ def createBSplinesCurve(nubs, sense):
 			)
 			shape = bsc.toShape()
 		except Exception as e:
-			logError('>E: ' + traceback.format_exc())
+			logError(u"ERROR> %s", e)
+			logError(traceback.format_exc())
 	if (shape is not None):
 		shape.Orientation = 'Reversed' if (sense == 'reversed') else 'Forward'
 	return shape
@@ -846,7 +849,8 @@ def createBSplinesSurface(nubs):
 			)
 		return bss.toShape()
 	except Exception as e:
-		logWarning('>E: %s' %(e))
+		logError(u"ERROR> %s", e)
+		logError(traceback.format_exc())
 	return None
 
 def createHelix(data):
@@ -1190,6 +1194,7 @@ class Entity(object):
 	def __init__(self):
 		self._attrib = None
 		self.entity  = None
+
 	def set(self, entity):
 		entity.node = self
 		self.entity = entity
@@ -1201,7 +1206,7 @@ class Entity(object):
 			if (getVersion() > 6):
 				i += 1 # skip history!
 		except Exception as e:
-			logError('>E: ' + traceback.format_exc())
+			logError(traceback.format_exc())
 		return i
 	def getIndex(self):  return -1   if (self.entity is None)  else self.entity.index
 	def getType(self):   return -1   if (self.entity is None)  else self.entity.name
@@ -1439,9 +1444,9 @@ class Face(Topology):
 			return surface
 		if (hasattr(s, 'type')):
 			if (s.type != 'ref'):
-				logWarning("    ... Don't know how to build surface '%s::%s' - only edges displayed!" %(s.__class__.__name__, s.type))
+				logWarning(u"    ... Don't know how to build surface '%s::%s' - only edges displayed!", s.__class__.__name__, s.type)
 		else:
-			logWarning("    ... Don't know how to build surface '%s' - only edges displayed!" %(s.__class__.__name__))
+			logWarning(u"    ... Don't know how to build surface '%s' - only edges displayed!", s.__class__.__name__)
 		return self.showEdges(edges)
 class Loop(Topology):
 	def __init__(self):
@@ -1478,6 +1483,7 @@ class Edge(Topology):
 		self._end    = None # The end vertex
 		self._parent = None # The edge's coedge
 		self._curve  = None # Lying on one the Adjacent faces
+		self.sense   = 'forwared'
 		self.text   = ''
 	def set(self, entity):
 		i = super(Edge, self).set(entity)
@@ -1644,7 +1650,7 @@ class Curve(Geometry):
 		i = self.setSubtype(entity.chunks, i)
 		return i
 	def build(self, start, end): # by default: return a line-segment!
-		logWarning("    ... '%s' not yet supported - forced to straight-curve!" %(self.__class__.__name__))
+		logWarning(u"    ... '%s' not yet supported - forced to straight-curve!", self.__class__.__name__)
 		if (self.shape is None):
 			# force everything else to straight line!
 			self.shape = createLine(start, end)
@@ -1691,6 +1697,22 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.curve  = None
 	def __str__(self): return "-%d Curve-Int: type=%s" %(self.getIndex(), self.type)
 	def __repr__(self): return self.__str__()
+	def getShape(self):
+		if (self.shape is None):
+			if (hasattr(self, 'curves')):
+				curve = self.curves[0].getShape()
+				others = []
+				for c in self.curves[1:]:
+					shp = c.getShape()
+					if (shp is not None):
+						others.append(shp)
+				self.shape = curve.multifuse(others)
+			else:
+				if (type(self.curve) == int):
+					self.curve = getSubtypeNode('intcurve', self.curve)
+				if (isinstance(self.curve, Curve)):
+					self.shape = self.curve.build(start, end)
+		return self.shape
 	def setCurve(self, chunks, index):
 		self.singularity, i = getSingularity(chunks, index)
 		if (self.singularity == 'full'):
@@ -1931,10 +1953,9 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 					if (shp): others.append(shp)
 				self.shape = curve.multifuse(others)
 			else:
-				if (not self.curve is None):
-					if (type(self.curve) == int):
-						self.curve = getSubtypeNode('intcurve', self.curve)
-				if (not self.curve is None):
+				if (type(self.curve) == int):
+					self.curve = getSubtypeNode('intcurve', self.curve)
+				if (isinstance(self.curve, Curve)):
 					self.shape = self.curve.build(start, end)
 		return self.shape
 class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
@@ -1951,7 +1972,7 @@ class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 		self.type, i = getValue(chunks, index)
 		if (self.type == 'lawintcur'):        return self.setLaw(chunks, i, False)
 		if (self.type == 'law_int_cur'):      return self.setLaw(chunks, i + 1, True)
-		logError("    Curve-Int-Int: unknown subtype %s !" %(self.type))
+		logError(u"    Curve-Int-Int: unknown subtype %s !", self.type)
 		return self.setCurve(chunks, i)
 	def setSubtype(self, chunks, index):
 		self.sense, i  = getSense(chunks, index)
@@ -2076,7 +2097,7 @@ class SurfaceCone(Surface):
 		return i
 	def build(self):
 		if (self.shape is None):
-			if (self.sine == 0): # 90°
+			if (isEqual1D(self.sine, 0.)): # 90 Deg
 				# Workaround: create ellipse and extrude in both directions
 				ellipse = createEllipse(self.center, self.axis, self.major, self.ratio)
 				# make a gigantic extrusion as it will be beautyfied later
@@ -2092,7 +2113,7 @@ class SurfaceCone(Surface):
 				self.shape = e.revolve(self.center, self.axis, 360.0)
 				if (self.ratio != 1):
 					# TODO: apply scaling for ratios != 1.0!
-					logWarning("    ... Can't create cone surface with elliptical base - skipped!")
+					logWarning(u"    ... Can't create cone surface with elliptical base - skipped!")
 		return self.shape
 class SurfaceMesh(Surface):
 	def __init__(self):
@@ -2681,9 +2702,9 @@ class SurfaceSpline(Surface):
 					self.shape = surface.build()
 					if (self.shape is None):
 						if (hasattr(surface, 'type')):
-							logWarning("    ... Don't know how to build surface '%s::%s' - only edges displayed!" %(surface.__class__.__name__, surface.type))
+							logWarning(u"    ... Don't know how to build surface '%s::%s' - only edges displayed!", surface.__class__.__name__, surface.type)
 						else:
-							logWarning("    ... Don't know how to build surface '%s' - only edges displayed!" %(surface.__class__.__name__))
+							logWarning(u"    ... Don't know how to build surface '%s' - only edges displayed!", surface.__class__.__name__)
 			if (self.surface is not None):
 				self.shape = self.surface.build()
 		return self.shape
@@ -2730,7 +2751,7 @@ class SurfaceTorus(Surface):
 				torus.MinorRadius = math.fabs(self.minor)
 				self.shape = Part.Face(torus)
 			except Exception as e:
-				logError("    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s:\n\t%s" %(major, minor, self.center, self.axis, e))
+				logError(u"    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s:\n\t%s", major, minor, self.center, self.axis, e)
 		return self.shape
 class Point(Geometry):
 	def __init__(self):

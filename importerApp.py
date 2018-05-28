@@ -252,7 +252,7 @@ class AppReader(SegmentReader):
 
 		a0, j = getUInt8A(node.data, i, len(node.data) - i)
 		if (len(a0) > 0):
-			logError('%s\t%s\t%s' %(getInventorFile()[0:getInventorFile().index('\\')], node.typeName, ' '.join(['%0{0}X'.format(2) %(h) for h in a0])))
+			logError(u"%s\t%s\t%s", getInventorFile()[0:getInventorFile().index('\\')], node.typeName, ' '.join(['%0{0}X'.format(2) %(h) for h in a0]))
 
 		return i
 
@@ -315,7 +315,7 @@ class AppReader(SegmentReader):
 			i = node.ReadUInt8(i, 'u8_3')
 		a0, j = getUInt8A(node.data, i, l - i)
 		if (len(a0) > 0):
-			logError('%s\t%s\t%s' %(getInventorFile()[0:getInventorFile().index('\\')], node.typeName, ' '.join(['%0{0}X'.format(2) %(h) for h in a0])))
+			logError(u"%s\t%s\t%s", getInventorFile()[0:getInventorFile().index('\\')], node.typeName, ' '.join(['%0{0}X'.format(2) %(h) for h in a0]))
 		return i
 
 	def Read_6759D870(self, node):
@@ -677,7 +677,7 @@ class AppReader(SegmentReader):
 				i = node.ReadLen32Text16(i, 'txt_2')
 				i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 		else:
-			logError('Unknown type: %04X' %(type))
+			logError(u"Unknown type: %04X", type)
 		return i
 
 	def Read_F8A779FD(self, node):

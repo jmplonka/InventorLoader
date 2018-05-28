@@ -25,6 +25,7 @@ def resolveEntityReferences(entities, lst):
 	skip = False
 	for entity in lst:
 		name = entity.name
+		entity.valid = True
 		if (name == "Begin-of-ACIS-History-Data"):
 			entity.index = -1
 			skip = True
@@ -52,6 +53,7 @@ def resolveEntityReferences(entities, lst):
 		else:
 			# skip everything beyond history
 			entity.index = -1
+			entity.valid = False
 
 	idx = 0
 	for entity in lst:
@@ -276,7 +278,7 @@ def buildTree(file, seg):
 						radius._data = data
 						ref.data.set('refRadius', radius)
 			elif (ref.index > -1):
-				logError('>E0010: (%04X): %s - Index out of range (%X>%X)!' %(data.index, data.typeName, ref.index, l))
+				logError(u"ERROR> (%04X): %s - Index out of range (%X>%X)!", data.index, data.typeName, ref.index, l)
 
 		ref = data.parentIndex
 		data.parent = None
@@ -331,7 +333,7 @@ class SegmentReader(object):
 			i = 0
 			if (logError):
 				a, dummy = getUInt8A(block, 0, len(block))
-				logMessage('%s: %s\t%s\t%s' %(self.__class__.__name__, getInventorFile(), node.typeID, IntArr2Str(a, 2)), LOG.LOG_ERROR)
+				logError(u"%s: %s\t%s\t%s", self.__class__.__name__, getInventorFile(), node.typeID, IntArr2Str(a, 2))
 
 			if (analyseLists):
 				iOld = i
@@ -376,14 +378,14 @@ class SegmentReader(object):
 			i = readType(node)
 		except Exception as e:
 			if (not isinstance(e, AttributeError)):
-				logError('>E: ' + traceback.format_exc())
+				logError(traceback.format_exc())
 			else:
-				logError('ERROR> (%04X): %s - %s' %(node.index, node.typeName, e))
+				logError(u"ERROR> (%04X) - %s: %s", node.index, node.typeName, e)
 
 		try:
 			if (i < len(node.data)): i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
 		except:
-			logError('>ERROR in %s.Read_%s: %s' %(self.__class__.__name__, node.typeName, traceback.format_exc()))
+			logError(u"ERROR in %s.Read_%s: %s", self.__class__.__name__, node.typeName, traceback.format_exc())
 
 		return
 
@@ -487,7 +489,7 @@ class SegmentReader(object):
 
 		hdrSize = 5 if (vers > 2014) else 4
 
-		logMessage('>I0002: Reading %s binary buffer ...' %(seg.name), LOG.LOG_INFO)
+		logInfo(u">I0002: Reading %s binary buffer ...", seg.name)
 
 		try:
 			i = 4

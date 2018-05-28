@@ -5,9 +5,10 @@ importerSAT.py:
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime
-from importerUtils import LOG, logMessage, logWarning, logError, viewAxonometric, getUInt8A
+import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime, ImportGui
+from importerUtils import logInfo, logWarning, logError, viewAxonometric, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
 from Acis          import AcisRef, AcisEntity, readNextSabChunk
+from Acis2Step     import export
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -17,6 +18,8 @@ LENGTH_TEXT = re.compile('[ \t]*(\d+) +(.*)')
 NEXT_TOKEN  = re.compile('[ \t]*([^ \t]+) +(.*)')
 lumps = 0
 wires = 0
+
+_fileName = None
 
 class Tokenizer():
 	def __init__(self, content):
@@ -149,7 +152,7 @@ class Header():
 		self.records = int(tokens[1])
 		self.bodies  = int(tokens[2])
 		self.flags   = int(tokens[3])
-		logMessage("Reading ACIS file version %s" %(self.version), LOG.LOG_INFO)
+		logInfo(u"Reading ACIS file version %s", self.version)
 		if (self.version >= 2.0):
 			data = file.readline()
 			self.prodId, data = getNextText(data)
@@ -163,9 +166,9 @@ class Header():
 			if (self.version > 24.0):
 				file.readline() # skip T @52 E94NQRBTUCKCWQWFE_HB5PSXH48CGGNH9CMMPASCFADVJGQAYC84
 			Acis.setScale(self.scale)
-			logMessage("    product: '%s'" %(self.prodId), LOG.LOG_INFO)
-			logMessage("    version: '%s'" %(self.prodVer), LOG.LOG_INFO)
-			logMessage("    date:    %s" %(self.date), LOG.LOG_INFO)
+			logInfo(u"    product: '%s'", self.prodId)
+			logInfo(u"    version: '%s'", self.prodVer)
+			logInfo(u"    date:    %s",   self.date)
 		Acis.setVersion(self.version)
 		return
 	def readBinary(self, data):
@@ -180,9 +183,9 @@ class Header():
 		tag, self.resabs, i  = readNextSabChunk(data, i)
 		tag, self.resnor, i  = readNextSabChunk(data, i)
 		self.version = int2version(self.version)
-		logMessage("    product: '%s'" %(self.prodId), LOG.LOG_INFO)
-		logMessage("    version: '%s'" %(self.prodVer), LOG.LOG_INFO)
-		logMessage("    date:    %s" %(self.date), LOG.LOG_INFO)
+		logInfo(u"    product: '%s'", self.prodId)
+		logInfo(u"    version: '%s'", self.prodVer)
+		logInfo(u"    date:    %s",   self.date)
 		Acis.setVersion(self.version)
 		return i
 
@@ -255,8 +258,8 @@ def resolveNode(entity):
 		if (len(entity.name) > 0):
 			Acis.createNode(entity)
 	except Exception as e:
-#		logError("Can't resolve '%s' - %s" %(entity, e))
-		logError('>E: ' + traceback.format_exc())
+#		logError(u"ERROR: Can't resolve '%s' - %s", entity, e)
+		logError(traceback.format_exc())
 	return
 
 def resolveNodes():
@@ -264,9 +267,10 @@ def resolveNodes():
 	bodies = []
 	model = getEntities()
 	for entity in model:
-		resolveNode(entity)
-		if (entity.name == "body"):
-			bodies.append(entity)
+		if (entity.valid):
+			resolveNode(entity)
+			if (entity.name == "body"):
+				bodies.append(entity)
 	return bodies
 
 def getName(attrib):
@@ -301,7 +305,7 @@ def buildFaces(shells, doc, root, name, transform):
 			buildWire(root, doc, wire, transform)
 
 	if (len(faces) > 0):
-		logMessage("    ... %d face(s)!" %(len(faces)), LOG.LOG_INFO)
+		logInfo(u"    ... %d face(s)!", len(faces))
 #		shell = faces[0] if (len(faces) == 1) else Part.Shell(faces)
 #		createBody(doc, root, name, shell, transform)
 
@@ -316,7 +320,7 @@ def buildWires(coedges, doc, root, name, transform):
 			edges.append(edge)
 
 	if (len(edges) > 0):
-		logMessage("        ... %d edges!" %(len(edges)), LOG.LOG_INFO)
+		logInfo(u"        ... %d edges!", len(edges))
 		createBody(doc, root, name, edges[0].fuse(edges[1:]) if (len(edges) > 1) else edges[0], transform)
 	return
 
@@ -324,7 +328,7 @@ def buildLump(root, doc, lump, transform):
 	global lumps
 	lumps += 1
 	name = "Lump%02d" %lumps
-	logMessage("    building lump '%s'..." %(name), LOG.LOG_INFO)
+	logInfo(u"    building lump '%s'...", name)
 
 	buildFaces(lump.getShells(), doc, root, name, transform)
 
@@ -334,7 +338,7 @@ def buildWire(root, doc, wire, transform):
 	global wires
 	wires += 1
 	name = "Wire%02d" %wires
-	logMessage("    building wire '%s'..." %(name), LOG.LOG_INFO)
+	logInfo(u"    building wire '%s'...", name)
 
 	buildWires(wire.getCoEdges(), doc, root, name, transform)
 	buildFaces(wire.getShells(), doc, root, name, transform)
@@ -361,11 +365,21 @@ def importModel(root, doc):
 
 	return
 
+def convertModel(group, doc):
+	global _fileName
+	header = getHeader()
+	bodies = resolveNodes()
+	stepfile = export(_fileName, header, bodies)
+	ImportGui.insert(stepfile, doc.Name)
+
 def readText(doc, fileName):
+	global _fileName
+	_fileName = fileName
 	header = Header()
 	entities = {}
 	lst      = []
 	index    = 0
+	valid    = True
 	Acis.clearEntities()
 
 	with open(fileName, 'rU') as file:
@@ -378,9 +392,14 @@ def readText(doc, fileName):
 		while (tokenizer.hasNext()):
 			entity, index = readEntityText(tokenizer, index)
 			#TODO: update progress indocator for tokenizer.pos
-			if (entity):
+			if (entity is not None):
 				lst.append(entity)
 				entities[entity.index] = entity
+				if (entity.name == "Begin-of-ACIS-History-Data"):
+					valid = False
+				if (entity.name == "End-of-ACIS-data"):
+					valid = False
+				entity.valid = valid
 		#progress.stop() # DONE reading file
 	resolveEntityReferences(entities, lst)
 	setHeader(header)
@@ -388,6 +407,8 @@ def readText(doc, fileName):
 	return True
 
 def readBinary(doc, fileName):
+	global _fileName
+	_fileName = fileName
 	header = Header()
 	entities = {}
 	lst      = []
@@ -414,8 +435,12 @@ def readBinary(doc, fileName):
 	return
 
 def create3dModel(group, doc):
-	importModel(group, doc)
-	viewAxonometric(doc)
+	strategy = chooseImportStrategyAcis()
+	if (strategy == STRATEGY_SAT):
+		importModel(group, doc)
+		viewAxonometric(doc)
+	else:
+		convertModel(group, doc)
 	setEntities(None)
 	setHeader(None)
 	return

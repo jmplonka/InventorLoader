@@ -533,7 +533,7 @@ class DCReader(SegmentReader):
 			elif (typ == 0x17):
 				a, i = getFloat64A(node.data, i, 6)
 			else:
-				logError('    >ERROR in Read_%s: Unknown block type %X (cnt=%d)!' %(node.typeName, typ, cnt))
+				logError(u"    ERROR in Read_%s: Unknown block type %X (cnt=%d)!", node.typeName, typ, cnt)
 				return i
 			lst.append([typ, a])
 			j += 1
@@ -1297,7 +1297,7 @@ class DCReader(SegmentReader):
 			filename = '%s\\%s_%04X.xls' %(folder, node.typeName, node.index)
 			with open(filename, 'wb') as xls:
 				xls.write(buffer)
-			# logMessage('    >INFO - found workook: stored as %s!' %(filename), LOG.LOG_ERROR)
+			# logInfo(u"    INFO - found workbook: stored as %s!", filename)
 		i += size
 		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
 		if (getFileVersion() > 2012):
@@ -1380,7 +1380,7 @@ class DCReader(SegmentReader):
 				lst.append([a1, f1, a2, a3, a4, a5, a6, a7])
 				node.content += '%s(%s,%g,%s,%s,%s,%s,%g,%s,%s)' %(sep, IntArr2Str(a1, 2), f1, IntArr2Str(a2, 2), FloatArr2Str(a3), IntArr2Str(a4, 2), FloatArr2Str(a5), f2, IntArr2Str(a6, 2), FloatArr2Str(a7))
 			else:
-				logError('    >ERROR in Read_%s: Unknown block type %X!' %(node.typeName, typ))
+				logError(u"    ERROR in Read_%s: Unknown block type %X!", node.typeName, typ)
 				return i
 			j += 1
 			sep = ','
@@ -5348,7 +5348,7 @@ class DCReader(SegmentReader):
 		translatedName = translate(name)
 		if (translatedName != name):
 			node.name = translatedName
-			logWarning('    >WARNING - translated parameter name %s to %r!' %(name, translatedName))
+			logWarning(u"    Translated parameter name %s to %r!", name, translatedName)
 
 		i += 4
 		i = node.ReadChildRef(i, 'refUnit')
@@ -6236,7 +6236,7 @@ class DCReader(SegmentReader):
 				lst.append([typ, u16, a1, f1, c1, l1, c2, l2, c3, f2, a2, a3])
 				node.content += '%s(%d,%s,%g)' %(sep, u16, IntArr2Str(a1, 2), f1)
 			else:
-				logError('    >ERROR in Read_%s: Unknown block type %X!' %(node.typeName, typ))
+				logError(u"    ERROR in Read_%s: Unknown block type %X!", node.typeName, typ)
 				return i
 			j += 1
 			sep = ','

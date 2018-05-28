@@ -758,7 +758,7 @@ class ParameterNode(DataNode):
 				# Modulo operation not supported by FreeCAD
 				raise UserWarning('Modulo operator not supported')
 		else:
-			logError('>>>> ERROR don\'t now how to build formula for %s: %s!' %(typeName, parameterData))
+			logError(u"    Don't now how to build formula for %s: %s!", typeName, parameterData)
 
 		return subFormula
 
@@ -775,7 +775,7 @@ class ParameterNode(DataNode):
 				except BaseException as be:
 					# replace by nominal value and unit!
 					value = unicode(self.getValue())
-					logWarning('    >WARNING: %s - replacing by nominal value %s!' %(be, value) )
+					logWarning(u"    %s - replacing by nominal value %s!", be, value)
 			else:
 				value = unicode(data.get('valueModel'))
 			return u'=%s' %(value)
@@ -883,9 +883,9 @@ class ParameterNode(DataNode):
 			# Luminosity
 			if (derivedUnit == 'lx')       : return Luminosity(x, type)
 			if (derivedUnit == 'lm')       : return Luminosity(x, type)
-			logWarning('>>>WARNING: found unsuppored derived unit - [%s] using [%s] instead!' %(derivedUnit, type))
+			logWarning(u"    found unsuppored derived unit - [%s] using [%s] instead!", derivedUnit, type)
 		else:
-			logWarning('>>>WARNING: unknown unit (%04X): \'%s\' - [%s]' %(self.index, self.typeName, type))
+			logWarning(u"WARNING: unknown unit (%04X): '%s' - [%s]", self.index, self.typeName, type)
 		return Derived(x, type)
 
 class ParameterTextNode(DataNode):
@@ -1081,13 +1081,13 @@ class FeatureNode(DataNode):
 	def getParticipants(self):
 		label = self.get('label')
 		if (label is None):
-			logError('ERR> (%04X): %s - has no required label attribute!' %(self.index, self.typeName))
+			logError(u"    (%04X): %s - has no required label attribute!", self.index, self.typeName)
 			return []
 		while (label.typeName != 'Label'):
 			dummy = label
 			label = label.get('label')
 			if (label is None):
-				logError('ERR> (%04X): %s - has no required label attribute!' %(dummy.index, dummy.typeName))
+				logError(u"    (%04X): %s - has no required label attribute!", dummy.index, dummy.typeName)
 		return label.get('lst0')
 
 	def __str__(self):
@@ -1118,7 +1118,7 @@ class ValueNode(DataNode):
 			if (type(value) is float):
 				return u'(%04X): %s%s=%g' %(self.index, self.typeName, name, value)
 			return u'(%04X): %s%s=%s' %(self.index, self.typeName, name, value)
-		logError('ERROR: (%04X): %s has no value defined!' %(self.index, self.typeName))
+		logError(u"    (%04X): %s has no value defined!", self.index, self.typeName)
 		return u'(%04X): %s' %(self.index, self.typeName)
 
 class PointNode(DataNode): # return unicoe
@@ -1172,7 +1172,7 @@ class CircleNode(DataNode):
 					try:
 						points += ', (%g,%g)' %(i.get('x'), i.get('y'))
 					except:
-						logError(u'ERROR> (%04X): %s - x=%s, y=%s, r=%s, points=%s' %(i.index, i.typeName, i.get('x'), i.get('y'), r, points))
+						logError(u"ERROR> (%04X): %s - x=%s, y=%s, r=%s, points=%s", i.index, i.typeName, i.get('x'), i.get('y'), r, points)
 				else:
 					points += ', (%g,%g,%g)' %(i.get('x'), i.get('y'), i.get('z'))
 		if (self.typeName[-2:] == '2D'):

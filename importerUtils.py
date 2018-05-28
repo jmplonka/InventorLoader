@@ -76,6 +76,7 @@ foundUids = {}
 
 STRATEGY_SAT    = 0
 STRATEGY_NATIVE = 1
+STRATEGY_STEP   = 2
 
 def getStrategy():
 	if getFileVersion() < 2010: return STRATEGY_SAT
@@ -84,10 +85,40 @@ def getStrategy():
 def isStrategySat():
 	return getStrategy() == STRATEGY_SAT
 
+def isStrategyStep():
+	return getStrategy() == STRATEGY_STEP
+
 def isStrategyNative():
 	return getStrategy() == STRATEGY_NATIVE
 
+def chooseImportStrategyAcis():
+	btnCnvrt = QPushButton('&Convert to STEP')
+	btnNativ = QPushButton('&nativ')
+	msgBox   = QMessageBox()
+	thmnl    = getThumbnailImage()
+	msgBox.setIcon(QMessageBox.Question)
+	if (thmnl is not None):
+		icon = thmnl.getIcon()
+		if (icon):
+			msgBox.setIconPixmap(icon)
+	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
+	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
+	msgBox.addButton(btnCnvrt, QMessageBox.ActionRole)
+	msgBox.addButton(btnNativ, QMessageBox.NoRole)
+	param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
+
+	btnMapping = {STRATEGY_STEP: btnCnvrt, STRATEGY_SAT: btnNativ}
+	msgBox.setDefaultButton(btnMapping[param.GetInt("strategy")])
+
+	result = msgBox.exec_()
+
+	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT}
+	strategy = resultMapping[result]
+	param.SetInt("strategy", strategy)
+	return strategy
+
 def chooseImportStrategy():
+	btnCnvrt = QPushButton('&Convert to STEP')
 	btnSat   = QPushButton('&SAT')
 	btnNativ = QPushButton('&nativ')
 	msgBox   = QMessageBox()
@@ -99,17 +130,20 @@ def chooseImportStrategy():
 			msgBox.setIconPixmap(icon)
 	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
 	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
+	msgBox.addButton(btnCnvrt, QMessageBox.ActionRole)
 	msgBox.addButton(btnSat, QMessageBox.YesRole)
 	msgBox.addButton(btnNativ, QMessageBox.NoRole)
 	param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
-	if (param.GetInt("strategy") == 0):
-		msgBox.setDefaultButton(btnSat)
-	else:
-		msgBox.setDefaultButton(btnNativ)
-	strategy = msgBox.exec_()
 
+	btnMapping = {STRATEGY_SAT: btnSat, STRATEGY_NATIVE: btnNativ, STRATEGY_STEP: btnCnvrt}
+	msgBox.setDefaultButton(btnMapping[param.GetInt("strategy")])
+
+	result = msgBox.exec_()
+
+	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE}
+	strategy = resultMapping[result]
 	param.SetInt("strategy", strategy)
-	return STRATEGY_SAT if (strategy == 0) else STRATEGY_NATIVE
+	return strategy
 
 def setCanImport(canImport):
 	global _can_import
@@ -527,7 +561,7 @@ def getUidText(uid):
 	try:
 		return UUID_NAMES[b]
 	except:
-		# logError("\tWARNING - can't find name for type %s" %(b))
+		#logError(u"    Can't find name for type %s!", b)
 		return uid
 
 def FloatArr2Str(arr):
@@ -596,24 +630,37 @@ def isEqual1D(a, b):
 	if (b is None): return isEqual1D(a, 0.0)
 	return abs(a - b) < 0.0001
 
-def logWarning(msg):
-	logMessage(msg, LOG.LOG_WARNING)
-	return
-
-def logError(msg):
-	logMessage(msg, LOG.LOG_ERROR)
-	return
-
 def logMessage(msg, level=LOG.LOG_DEBUG):
-	if (level != LOG.LOG_ALWAYS):
-		if ((level & LOG.LOG_FILTER) == 0):
-			return
+	if (level == LOG.LOG_DEBUG):
+		return logDebug(msg)
+	if (level == LOG.LOG_INFO):
+		return logInfo(msg)
 	if (level == LOG.LOG_WARNING):
-		Console.PrintWarning(msg + '\n')
-	elif (level == LOG.LOG_ERROR):
-		Console.PrintError(msg + '\n')
-	else:
-		Console.PrintMessage(msg + '\n')
+		return logWarning(msg)
+	if (level == LOG.LOG_ERROR):
+		return logError(msg)
+	if (level == LOG.LOG_ALWAYS):
+		return logAlways(msg)
+	return
+
+def logDebug(msg, *args):
+	if ((LOG.LOG_DEBUG & LOG.LOG_FILTER) != 0):
+		Console.PrintMessage(msg %args + '\n')
+
+def logInfo(msg, *args):
+	if ((LOG.LOG_INFO & LOG.LOG_FILTER) != 0):
+		Console.PrintMessage(msg %args + '\n')
+
+def logWarning(msg, *args):
+	if ((LOG.LOG_WARNING & LOG.LOG_FILTER) != 0):
+		Console.PrintWarning(msg %args + '\n')
+
+def logError(msg, *args):
+	if ((LOG.LOG_ERROR & LOG.LOG_FILTER) != 0):
+		Console.PrintError(msg %args + '\n')
+
+def logAlways(msg, *args):
+	return Console.PrintMessage(msg %args + '\n')
 
 def getDumpLineLength():
 	global _dumpLineLength
@@ -655,7 +702,7 @@ def setFileVersion(ole):
 		_fileVersion = int(float(v))
 		if (_fileVersion == 134): # early version of 2010
 			_fileVersion = 2010
-	logMessage('Autodesk Inventor %s (Build %d) file' %(_fileVersion, b), LOG.LOG_ALWAYS)
+	logAlways(u"Autodesk Inventor %s (Build %d) file" %(_fileVersion, b))
 
 def getInventorFile():
 	global _inventor_file
@@ -682,7 +729,7 @@ def viewAxonometric(doc):
 	if (GuiUp):
 		FreeCADGui.getDocument(doc.Name).activeView().viewAxonometric()
 		FreeCADGui.SendMsgToActiveView("ViewFit")
-	logMessage("DONE!", LOG.LOG_ALWAYS)
+	logAlways(u"DONE!")
 
 class CDumpStream():
 	def __init__(self):
