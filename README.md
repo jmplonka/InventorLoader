@@ -26,6 +26,12 @@ That allows it to embed Excel workboos e.g.
  -- SAT based: like STEP file, model will be imported based on FACE, EDGES and VERTICES.
 
 ## History:
+- 0.9 Added convertation to STEP.
+	IPT files can now either be imported
+	* based on features (nearest to FreeCAD so changing the model is easy)
+	* based on SAT (model is imported based on stored Surfaces and Edges)
+	* based on STEP (SAT model is converted to STEP and importd into FreeCAD using built in reader)
+
 - 0.8.1 Fixed support of cone surfaces.
 
 - 0.8 Added handling of Inventor 2019 file format.
