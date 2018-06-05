@@ -791,24 +791,23 @@ def createBSplinesCurve(nubs, sense):
 		try:
 			bsc = Part.BSplineCurve()
 			if (nubs.rational):
-				bsc.buildFromPolesMultsKnots(       \
+				bsc.buildFromPolesMultsKnots(           \
 					poles         = nubs.poles,     \
 					mults         = nubs.uMults,    \
 					knots         = nubs.uKnots,    \
-					periodic      = nubs.uPeriodic, \
+					periodic      = False,          \
 					degree        = nubs.uDegree,   \
-					weights       = nubs.weights,   \
-					CheckRational = nubs.rational
+					weights       = nubs.weights
 				)
 			else:
-				bsc.buildFromPolesMultsKnots(       \
+				bsc.buildFromPolesMultsKnots(           \
 					poles         = nubs.poles,     \
 					mults         = nubs.uMults,    \
 					knots         = nubs.uKnots,    \
-					periodic      = nubs.uPeriodic, \
-					degree        = nubs.uDegree,   \
-					CheckRational = nubs.rational
+					periodic      = False,          \
+					degree        = nubs.uDegree
 			)
+			# periodic = nubs.uPeriodic
 			shape = bsc.toShape()
 		except Exception as e:
 			logError(u"ERROR> %s", e)
@@ -829,8 +828,8 @@ def createBSplinesSurface(nubs):
 				vmults    = nubs.vMults,    \
 				uknots    = nubs.uKnots,    \
 				vknots    = nubs.vKnots,    \
-				uperiodic = nubs.uPeriodic, \
-				vperiodic = nubs.vPeriodic, \
+				uperiodic = False,          \
+				vperiodic = False,          \
 				udegree   = nubs.uDegree,   \
 				vdegree   = nubs.vDegree,   \
 				weights   = nubs.weights    \
@@ -842,11 +841,13 @@ def createBSplinesSurface(nubs):
 				vmults    = nubs.vMults,    \
 				uknots    = nubs.uKnots,    \
 				vknots    = nubs.vKnots,    \
-				uperiodic = nubs.uPeriodic, \
-				vperiodic = nubs.vPeriodic, \
+				uperiodic = False,          \
+				vperiodic = False,          \
 				udegree   = nubs.uDegree,   \
-				vdegree   = nubs.vDegree,   \
+				vdegree   = nubs.vDegree    \
 			)
+		# uperiodic = nubs.uPeriodic 
+		# vperiodic = nubs.vPeriodic
 		return bss.toShape()
 	except Exception as e:
 		logError(u"ERROR> %s", e)
@@ -1711,7 +1712,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				if (type(self.curve) == int):
 					self.curve = getSubtypeNode('intcurve', self.curve)
 				if (isinstance(self.curve, Curve)):
-					self.shape = self.curve.build(start, end)
+					self.shape = self.curve.build(None, None)
 		return self.shape
 	def setCurve(self, chunks, index):
 		self.singularity, i = getSingularity(chunks, index)
@@ -2697,16 +2698,17 @@ class SurfaceSpline(Surface):
 	def build(self):
 		if (self.shape is None):
 			if (self.type == 'ref'):
-				surface = getSubtypeNode('spline', self.ref)
-				if (surface is not None):
-					self.shape = surface.build()
-					if (self.shape is None):
-						if (hasattr(surface, 'type')):
-							logWarning(u"    ... Don't know how to build surface '%s::%s' - only edges displayed!", surface.__class__.__name__, surface.type)
-						else:
-							logWarning(u"    ... Don't know how to build surface '%s' - only edges displayed!", surface.__class__.__name__)
+				self.surface = getSubtypeNode('spline', self.ref)
 			if (self.surface is not None):
 				self.shape = self.surface.build()
+				if (self.shape is None):
+					if (hasattr(self.surface, 'type')):
+						logWarning(u"    ... Don't know how to build surface '%s::%s' - only edges displayed!", self.surface.__class__.__name__, self.surface.type)
+					else:
+						logWarning(u"    ... Don't know how to build surface '%s' - only edges displayed!", self.surface.__class__.__name__)
+				elif (not isinstance(self.shape.Surface, Part.BSplineSurface)):
+					logWarning(u"    ... referenced spline surface is of incompatible type '%s' - only edges displayed!", self.shape.Surface.__class__.__name__)
+					self.shape = None
 		return self.shape
 class SurfaceTorus(Surface):
 	'''

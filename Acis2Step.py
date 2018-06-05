@@ -6,9 +6,9 @@ Acis2Step.py:
 
 from datetime      import datetime
 from importerUtils import isEqual
-from FreeCAD import Vector as VEC
+from FreeCAD       import Vector as VEC
 from importerUtils import logError, logAlways, isEqual1D
-import traceback, inspect, os, Acis, math, re
+import traceback, inspect, os, Acis, math, re, Part
 
 #############################################################
 # private variables
@@ -32,6 +32,8 @@ _orientedEdges   = []
 _edgeLoops       = []
 _faceBounds      = []
 _faceOuterBounds = []
+_advancedFaces   = {}
+_lumpCounter     = 0
 
 #############################################################
 # private functions
@@ -192,7 +194,7 @@ def _createCurveInt(acisCurve):
 			curve = _curveBSplines[key]
 		except:
 			if (bsc.isRational()):
-				pass
+				pass # e.g.: ./3rdParty/150107-Freiform-pa.ipt
 			else:
 				curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False, mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
 				_curveBSplines[key] = curve
@@ -314,7 +316,7 @@ def _createSurfaceSphere(acisSurface):
 	return sphere
 def _createSurfaceSpline(acisSurface):
 	shape = acisSurface.build()
-	if (shape is not None):
+	if (isinstance(shape, Part.Face) and isinstance(shape.Surface, Part.BSplineSurface)):
 		bss = shape.Surface
 		points = []
 		for u in bss.getPoles():
@@ -335,36 +337,42 @@ def _createSurfaceSpline(acisSurface):
 		return spline
 	logError(u"Spline-Surface not created for (%s)", acisSurface.__str__()[:-1])
 	return None
-
 def _createSurfaceTorus(acisSurface):
 	global _toroids
 	key = "%s,%s,%s,%r,%r" %(acisSurface.center, acisSurface.axis, acisSurface.uvorigin, acisSurface.major, acisSurface.minor)
 	try:
 		torus = _toroids[key]
 	except:
-		torus = TOROIDAL_SURFACE('', None, acisSurface.major, acisSurface.minor)
+		torus = TOROIDAL_SURFACE('', None, acisSurface.major, math.fabs(acisSurface.minor))
 		torus.placement = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis, 'center_axis', acisSurface.uvorigin, 'ref_axis')
 		_toroids[key] = torus
-	return torus
+	return torus, sense
 
-def _createSurface(acisSurface):
-	if (isinstance(acisSurface, Acis.SurfaceCone)):
-		return _createSurfaceCone(acisSurface)
-	if (isinstance(acisSurface, Acis.SurfaceMesh)):
-		return _createSurfaceMesh(acisSurface)
-	if (isinstance(acisSurface, Acis.SurfacePlane)):
-		return _createSurfacePlane(acisSurface)
-	if (isinstance(acisSurface, Acis.SurfaceSphere)):
-		return _createSurfaceSphere(acisSurface)
-	if (isinstance(acisSurface, Acis.SurfaceSpline)):
-		return _createSurfaceSpline(acisSurface)
+def _createSurface(acisFace):
+	acisSurface = acisFace.getSurface()
+	if (isinstance(acisSurface, Acis.SurfaceCone)):   return (_createSurfaceCone(acisSurface),   (acisFace.sense == 'forward'))
+	if (isinstance(acisSurface, Acis.SurfaceMesh)):   return (_createSurfaceMesh(acisSurface),   (acisFace.sense == 'forward'))
+	if (isinstance(acisSurface, Acis.SurfacePlane)):  return (_createSurfacePlane(acisSurface),  (acisFace.sense == 'forward'))
+	if (isinstance(acisSurface, Acis.SurfaceSphere)): return (_createSurfaceSphere(acisSurface), (acisFace.sense == 'forward'))
+	if (isinstance(acisSurface, Acis.SurfaceSpline)): return (_createSurfaceSpline(acisSurface), (acisFace.sense == 'forward'))
 	if (isinstance(acisSurface, Acis.SurfaceTorus)):
-		return _createSurfaceTorus(acisSurface)
+		surface = _createSurfaceTorus(acisSurface)
+		if (acisSurface.minor < 0.0):
+			return surface, (acisFace.sense != 'forward')
+		return surface, (acisFace.sense != 'forward')
 
 def _convertFace(acisFace, shell):
-	boundaries = _createBoundaries(acisFace.getLoops())
-	surface    = _createSurface(acisFace.getSurface())
-	return ADVANCED_FACE('', boundaries, surface, (acisFace.sense == 'forward'))
+	global _advancedFaces
+	boundaries     = _createBoundaries(acisFace.getLoops())
+	surface, sense = _createSurface(acisFace)
+	id = "None" if surface is None else surface.id
+	key = '(%s),%s,%s' %(_lst2str(boundaries), id, _bool2str(sense))
+	try:
+		face = _advancedFaces[key]
+	except:
+		face = ADVANCED_FACE('', boundaries, surface, sense)
+		_advancedFaces[key] = face
+	return face
 
 def _convertShell(acisShell):
 	# FIXME how to distinguish between open or closed shell?
@@ -375,9 +383,11 @@ def _convertShell(acisShell):
 	return shell
 
 def _convertLump(acisLump, bodies, representation, style):
+	global _lumpCounter
 	for acisShell in acisLump.getShells():
 		shell = _convertShell(acisShell)
-		lump = SHELL_BASED_SURFACE_MODEL('Fl\X\E4che1', [])
+		_lumpCounter += 1
+		lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
 		lump.items.append(shell)
 		representation.items.append(lump)
 		bodies.append(lump)
@@ -405,6 +415,7 @@ def _initExport():
 	global _edgeLoops
 	global _faceBounds
 	global _faceOuterBounds
+	global _advancedFaces
 
 	_entityId        = 10
 	_pointsVertex    = {}
@@ -423,6 +434,7 @@ def _initExport():
 	_orientedEdges   = []
 	_edgeLoops       = []
 	_faceBounds      = []
+	_advancedFaces   = {}
 
 	return
 
@@ -1280,6 +1292,7 @@ def export(filename, satHeader, satBodies):
 	_setExported(_toroids, True)
 	_setExported(_curveBSplines, True)
 	_setExported(_faceOuterBounds, True)
+	_setExported(_advancedFaces, True)
 
 	stepfile = "%s/%s.step" %(path, name)
 	with open(stepfile, 'w') as step:
@@ -1294,13 +1307,13 @@ def export(filename, satHeader, satBodies):
 		step.write("/* implementation_level */ '2;1');\n")
 		step.write("\n");
 		step.write("FILE_NAME(\n")
-		step.write("/* name */ '" + path + "',\n")
-		step.write("/* time_stamp */ '" + dt.strftime("%Y-%m-%dT%H:%M:%S") + "',\n")
-		step.write("/* author */ ('"+user+"'),\n")
-		step.write("/* organization */ ('"+orga+"'),\n")
-		step.write("/* preprocessor_version */ '"+proc+"',\n")
+		step.write("/* name */ '%s',\n" %(path))
+		step.write("/* time_stamp */ '%s',\n" %(dt.strftime("%Y-%m-%dT%H:%M:%S")))
+		step.write("/* author */ ('%s'),\n" %(user))
+		step.write("/* organization */ ('%s'),\n" %(orga))
+		step.write("/* preprocessor_version */ '%s',\n" %(proc))
 		step.write("/* originating_system */ 'Autodesk Inventor 2017',\n")
-		step.write("/* authorisation */ '"+auth+"');\n")
+		step.write("/* authorisation */ '%s');\n" %(auth))
 		step.write("\n");
 		step.write("FILE_SCHEMA (('AUTOMOTIVE_DESIGN { 1 0 10303 214 3 1 1 }'));\n")
 		step.write("ENDSEC;\n")
@@ -1308,14 +1321,12 @@ def export(filename, satHeader, satBodies):
 		step.write("DATA;\n")
 		step.write(mdgpr.exportSTEP())
 		step.write(aga.exportSTEP())
-		step.write("\n");
 
 		_exportList(step, _faceOuterBounds)
-		_exportList(step, _ellipses)
-		_exportList(step, _planes)
-		_exportList(step, _cones)
-		_exportList(step, _spheres)
 		_exportList(step, _toroids)
+		_exportList(step, _planes)
+		_exportList(step, _ellipses)
+		_exportList(step, _spheres)
 		_exportList(step, _faceBounds)
 		_exportList(step, _edgeLoops)
 		_exportList(step, _lines)
@@ -1324,6 +1335,8 @@ def export(filename, satHeader, satBodies):
 		_exportList(step, _pointsVertex)
 		_exportList(step, _edgeCurves)
 		_exportList(step, _orientedEdges)
+		_exportList(step, _cones)
+		_exportList(step, _advancedFaces)
 		_exportList(step, _axisPlacements)
 		_exportList(step, _directions)
 		_exportList(step, _pointsCartesian)
@@ -1341,14 +1354,10 @@ def export(filename, satHeader, satBodies):
 		step.write(shpDefRep.exportSTEP())
 		shpRepRel.isexported = False
 		step.write(shpRepRel.exportSTEP())
-		step.write("\n");
 		prdRelPRdCat.isexported = False
 		step.write(prdRelPRdCat.exportSTEP())
-		step.write("\n");
 		appPrtDef.isexported = False
 		step.write(appPrtDef.exportSTEP())
-		step.write("\n");
-		step.write("\n");
 		appDatTimAss.isexported = False
 		step.write(appDatTimAss.exportSTEP())
 		for style in prsStyAss:
