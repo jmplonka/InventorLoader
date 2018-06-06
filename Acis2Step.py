@@ -7,7 +7,7 @@ Acis2Step.py:
 from datetime      import datetime
 from importerUtils import isEqual
 from FreeCAD       import Vector as VEC
-from importerUtils import logError, logAlways, isEqual1D
+from importerUtils import logError, logAlways, isEqual1D, getAuthor
 import traceback, inspect, os, Acis, math, re, Part
 
 #############################################################
@@ -27,6 +27,7 @@ _planes          = {}
 _spheres         = {}
 _toroids         = {}
 _curveBSplines   = {}
+_surfaceBSplines = []
 _axisPlacements  = []
 _orientedEdges   = []
 _edgeLoops       = []
@@ -139,6 +140,14 @@ def _createVector(fcVec, name = ''):
 		_vectors[key] = vec
 	return vec
 
+def _createAxis1Placement(name, aPt, aName, bPt, bName):
+	global _axisPlacements
+	plc = AXIS1_PLACEMENT(name, None, None)
+	plc.location  = _createCartesianPoint(aPt, aName)
+	plc.axis      = _createDirection(bPt, bName)
+	_axisPlacements.append(plc)
+	return plc
+
 def _createAxis2Placement3D(name, aPt, aName, bPt, bName, cPt, cName):
 	global _axisPlacements
 	plc = AXIS2_PLACEMENT_3D(name, None, None, None)
@@ -188,17 +197,36 @@ def _createCurveInt(acisCurve):
 	shape = acisCurve.getShape()
 	if (shape is not None):
 		bsc = shape.Curve
-		points = [_createCartesianPoint(v, 'Ctrl Pts') for v in bsc.getPoles()]
-		key = "(%s),(%s),(%s)" %(",".join(["#%d"%(p.id) for p in points]), ",".join(["%d" %(d) for d in bsc.getMultiplicities()]), ",".join(["%r" %(r) for r in bsc.getKnots()]))
-		try:
-			curve = _curveBSplines[key]
-		except:
-			if (bsc.isRational()):
-				pass # e.g.: ./3rdParty/150107-Freiform-pa.ipt
-			else:
-				curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False, mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
+		if (isinstance(bsc, Part.BSplineCurve)):
+			points = [_createCartesianPoint(v, 'Ctrl Pts') for v in bsc.getPoles()]
+			key = "(%s),(%s),(%s)" %(",".join(["#%d"%(p.id) for p in points]), ",".join(["%d" %(d) for d in bsc.getMultiplicities()]), ",".join(["%r" %(r) for r in bsc.getKnots()]))
+			try:
+				curve = _curveBSplines[key]
+			except:
+				if (bsc.isRational()):
+					params = (
+						BOUNDED_CURVE(),
+						B_SPLINE_CURVE(name=None, degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False),
+						B_SPLINE_CURVE_WITH_KNOTS(mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED'),
+						CURVE(),
+						GEOMETRIC_REPRESENTATION_ITEM(),
+						RATIONAL_B_SPLINE_CURVE(bsc.getWeights()),
+						REPRESENTATION_ITEM(''))
+					curve = ListEntity(params)
+				else:
+					curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False, mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
 				_curveBSplines[key] = curve
-		return curve
+			return curve
+		if (isinstance(bsc, Part.Line)):
+			key = "%s,%s" %(bsc.Location, bsc.Direction)
+			try:
+				line = _lines[key]
+			except:
+				line = LINE('', None, None)
+				line.pnt = _createCartesianPoint(bsc.Location)
+				line.dir = _createVector(bsc.Direction)
+				_lines[key] = line
+			return line
 	logError(u"IntCurve not created for %s", acisCurve)
 	return None
 def _createCurveIntInt(acisCurve):
@@ -218,8 +246,7 @@ def _createCurveStraight(acisCurve):
 		_lines[key] = line
 	return line
 
-def _createCurve(acisEdge):
-	acisCurve = acisEdge.getCurve()
+def _createCurve(acisCurve):
 	if (acisCurve is None):
 		return None
 	if (isinstance(acisCurve, Acis.CurveComp)):
@@ -240,7 +267,7 @@ def _createCurve(acisEdge):
 
 def _createCoEdge(acisCoEdge):
 	acisEdge = acisCoEdge.getEdge()
-	curve    = _createCurve(acisEdge)
+	curve    = _createCurve(acisEdge.getCurve())
 	if (curve is not None):
 		p1       = _createVertexPoint(acisEdge.getStart())
 		p2       = _createVertexPoint(acisEdge.getEnd())
@@ -315,26 +342,35 @@ def _createSurfaceSphere(acisSurface):
 		_spheres[key] = sphere
 	return sphere
 def _createSurfaceSpline(acisSurface):
+	global _surfaceBSplines
 	shape = acisSurface.build()
-	if (isinstance(shape, Part.Face) and isinstance(shape.Surface, Part.BSplineSurface)):
-		bss = shape.Surface
-		points = []
-		for u in bss.getPoles():
-			p = [_createCartesianPoint(v, 'Ctrl Pts') for v in u]
-			points.append(p)
-		if (bss.isURational()):
-			params = (
-				BOUNDED_SURFACE(),
-				B_SPLINE_SURFACE(bss.UDegree, bss.VDegree, points, 'UNSPECIFIED', bss.isUClosed(), bss.isVClosed(), False),
-				B_SPLINE_SURFACE_WITH_KNOTS(uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED'),
-				GEOMETRIC_REPRESENTATION_ITEM(),
-				RATIONAL_B_SPLINE_SURFACE(bss.getWeights()),
-				REPRESENTATION_ITEM(''),
-				SURFACE())
-			spline = ListEntity(params)
-		else:
-			spline = B_SPLINE_SURFACE_WITH_KNOTS(name='', uDegree=bss.UDegree, vDegree=bss.VDegree, points=points, form='UNSPECIFIED', uClosed=bss.isUClosed(), vClosed=bss.isVClosed(), selfIntersecting=False, uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
-		return spline
+	if (hasattr(shape, 'Surface')):
+		if (isinstance(shape.Surface, Part.BSplineSurface)):
+			bss = shape.Surface
+			points = []
+			for u in bss.getPoles():
+				p = [_createCartesianPoint(v, 'Ctrl Pts') for v in u]
+				points.append(p)
+			if (bss.isURational()):
+				params = (
+					BOUNDED_SURFACE(),
+					B_SPLINE_SURFACE(bss.UDegree, bss.VDegree, points, 'UNSPECIFIED', bss.isUClosed(), bss.isVClosed(), False),
+					B_SPLINE_SURFACE_WITH_KNOTS(uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED'),
+					GEOMETRIC_REPRESENTATION_ITEM(),
+					RATIONAL_B_SPLINE_SURFACE(bss.getWeights()),
+					REPRESENTATION_ITEM(''),
+					SURFACE())
+				spline = ListEntity(params)
+			else:
+				spline = B_SPLINE_SURFACE_WITH_KNOTS(name='', uDegree=bss.UDegree, vDegree=bss.VDegree, points=points, form='UNSPECIFIED', uClosed=bss.isUClosed(), vClosed=bss.isVClosed(), selfIntersecting=False, uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
+			_surfaceBSplines.append(spline)
+			return spline
+		if (acisSurface.type == 'rotsur'):
+			profile   = _createCurve(acisSurface.profile)
+			placement = _createAxis1Placement('', acisSurface.loc, '', acisSurface.dir, '')
+			spline    = SURFACE_OF_REVOLUTION('', profile, placement)
+			_surfaceBSplines.append(spline)
+			return spline
 	logError(u"Spline-Surface not created for (%s)", acisSurface.__str__()[:-1])
 	return None
 def _createSurfaceTorus(acisSurface):
@@ -360,7 +396,7 @@ def _createSurface(acisFace):
 		if (acisSurface.minor < 0.0):
 			return surface, (acisFace.sense != 'forward')
 		return surface, (acisFace.sense != 'forward')
-
+	return None, False
 def _convertFace(acisFace, shell):
 	global _advancedFaces
 	boundaries     = _createBoundaries(acisFace.getLoops())
@@ -410,6 +446,7 @@ def _initExport():
 	global _spheres
 	global _toroids
 	global _curveBSplines
+	global _surfaceBSplines
 	global _axisPlacements
 	global _orientedEdges
 	global _edgeLoops
@@ -430,6 +467,7 @@ def _initExport():
 	_spheres         = {}
 	_toroids         = {}
 	_curveBSplines   = {}
+	_surfaceBSplines = []
 	_axisPlacements  = []
 	_orientedEdges   = []
 	_edgeLoops       = []
@@ -439,11 +477,14 @@ def _initExport():
 	return
 
 def _setExported(l, b):
-	for p in l:
-		if (isinstance(p, ExportEntity)):
-			p.isexported = b
-		else:
-			l[p].isexported = b
+	if ((type(l) == dict) or (type(l) == list)):
+		for p in l:
+			if (isinstance(p, ExportEntity)):
+				p.isexported = b
+			else:
+				l[p].isexported = b
+	if (isinstance(l, ExportEntity)):
+		l.isexported = b
 
 def _exportList(step, l):
 	if (type(l) == list):
@@ -485,9 +526,11 @@ class AnonymEntity(object):
 	def getAttribute(self):
 		l = [_obj2str(p) for p in self._getParameters()]
 		return "%s(%s)" %(self._getClassName(), ",".join(l))
-	def __str__(self):
+	def toString(self):
 		l = [_obj2str(p) for p in self._getParameters()]
 		return "%s(%s)" %(self._getClassName(), ",".join(l))
+	def __str__(self):
+		return self.toString()
 	def __repr__(self):
 		l = [_obj2str(p) for p in self._getParameters()]
 		return "#%d\t= %s(%s)" %(self.id, self._getClassName(), ",".join(l))
@@ -685,14 +728,20 @@ class ELLIPSE(NamedEntity):
 	def _getParameters(self):
 		return super(ELLIPSE, self)._getParameters() + [self.placement, self.axis1, self.axis2]
 
-class AXIS2_PLACEMENT_3D(NamedEntity):
-	def __init__(self, name, location, axis, direction):
-		super(AXIS2_PLACEMENT_3D, self).__init__(name)
+class AXIS1_PLACEMENT(NamedEntity):
+	def __init__(self, name, location, axis):
+		super(AXIS1_PLACEMENT, self).__init__(name)
 		self.location  = location
 		self.axis      = axis
+	def _getParameters(self):
+		return super(AXIS1_PLACEMENT, self)._getParameters() + [self.location, self.axis]
+
+class AXIS2_PLACEMENT_3D(AXIS1_PLACEMENT):
+	def __init__(self, name, location, axis, direction):
+		super(AXIS2_PLACEMENT_3D, self).__init__(name, location, axis)
 		self.direction = direction
 	def _getParameters(self):
-		return super(AXIS2_PLACEMENT_3D, self)._getParameters() + [self.location, self.axis, self.direction]
+		return super(AXIS2_PLACEMENT_3D, self)._getParameters() + [self.direction]
 
 class ListEntity(ReferencedEntity):
 	def __init__(self, entities):
@@ -719,7 +768,7 @@ class ListEntity(ReferencedEntity):
 		self.isexported = True
 		return step
 	def __repr__(self):
-		return "#%d\t= (%s)" %(self.id, " ".join(["%s"%(e) for e in self.entities]))
+		return "#%d\t= (%s)" %(self.id, " ".join(["%s" % (e.toString()) for e in self.entities]))
 
 class NamedListEntity(ListEntity):
 	def __init__(self, entities):
@@ -1101,29 +1150,65 @@ class EDGE_CURVE(NamedEntity):
 	def _getParameters(self):
 		return super(EDGE_CURVE, self)._getParameters() + [self.start, self.end, self.curve, self.sense]
 
-class B_SPLINE_CURVE_WITH_KNOTS(ReferencedEntity):
-	def __init__(self, name=None, degree=None, points=None, form=None, closed=None, selfIntersecting=None, mults=None, knots=None, form2=None):
-		super(B_SPLINE_CURVE_WITH_KNOTS, self).__init__()
+class CURVE(ReferencedEntity):
+	def __init__(self, name=None):
+		super(CURVE, self).__init__()
+		self.name             = name
+
+class BOUNDED_CURVE(CURVE):
+	def __init__(self, name=None):
+		super(BOUNDED_CURVE, self).__init__(name)
+
+class RATIONAL_B_SPLINE_CURVE(ReferencedEntity):
+	def __init__(self, weights):
+		super(RATIONAL_B_SPLINE_CURVE, self).__init__()
+		self.weights = weights
+	def _getParameters(self):
+		return super(RATIONAL_B_SPLINE_CURVE, self)._getParameters() + [self.weights]
+
+class B_SPLINE_CURVE(ReferencedEntity):
+	def __init__(self, name=None, degree=None, points=None, form=None, closed=None, selfIntersecting=None):
+		super(B_SPLINE_CURVE, self).__init__()
 		self.name             = name
 		self.degree           = degree
 		self.points           = points
 		self.form             = _getE(form)
 		self.closed           = closed
 		self.selfIntersecting = selfIntersecting
-		self.mults            = mults
-		self.knots            = knots
-		self.form2            = _getE(form2)
 	def _getParameters(self):
-		l = super(B_SPLINE_CURVE_WITH_KNOTS, self)._getParameters()
+		l = super(B_SPLINE_CURVE, self)._getParameters()
 		if (self.name             is not None): l.append(self.name)
 		if (self.degree           is not None): l.append(self.degree)
 		if (self.points           is not None): l.append(self.points)
 		if (self.form             is not None): l.append(self.form)
 		if (self.closed           is not None): l.append(self.closed)
 		if (self.selfIntersecting is not None): l.append(self.selfIntersecting)
+		return l
+
+class B_SPLINE_CURVE_WITH_KNOTS(B_SPLINE_CURVE):
+	def __init__(self, name=None, degree=None, points=None, form=None, closed=None, selfIntersecting=None, mults=None, knots=None, form2=None):
+		super(B_SPLINE_CURVE_WITH_KNOTS, self).__init__(name, degree, points, form, closed, selfIntersecting)
+		self.mults            = mults
+		self.knots            = knots
+		self.form2            = _getE(form2)
+	def _getParameters(self):
+		l = super(B_SPLINE_CURVE_WITH_KNOTS, self)._getParameters()
 		if (self.mults            is not None): l.append(self.mults)
 		if (self.knots            is not None): l.append(self.knots)
 		if (self.form2            is not None): l.append(self.form2)
+		return l
+
+class SURFACE_OF_REVOLUTION(ReferencedEntity):
+	def __init__(self, name=None, curve=None, position=None):
+		super(SURFACE_OF_REVOLUTION, self).__init__()
+		self.name      = name
+		self.curve     = curve
+		self.positions = position
+	def _getParameters(self):
+		l = super(SURFACE_OF_REVOLUTION, self)._getParameters()
+		if (self.name      is not None): l.append(self.name)
+		if (self.curve     is not None): l.append(self.curve)
+		if (self.positions is not None): l.append(self.positions)
 		return l
 
 class BOUNDED_SURFACE(ReferencedEntity):
@@ -1216,7 +1301,7 @@ class APPLIED_GROUP_ASSIGNMENT(ReferencedEntity):
 
 def export(filename, satHeader, satBodies):
 	dt        = datetime.now() # 2018-05-13T08:03:27-07:00
-	user      = 'jplonka'
+	user      = getAuthor()
 	orga      = ''
 	proc      = 'ST-DEVELOPER v16.5'
 	auth      = ''
@@ -1264,16 +1349,17 @@ def export(filename, satHeader, satBodies):
 	for body in satBodies:
 		_convertBody(body.node, bodies, advShpRpr, prsStyAss[0])
 
-	glbLength.isexported = True
-	glbAngleSolid.isexported = True
-	glbAnglePlane.isexported = True
-	shpRepRel.isexported = True
-	prdRelPRdCat.isexported = True
-	appPrtDef.isexported = True
-	shpDefRep.isexported = True
-	appDatTimAss.isexported = True
-	prsStyAss[0].isexported = True
-	pamwu.isexported = True
+	_setExported(glbLength, True)
+	_setExported(glbAngleSolid, True)
+	_setExported(glbAnglePlane, True)
+	_setExported(shpRepRel, True)
+	_setExported(prdRelPRdCat, True)
+	_setExported(appPrtDef, True)
+	_setExported(shpDefRep, True)
+	_setExported(appDatTimAss, True)
+	_setExported(prsStyAss[0], True)
+	_setExported(pamwu, True)
+	_setExported(prdDef, True)
 
 	_setExported(_pointsCartesian, True)
 	_setExported(_directions, True)
@@ -1291,6 +1377,7 @@ def export(filename, satHeader, satBodies):
 	_setExported(_spheres, True)
 	_setExported(_toroids, True)
 	_setExported(_curveBSplines, True)
+	_setExported(_surfaceBSplines, False)
 	_setExported(_faceOuterBounds, True)
 	_setExported(_advancedFaces, True)
 
@@ -1307,7 +1394,7 @@ def export(filename, satHeader, satBodies):
 		step.write("/* implementation_level */ '2;1');\n")
 		step.write("\n");
 		step.write("FILE_NAME(\n")
-		step.write("/* name */ '%s',\n" %(path))
+		step.write("/* name */ '%s',\n" %(stepfile))
 		step.write("/* time_stamp */ '%s',\n" %(dt.strftime("%Y-%m-%dT%H:%M:%S")))
 		step.write("/* author */ ('%s'),\n" %(user))
 		step.write("/* organization */ ('%s'),\n" %(orga))
@@ -1330,13 +1417,16 @@ def export(filename, satHeader, satBodies):
 		_exportList(step, _faceBounds)
 		_exportList(step, _edgeLoops)
 		_exportList(step, _lines)
-		_exportList(step, _curveBSplines)
 		_exportList(step, _vectors)
+		_exportList(step, _curveBSplines)
 		_exportList(step, _pointsVertex)
 		_exportList(step, _edgeCurves)
 		_exportList(step, _orientedEdges)
 		_exportList(step, _cones)
+		_exportList(step, _surfaceBSplines)
 		_exportList(step, _advancedFaces)
+		appDatTimAss.isexported = False
+		step.write(appDatTimAss.exportSTEP())
 		_exportList(step, _axisPlacements)
 		_exportList(step, _directions)
 		_exportList(step, _pointsCartesian)
@@ -1358,8 +1448,8 @@ def export(filename, satHeader, satBodies):
 		step.write(prdRelPRdCat.exportSTEP())
 		appPrtDef.isexported = False
 		step.write(appPrtDef.exportSTEP())
-		appDatTimAss.isexported = False
-		step.write(appDatTimAss.exportSTEP())
+		prdDef.isexported = False
+		step.write(prdDef.exportSTEP())
 		for style in prsStyAss:
 			prsStyAss[0].isexported = False
 			step.write(style.exportSTEP())

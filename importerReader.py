@@ -177,7 +177,8 @@ def ReadInventorSummaryInformation(doc, properties, path):
 	name, keys = getPropertySetName(properties, path, model)
 
 	if (doc):
-		doc.CreatedBy = getProperty(properties, KEY_SUM_INFO_AUTHOR)
+		setAuthor(getProperty(properties, KEY_SUM_INFO_AUTHOR))
+		doc.CreatedBy = getAuthor()
 		doc.Comment = getProperty(properties, KEY_SUM_INFO_COMMENT)
 		doc.LastModifiedBy = getProperty(properties, KEY_SUM_INFO_MODIFYER)
 

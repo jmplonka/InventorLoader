@@ -924,7 +924,7 @@ def readSplineSurface(chunks, index, tolerance):
 		singularityU, i = getSingularity(chunks, i)
 		singularityV, i = getSingularity(chunks, i)
 		return None, (a11, a12, f, closureU, closureV, singularityU, singularityV), i
-	elif (singularity == 4): # TODO what the heck is this???
+	elif (singularity == 4): # TODO: what the heck is this???
 		rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		rV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		closureU, i = getClosure(chunks, i)
@@ -974,13 +974,23 @@ def readLoftData(chunks, index):
 		ld.dir, i = getVector(chunks, i)
 	return ld, i
 
-def readLoftProfile(chunks, index):
-	m, i = getInteger(chunks, index)
+def readLoftProfile(chunks, index, inventor):
+	i = index
+	if (inventor):
+		m, i = getInteger(chunks, i)
+	else:
+		m = 1
 	section = []
 	for l in range(0, m):
-		t, i = getInteger(chunks, i)
+		if (inventor):
+			t, i = getInteger(chunks, i)
+		else:
+			t = 0
 		ck, i = readCurve(chunks, i)
-		lk, i = readLoftData(chunks, i)
+		if (inventor):
+			lk, i = readLoftData(chunks, i)
+		else:
+			lk = None
 		section.append((t, ck, lk))
 	return section, i
 
@@ -994,13 +1004,16 @@ def readLoftPath(chunks, index):
 	f, i = getInteger(chunks, i)
 	return (cur, paths, f), i
 
-def readLofSection(chunks, index):
+def readLofSection(chunks, index, inventor):
 	n, i = getInteger(chunks, index)
 	loft = []
 	for k in range(0, n):
 		fk, i = getFloat(chunks, i)
-		profile, i = readLoftProfile(chunks, i)
-		path, i = readLoftPath(chunks, i)
+		profile, i = readLoftProfile(chunks, i, inventor)
+		if (inventor):
+			path, i = readLoftPath(chunks, i)
+		else:
+			path = None
 		loft.append((fk, profile, path))
 	return loft, i
 
@@ -1726,8 +1739,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			if (type(val) == float):
 				self.tolerance = val
 		elif (self.singularity == 'summary'):
-			if (getVersion() > 17.0):
-				i += 1
+			if (getVersion() >= 17.0):
+				i += 1 # 3 
 			arr, i  = getFloatArray(chunks, i)
 			fac, i  = getFloat(chunks, i)
 			clsr, i = getClosure(chunks, i)
@@ -2191,7 +2204,7 @@ class SurfaceSpline(Surface):
 		super(SurfaceSpline, self).__init__()
 		self.surface = None
 	def setSurfaceShape(self, chunks, index, inventor):
-		spline, tol, i = readSplineSurface(chunks, index, True)
+		spline, self.tolerance, i = readSplineSurface(chunks, index, True)
 		self.shape = createBSplinesSurface(spline)
 		if (getVersion() >= 2.0):
 			arr, i  = readArrayFloats(chunks, i, inventor)
@@ -2347,8 +2360,8 @@ class SurfaceSpline(Surface):
 		x6, i     = getVector(chunks, i)
 		return i
 	def setLoft(self, chunks, index, inventor):
-		ls1, i = readLofSection(chunks, index)
-		ls2, i = readLofSection(chunks, i)
+		ls1, i = readLofSection(chunks, index, inventor)
+		ls2, i = readLofSection(chunks, i, inventor)
 
 		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		r2, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
@@ -2363,14 +2376,23 @@ class SurfaceSpline(Surface):
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setNet(self, chunks, index, inventor):
-		ls1, i = readLofSection(chunks, index)
-		ls2, i = readLofSection(chunks, i)
-		a1, i = getFloats(chunks, i, 12)
-		a2, i = getInteger(chunks, i)
-		v1, i = getVector(chunks, i)
-		v2, i = getVector(chunks, i)
-		v3, i = getVector(chunks, i)
-		v4, i = getVector(chunks, i)
+		ls1, i = readLofSection(chunks, index, inventor)
+		ls2, i = readLofSection(chunks, i, inventor)
+		if (inventor):
+			a1, i = getFloats(chunks, i, 12)
+			a2, i = getInteger(chunks, i)
+			v1, i = getVector(chunks, i)
+			v2, i = getVector(chunks, i)
+			v3, i = getVector(chunks, i)
+			v4, i = getVector(chunks, i)
+		else:
+			a1 = []
+			for j in range(0, len(ls2)):
+				a2 = []
+				for k in range(0, len(ls1)):
+					a3, i = getFloats(chunks, i, 2)
+					a2.append(a3)
+				a1.append(a2)
 		frml1, i = readFormula(chunks, i)
 		frml2, i = readFormula(chunks, i)
 		frml3, i = readFormula(chunks, i)
@@ -2430,10 +2452,12 @@ class SurfaceSpline(Surface):
 			a9, i = getFloatArray(chunks, i)
 		return i
 	def setRotation(self, chunks, index, inventor):
-		profile, i = readCurve(chunks, index)
-		loc, i     = getLocation(chunks, i)
-		dir, i     = getVector(chunks, i)
+		self.profile, i = readCurve(chunks, index)
+		self.loc, i     = getLocation(chunks, i)
+		self.dir, i     = getVector(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
+		# create a rotation shape from the profile
+		self.shape = Part.SurfaceOfRevolution(self.profile.build(None, None).Curve, self.loc, self.dir).toShape()
 		return i
 	def setSkin(self, chunks, index, inventor):
 		skins = []
@@ -2895,6 +2919,8 @@ class AttribSysVertedge(AttribSys):
 	def __init__(self): super(AttribSysVertedge, self).__init__()
 class AttribTsl(Attrib):
 	def __init__(self): super(AttribTsl, self).__init__()
+class AttribTslColour(AttribTsl):
+	def __init__(self): super(AttribTslColour, self).__init__()
 class AttribTslId(AttribTsl):
 	def __init__(self): super(AttribTslId, self).__init__()
 class AttribMixOrganization(Attrib):
@@ -3272,6 +3298,7 @@ SURFACE_TYPES = {
 	'helix_spl_line':       ('setHelixLine', 1, True),
 	'loftsur':              ('setLoft', 0, False),
 	'loft_spl_sur':         ('setLoft', 1, True),
+	'netsur':               ('setNet', 0, False),
 	'net_spl_sur':          ('setNet', 1, True),
 	'offsur':               ('setOffset', 0, False),
 	'off_spl_sur':          ('setOffset', 1, True),
@@ -3432,6 +3459,7 @@ ENTITY_TYPES = {
 	"vertedge-sys-attrib":                                                                         AttribSysVertedge,
 	"tsl-attrib":                                                                                  AttribTsl,
 	"id-tsl-attrib":                                                                               AttribTslId,
+	"colour-tsl-attrib":                                                                           AttribTslColour,
 	"Begin-of-ACIS-History-Data":                                                                  BeginOfAcisHistoryData,
 	"body":                                                                                        Body,
 	"coedge":                                                                                      CoEdge,

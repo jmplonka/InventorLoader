@@ -78,6 +78,8 @@ STRATEGY_SAT    = 0
 STRATEGY_NATIVE = 1
 STRATEGY_STEP   = 2
 
+_author = ''
+
 def getStrategy():
 	if getFileVersion() < 2010: return STRATEGY_SAT
 	return FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetInt("strategy", STRATEGY_SAT)
@@ -91,16 +93,19 @@ def isStrategyStep():
 def isStrategyNative():
 	return getStrategy() == STRATEGY_NATIVE
 
+def setAuthor(author):
+	global _author
+	_author = author
+	return
+
+def getAuthor():
+	return _author
+
 def chooseImportStrategyAcis():
 	btnCnvrt = QPushButton('&Convert to STEP')
 	btnNativ = QPushButton('&nativ')
 	msgBox   = QMessageBox()
-	thmnl    = getThumbnailImage()
 	msgBox.setIcon(QMessageBox.Question)
-	if (thmnl is not None):
-		icon = thmnl.getIcon()
-		if (icon):
-			msgBox.setIconPixmap(icon)
 	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
 	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
 	msgBox.addButton(btnCnvrt, QMessageBox.ActionRole)
@@ -630,6 +635,36 @@ def isEqual1D(a, b):
 	if (b is None): return isEqual1D(a, 0.0)
 	return abs(a - b) < 0.0001
 
+def _log(caller, method, msg, args):
+	try:
+		if (len(args) > 0):
+			method(msg %args + '\n')
+		else:
+			method(msg + '\n')
+	except:
+		Console.PrintError("FATAL ERROR in %s:\n" %(caller))
+		Console.PrintError("msg   = " + msg)
+		if (len(args) > 0): Console.PrintError("*args = (%s)" %(",".join(args)))
+
+def logDebug(msg, *args):
+	if ((LOG.LOG_DEBUG & LOG.LOG_FILTER) != 0):
+		_log("logDebug", Console.PrintMessage, msg, args)
+
+def logInfo(msg, *args):
+	if ((LOG.LOG_INFO & LOG.LOG_FILTER) != 0):
+		_log("logInfo", Console.PrintMessage, msg, args)
+
+def logWarning(msg, *args):
+	if ((LOG.LOG_WARNING & LOG.LOG_FILTER) != 0):
+		_log("logWarning", Console.PrintWarning, msg, args)
+
+def logError(msg, *args):
+	if ((LOG.LOG_ERROR & LOG.LOG_FILTER) != 0):
+		_log("logError", Console.PrintError, msg, args)
+
+def logAlways(msg, *args):
+	_log("logAlways", Console.PrintMessage, msg, args)
+
 def logMessage(msg, level=LOG.LOG_DEBUG):
 	if (level == LOG.LOG_DEBUG):
 		return logDebug(msg)
@@ -642,25 +677,6 @@ def logMessage(msg, level=LOG.LOG_DEBUG):
 	if (level == LOG.LOG_ALWAYS):
 		return logAlways(msg)
 	return
-
-def logDebug(msg, *args):
-	if ((LOG.LOG_DEBUG & LOG.LOG_FILTER) != 0):
-		Console.PrintMessage(msg %args + '\n')
-
-def logInfo(msg, *args):
-	if ((LOG.LOG_INFO & LOG.LOG_FILTER) != 0):
-		Console.PrintMessage(msg %args + '\n')
-
-def logWarning(msg, *args):
-	if ((LOG.LOG_WARNING & LOG.LOG_FILTER) != 0):
-		Console.PrintWarning(msg %args + '\n')
-
-def logError(msg, *args):
-	if ((LOG.LOG_ERROR & LOG.LOG_FILTER) != 0):
-		Console.PrintError(msg %args + '\n')
-
-def logAlways(msg, *args):
-	return Console.PrintMessage(msg %args + '\n')
 
 def getDumpLineLength():
 	global _dumpLineLength
