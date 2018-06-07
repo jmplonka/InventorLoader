@@ -395,7 +395,7 @@ def _createSurface(acisFace):
 		surface = _createSurfaceTorus(acisSurface)
 		if (acisSurface.minor < 0.0):
 			return surface, (acisFace.sense != 'forward')
-		return surface, (acisFace.sense != 'forward')
+		return surface, (acisFace.sense == 'forward')
 	return None, False
 def _convertFace(acisFace, shell):
 	global _advancedFaces
