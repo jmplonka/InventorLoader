@@ -99,25 +99,29 @@ DIR_X  = VEC(1, 0, 0)
 DIR_Y  = VEC(0, 1, 0)
 DIR_Z  = VEC(0, 0, 1)
 
-RANGE      = {0x0B: 'I',          0x0A: 'F'}
-REFLECTION = {0x0B: 'no_reflect', 0x0A: 'reflect'}
-ROTATION   = {0x0B: 'no_rotate',  0x0A: 'rotate'}
-SHEAR      = {0x0B: 'no_shear',   0x0A: 'shear'}
-SENSE      = {0x0B: 'forward',    0x0A: 'reversed'}
-SENSEV     = {0x0B: 'forward_v',  0x0A: 'reverse_v'}
-SIDES      = {0x0B: 'single',     0x0A: 'double'}
-SIDE       = {0x0B: 'out',        0x0A: 'in'}
+RANGE        = {0x0B: 'I',            0x0A: 'F'}
+REFLECTION   = {0x0B: 'no_reflect',   0x0A: 'reflect'}
+ROTATION     = {0x0B: 'no_rotate',    0x0A: 'rotate'}
+SHEAR        = {0x0B: 'no_shear',     0x0A: 'shear'}
+SENSE        = {0x0B: 'forward',      0x0A: 'reversed'}
+SENSEV       = {0x0B: 'forward_v',    0x0A: 'reverse_v'}
+SIDES        = {0x0B: 'single',       0x0A: 'double'}
+SIDE         = {0x0B: 'out',          0x0A: 'in'}
+SURF_BOOL    = {0x0B: 'FALSE',        0x0A: 'TRUE'}
+SURF_NORM    = {0x0B: 'ISO',          0x0A: 'UNKNOWN'}
+SURF_DIR     = {0x0B: 'SKIN',         0x0A: 'PERPENDICULAR'}
+SURF_SWEEP   = {0x0B: 'angled',       0x0A: 'normal'}
+CIRC_TYP     = {0x0B: 'non_cross',    0x0A: 'cross'}
+CIRC_SMTH    = {0x0B: 'normal',       0x0A: 'smooth'}
+CALIBRATED   = {0x0B: 'uncalibrated', 0x0A: 'calibrated'}
+CHAMFER_TYPE = {0x0B: 'const',        0x0A: 'radius'}
+CONVEXITY    = {0x0B: 'concave',      0x0A: 'convex'}
+RENDER_BLEND = {0x0B: 'rb_snapshot',  0x0A: 'rb_envelope'}
 
-SURF_BOOL  = {0x0B: 'FALSE',      0x0A: 'TRUE'}
-SURF_NORM  = {0x0B: 'ISO',        0x0A: 'UNKNOWN'}
-SURF_DIR   = {0x0B: 'SKIN',       0x0A: 'PERPENDICULAR'}
-SURF_SWEEP = {0x0B: 'angled',     0x0A: 'normal'}
-
-CIRC_TYP  = {0x0B: 'non_cross',   0x0A: 'cross'}
-CIRC_SMTH = {0x0B: 'normal',      0x0A: 'smooth'}
-
-CLOSURE     = {0: 'open', 1: 'closed', 2: 'periodic', '0x0B': 'open', '0x0A': 'periodic'}
-SINGULARITY = {0: 'full', 1: 'v',      2: 'none',     '0x0B': 'none', '0x0A': 'full'}
+VAR_RADIUS  = {0: 'single_radius',  1: 'two_radii'}
+VAR_CHAMFER = {3: 'rounded_chamfer'}
+CLOSURE     = {0: 'open',   1: 'closed',  2: 'periodic', '0x0B': 'open', '0x0A': 'periodic'}
+SINGULARITY = {0: 'full',   1: 'v',       2: 'none',     '0x0B': 'none', '0x0A': 'full'}
 VBL_CIRLE   = {0: 'circle', 1: 'ellipse', 3: 'unknown', 'cylinder': 'circle'}
 
 scale   = 1.0
@@ -254,6 +258,15 @@ def getFloats(chunks, index, count):
 		arr.append(f)
 	return arr, i
 
+def getFloatsScaled(chunks, index, count):
+	s = getScale()
+	i = index
+	arr = []
+	for n in range(0, count):
+		f, i = getFloat(chunks, i)
+		arr.append(f * f)
+	return arr, i
+
 def getFloatArray(chunks, index):
 	n, i = getInteger(chunks, index)
 	arr, i = getFloats(chunks, i, n)
@@ -335,6 +348,26 @@ def getCircleType(chunks, index):
 
 def getCircleSmoothing(chunks, index):
 	return getEnumByTag(chunks, index, CIRC_SMTH)
+
+def getVarRadius(chunks, index):
+	radius, i = getEnumByValue(chunks, index, VAR_RADIUS)
+	return radius.lower(), i
+
+def getVarChamfer(chunks, index):
+	chamfer, i = getEnumByValue(chunks, index, VAR_CHAMFER)
+	return chamfer.lower(), i
+
+def getCalibrated(chunks, index):
+	return getEnumByTag(chunks, index, CALIBRATED)
+
+def getChamferType(chunks, index):
+	return getEnumByTag(chunks, index, CHAMFER_TYPE)
+
+def getConvexity(chunks, index):
+	return getEnumByTag(chunks, index, CONVEXITY)
+
+def getRenderBlend(chunks, index):
+	return getEnumByTag(chunks, index, RENDER_BLEND)
 
 def getUnknownFT(chunks, index):
 	i = index
@@ -846,7 +879,7 @@ def createBSplinesSurface(nubs):
 				udegree   = nubs.uDegree,   \
 				vdegree   = nubs.vDegree    \
 			)
-		# uperiodic = nubs.uPeriodic 
+		# uperiodic = nubs.uPeriodic
 		# vperiodic = nubs.vPeriodic
 		return bss.toShape()
 	except Exception as e:
@@ -897,6 +930,15 @@ def readBS3Surface(chunks, index):
 		closureU, closureV, singularityU, singularityV, knotsU, knotsV, i = getClosureSurface(chunks, i)
 		nubs = BS3_Surface(nbs == 'nurbs', closureU == 'periodic', closureV == 'periodic', degreeU, degreeV)
 		i = readPoints3DMap(nubs, knotsU, knotsV, chunks, i)
+	if (nbs == 'summary'):
+		x, i            = getFloat(chunks, i)
+		arr, i          = getFloatArray(chunks, i)
+		tol, i          = getLength(chunks, i)
+		closureU, i     = getClosure(chunks, i)
+		closureV, i     = getClosure(chunks, i)
+		singularityU, i = getSingularity(chunks, i)
+		singularityV, i = getSingularity(chunks, i)
+		# FIXME: create a surface from these values! -> ../tutorials/2012/Tube and Pipe/Example_iparts/45Elbow.ipt
 	return nubs, i
 
 def readSplineSurface(chunks, index, tolerance):
@@ -904,35 +946,32 @@ def readSplineSurface(chunks, index, tolerance):
 	if (singularity == 'full'):
 		spline, i = readBS3Surface(chunks, i)
 		if ((spline is not None) and tolerance):
-			tol, i = getFloat(chunks, i)
-			return spline, tol * getScale(), i
+			tol, i = getLength(chunks, i)
+			return spline, tol, i
 		return spline, None, i
-	if (singularity == 'none'):
-		rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		rV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		closureU, i = getClosure(chunks, i)
-		closureV, i = getClosure(chunks, i)
-		singularityU, i = getSingularity(chunks, i)
-		singularityV, i = getSingularity(chunks, i)
-		return None, (rU, rV, closureU, closureV, singularityU, singularityV), i
-	elif (singularity == 'v'):
-		a11, i = getFloatArray(chunks, i)
-		a12, i = getFloatArray(chunks, i)
-		f, i = getFloat(chunks, i)
-		closureU, i = getClosure(chunks, i)
-		closureV, i = getClosure(chunks, i)
-		singularityU, i = getSingularity(chunks, i)
-		singularityV, i = getSingularity(chunks, i)
-		return None, (a11, a12, f, closureU, closureV, singularityU, singularityV), i
-	elif (singularity == 4): # TODO: what the heck is this???
-		rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		rV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		closureU, i = getClosure(chunks, i)
-		closureV, i = getClosure(chunks, i)
-		singularityU, i = getSingularity(chunks, i)
-		singularityV, i = getSingularity(chunks, i)
-		return None, (rU, rV, closureU, closureV, singularityU, singularityV), i
-
+	arr1 = None
+	arr2 = None
+	rngU = None
+	rngV = None
+	tol  = None
+	if ((singularity == 'none') or (singularity == 4)):
+		rngU, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+		rngV, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+		clsU, i = getClosure(chunks, i)
+		clsV, i = getClosure(chunks, i)
+		sngU, i = getSingularity(chunks, i)
+		sngV, i = getSingularity(chunks, i)
+		return None, (arr1, arr2, rngU, rngV, tol, clsU, clsV, sngU, sngV), i
+	if ((singularity == 'v') or (singularity == 'summary')):
+		arr1, i = getFloatArray(chunks, i)
+		arr2, i = getFloatArray(chunks, i)
+		tol, i  = getLength(chunks, i)
+		clsU, i = getClosure(chunks, i)
+		clsV, i = getClosure(chunks, i)
+		sngU, i = getSingularity(chunks, i)
+		sngV, i = getSingularity(chunks, i)
+		# FIXME: create a surface from these values! -> ../tutorials/2012/Tube and Pipe/Example_iparts/45Elbow.ipt
+		return None, (arr1, arr2, rngU, rngV, tol, clsU, clsV, sngU, sngV), i
 	raise Exception("Unknown spline singularity '%s'" %(singularity))
 
 def readLofSubdata(chunks, i):
@@ -1092,6 +1131,59 @@ def readRbBlend(chunks, index, inventor):
 		return (txt, srf, cur, bs2, vec, (dummy, spline, tol)), i
 	return (txt, srf, cur, bs2, vec, None), i
 
+def getBlendSurface(chunks, index, inventor):
+	name, i    = getValue(chunks, index)
+	surface, i = readSurface(chunks, i)
+	curve, i   = readCurve(chunks,i)
+	bs, i      = readBS2Curve(chunks, i) # nullbs
+	v, i       = getLocation(chunks, i)
+	if (inventor):
+		bs, i = readBS2Curve(chunks, i) # nullbs
+		f, i  = getFloat(chunks, i)
+		bs, i = readBS2Curve(chunks, i) # nullbs
+	return (name, surface, curve, bs, v), i
+
+def getBlendValues(chunks, index):
+	a   = None
+	s   = None
+	r   = None
+	bsc = None
+	name, i     = getValue(chunks, index)
+	if (chunks[i].tag in [0x07, 0x0A, 0x0B]):
+		t = 1
+	else:
+		t, i = getInteger(chunks, i) # Enum value
+	if (name == 'two_ends'):
+		c, i = getCalibrated(chunks, i)
+		a, i = getFloats(chunks, i, 2)
+		s, i = getFloatsScaled(chunks, i, 2)
+		return (name, c, t, a, s, bsc, r, None), i
+	if (name == 'edge_offset'):
+		c, i = getCalibrated(chunks, i)
+		if (t == 0):
+			a, i = getFloats(chunks, i, 2) # start and end angle in RAD
+			r, i = getLength(chunks, i)
+			a = [a]
+		elif (t == 1):
+			r, i = getFloat(chunks, i)
+			s, i = getFloatsScaled(chunks, i, 2)
+		return (name, c, t, a, s, bsc, r, None), i
+	if (name == 'functional'):
+		c, i   = getCalibrated(chunks, i)
+		a, i   = getFloat(chunks, i)
+		s, i   = getLength(chunks, i)
+		bsc, i = readBS2Curve(chunks, i)
+		r, i   = getFloat(chunks, i)
+		return (name, c, t, [a], [s], bsc, r, None), i
+	if (name == 'const'):
+		c, i   = getCalibrated(chunks, i)
+		a, i   = getFloats(chunks, i, 2)
+		s, i   = getLength(chunks, i)
+		vc, i  = getVarChamfer(chunks, i)   # 3 = rounded_chamfer
+		ct, i  = getChamferType(chunks, i)  # 0x0A = radius, 0x0B = const
+		bv, i  = getBlendValues(chunks, i)  # two_ends ...
+		return (name, c, t, a, [s], bsc, r, (vc, ct, bv)), i
+	raise Exception("Unknown BlendValue %s!" %(name))
 class VBL():
 	def __init__(self):
 		self.t  = ''
@@ -1345,7 +1437,7 @@ class Shell(Topology):
 		self._next, i  = getRefNode(entity, i, 'shell')
 		self._shell, i = getRefNode(entity, i, None)
 		self._face, i  = getRefNode(entity, i, 'face')
-		if (getVersion() > 1.07):
+		if (getVersion() > 1.7):
 			self._wire, i  = getRefNode(entity, i, 'wire')
 		self._lump, i  = getRefNode(entity, i, 'lump')
 		return i
@@ -1631,7 +1723,7 @@ class Wire(Topology):
 			coedges.append(ce)
 			idxLst.append(ce.getIndex())
 			ce = ce.getNext()
-			if (ce.getIndex() in idxLst):
+			if ((not ce is None) and (ce.getIndex() in idxLst)):
 				ce = None
 		return coedges
 	def getShells(self):
@@ -1709,8 +1801,6 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.range  = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.type   = ''
 		self.curve  = None
-	def __str__(self): return "-%d Curve-Int: type=%s" %(self.getIndex(), self.type)
-	def __repr__(self): return self.__str__()
 	def getShape(self):
 		if (self.shape is None):
 			if (hasattr(self, 'curves')):
@@ -1740,7 +1830,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				self.tolerance = val
 		elif (self.singularity == 'summary'):
 			if (getVersion() >= 17.0):
-				i += 1 # 3 
+				i += 1 # 3
 			arr, i  = getFloatArray(chunks, i)
 			fac, i  = getFloat(chunks, i)
 			clsr, i = getClosure(chunks, i)
@@ -1872,6 +1962,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		i = self.setSurfaceCurve(chunks, index)
 		if (inventor):
 				i += 1
+		if (getVersion() > 22.0):
+			i += 3 # -1 none F
 		offsets, i = getFloats(chunks, i, 2)
 		return i
 	def setOffset(self, chunks, index, inventor):
@@ -2002,7 +2094,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.sense  = 'forward'
 		self._curve = None  # The PCurve's curve
 	def setExpPar(self, chunks, index):
-		i = index if (getVersion() <= 22.0) else index + 1
+		i = index if (getVersion() < 25.0) else index + 1
 		self.pcurve, i = readBS2Curve(chunks, i)
 		factor, i = getFloat(chunks, i)
 		if (getVersion() > 15.0):
@@ -2210,8 +2302,52 @@ class SurfaceSpline(Surface):
 			arr, i  = readArrayFloats(chunks, i, inventor)
 		return i
 	def setBlendSupply(self, chunks, index, inventor):
-		name, i = getValue(chunks, index)
-		self.surface, i = readSurface(chunks, i)
+		bs1, i  = getBlendSurface(chunks, index, inventor)
+		bs2, i  = getBlendSurface(chunks, i, inventor)
+
+		if (getVersion() > 22.0):
+			i += 2 # 122, -1
+		cur1, i = readCurve(chunks, i)
+		if (getVersion() > 22.0):
+			curT, i = readCurve(chunks, i)
+			curT, i = readCurve(chunks, i)
+			curT, i = readCurve(chunks, i)
+			curT, i = readCurve(chunks, i)
+
+		tol1, i = getFloats(chunks, i, 2)    # 0, 0
+		r1,  i  = getVarRadius(chunks, i)    # 0 = single_radius, 1 = two_radii ## convert SAT to STEP!!!
+		bv1, i  = getBlendValues(chunks, i)  # two_ends ...
+		if (r1 == 'two_radii'):
+			bv2, i  = getBlendValues(chunks, i)  # two_ends ...
+			n, i    = getVarChamfer(chunks, i)   # 3 = rounded_chamfer
+			t, i    = getChamferType(chunks, i)  # 0x0A = radius, 0x0B = const
+			bv3, i  = getBlendValues(chunks, i)  # two_ends ...
+		rU, i   = getInterval(chunks, i, 0, 1, 1.0)
+		rV, i   = getInterval(chunks, i, 0, 1, 1.0)
+
+		j, i    = getInteger(chunks, i)      # 1
+		f, i    = getFloat(chunks, i)        #
+		s, i    = getLength(chunks, i)       #
+
+		if (getVersion() > 22.0):
+			i += 1 # T
+
+		j, i    = getInteger(chunks, i)      # 1
+		spline, tol, i = readSplineSurface(chunks, i, True)
+		# FIXME: create a surface from these values! -> ../tutorials/2012/Tube and Pipe/Example_iparts/45Elbow.ipt
+		self.shape = createBSplinesSurface(spline)
+		if (getVersion() >= 2.0):
+			arr, i  = readArrayFloats(chunks, i, inventor)
+
+		if (inventor):
+			a, i = getIntegers(chunks, i, 3) # 0 0 0
+		curve, i = readCurve(chunks, i)
+		t, i     = getConvexity(chunks, i)   # 0x0A = convex
+		t, i     = getRenderBlend(chunks, i) # 0x0A = rb_envelope, 0x0B = rb_snapshop
+		if (inventor):
+			r, i  = getInterval(chunks, i, 0.0, 1.0, 1.0)
+			bs, i = readBS3Curve(chunks, i)
+			bs, i = readBS2Curve(chunks, i)  # nullbs
 		return i
 	def setClLoft(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
@@ -2437,13 +2573,22 @@ class SurfaceSpline(Surface):
 		rb1, i = readRbBlend(chunks, i, inventor)
 		rb2, i = readRbBlend(chunks, i, inventor)
 
+		if (getVersion() > 22.0):
+			i += 2 # 43, 1e-10
 		# read remaining data
 		c3, i = readCurve(chunks, i)
+		if (getVersion() > 22.0):
+			cT, i = readCurve(chunks, i)
+			cT, i = readCurve(chunks, i)
+			cT, i = readCurve(chunks, i)
+			cT, i = readCurve(chunks, i)
 		a1, i = getFloats(chunks, i, 2)
-		i += 1 # no_radius,  -1
+		f1, i = getValue(chunks, i); # -1 = no_radius, float
 		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		a2, i = getFloats(chunks, i, 3)
+		if (getVersion() > 22.0):
+			i += 1 # T
 		i += 1 # 1
 		i = self.setSurfaceShape(chunks, i, inventor)
 		if (inventor):
@@ -3118,7 +3263,7 @@ class AcisChunk():
 		if (self.tag == 0x12): return "@%d %s " %(len(self.val), self.val)                 # STRING
 		if (self.tag == 0x13): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == 0x14): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
-		if (self.tag == 0x15): return "%d "     %(self.val)
+		if (self.tag == 0x15): return "%d "     %(self.val)                                # value of an enumeration
 		if (self.tag == 0x16): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		return ''
 	def __repr__(self):
@@ -3136,7 +3281,7 @@ class AcisChunk():
 		if (self.tag == 0x11): return "%s "   %(self.val)                                # TERMINATOR
 		if (self.tag == 0x13): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == 0x14): return "(%s) " %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
-		if (self.tag == 0x15): return "%d "   %(self.val)
+		if (self.tag == 0x15): return "%d "   %(self.val)                                # value of an enumeration
 		if (self.tag == 0x16): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
 		return "%s " %(self.val)
 
@@ -3222,7 +3367,7 @@ TAG_READER = {
 	0x12: getStr4,		   # 32Bit length + UTF8-Char
 	0x13: getTagFloats3D,  # 3D-Vector scaled
 	0x14: getTagFloats3D,  # 3D-Vector normalized
-	0x15: getUInt32,	   # 32Bit unsigned value
+	0x15: getUInt32,	   # value of an enumeration
 	0x16: getTagFloats2D,  # U-V-Vector
 }
 

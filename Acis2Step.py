@@ -227,7 +227,7 @@ def _createCurveInt(acisCurve):
 				line.dir = _createVector(bsc.Direction)
 				_lines[key] = line
 			return line
-	logError(u"IntCurve not created for %s", acisCurve)
+	logError(u"Int-Curve not created for (%s)", acisCurve.__str__()[:-1])
 	return None
 def _createCurveIntInt(acisCurve):
 	return curve
