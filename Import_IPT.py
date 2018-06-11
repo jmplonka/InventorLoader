@@ -49,6 +49,7 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 						ReadOtherProperties(props, fname, Design_Tracking_Control)
 					elif (name == '\x05PypkizqiUjudbposAayal4qdGf'):
 						ReadOtherProperties(props, fname, Design_Tracking_Properties)
+						setDescription(getProperty(props, 29))
 					elif (name == '\x05Qm0qv30hP3udrkgvAaitm1o20d'):
 						ReadOtherProperties(props, fname, Private_Model_Information)
 					elif (name == '\x05Ynltsm4aEtpcuzs1Lwgf30tmXf'):
@@ -184,6 +185,6 @@ def create3dModel(root, doc):
 					elif (strategy == STRATEGY_STEP):
 						convertModel(root, doc)
 
-	viewAxonometric(doc)
+	viewAxonometric()
 
 	return

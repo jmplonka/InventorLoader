@@ -9,6 +9,7 @@ import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime, ImportGui
 from importerUtils import logInfo, logWarning, logError, viewAxonometric, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
 from Acis          import AcisRef, AcisEntity, readNextSabChunk
 from Acis2Step     import export
+from math          import fabs
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -160,7 +161,7 @@ class Header():
 			self.date, data = getNextText(data)
 			data = file.readline()
 			tokens = data.split(' ')
-			self.scale  = float(tokens[0])
+			self.scale  = fabs(float(tokens[0])) # prevent STEP importer from handling negative scales -> "Cannot compute Inventor representation for the shape of Part__Feature"
 			self.resabs = float(tokens[1])
 			self.resnor = float(tokens[2])
 			if (self.version > 24.0):
@@ -438,9 +439,9 @@ def create3dModel(group, doc):
 	strategy = chooseImportStrategyAcis()
 	if (strategy == STRATEGY_SAT):
 		importModel(group, doc)
-		viewAxonometric(doc)
 	else:
 		convertModel(group, doc)
+	viewAxonometric()
 	setEntities(None)
 	setHeader(None)
 	return

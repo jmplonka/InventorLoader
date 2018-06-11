@@ -7,7 +7,7 @@ Acis2Step.py:
 from datetime      import datetime
 from importerUtils import isEqual
 from FreeCAD       import Vector as VEC
-from importerUtils import logError, logAlways, isEqual1D, getAuthor
+from importerUtils import logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription
 import traceback, inspect, os, Acis, math, re, Part
 
 #############################################################
@@ -282,19 +282,21 @@ def _createBoundaries(acisLoops):
 	isouter = True
 	for acisLoop in acisLoops:
 		loop = EDGE_LOOP('', [])
-		_edgeLoops.append(loop)
-		for acisCoEdge in acisLoop.getCoEdges():
-			edge = _createCoEdge(acisCoEdge)
-			if (edge is not None):
-				loop.edges.append(edge)
-
-		if (isouter):
-			face = FACE_OUTER_BOUND('', loop, True)
-			isouter = False
-		else:
-			face = FACE_BOUND('', loop, True)
-		boundaries.append(face)
-		_faceBounds.append(face)
+		coedges = acisLoop.getCoEdges()
+		if (len(coedges) > 0):
+			for acisCoEdge in coedges:
+				edge = _createCoEdge(acisCoEdge)
+				if (edge is not None):
+					loop.edges.append(edge)
+		if (len(loop.edges) > 0):
+			_edgeLoops.append(loop)
+			if (isouter):
+				face = FACE_OUTER_BOUND('', loop, True)
+				isouter = False
+			else:
+				face = FACE_BOUND('', loop, True)
+			boundaries.append(face)
+			_faceBounds.append(face)
 	return boundaries
 
 def _createSurfaceCone(acisSurface):
@@ -303,13 +305,16 @@ def _createSurfaceCone(acisSurface):
 	try:
 		cone = _cones[key]
 	except:
-		plc    = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis, 'center_axis',  acisSurface.major, 'ref_axis')
+		if (acisSurface.cosine * acisSurface.sine < 0):
+			plc    = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis.negative(), 'center_axis',  acisSurface.major, 'ref_axis')
+		else:
+			plc    = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis, 'center_axis',  acisSurface.major, 'ref_axis')
 		radius = acisSurface.major.Length
 		if (isEqual1D(acisSurface.sine, 0.0)):
 			cone = CYLINDRICAL_SURFACE('', plc, radius)
 		else:
 			angle  = math.degrees(math.asin(acisSurface.sine))
-			cone = CONICAL_SURFACE('', plc, radius, angle)
+			cone = CONICAL_SURFACE('', plc, radius, math.fabs(angle))
 		_cones[key] = cone
 	return cone
 def _createSurfaceMesh(acisSurface):
@@ -321,12 +326,12 @@ def _createSurfacePlane(acisSurface):
 	try:
 		plane = _planes[key]
 	except:
-		if (isEqual1D(acisSurface.normal.z, 1.0)):
-			ref = VEC(1.0, 0.0, 0.0)
-		elif (isEqual1D(acisSurface.normal.z, -1.0)):
-			ref = VEC(-1.0, 0.0, 0.0)
+		if (isEqual1D(acisSurface.normal.x, 1.0)):
+			ref = VEC(0.0, 1.0, 0.0)
+		elif (isEqual1D(acisSurface.normal.x, -1.0)):
+			ref = VEC(0.0, -1.0, 0.0)
 		else:
-			ref = acisSurface.normal.cross(VEC(0, 0, 1)) # any perpendicular vector to normal?!?
+			ref = acisSurface.normal.cross(VEC(-1, 0, 0)) # any perpendicular vector to normal?!?
 		plane = PLANE('', None)
 		plane.placement = _createAxis2Placement3D('', acisSurface.root, 'Origin', acisSurface.normal, 'center_axis', ref, 'ref_axis')
 		_planes[key] = plane
@@ -386,11 +391,15 @@ def _createSurfaceTorus(acisSurface):
 
 def _createSurface(acisFace):
 	acisSurface = acisFace.getSurface()
-	if (isinstance(acisSurface, Acis.SurfaceCone)):   return (_createSurfaceCone(acisSurface),   (acisFace.sense == 'forward'))
 	if (isinstance(acisSurface, Acis.SurfaceMesh)):   return (_createSurfaceMesh(acisSurface),   (acisFace.sense == 'forward'))
 	if (isinstance(acisSurface, Acis.SurfacePlane)):  return (_createSurfacePlane(acisSurface),  (acisFace.sense == 'forward'))
 	if (isinstance(acisSurface, Acis.SurfaceSphere)): return (_createSurfaceSphere(acisSurface), (acisFace.sense == 'forward'))
 	if (isinstance(acisSurface, Acis.SurfaceSpline)): return (_createSurfaceSpline(acisSurface), (acisFace.sense == 'forward'))
+	if (isinstance(acisSurface, Acis.SurfaceCone)):
+		surface = _createSurfaceCone(acisSurface)
+		if( acisSurface.cosine < 0):
+			return surface, (acisFace.sense != 'forward')
+		return surface, (acisFace.sense == 'forward')
 	if (isinstance(acisSurface, Acis.SurfaceTorus)):
 		surface = _createSurfaceTorus(acisSurface)
 		if (acisSurface.minor < 0.0):
@@ -1300,12 +1309,14 @@ class APPLIED_GROUP_ASSIGNMENT(ReferencedEntity):
 #############################################################
 
 def export(filename, satHeader, satBodies):
-	dt        = datetime.now() # 2018-05-13T08:03:27-07:00
-	user      = getAuthor()
-	orga      = ''
-	proc      = 'ST-DEVELOPER v16.5'
-	auth      = ''
-	bodies    = []
+	dt     = datetime.now() # 2018-05-13T08:03:27-07:00
+	user   = getAuthor()
+	desc   = getDescription()
+	orga   = ''
+	proc   = 'ST-DEVELOPER v16.5'
+	auth   = ''
+	bodies = []
+
 	_initExport()
 
 	global _scale
@@ -1332,7 +1343,7 @@ def export(filename, satHeader, satBodies):
 
 	appDatTimAss = APPLIED_DATE_AND_TIME_ASSIGNMENT(dt)
 	appPrtDef    = APPLICATION_PROTOCOL_DEFINITION()
-	prd          = PRODUCT(name, name, None, appPrtDef.application)
+	prd          = PRODUCT(name, name, desc, appPrtDef.application)
 	prdDef       = PRODUCT_DEFINITION(name, name, prd, appPrtDef.application)
 
 	placement    = _createAxis2Placement3D('placement', VEC(0,0,0), '', VEC(0,0,1), 'axis', VEC(1,0,0), 'refdir')
@@ -1425,7 +1436,7 @@ def export(filename, satHeader, satBodies):
 		_exportList(step, _cones)
 		_exportList(step, _surfaceBSplines)
 		_exportList(step, _advancedFaces)
-		appDatTimAss.isexported = False
+#		appDatTimAss.isexported = False
 		step.write(appDatTimAss.exportSTEP())
 		_exportList(step, _axisPlacements)
 		_exportList(step, _directions)

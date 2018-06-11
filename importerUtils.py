@@ -79,6 +79,7 @@ STRATEGY_NATIVE = 1
 STRATEGY_STEP   = 2
 
 _author = ''
+_description = None
 
 def getStrategy():
 	if getFileVersion() < 2010: return STRATEGY_SAT
@@ -100,6 +101,14 @@ def setAuthor(author):
 
 def getAuthor():
 	return _author
+
+def setDescription(description):
+	global _description
+	_description = description
+	return
+
+def getDescription():
+	return _description
 
 def chooseImportStrategyAcis():
 	btnCnvrt = QPushButton('&Convert to STEP')
@@ -741,9 +750,9 @@ def translate(str):
 	res = res.replace(u'ß', 'ss')
 	return res
 
-def viewAxonometric(doc):
+def viewAxonometric():
 	if (GuiUp):
-		FreeCADGui.getDocument(doc.Name).activeView().viewAxonometric()
+		FreeCADGui.activeView().viewAxonometric()
 		FreeCADGui.SendMsgToActiveView("ViewFit")
 	logAlways(u"DONE!")
 
