@@ -34,7 +34,7 @@
 ## Incomplete Features
 	* spline-surface - missing creation of Helix surface.
 	* references - sometime references can't be resolved
-	
+
 ## missing Features
 	* mesh-surfaces
 	* compu-, int-int-curves
@@ -42,4 +42,4 @@
 ## unsupported
 	* attributes
 	* annotations
-	* splines other than nurbs or nubs (e.g. "summary")
+	* splines other than nurbs or nubs (e.g. "summary" or "none")

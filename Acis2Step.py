@@ -370,9 +370,12 @@ def _createSurfaceSpline(acisSurface):
 				spline = B_SPLINE_SURFACE_WITH_KNOTS(name='', uDegree=bss.UDegree, vDegree=bss.VDegree, points=points, form='UNSPECIFIED', uClosed=bss.isUClosed(), vClosed=bss.isVClosed(), selfIntersecting=False, uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
 			_surfaceBSplines.append(spline)
 			return spline
-		if (acisSurface.type in ['rotsur', 'rot_spl_sur']):
-			profile   = _createCurve(acisSurface.profile)
-			placement = _createAxis1Placement('', acisSurface.loc, '', acisSurface.dir, '')
+		if (isinstance(shape.Surface, Part.SurfaceOfRevolution)):
+			node = acisSurface
+			while (node.type == 'ref'):
+				node = node.surface
+			profile   = _createCurve(node.profile)
+			placement = _createAxis1Placement('', node.loc, '', node.dir, '')
 			spline    = SURFACE_OF_REVOLUTION('', profile, placement)
 			_surfaceBSplines.append(spline)
 			return spline
