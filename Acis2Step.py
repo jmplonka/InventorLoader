@@ -172,6 +172,10 @@ def _exportList_(a):
 	for i in a:
 		if (isinstance(i, ExportEntity)):
 			step += i.exportSTEP()
+		elif (type(i) == list):
+			step += _exportList_(i)
+		elif (type(i) == tuple):
+			step += _exportList_(i)
 	return step
 
 def _createCurveComp(acisCurve):
@@ -369,6 +373,7 @@ def _createSurfaceSpline(acisSurface):
 			else:
 				spline = B_SPLINE_SURFACE_WITH_KNOTS(name='', uDegree=bss.UDegree, vDegree=bss.VDegree, points=points, form='UNSPECIFIED', uClosed=bss.isUClosed(), vClosed=bss.isVClosed(), selfIntersecting=False, uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
 			_surfaceBSplines.append(spline)
+			spline.__acis__ = acisSurface
 			return spline
 		if (isinstance(shape.Surface, Part.SurfaceOfRevolution)):
 			node = acisSurface
@@ -433,11 +438,22 @@ def _convertShell(acisShell):
 def _convertLump(acisLump, bodies, representation, style):
 	global _lumpCounter
 	for acisShell in acisLump.getShells():
-		shell = _convertShell(acisShell)
-		_lumpCounter += 1
-		lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
-		lump.items.append(shell)
-		representation.items.append(lump)
+		for acisFace in acisShell.getFaces():
+			_lumpCounter += 1
+			lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
+			shell = OPEN_SHELL('',[])
+			lump.items.append(shell)
+			face = _convertFace(acisFace, shell)
+			shell.faces.append(face)
+			representation.items.append(lump)
+
+
+
+#		shell = _convertShell(acisShell)
+#		_lumpCounter += 1
+#		lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
+#		lump.items.append(shell)
+#		representation.items.append(lump)
 		bodies.append(lump)
 
 def _convertBody(acisBody, bodies, representation, style):
@@ -574,7 +590,13 @@ class ExportEntity(AnonymEntity):
 	def exportSTEP(self):
 		if (self.isexported):
 			return ''
-		step = "%r;\n" %(self)
+		step = ""
+		if (hasattr(self, '__acis__')):
+			if (self.__acis__.type == 'ref'):
+				step += "/*\n * ref = %d\n */\n" %(self.__acis__.ref)
+			else:
+				step += "/*\n * $%d\n */\n" %(self.__acis__.getIndex())
+		step += "%r;\n" %(self)
 		step += self.exportProperties()
 		self.isexported = True
 		return step
@@ -766,7 +788,13 @@ class ListEntity(ReferencedEntity):
 	def exportSTEP(self):
 		if (self.isexported):
 			return ''
-		step = "%r;\n" %(self)
+		step = ""
+		if (hasattr(self, '__acis__')):
+			if (self.__acis__.type == 'ref'):
+				step += "/*\n * ref = %d\n */\n" %(self.__acis__.ref)
+			else:
+				step += "/*\n * $%d\n */\n" %(self.__acis__.getIndex())
+		step += "%r;\n" %(self)
 		for e in self.entities:
 			try:
 				if (isinstance(e, ExportEntity)):
@@ -1329,6 +1357,13 @@ def export(filename, satHeader, satBodies):
 	name, x = os.path.splitext(f)
 	path = path.replace('\\', '/')
 
+	with open("%s/%s/subtypes.txt" %(path,name), 'w') as fp:
+		surfaces = Acis.subtypeTable['surface']
+		for i, n in enumerate(surfaces):
+			s = repr(n)
+			if (s[-1] == '\n'): s = s[0:-1]
+			fp.write("%d\t%r\n" %(i, s))
+
 	glbLength     = UNIT((LENGTH_UNIT(None), NAMED_UNIT(AnyEntity()), SI_UNIT('MILLI','METRE')))
 	glbAngleSolid = UNIT((NAMED_UNIT(AnyEntity()), SI_UNIT(None,'STERADIAN'), SOLID_ANGLE_UNIT(None)))
 	dimExp        = DIMENSIONAL_EXPONENTS()
@@ -1363,37 +1398,37 @@ def export(filename, satHeader, satBodies):
 	for body in satBodies:
 		_convertBody(body.node, bodies, advShpRpr, prsStyAss[0])
 
-	_setExported(glbLength, True)
-	_setExported(glbAngleSolid, True)
-	_setExported(glbAnglePlane, True)
-	_setExported(shpRepRel, True)
-	_setExported(prdRelPRdCat, True)
-	_setExported(appPrtDef, True)
-	_setExported(shpDefRep, True)
-	_setExported(appDatTimAss, True)
-	_setExported(prsStyAss[0], True)
-	_setExported(pamwu, True)
-	_setExported(prdDef, True)
-
-	_setExported(_pointsCartesian, True)
-	_setExported(_directions, True)
-	_setExported(_axisPlacements, True)
-	_setExported(_orientedEdges, True)
-	_setExported(_edgeCurves, True)
-	_setExported(_pointsVertex, True)
-	_setExported(_lines, True)
-	_setExported(_ellipses, True)
-	_setExported(_edgeLoops, True)
-	_setExported(_faceBounds, True)
-	_setExported(_vectors, True)
-	_setExported(_cones, True)
-	_setExported(_planes, True)
-	_setExported(_spheres, True)
-	_setExported(_toroids, True)
-	_setExported(_curveBSplines, True)
-	_setExported(_surfaceBSplines, False)
-	_setExported(_faceOuterBounds, True)
-	_setExported(_advancedFaces, True)
+#	_setExported(glbLength, True)
+#	_setExported(glbAngleSolid, True)
+#	_setExported(glbAnglePlane, True)
+#	_setExported(shpRepRel, True)
+#	_setExported(prdRelPRdCat, True)
+#	_setExported(appPrtDef, True)
+#	_setExported(shpDefRep, True)
+#	_setExported(appDatTimAss, True)
+#	_setExported(prsStyAss[0], True)
+#	_setExported(pamwu, True)
+#	_setExported(prdDef, True)
+#
+#	_setExported(_pointsCartesian, True)
+#	_setExported(_directions, True)
+#	_setExported(_axisPlacements, True)
+#	_setExported(_orientedEdges, True)
+#	_setExported(_edgeCurves, True)
+#	_setExported(_pointsVertex, True)
+#	_setExported(_lines, True)
+#	_setExported(_ellipses, True)
+#	_setExported(_edgeLoops, True)
+#	_setExported(_faceBounds, True)
+#	_setExported(_vectors, True)
+#	_setExported(_cones, True)
+#	_setExported(_planes, True)
+#	_setExported(_spheres, True)
+#	_setExported(_toroids, True)
+#	_setExported(_curveBSplines, True)
+#	_setExported(_surfaceBSplines, False)
+#	_setExported(_faceOuterBounds, True)
+#	_setExported(_advancedFaces, True)
 
 	stepfile = "%s/%s.step" %(path, name)
 	with open(stepfile, 'w') as step:
@@ -1423,49 +1458,49 @@ def export(filename, satHeader, satBodies):
 		step.write(mdgpr.exportSTEP())
 		step.write(aga.exportSTEP())
 
-		_exportList(step, _faceOuterBounds)
-		_exportList(step, _toroids)
-		_exportList(step, _planes)
-		_exportList(step, _ellipses)
-		_exportList(step, _spheres)
-		_exportList(step, _faceBounds)
-		_exportList(step, _edgeLoops)
-		_exportList(step, _lines)
-		_exportList(step, _vectors)
-		_exportList(step, _curveBSplines)
-		_exportList(step, _pointsVertex)
-		_exportList(step, _edgeCurves)
-		_exportList(step, _orientedEdges)
-		_exportList(step, _cones)
-		_exportList(step, _surfaceBSplines)
-		_exportList(step, _advancedFaces)
+#		_exportList(step, _faceOuterBounds)
+#		_exportList(step, _toroids)
+#		_exportList(step, _planes)
+#		_exportList(step, _ellipses)
+#		_exportList(step, _spheres)
+#		_exportList(step, _faceBounds)
+#		_exportList(step, _edgeLoops)
+#		_exportList(step, _lines)
+#		_exportList(step, _vectors)
+#		_exportList(step, _curveBSplines)
+#		_exportList(step, _pointsVertex)
+#		_exportList(step, _edgeCurves)
+#		_exportList(step, _orientedEdges)
+#		_exportList(step, _cones)
+#		_exportList(step, _surfaceBSplines)
+#		_exportList(step, _advancedFaces)
 #		appDatTimAss.isexported = False
 		step.write(appDatTimAss.exportSTEP())
-		_exportList(step, _axisPlacements)
-		_exportList(step, _directions)
-		_exportList(step, _pointsCartesian)
+#		_exportList(step, _axisPlacements)
+#		_exportList(step, _directions)
+#		_exportList(step, _pointsCartesian)
 
-		glbLength.isexported = False
+#		glbLength.isexported = False
 		step.write(glbLength.exportSTEP())
-		glbAngleSolid.isexported = False
+#		glbAngleSolid.isexported = False
 		step.write(glbAngleSolid.exportSTEP())
 		step.write(dimExp.exportSTEP())
-		glbAnglePlane.isexported = False
+#		glbAnglePlane.isexported = False
 		step.write(glbAnglePlane.exportSTEP())
-		pamwu.isexported = False
+#		pamwu.isexported = False
 		step.write(pamwu.exportSTEP())
-		shpDefRep.isexported = False
+#		shpDefRep.isexported = False
 		step.write(shpDefRep.exportSTEP())
-		shpRepRel.isexported = False
+#		shpRepRel.isexported = False
 		step.write(shpRepRel.exportSTEP())
-		prdRelPRdCat.isexported = False
+#		prdRelPRdCat.isexported = False
 		step.write(prdRelPRdCat.exportSTEP())
-		appPrtDef.isexported = False
+#		appPrtDef.isexported = False
 		step.write(appPrtDef.exportSTEP())
-		prdDef.isexported = False
+#		prdDef.isexported = False
 		step.write(prdDef.exportSTEP())
 		for style in prsStyAss:
-			prsStyAss[0].isexported = False
+#			prsStyAss[0].isexported = False
 			step.write(style.exportSTEP())
 		step.write("ENDSEC;\n")
 		step.write("END-ISO-10303-21;")

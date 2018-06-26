@@ -5,10 +5,10 @@ Acis.py:
 Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) files.
 '''
 
-import traceback, FreeCAD, math, Part, Draft
-from importerUtils              import logWarning, logError, isEqual, isEqual1D, getUInt8, getUInt16, getSInt32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
+import traceback, FreeCAD, Part, Draft
+from importerUtils              import logWarning, logError,logAlways, isEqual, isEqual1D, getUInt8, getUInt16, getSInt16, getSInt32, getFloat32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
-from math                       import pi, fabs
+from math                       import pi, fabs, degrees, asin, tan, atan
 from BOPTools.GeneralFuseResult import GeneralFuseResult
 
 __author__     = 'Jens M. Plonka'
@@ -99,25 +99,50 @@ DIR_X  = VEC(1, 0, 0)
 DIR_Y  = VEC(0, 1, 0)
 DIR_Z  = VEC(0, 0, 1)
 
-RANGE        = {0x0B: 'I',            0x0A: 'F'}
-REFLECTION   = {0x0B: 'no_reflect',   0x0A: 'reflect'}
-ROTATION     = {0x0B: 'no_rotate',    0x0A: 'rotate'}
-SHEAR        = {0x0B: 'no_shear',     0x0A: 'shear'}
-SENSE        = {0x0B: 'forward',      0x0A: 'reversed'}
-SENSEV       = {0x0B: 'forward_v',    0x0A: 'reverse_v'}
-SIDES        = {0x0B: 'single',       0x0A: 'double'}
-SIDE         = {0x0B: 'out',          0x0A: 'in'}
-SURF_BOOL    = {0x0B: 'FALSE',        0x0A: 'TRUE'}
-SURF_NORM    = {0x0B: 'ISO',          0x0A: 'UNKNOWN'}
-SURF_DIR     = {0x0B: 'SKIN',         0x0A: 'PERPENDICULAR'}
-SURF_SWEEP   = {0x0B: 'angled',       0x0A: 'normal'}
-CIRC_TYP     = {0x0B: 'non_cross',    0x0A: 'cross'}
-CIRC_SMTH    = {0x0B: 'normal',       0x0A: 'smooth'}
-CALIBRATED   = {0x0B: 'uncalibrated', 0x0A: 'calibrated'}
-CHAMFER_TYPE = {0x0B: 'const',        0x0A: 'radius'}
-CONVEXITY    = {0x0B: 'concave',      0x0A: 'convex'}
-RENDER_BLEND = {0x0B: 'rb_snapshot',  0x0A: 'rb_envelope'}
+# Primitives for Binary File Format (.sab)
+TAG_CHAR          =  2	 # character (unsigned 8 bit)
+TAG_SHORT         =  3	 # 16Bit signed value
+TAG_LONG          =  4	 # 32Bit signed value
+TAG_FLOAT         =  5	 # 32Bit IEEE Float value
+TAG_DOUBLE        =  6	 # 64Bit IEEE Float value
+TAG_UTF8_U8       =  7	 #  8Bit length + UTF8-Char
+TAG_UTF8_U16      =  8	 # 16Bit length + UTF8-Char
+TAG_UTF8_U32      =  9	 # 32Bit length + UTF8-Char
+TAG_TRUE          = 10	 # Logical true value
+TAG_FALSE         = 11	 # Logical false value
+TAG_ENTITY_REF    = 12	 # Entity reference
+TAG_IDENT         = 13	 # Sub-Class-Name
+TAG_SUBIDENT      = 14	 # Base-Class-Namme
+TAG_SUBTYPE_OPEN  = 15	 # Opening block tag
+TAG_SUBTYPE_CLOSE = 16	 # Closing block tag
+TAG_TERMINATOR    = 17	 # '#' sign
+TAG_UTF8_U32      = 18	 # 32Bit length + UTF8-Char
+TAG_POSITION      = 19	 # 3D-Vector scaled (scaling will be done later because of text file handling!)
+TAG_VECTOR_3D     = 20	 # 3D-Vector normalized
+TAG_ENUM_VALUE    = 21	 # value of an enumeration
+TAG_VECTOR_2D     = 22	 # U-V-Vector
 
+# TAG_FALSE, TAG_TRUE value mappings
+RANGE        = {TAG_FALSE: 'I',            TAG_TRUE: 'F'}
+REFLECTION   = {TAG_FALSE: 'no_reflect',   TAG_TRUE: 'reflect'}
+ROTATION     = {TAG_FALSE: 'no_rotate',    TAG_TRUE: 'rotate'}
+SHEAR        = {TAG_FALSE: 'no_shear',     TAG_TRUE: 'shear'}
+SENSE        = {TAG_FALSE: 'forward',      TAG_TRUE: 'reversed'}
+SENSEV       = {TAG_FALSE: 'forward_v',    TAG_TRUE: 'reverse_v'}
+SIDES        = {TAG_FALSE: 'single',       TAG_TRUE: 'double'}
+SIDE         = {TAG_FALSE: 'out',          TAG_TRUE: 'in'}
+SURF_BOOL    = {TAG_FALSE: 'FALSE',        TAG_TRUE: 'TRUE'}
+SURF_NORM    = {TAG_FALSE: 'ISO',          TAG_TRUE: 'UNKNOWN'}
+SURF_DIR     = {TAG_FALSE: 'SKIN',         TAG_TRUE: 'PERPENDICULAR'}
+SURF_SWEEP   = {TAG_FALSE: 'angled',       TAG_TRUE: 'normal'}
+CIRC_TYP     = {TAG_FALSE: 'non_cross',    TAG_TRUE: 'cross'}
+CIRC_SMTH    = {TAG_FALSE: 'normal',       TAG_TRUE: 'smooth'}
+CALIBRATED   = {TAG_FALSE: 'uncalibrated', TAG_TRUE: 'calibrated'}
+CHAMFER_TYPE = {TAG_FALSE: 'const',        TAG_TRUE: 'radius'}
+CONVEXITY    = {TAG_FALSE: 'concave',      TAG_TRUE: 'convex'}
+RENDER_BLEND = {TAG_FALSE: 'rb_snapshot',  TAG_TRUE: 'rb_envelope'}
+
+# TAG_ENUM value mappings
 VAR_RADIUS  = {0: 'single_radius',  1: 'two_radii'}
 VAR_CHAMFER = {3: 'rounded_chamfer'}
 CLOSURE     = {0: 'open',   1: 'closed',  2: 'periodic', '0x0B': 'open', '0x0A': 'periodic'}
@@ -132,6 +157,8 @@ subtypeTable = {}
 
 references = {}
 
+_currentEntityId = -2
+
 def addNode(node):
 	if (node.entity is not None):
 		subtype = node.getType()
@@ -139,14 +166,17 @@ def addNode(node):
 		if (i > 0):
 			subtype = subtype[0:i]
 
-def addSubtypeNode(subtype, node):
+def addSubtypeNode(subtype, node, overwrite_last = False):
 	global subtypeTable
 	try:
 		refs = subtypeTable[subtype]
 	except KeyError:
 		refs = []
 		subtypeTable[subtype] = refs
-	refs.append(node)
+	if (overwrite_last):
+		refs[-1] = node
+	else:
+		refs.append(node)
 
 def getSubtypeNode(subtype, index):
 	global subtypeTable
@@ -227,7 +257,7 @@ def getRefNode(entity, index, name):
 
 def getEnum(chunks, index):
 	tag = chunks[index].tag
-	assert (tag == 0x0A) or (tag == 0x0B)
+	assert (tag in [TAG_TRUE, TAG_FALSE])
 	return tag, index + 1
 
 def getInteger(chunks, index):
@@ -397,7 +427,7 @@ def getInterval(chunks, index, defMin, defMax, scale):
 
 def getPoint(chunks, index):
 	chunk = chunks[index]
-	if ((chunk.tag == 0x13) or (chunk.tag == 0x14)):
+	if ((chunk.tag == TAG_POSITION) or (chunk.tag == TAG_VECTOR_3D)):
 		return chunk.val, index + 1
 	x, i =  getFloat(chunks, index)
 	y, i =  getFloat(chunks, i)
@@ -414,14 +444,17 @@ def getLocation(chunks, index):
 
 def getBlock(chunks, index):
 	data = []
-	i = index + 1
+	i = index
 	chunk = chunks[i]
-	while (chunk.tag != 0x10):
-		data.append(chunk)
-		if (chunk.tag == 0x0F):
+	data.append(chunk)
+	i += 1
+	chunk = chunks[i]
+	while (chunk.tag != TAG_SUBTYPE_CLOSE):
+		if (chunk.tag == TAG_SUBTYPE_OPEN):
 			block, i = getBlock(chunks, i)
 			data += block
 		else:
+			data.append(chunk)
 			i += 1
 		chunk = chunks[i]
 	data.append(chunk)
@@ -580,7 +613,7 @@ def readSurface(chunks, index):
 	i = index + 1
 	subtype = chunk.val
 	tag = chunk.tag
-	if ((tag == 0x07) or (tag == 0x0D)):
+	if (tag in [TAG_UTF8_U8, TAG_IDENT]):
 		surface = None
 		try:
 			surface = newInstance(SURFACES, subtype)
@@ -590,10 +623,10 @@ def readSurface(chunks, index):
 			i = surface.setSubtype(chunks, i)
 		return surface, i
 #FIXME: this is a dirty hack :(
-	elif (tag == 0x06):
+	elif (tag == TAG_DOUBLE):
 		a, i = getFloats(chunks, index, 5)
 		return None, i
-	elif ((tag == 0x13) or (tag == 0x14)):
+	elif ((tag == TAG_POSITION) or (tag == TAG_VECTOR_3D)):
 		a, i = getFloats(chunks, i, 2)
 		return None, i
 
@@ -604,15 +637,15 @@ def readArrayFloats(chunks, index, inventor):
 	a4, i = getFloatArray(chunks, i)
 	a5, i = getFloatArray(chunks, i)
 	a6, i = getFloatArray(chunks, i)
-	if (inventor and chunks[i].tag in (0x0A, 0x0B)):
+	if (inventor and chunks[i].tag in (TAG_TRUE, TAG_FALSE)):
 		e, i = getEnum(chunks, i)
 	else:
-		e = 0x0B
+		e = TAG_FALSE
 	return (a1, a2, a3, a4, a5, a6, e), i
 
 def rotateShape(shape, dir):
 	# Setting the axis directly doesn't work for directions other than x-axis!
-	angle = math.degrees(DIR_Z.getAngle(dir))
+	angle = degrees(DIR_Z.getAngle(dir))
 	if (angle != 0):
 		axis = DIR_Z.cross(dir) if angle != 180 else DIR_X
 		shape.rotate(PLC(CENTER, axis, angle))
@@ -853,19 +886,6 @@ def createBSplinesSurface(nubs):
 		logError(traceback.format_exc())
 	return None
 
-def createHelix(data):
-	axis = Draft.makeWire([data.axisStart, data.axisEnd], closed=False, face=False, support=None)
-	axis.ViewObject.LineColor  = (0.0, 1.0, 0.0)
-	axis.ViewObject.DrawStyle  = "Dashdot"
-	axis.ViewObject.PointSize  = 1
-	axis.Label = "Helix_Axis (%s)" %(axis.Length.Value)
-
-	#helix = Part.makeHelix(pitch, height, radius, angle)
-	#helix.LocalCoord=0
-	#helix.Style = 1
-
-	return None
-
 def readBS2Curve(chunks, index):
 	nbs, dgr, i = getDimensionCurve(chunks, index)
 	if (nbs == 'nullbs'):
@@ -945,13 +965,6 @@ def readLofSubdata(chunks, i):
 	type, i    = getInteger(chunks, i)
 	n, i       = getInteger(chunks, i)
 	m, i       = getInteger(chunks, i)
-	# 0x0B 213 1 0 (0.0, 1.0 0.0, 1.0                                                  0x0B
-	# 0x0B 212 1 0 (0.0, 1.0 0.0, 2.34107                                              0x0B
-	# 0x0B 213 1 1 (0.0, 0.5 0.5, 0.75     0.5      0.5                                0x0B
-	# 0x0B 213 1 2 (0.0, 1.0 0.0, 0.364571 0.364571 0.364571 0.0 0.0                   0x0B
-	# 0x0B 212 1 2 (0.0, 1.0 0.0, 1.0      1.0      1.0      0.0 0.0                   0x0B
-	# 0x0B 213 2 1 (0.0, 0.5 0.0, 0.5      1.0 1.0  0.5      1.0  0.5      1.0 1.0 1.0 0x0B
-	# 0x0B 211 0 0 ()                                             2*PI, 0, 0, 1, 0x0B
 	v = []
 	if (type == 211):
 		a, i = getFloats(chunks, i, 2)
@@ -976,7 +989,7 @@ def readLoftData(chunks, index):
 	subdata, i    = readLofSubdata(chunks, i)
 	(ld.type, n, m, v) = subdata
 	ld.e2, i      = getEnum(chunks, i)
-	if (ld.e2 == 0x0A):
+	if (ld.e2 == TAG_TRUE):
 		ld.dir, i = getVector(chunks, i)
 	return ld, i
 
@@ -1024,7 +1037,7 @@ def readLofSection(chunks, index, inventor):
 	return loft, i
 
 def readScaleClLoft(chunks, index):
-	if (chunks[index].tag in (0x0A, 0x0B)):
+	if (chunks[index].tag in [TAG_TRUE, TAG_FALSE]):
 		## fixme!
 		return None, index
 	n, i = getInteger(chunks, index)
@@ -1034,7 +1047,7 @@ def readScaleClLoft(chunks, index):
 		ck, i = readCurve(chunks, i)
 		lk, i = readLoftData(chunks, i)
 		lofts.append([nk, ck, lk])
-	if (not chunks[i].tag in (0x07, 0x0D, 0x0E)):
+	if (not chunks[i].tag in [TAG_UTF8_U8, TAG_IDENT, TAG_SUBIDENT]):
 		## fixme!
 		return None, index
 	cur, i = readCurve(chunks, i)
@@ -1052,7 +1065,7 @@ def readSkin(chunks, index, inventor):
 	skin.f1, i   = getFloat(chunks, i)
 	if (inventor):
 		n, i = getInteger(chunks, i)
-		if (not chunks[i].tag in (0x07, 0x0D, 0x0E)):
+		if (not chunks[i].tag in [TAG_UTF8_U8, TAG_IDENT, TAG_SUBIDENT]):
 			for k in range(0, n):
 				i += 1
 				skin.cur, i = readCurve(chunks, i)
@@ -1116,7 +1129,7 @@ def getBlendValues(chunks, index):
 	r   = None
 	bsc = None
 	name, i     = getValue(chunks, index)
-	if (chunks[i].tag in [0x07, 0x0A, 0x0B]):
+	if (chunks[i].tag in [TAG_UTF8_U8, TAG_TRUE, TAG_FALSE]):
 		t = 1
 	else:
 		t, i = getInteger(chunks, i) # Enum value
@@ -1190,12 +1203,12 @@ class LoftData():
 	def __init__(self):
 		self.surface = None
 		self.bs2cur  = None
-		self.e1      = 0x0B
+		self.e1      = TAG_FALSE
 		self.type    = 213
 		self.n       = 1
 		self.m       = 1
 		self.v       = []
-		self.e2      = 0x0B
+		self.e2      = TAG_FALSE
 class Skin():
 	def __init__(self):
 		self.a1   = [-1, -1, -1, -1]
@@ -1258,14 +1271,42 @@ class BS3_Surface(BS3_Curve):
 		return i
 class Helix():
 	def __init(self):
-		self.angleStart = Range('I', 1.0) # start angle
-		self.angleEnd   = Range('I', 1.0) # end engle
-		self.center     = CENTER
-		self.rMajor     = CENTER
-		self.rMinor     = CENTER
-		self.axisStart  = CENTER
-		self.alpha      = MIN_0
-		self.axisEnd    = DIR_Z
+		self.radAngles = Intervall(Range('I', 1.0), Range('I', 1.0))
+		self.posCenter = CENTER
+		self.dirMajor  = DIR_X
+		self.dirMinor  = DIR_Y
+		self.dirPitch  = DIR_Z
+		self.facApex   = MIN_0
+		self.vecAxis   = DIR_Z
+	def	getPitch(self):
+		return self.dirPitch.Length
+	def	getHeight(self):
+		assert (isEqual1D(self.radAngles.getLowerLimit(), 0)), 'Helix: start angle not supported!'
+		return self.getPitch() * self.radAngles.getUpperLimit() / 2.0 / pi
+	def	getRadius(self):
+		assert (isEqual1D(self.dirMajor.Length, self.dirMinor.Length)), 'Helix: elliptical helix not supported!'
+		return self.dirMajor.Length
+	def	getApexAngle(self):
+		radApexAngle = atan(self.facApex * self.getRadius() / self.getPitch())
+		return degrees(radApexAngle)
+	def isLeftHanded(self):
+		angle = self.vecAxis.getAngle(self.dirMajor.cross(self.dirMinor))
+		return (fabs(angle) < 0.1)
+	def build(self):
+		pitch      = self.getPitch()
+		height     = self.getHeight()
+		radius     = self.getRadius()
+		apexAngle  = self.getApexAngle()
+		leftHanded = self.isLeftHanded()
+		wire = Part.makeLongHelix(pitch, height, radius, apexAngle, leftHanded)
+		angle = degrees(DIR_Z.getAngle(self.vecAxis))
+		if (angle != 0):
+			axis = DIR_Z.cross(self.vecAxis) if angle != 180 else DIR_X
+		else:
+			axis = DIR_Z
+		wire.Placement = PLC(self.posCenter, ROT(axis, angle), CENTER)
+		return wire
+
 class Range():
 	def __init__(self, type, limit, scale = 1.0):
 		self.type  = type
@@ -1297,8 +1338,10 @@ class Entity(object):
 		self.entity  = None
 
 	def set(self, entity):
+		global _currentEntityId
 		entity.node = self
 		self.entity = entity
+		_currentEntityId = entity.index
 		addNode(self)
 
 		try:
@@ -1634,9 +1677,9 @@ class CoEdge(Topology):
 		self._edge, i     = getRefNode(entity, i, 'edge')
 		self.sense, i     = getSense(entity.chunks, i)
 		self._owner, i    = getRefNode(entity, i, None) # can be either Loop or Wire
-		if (entity.chunks[i].tag != 0x0C):
+		if (entity.chunks[i].tag != TAG_ENTITY_REF):
 			i += 1
-		self._curve, i    = getRefNode(entity, i, 'curve')
+		self._curve, i    = getRefNode(entity, i, 'pcurve')
 		return i
 	def getNext(self):     return None if (self._next is None)     else self._next.node
 	def getPrevious(self): return None if (self._previous is None) else self._previous.node
@@ -1732,7 +1775,9 @@ class Wire(Topology):
 
 # abstract super class for all geometries
 class Geometry(Entity):
-	def __init__(self): super(Geometry, self).__init__()
+	def __init__(self, name):
+		super(Geometry, self).__init__()
+		self.__name__ = name
 	def set(self, entity):
 		i = super(Geometry, self).set(entity)
 		if (getVersion() > 10.0):
@@ -1740,9 +1785,17 @@ class Geometry(Entity):
 		if (getVersion() > 6.0):
 			i += 1 # skip ???
 		return i
+	def __repr__(self):
+		if (self.entity is None):
+			if (hasattr(self, 'ref')):
+				return "%s { ref %d }" %(self.__name__, self.ref)
+			if (hasattr(self, 'type')):
+				return "%s { %s ... }" %(self.__name__, self.type)
+			return "%s { ... }" %(self.__name__)
+		return super(Geometry, self).__repr__()
 class Curve(Geometry):
-	def __init__(self):
-		super(Curve, self).__init__()
+	def __init__(self, name):
+		super(Curve, self).__init__(name)
 		self.shape = None
 	def setSubtype(self, chunks, index):
 		return index
@@ -1756,17 +1809,21 @@ class Curve(Geometry):
 			# force everything else to straight line!
 			self.shape = createLine(start, end)
 		return self.shape
-class CurveComp(Curve):    # compound courve "compcurv-curve"
+class CurveComp(Curve):    # compound curve "compcurv-curve"
+	def __init__(self):
+		return super(CurveComp, self).__init__('compcurv')
 	def setSubtype(self, chunks, index):
 		return index
-class CurveDegenerate(Curve):    # degenerate courve "degenerate_curve"
+class CurveDegenerate(Curve):    # degenerate curve "degenerate-curve"
+	def __init__(self):
+		return super(CurveDegenerate, self).__init__('degenerate')
 	def setSubtype(self, chunks, index):
 		v1, i = getLocation(chunks, index)
 		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		return i
 class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 	def __init__(self):
-		super(CurveEllipse, self).__init__()
+		super(CurveEllipse, self).__init__('ellipse')
 		self.center = CENTER
 		self.normal = DIR_Z
 		self.major  = DIR_X
@@ -1790,8 +1847,8 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 			ellipse = Part.ArcOfCircle(ellipse, a, b) if (self.ratio == 1) else Part.ArcOfEllipse(ellipse, a, b)
 		return ellipse.toShape()
 class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
-	def __init__(self):
-		super(CurveInt, self).__init__()
+	def __init__(self, name = ''):
+		super(CurveInt, self).__init__(name + 'intcurve')
 		self.sense  = 'forward' # The IntCurve's reversal flag
 		self.range  = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.type   = ''
@@ -1808,7 +1865,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				self.shape = curve.multifuse(others)
 			else:
 				if (type(self.curve) == int):
-					self.curve = getSubtypeNode('intcurve', self.curve)
+					self.curve = getSubtypeNode('curve', self.curve)
 				if (isinstance(self.curve, Curve)):
 					self.shape = self.curve.build(None, None)
 		return self.shape
@@ -1838,10 +1895,25 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		else:
 			raise Exception("Unknown Surface-singularity '%s'" %(self.singularity))
 		return i
-	def setSurfaceCurve(self, chunks, index):
+	def setSurfaceCurve(self, chunks, index, inventor):
 		i = self.setCurve(chunks, index)
 		surface1, i = readSurface(chunks, i)
 		surface2, i = readSurface(chunks, i)
+
+		# Nasty workaround to fix sub_ident_table for correct ref values !?!
+		if (not surface1 is None):
+			if (not surface2 is None):
+				if (surface2.type != 'ref' and surface1.type == 'ref'):
+					global subtypeTable
+					lst = subtypeTable['surface']
+					lst[-2] = lst[-1]
+					subtypeTable['surface'] = lst[:-1]
+		elif (not inventor):
+			if (surface2 is None):
+				srf = Surface('null_surface')
+				srf.entity = AcisEntity('null_surface')
+				srf.entity.index = self.getIndex()
+				addSubtypeNode('surface', srf)
 		curve1, i   = readBS2Curve(chunks, i)
 		curve2, i   = readBS2Curve(chunks, i)
 		if (getVersion() > 15.0):
@@ -1853,15 +1925,15 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			a3, i       = getFloatArray(chunks, i)
 		return i
 	def setBlend(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		txt, i      = getText(chunks, i)
 		return i
 	def setBlendSprng(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		txt, i      = getText(chunks, i)
 		return i
 	def setComp(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		a4, i       = getFloatArray(chunks, i)
 		count, i    = getInteger(chunks, i)
 		a5, i       = getFloats(chunks, im, count)
@@ -1873,13 +1945,13 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			self.curves.append(c)
 		return i
 	def setDefm(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		if (inventor):
 			x3, i = getFloat(chunks, i)
 		bend, i = readCurve(chunks, i)
 		return i
 	def setExact(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		if (getVersion() >= 2.0):
 			if (inventor):
 				x3, i = getFloat(chunks, i)
@@ -1889,28 +1961,27 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			range2, i  = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def setHelix(self, chunks, index, inventor):
-		helix = Helix()
-		helix.angleStart, i = getRange(chunks, index, MIN_0, 1.0)
-		helix.angleEnd, i   = getRange(chunks, i, MAX_2PI, 1.0)
-		helix.axisStart, i  = getLocation(chunks, i)        # axis start
-		helix.rMajor, i     = getLocation(chunks, i)        # profile's ellipse major radius
-		helix.rMinor, i     = getLocation(chunks, i)        # profile's ellipse minor radius
-		helix.center, i     = getLocation(chunks, i)        # profile's ellipse center
-		helix.alpha, i      = getFloat(chunks, i)           # pitch ???
-		helix.axisEnd, i    = getLocation(chunks, i)        # axis end
-		self.shape = createHelix(helix)
+		self.helix = Helix()
+		self.helix.radAngles, i = getInterval(chunks, index, MIN_0, MAX_2PI, 1.0)
+		self.helix.posCenter, i = getLocation(chunks, i)        # axis start
+		self.helix.dirMajor, i  = getLocation(chunks, i)        # profile's ellipse major radius
+		self.helix.dirMinor, i  = getLocation(chunks, i)        # profile's ellipse minor radius
+		self.helix.dirPitch, i  = getLocation(chunks, i)        # profile's ellipse center
+		self.helix.facApex, i   = getFloat(chunks, i)           # pitch ???
+		self.helix.vecAxis, i   = getVector(chunks, i)        # axis end
 		surface1, i = readSurface(chunks, i)  # None
 		surface2, i = readSurface(chunks, i)  # None
 		curve1, i   = readBS2Curve(chunks, i) # None
 		curve2, i   = readBS2Curve(chunks, i) # None
+		self.shape = self.helix.build()
 		return i
 	def setInt(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		x, i = getFloat(chunks, i)
 		return i
 	def setLaw(self, chunks, index, inventor):
 		i = index
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		laws = []
 		if (inventor):
 			n, i   = getInteger(chunks, i) # 0
@@ -1955,7 +2026,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 						break
 		return i
 	def setOff(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		if (inventor):
 				i += 1
 		if (getVersion() > 22.0):
@@ -1963,13 +2034,13 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		offsets, i = getFloats(chunks, i, 2)
 		return i
 	def setOffset(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		if (inventor):
 			i += 1
 		curve, i = readCurve(chunks, i)
 		return i
 	def setOffsetSurface(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		if (inventor):
 			i += 1
 		rngU, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
@@ -1979,7 +2050,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		# x, y, z ???
 		return i
 	def setParameter(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		if (getVersion() > 15.0):
 			i += 1
 		if (not inventor):
@@ -1988,13 +2059,13 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			txt, i = getText(chunks, i)
 		return i
 	def setParameterSilhouette(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		i1, i = getInteger(chunks, i)
 		v1, i = getVector(chunks, i) # direction
 		f1, i = getFloat(chunks, i)
 		return i
 	def setProject(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		if (inventor):
 			i += 1
 		curve, i = readCurve(chunks, i)
@@ -2003,6 +2074,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setRef(self, chunks, index):
 		self.curve, i = getInteger(chunks, index)
+		self.ref = self.curve
 		return i
 	def setSpring(self, chunks, index, inventor):
 		i = self.setCurve(chunks, index)
@@ -2024,25 +2096,24 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		# n, m ???
 		return i
 	def setSurface(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index)
+		i = self.setSurfaceCurve(chunks, index, inventor)
 		return i
 	def setBulk(self, chunks, index):
 		self.type, i = getValue(chunks, index)
 
-		addSubtypeNode('intcurve', self)
-
 		if (self.type == 'ref'):               return self.setRef(chunks, i)
 
 		try:
-			prm = CURVE_TYPES[self.type]
-			fkt = getattr(self, prm[0])
-			return fkt(chunks, i + prm[1], prm[2])
+			prm = CURVE_SET_DATA[self.type]
+			setCurveData = getattr(self, prm[0])
+			return setCurveData(chunks, i + prm[1], prm[2])
 		except KeyError as ke:
 			raise Exception("Curve-Int: unknown subtype '%s'!" %(self.type))
 	def setSubtype(self, chunks, index):
 		self.sense, i  = getSense(chunks, index)
 		block, i      = getBlock(chunks, i)
-		self.setBulk(block, 0)
+		addSubtypeNode('curve', self)
+		self.setBulk(block, 1)
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, start, end):
@@ -2056,13 +2127,13 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				self.shape = curve.multifuse(others)
 			else:
 				if (type(self.curve) == int):
-					self.curve = getSubtypeNode('intcurve', self.curve)
+					self.curve = getSubtypeNode('curve', self.curve)
 				if (isinstance(self.curve, Curve)):
 					self.shape = self.curve.build(start, end)
 		return self.shape
 class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 	def __init__(self):
-		super(CurveIntInt, self).__init__()
+		super(CurveIntInt, self).__init__('intcurve-')
 		self.sense = 'forward' # The IntCurve's reversal flag
 		self.range = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.type  = ''
@@ -2076,36 +2147,35 @@ class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 		if (self.type == 'law_int_cur'):      return self.setLaw(chunks, i + 1, True)
 		logError(u"    Curve-Int-Int: unknown subtype %s !", self.type)
 		return self.setCurve(chunks, i)
-	def setSubtype(self, chunks, index):
-		self.sense, i  = getSense(chunks, index)
-		block, i      = getBlock(chunks, i)
-		self.setBulk(block, 0)
-		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		return i
 class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: point3D = surface.value(u, v)
 	'''An approximation to a curve lying on a surface, defined in terms of the surface’s u-v parameters.'''
 	def __init__(self):
-		super(CurveP, self).__init__()
+		super(CurveP, self).__init__('pcurve')
 		self.type   = -1    # The PCurve's type
 		self.sense  = 'forward'
-		self._curve = None  # The PCurve's curve
+		self.pcurve = None
 	def setExpPar(self, chunks, index):
 		i = index if (getVersion() < 25.0) else index + 1
 		self.pcurve, i = readBS2Curve(chunks, i)
 		tolerance, i = getFloat(chunks, i)
 		if (getVersion() > 15.0):
 			i += 1
+		global subtypeTable
+		l = len(subtypeTable)
 		self.surface, i = readSurface(chunks, i)
+		if (isinstance(self.surface, Surface)):
+			if (not isinstance(self.surface, SurfaceSpline)):
+				addSubtypeNode('surface', self.surface)
+
 		self.type = 'exppc'
 		return i
 	def setRef(self, chunks, index):
-		self.ref, i = getInteger(chunks, index)
+		self.pcurve, i = getInteger(chunks, index)
+		self.ref = self.pcurve
 		self.type = 'ref'
 		return i
 	def setBulk(self, chunks, index):
 		self.type, i = getValue(chunks, index)
-
-		addSubtypeNode('pcurve', self)
 
 		if (self.type == 'ref'):         return self.setRef(chunks, i)
 		if (self.type == 'exp_par_cur'): return self.setExpPar(chunks, i)
@@ -2114,7 +2184,8 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 	def setSubtype(self, chunks, index):
 		self.sense, i = getSense(chunks, index)
 		block, i = getBlock(chunks, i)
-		self.setBulk(block, 0)
+		addSubtypeNode('pcurve', self)
+		self.setBulk(block, 1)
 		self.u, i = getFloat(chunks, i)
 		self.v, i = getFloat(chunks, i)
 		return i
@@ -2124,25 +2195,24 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		if (self.type == 0):
 			i = self.setSubtype(entity.chunks, i)
 		else:
-			self._curve, i = getRefNode(entity, i, 'curve')
+			self.pcurve, i = getRefNode(entity, i, 'curve')
 			self.u, i = getFloat(entity.chunks, i)
 			self.v, i = getFloat(entity.chunks, i)
-			self.type = 'curve'
+			self.type = 'ref'
 		return i
 	def build(self, start, end):
 		if (self.shape is None):
 			if (self.type == 'ref'):
-				curve = getSubtypeNode('pcurve', self.ref)
-				if (curve is not None):
-					self.shape = curve.build(start, end)
+				if (type(self.pcurve) == int):
+					self.pcurve = getSubtypeNode('pcurve', self.pcurve)
+				if (isinstance(self.pcurve, CurveP)):
+					self.shape = self.pcurve.build(start, end)
 			elif (self.type == 'exppc'):
 				shelf.shape = createBSplinesPCurve(self.pcurve, self.surface, self.sense)
-			elif (self._curve is not None):
-				self.shape = self._curve.build(start, end)
 		return self.shape
 class CurveStraight(Curve):# straight curve "straight-curve"
 	def __init__(self):
-		super(CurveStraight, self).__init__()
+		super(CurveStraight, self).__init__('straight')
 		self.root  = CENTER
 		self.dir   = CENTER
 		self.range = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
@@ -2156,9 +2226,10 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 	def build(self, start, end):
 		return createLine(start, end)
 class Surface(Geometry):
-	def __init__(self):
-		super(Surface, self).__init__()
+	def __init__(self, name):
+		super(Surface, self).__init__(name)
 		self.shape = None
+		self.type  = name
 	def setSubtype(self, chunks, index):
 		return index
 	def set(self, entity):
@@ -2168,7 +2239,7 @@ class Surface(Geometry):
 	def build(self): return None
 class SurfaceCone(Surface):
 	def __init__(self):
-		super(SurfaceCone, self).__init__()
+		super(SurfaceCone, self).__init__('cone')
 		self.center = CENTER
 		self.axis   = DIR_Z
 		self.major  = DIR_X
@@ -2180,7 +2251,7 @@ class SurfaceCone(Surface):
 		self.sense  = 'forward'
 		self.urange = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
-	def __str__(self): return "Surface-Cone: center=%s, axis=%s, radius=%g, ratio=%g, semiAngle=%g" %(self.center, self.axis, self.major.Length, self.ratio, math.degrees(math.asin(self.sine)))
+	def __str__(self): return "Surface-Cone: center=%s, axis=%s, radius=%g, ratio=%g, semiAngle=%g" %(self.center, self.axis, self.major.Length, self.ratio, degrees(asin(self.sine)))
 	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i = getLocation(chunks, index) # Cartesian Point 'Origin'
@@ -2209,7 +2280,7 @@ class SurfaceCone(Surface):
 				self.shape = cyl.Faces[0]
 			else:
 				# Workaround: can't generalFuse Part.Cone!
-				height = self.major.Length / math.tan(math.asin(self.sine))
+				height = self.major.Length / tan(asin(self.sine))
 				apex  = self.center - self.axis * height
 				l = Part.Line(apex, self.center + self.major)
 				e = Part.LineSegment(apex, l.value(MAX_LEN)).toShape()
@@ -2220,13 +2291,13 @@ class SurfaceCone(Surface):
 		return self.shape
 class SurfaceMesh(Surface):
 	def __init__(self):
-		super(SurfaceMesh, self).__init__()
+		super(SurfaceMesh, self).__init__('mesh')
 	def setSubtype(self, chunks, index):
 		# TODO: missing example for mesh-surface
 		return index
 class SurfacePlane(Surface):
 	def __init__(self):
-		super(SurfacePlane, self).__init__()
+		super(SurfacePlane, self).__init__('plane')
 		self.root     = CENTER
 		self.normal   = DIR_Z
 		self.uvorigin = CENTER
@@ -2250,7 +2321,7 @@ class SurfacePlane(Surface):
 		return self.shape
 class SurfaceSphere(Surface):
 	def __init__(self):
-		super(SurfaceSphere, self).__init__()
+		super(SurfaceSphere, self).__init__('sphere')
 		self.center   = CENTER
 		self.radius   = 0.0
 		self.uvorigin = CENTER
@@ -2279,7 +2350,7 @@ class SurfaceSphere(Surface):
 		return self.shape
 class SurfaceSpline(Surface):
 	def __init__(self):
-		super(SurfaceSpline, self).__init__()
+		super(SurfaceSpline, self).__init__('spline')
 		self.surface = None
 	def setSurfaceShape(self, chunks, index, inventor):
 		spline, self.tolerance, i = readSplineSurface(chunks, index, True)
@@ -2376,7 +2447,6 @@ class SurfaceSpline(Surface):
 		v14, i = getVector(chunks, i)
 		t1, i = getInteger(chunks, i) # 0, 1
 		if (t1 == 1):
-			#0x0A 0x0B 0x0B VEC VEC VEC 1 0x0B 0x0B 0 1 2.02849 0x0B 0x0B 0x0B 0x0B 0x0B 1 0
 			e21, i = getEnum(chunks, i)
 			e22, i = getEnum(chunks, i)
 			e23, i = getEnum(chunks, i)
@@ -2422,7 +2492,7 @@ class SurfaceSpline(Surface):
 		elif (singularity == 'none'):
 			s12, i = getFloats(chunks, i, 9)
 			tol11, i = getLength(chunks, i)
-			if (not chunks[i].tag in (0x07, 0x0D, 0x0E)):
+			if (not chunks[i].tag in [TAG_UTF8_U8, TAG_IDENT, TAG_SUBIDENT]):
 				i += 1 # newer Inventor versions (>2017
 			p13, i = readBS2Curve(chunks, i)
 		else:
@@ -2451,35 +2521,21 @@ class SurfaceSpline(Surface):
 	def setHelixCircle(self, chunks, index, inventor):
 		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
 		dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
-		length, i = getLength(chunks, i)
-		dime2, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
-		x1, i     = getLocation(chunks, i)
-		x2, i     = getLocation(chunks, i)
-		x3, i     = getLocation(chunks, i)
-		x4, i     = getLocation(chunks, i)
-		fac1, i   = getFloat(chunks, i)
-		x5, i     = getVector(chunks, i)
-		s1, i     = readSurface(chunks, i)
-		s2, i     = readSurface(chunks, i)
-		c1, i     = readBS2Curve(chunks, i)
-		c2, i     = readBS2Curve(chunks, i)
-		fac2, i   = getFloat(chunks, i)
+		length, i = getLength(chunks, i) # pi / 2
+		curve = CurveInt()
+		curve.type = "helix_int_cur"
+		i = curve.setHelix(chunks, i, inventor)
+		helix = curve.helix
+		radius, i   = getLength(chunks, i) # radius of the circle
 		return i
 	def setHelixLine(self, chunks, index, inventor):
 		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
-		dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
-		dime2, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
-		x1, i     = getLocation(chunks, i)
-		x2, i     = getLocation(chunks, i)
-		x3, i     = getLocation(chunks, i)
-		x4, i     = getLocation(chunks, i)
-		fac1, i   = getFloat(chunks, i)
-		x5, i     = getVector(chunks, i)
-		s1, i     = readSurface(chunks, i)
-		s2, i     = readSurface(chunks, i)
-		c1, i     = readBS2Curve(chunks, i)
-		c2, i     = readBS2Curve(chunks, i)
-		x6, i     = getVector(chunks, i)
+		values, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, 1.0)
+		curve = CurveInt()
+		curve.type = "helix_int_cur"
+		i = curve.setHelix(chunks, i, inventor)
+		helix = curve.helix
+		posCenter, i     = getLocation(chunks, i)
 		return i
 	def setLoft(self, chunks, index, inventor):
 		ls1, i = readLofSection(chunks, index, inventor)
@@ -2493,7 +2549,7 @@ class SurfaceSpline(Surface):
 		sng2, i = getSingularity(chunks, i)
 		# 1|2, 0?, 0, nubs
 		b, i = getInteger(chunks, i)
-		while (not chunks[i+1].tag in (0x07, 0x0D, 0x0E)):
+		while (not chunks[i+1].tag in [TAG_UTF8_U8, TAG_IDENT, TAG_SUBIDENT]):
 			i += 1 ## FIXME
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
@@ -2528,7 +2584,7 @@ class SurfaceSpline(Surface):
 		senseV, i = getSense(chunks, i)
 		if (inventor):
 			e3, i = getEnum(chunks, i) # 0x0B
-			if ((chunks[i].tag == 0x0A) or (chunks[i].tag == 0x0B)): # 0x0B
+			if (chunks[i].tag in [TAG_TRUE, TAG_FALSE]):
 				i += 1
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
@@ -2588,7 +2644,7 @@ class SurfaceSpline(Surface):
 		self.dir, i     = getVector(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		# create a rotation shape from the profile
-		self.shape = Part.SurfaceOfRevolution(self.profile.build(None, None).Curve, self.loc, self.dir).toShape()
+		#self.shape = Part.SurfaceOfRevolution(self.profile.build(None, None).Curve, self.loc, self.dir).toShape()
 		return i
 	def setSkin(self, chunks, index, inventor):
 		skins = []
@@ -2667,7 +2723,7 @@ class SurfaceSpline(Surface):
 			r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			n3, i = getFloat(chunks, i)     # 0
 			e2, i = getEnum(chunks, i)	      # 0x0B
-			if (chunks[i].tag == 0x0A):
+			if (chunks[i].tag == TAG_TRUE):
 				i += 1
 				c2, i = readCurve(chunks, i)
 				r2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -2703,7 +2759,7 @@ class SurfaceSpline(Surface):
 			else:
 				raise Exception()
 			e4, i = getEnum(chunks, i)
-			if (e4 == 0x0A):
+			if (e4 == TAG_TRUE):
 				c4, i = readCurve(chunks, i)
 			else:
 				e5, i = getEnum(chunks, i)
@@ -2740,10 +2796,10 @@ class SurfaceSpline(Surface):
 		i1, i = getInteger(chunks, i) # 0
 
 		e4, i = getEnum(chunks, i)
-		if (e4 == 0x0A):
+		if (e4 == TAG_TRUE):
 			l5, i = readScaleClLoft(chunks, i)
 			e5, i = getEnum(chunks, i)
-			if (e5 == 0x0A):
+			if (e5 == TAG_TRUE):
 				l6, i = readScaleClLoft(chunks, i)
 				i6, i = getInteger(chunks, i) # 0
 				p6, i = getVector(chunks, i)
@@ -2827,12 +2883,11 @@ class SurfaceSpline(Surface):
 		f3, i = getFloat(chunks, i)
 		return i
 	def setRef(self, chunks, index):
-		self.ref, i = getInteger(chunks, index)
+		self.surface, i = getInteger(chunks, index)
+		self.ref = self.surface
 		return i
 	def setBulk(self, chunks, index):
 		self.type, i = getValue(chunks, index)
-
-		addSubtypeNode('spline', self)
 
 		if (self.type == 'ref'):                   return self.setRef(chunks, i)
 
@@ -2845,24 +2900,41 @@ class SurfaceSpline(Surface):
 	def setSubtype(self, chunks, index):
 		self.sense, i  = getSense(chunks, index)
 		block, i       = getBlock(chunks, i)
-		self.setBulk(block, 0)
+		if (self.entity is None):
+			global _currentEntityId
+			self.entity = AcisEntity('spline')
+			self.entity.index = _currentEntityId
+			if (self.sense == 'forward'):
+				self.entity.chunks = [AcisChunk(TAG_FALSE, 'forward')] + block
+			else:
+				self.entity.chunks = [AcisChunk(TAG_TRUE, 'reversed')] + block
+
+		addSubtypeNode('surface', self)
+		self.setBulk(block, 1)
 		self.rangeU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		self.rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self):
 		if (self.shape is None):
+			if (hasattr(self, 'failed')):
+				return None
+			self.failed = True # assume we can't build the surface!
 			if (self.type == 'ref'):
-				self.surface = getSubtypeNode('spline', self.ref)
-			if (self.surface is not None):
+				if (type(self.surface) == int):
+					self.surface = getSubtypeNode('surface', self.surface)
+			if (isinstance(self.surface, Surface)):
 				self.shape = self.surface.build()
 				if (self.shape is None):
 					if (hasattr(self.surface, 'type')):
-						logWarning(u"    ... Don't know how to build surface '%s::%s' - only edges displayed!", self.surface.__class__.__name__, self.surface.type)
+						if (self.surface.type == 'ref'):
+							logWarning(u"    ... Don't know how to build surface '%s::ref %d' - only edges displayed!", self.surface.__class__.__name__, self.surface.ref)
+						else:
+							logWarning(u"    ... Don't know how to build surface '%s::%s' - only edges displayed!", self.surface.__class__.__name__, self.surface.type)
 					else:
 						logWarning(u"    ... Don't know how to build surface '%s' - only edges displayed!", self.surface.__class__.__name__)
-				elif (not (isinstance(self.shape.Surface, Part.BSplineSurface) or isinstance(self.shape.Surface, Part.SurfaceOfRevolution))):
-					logWarning(u"    ... referenced spline surface is of incompatible type '%s' - only edges displayed!", self.shape.Surface.__class__.__name__)
-					self.shape = None
+#				elif (not (isinstance(self.shape.Surface, Part.BSplineSurface) or isinstance(self.shape.Surface, Part.SurfaceOfRevolution))):
+#					logWarning(u"    ... referenced spline surface is of incompatible type '%s' - only edges displayed!", self.shape.Surface.__class__.__name__)
+#					self.shape = None
 		return self.shape
 class SurfaceTorus(Surface):
 	'''
@@ -2870,7 +2942,7 @@ class SurfaceTorus(Surface):
 	and min radius, the u-v-origin point the range for u and v and the sense.
 	'''
 	def __init__(self):
-		super(SurfaceTorus, self).__init__()
+		super(SurfaceTorus, self).__init__('torus')
 		self.center   = CENTER
 		self.axis     = DIR_Z
 		self.major    = 1.0
@@ -2893,21 +2965,21 @@ class SurfaceTorus(Surface):
 		return i
 	def build(self):
 		if (self.shape is None):
-			major = math.fabs(self.major)
-			minor = math.fabs(self.minor)
+			major = fabs(self.major)
+			minor = fabs(self.minor)
 			try:
 				torus = Part.Toroid()
 				rotateShape(torus, self.axis)
 				torus.Center = self.center
-				torus.MajorRadius = math.fabs(self.major)
-				torus.MinorRadius = math.fabs(self.minor)
+				torus.MajorRadius = major
+				torus.MinorRadius = minor
 				self.shape = Part.Face(torus)
 			except Exception as e:
 				logError(u"    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s:\n\t%s", major, minor, self.center, self.axis, e)
 		return self.shape
 class Point(Geometry):
 	def __init__(self):
-		super(Point, self).__init__()
+		super(Point, self).__init__('point')
 		self.position = CENTER
 		self.count    = -1 # Number of references
 	def set(self, entity):
@@ -3228,41 +3300,50 @@ class AcisChunk():
 		self.tag = key
 		self.val = val
 	def __str__(self):
-		if (self.tag == 0x04): return "%d "     %(self.val)
-		if (self.tag == 0x06): return "%g "     %(self.val)
-		if (self.tag == 0x07): return "@%d %s " %(len(self.val), self.val)                 # STRING
-		if (self.tag == 0x08): return "%s"      %(self.val)                                # STRING
-		if (self.tag == 0x0A): return "%s "     %(self.val)
-		if (self.tag == 0x0B): return "%s "     %(self.val)
-		if (self.tag == 0x0C): return "%s "     %(self.val)                                # ENTITY_POINTER
-		if (self.tag == 0x0D): return "%s "     %(self.val)                                # CLASS_IDENTIFYER
-		if (self.tag == 0x0E): return "%s-"     %(self.val)                                # SUBCLASS_IDENTIFYER
-		if (self.tag == 0x0F): return "%s "     %(self.val)                                # SUBTYP_START
-		if (self.tag == 0x10): return "%s "     %(self.val)                                # SUBTYP_END
-		if (self.tag == 0x11): return "%s\n"    %(self.val)                                # TERMINATOR
-		if (self.tag == 0x12): return "@%d %s " %(len(self.val), self.val)                 # STRING
-		if (self.tag == 0x13): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == 0x14): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
-		if (self.tag == 0x15): return "%d "     %(self.val)                                # value of an enumeration
-		if (self.tag == 0x16): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_CHAR         ): return "%s "     %(self.val)
+		if (self.tag == TAG_SHORT        ): return "%d "     %(self.val)
+		if (self.tag == TAG_LONG         ): return "%d "     %(self.val)
+		if (self.tag == TAG_FLOAT        ): return "%g "     %(self.val)
+		if (self.tag == TAG_DOUBLE       ): return "%g "     %(self.val)
+		if (self.tag == TAG_UTF8_U8      ): return "@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U16     ): return "%s"      %(self.val)
+		if (self.tag == TAG_UTF8_U32     ): return "%s "     %(self.val)
+		if (self.tag == TAG_TRUE         ): return "%s "     %(self.val)
+		if (self.tag == TAG_FALSE        ): return "%s "     %(self.val)
+		if (self.tag == TAG_ENTITY_REF   ): return "%s "     %(self.val)
+		if (self.tag == TAG_IDENT        ): return "%s "     %(self.val)
+		if (self.tag == TAG_SUBIDENT     ): return "%s-"     %(self.val)
+		if (self.tag == TAG_SUBTYPE_OPEN ): return "%s "     %(self.val)
+		if (self.tag == TAG_SUBTYPE_CLOSE): return "%s "     %(self.val)
+		if (self.tag == TAG_TERMINATOR   ): return "%s\n"    %(self.val)
+		if (self.tag == TAG_UTF8_U32     ): return "@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_POSITION     ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_VECTOR_3D    ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_ENUM_VALUE   ): return "%d "     %(self.val)
+		if (self.tag == TAG_VECTOR_2D    ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		return ''
 	def __repr__(self):
-		if (self.tag == 0x04): return "%d "   %(self.val)
-		if (self.tag == 0x06): return "%g "   %(self.val)
-		if (self.tag == 0x07): return "'%s' " %(self.val)                                # STRING
-		if (self.tag == 0x08): return "'%s' " %(self.val)                                # STRING
-		if (self.tag == 0x0A): return '0x0A '
-		if (self.tag == 0x0B): return '0x0B '
-		if (self.tag == 0x0E): return "%s-"   %(self.val)                                # SUBCLASS_IDENTIFYER
-		if (self.tag == 0x0F): return '{ '
-		if (self.tag == 0x10): return '} '
-		if (self.tag == 0x11): return '#'
-		if (self.tag == 0x12): return "'%s' " %(self.val)                                # STRING
-		if (self.tag == 0x11): return "%s "   %(self.val)                                # TERMINATOR
-		if (self.tag == 0x13): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == 0x14): return "(%s) " %(" ".join(["%g" %(f) for f in self.val])) # something to do with scale
-		if (self.tag == 0x15): return "%d "   %(self.val)                                # value of an enumeration
-		if (self.tag == 0x16): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_CHAR         ): return "%s "   %(self.val)
+		if (self.tag == TAG_SHORT        ): return "%d "   %(self.val)
+		if (self.tag == TAG_LONG         ): return "%d "   %(self.val)
+		if (self.tag == TAG_FLOAT        ): return "%g "   %(self.val)
+		if (self.tag == TAG_DOUBLE       ): return "%g "   %(self.val)
+		if (self.tag == TAG_UTF8_U8      ): return "'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U16     ): return "'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U32     ): return "'%s' " %(self.val)
+		if (self.tag == TAG_TRUE         ): return '0x0A '
+		if (self.tag == TAG_FALSE        ): return '0x0B '
+		if (self.tag == TAG_ENTITY_REF   ): return "%s "   %(self.val)
+		if (self.tag == TAG_IDENT        ): return "$%s "  %(self.val)
+		if (self.tag == TAG_SUBIDENT     ): return "%s-"   %(self.val)
+		if (self.tag == TAG_SUBTYPE_OPEN ): return '{ '
+		if (self.tag == TAG_SUBTYPE_CLOSE): return '} '
+		if (self.tag == TAG_TERMINATOR   ): return '#'
+		if (self.tag == TAG_UTF8_U32     ): return "'%s' " %(self.val)
+		if (self.tag == TAG_POSITION     ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_VECTOR_3D    ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_ENUM_VALUE   ): return "%d "   %(self.val)
+		if (self.tag == TAG_VECTOR_2D    ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
 		return "%s " %(self.val)
 
 class AcisEntity():
@@ -3317,6 +3398,7 @@ def getEntityRef(data, offset):
 	index, i = getSInt32(data, offset)
 	return AcisRef(index), i
 
+def getTagChar(data, index):      return data[index], index + 1
 def getTagA(data, index):         return '0x0A', index
 def getTagB(data, index):         return '0x0B', index
 def getTagOpen(data, index):      return '{', index
@@ -3329,36 +3411,36 @@ def getTagFloats2D(data, index):  return getFloat64A(data, index, 2)
 Mapper for binary tags to corresponding reader
 '''
 TAG_READER = {
-#   0x00: get?????		   # ??? no example available
-#   0x01: get?????		   # ??? no example available
-#   0x02: get?????		   # ??? no example available
-#   0x03: get?????		   # ??? no example available
-	0x04: getSInt32,	   # 32Bit signed value
-#   0x05: get?????		   # ??? no example available
-	0x06: getFloat64,	   # 64Bit IEEE Float value
-	0x07: getStr1,		   # 8Bit length + UTF8-Char
-	0x08: getStr2,		   # 16Bit length + UTF8-Char
-	0x09: getStr4,		   # 32Bit length + UTF8-Char
-	0x0A: getTagA,		   # False
-	0x0B: getTagB,		   # True
-	0x0C: getEntityRef,    # Entity reference
-	0x0D: getStr1,		   # Sub-Class-Name
-	0x0E: getStr1,		   # Base-Class-Namme
-	0x0F: getTagOpen,	   # Opening block tag
-	0x10: getTagClose,	   # Closing block tag
-	0x11: getTagTerminate, # '#' sign
-	0x12: getStr4,		   # 32Bit length + UTF8-Char
-	0x13: getTagFloats3D,  # 3D-Vector scaled (scaling will be done later because of text file handling!)
-	0x14: getTagFloats3D,  # 3D-Vector normalized
-	0x15: getUInt32,	   # value of an enumeration
-	0x16: getTagFloats2D,  # U-V-Vector
+#	TAG_0:           : get?????,        # ??? no example available
+#	TAG_1:           : get?????,        # ??? no example available
+	TAG_CHAR         : getTagChar,      # single character (unsigned 8 bit)
+	TAG_SHORT        : getSInt16,       # 16Bit signed value
+	TAG_LONG         : getSInt32,       # 32Bit signed value
+	TAG_FLOAT        : getFloat32,      # 32Bit IEEE float value
+	TAG_DOUBLE       : getFloat64,      # 64Bit IEEE float value
+	TAG_UTF8_U8      : getStr1,         # 8Bit length + UTF8-Char
+	TAG_UTF8_U16     : getStr2,         # 16Bit length + UTF8-Char
+	TAG_UTF8_U32     : getStr4,         # 32Bit length + UTF8-Char
+	TAG_TRUE         : getTagA,         # False
+	TAG_FALSE        : getTagB,         # True
+	TAG_ENTITY_REF   : getEntityRef,    # Entity reference
+	TAG_IDENT        : getStr1,         # Sub-Class-Name
+	TAG_SUBIDENT     : getStr1,         # Base-Class-Namme
+	TAG_SUBTYPE_OPEN : getTagOpen,      # Opening block tag
+	TAG_SUBTYPE_CLOSE: getTagClose,     # Closing block tag
+	TAG_TERMINATOR   : getTagTerminate, # '#' character
+	TAG_UTF8_U32     : getStr4,         # 32Bit length + UTF8-Char
+	TAG_POSITION     : getTagFloats3D,  # Scaling will be done later because of text file handling!
+	TAG_VECTOR_3D    : getTagFloats3D,  # 3D-Vector normalized
+	TAG_ENUM_VALUE   : getUInt32,       # value of an enumeration
+	TAG_VECTOR_2D    : getTagFloats2D,  # U-V-Vector
 }
 
 def readNextSabChunk(data, index):
 	tag, i = getUInt8(data, index)
 	try:
-		reader = TAG_READER[tag]
-		return (tag, ) + reader(data, i)
+		readTagData = TAG_READER[tag]
+		return (tag, ) + readTagData(data, i)
 	except KeyError as ke:
 		raise Exception("Don't know to read TAG %X" %(tag))
 
@@ -3384,7 +3466,7 @@ SURFACES = {
 	'null_surface': None,
 }
 
-CURVE_TYPES = {
+CURVE_SET_DATA = {
 	'bldcur':            ('setBlend', 0, False),
 	'blend_int_cur':     ('setBlend', 1, True),
 	'blndsprngcur':      ('setBlendSprng', 0, False),
