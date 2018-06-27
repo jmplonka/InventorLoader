@@ -34,6 +34,8 @@ _edgeLoops       = []
 _faceBounds      = []
 _faceOuterBounds = []
 _advancedFaces   = {}
+_representations = []
+_assignments     = {}
 _lumpCounter     = 0
 
 #############################################################
@@ -294,11 +296,7 @@ def _createBoundaries(acisLoops):
 					loop.edges.append(edge)
 		if (len(loop.edges) > 0):
 			_edgeLoops.append(loop)
-			if (isouter):
-				face = FACE_OUTER_BOUND('', loop, True)
-				isouter = False
-			else:
-				face = FACE_BOUND('', loop, True)
+			face = FACE_BOUND('', loop, True)
 			boundaries.append(face)
 			_faceBounds.append(face)
 	return boundaries
@@ -416,6 +414,10 @@ def _createSurface(acisFace):
 	return None, False
 def _convertFace(acisFace, shell):
 	global _advancedFaces
+	global _currentColor
+	global _representations
+	global _assignments
+
 	boundaries     = _createBoundaries(acisFace.getLoops())
 	surface, sense = _createSurface(acisFace)
 	id = "None" if surface is None else surface.id
@@ -425,6 +427,15 @@ def _convertFace(acisFace, shell):
 	except:
 		face = ADVANCED_FACE('', boundaries, surface, sense)
 		_advancedFaces[key] = face
+		keyRGB = "%g,%g,%g" %(_currentColor.red, _currentColor.green, _currentColor.blue)
+		try:
+			assignment = _assignments[keyRGB]
+		except:
+			assignment = PRESENTATION_STYLE_ASSIGNMENT(_currentColor);
+			_assignments[keyRGB] = assignment
+		items = [STYLED_ITEM('color', [assignment], face)]
+		_representations.append(MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('', items, _representations[0].context))
+
 	return face
 
 def _convertShell(acisShell):
@@ -435,8 +446,30 @@ def _convertShell(acisShell):
 		shell.faces.append(face)
 	return shell
 
-def _convertLump(acisLump, bodies, representation, style):
+def getColor(acisLump):
+	color = acisLump.getColor()
+	if (color is not None):
+		global _currentColor
+
+		key = "%g,%g,%g" %(color.red, color.green, color.blue)
+		try:
+			rgb = _colorPalette[key]
+		except:
+			rgb = COLOUR_RGB(color.red, color.green, color.blue)
+			_colorPalette[key] = rgb
+			logAlways("Found new used color (%s)" %(key))
+		return rgb
+	return None
+
+def _convertLump(acisLump, bodies, representation):
 	global _lumpCounter
+	global _colorPalette
+	global _currentColor
+
+	color = getColor(acisLump)
+	if (color is not None):
+		_currentColor = color
+
 	for acisShell in acisLump.getShells():
 		for acisFace in acisShell.getFaces():
 			_lumpCounter += 1
@@ -447,8 +480,6 @@ def _convertLump(acisLump, bodies, representation, style):
 			shell.faces.append(face)
 			representation.items.append(lump)
 
-
-
 #		shell = _convertShell(acisShell)
 #		_lumpCounter += 1
 #		lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
@@ -456,9 +487,9 @@ def _convertLump(acisLump, bodies, representation, style):
 #		representation.items.append(lump)
 		bodies.append(lump)
 
-def _convertBody(acisBody, bodies, representation, style):
+def _convertBody(acisBody, bodies, representation):
 	for acisLump in acisBody.getLumps():
-		_convertLump(acisLump, bodies, representation, style)
+		_convertLump(acisLump, bodies, representation)
 
 def _initExport():
 	global _entityId
@@ -481,6 +512,9 @@ def _initExport():
 	global _faceBounds
 	global _faceOuterBounds
 	global _advancedFaces
+	global _representations
+	global _assignments
+	global _colorPalette
 
 	_entityId        = 10
 	_pointsVertex    = {}
@@ -501,6 +535,9 @@ def _initExport():
 	_edgeLoops       = []
 	_faceBounds      = []
 	_advancedFaces   = {}
+	_representations = []
+	_assignments     = {}
+	_colorPalette    = {}
 
 	return
 
@@ -521,7 +558,6 @@ def _exportList(step, l):
 		d = l.values()
 	d.sort()
 	for p in d:
-		p.isexported = False
 		step.write(p.exportSTEP())
 
 #############################################################
@@ -626,45 +662,45 @@ class COLOUR_RGB(NamedEntity):
 		return super(COLOUR_RGB, self)._getParameters() + [self.red, self.green, self.blue]
 
 class FILL_AREA_STYLE_COLOUR(NamedEntity):
-	def __init__(self, red, green, blue):
+	def __init__(self, color):
 		super(FILL_AREA_STYLE_COLOUR, self).__init__()
-		self.colour = COLOUR_RGB(red, green, blue)
+		self.colour = color
 	def _getParameters(self):
 		return super(FILL_AREA_STYLE_COLOUR, self)._getParameters() + [self.colour]
 
 class FILL_AREA_STYLE(NamedEntity):
-	def __init__(self, red, green, blue):
+	def __init__(self, color):
 		super(FILL_AREA_STYLE, self).__init__()
-		self.styles = [FILL_AREA_STYLE_COLOUR(red, green, blue)]
+		self.styles = [FILL_AREA_STYLE_COLOUR(color)]
 	def _getParameters(self):
 		return super(FILL_AREA_STYLE, self)._getParameters() + [self.styles]
 
 class SURFACE_STYLE_FILL_AREA(ReferencedEntity):
-	def __init__(self, red, green, blue):
+	def __init__(self, color):
 		super(SURFACE_STYLE_FILL_AREA, self).__init__()
-		self.style = FILL_AREA_STYLE(red, green, blue)
+		self.style = FILL_AREA_STYLE(color)
 	def _getParameters(self):
 		return super(SURFACE_STYLE_FILL_AREA, self)._getParameters() + [self.style]
 
 class SURFACE_SIDE_STYLE(NamedEntity):
-	def __init__(self, red, green, blue):
+	def __init__(self, color):
 		super(SURFACE_SIDE_STYLE, self).__init__()
-		self.styles = [SURFACE_STYLE_FILL_AREA(red, green, blue)]
+		self.styles = [SURFACE_STYLE_FILL_AREA(color)]
 	def _getParameters(self):
 		return super(SURFACE_SIDE_STYLE, self)._getParameters() + [self.styles]
 
 class SURFACE_STYLE_USAGE(ReferencedEntity):
-	def __init__(self, red, green, blue):
+	def __init__(self, color):
 		super(SURFACE_STYLE_USAGE, self).__init__()
 		self.sides = _getE('BOTH')
-		self.style = SURFACE_SIDE_STYLE(red, green, blue)
+		self.style = SURFACE_SIDE_STYLE(color)
 	def _getParameters(self):
 		return super(SURFACE_STYLE_USAGE, self)._getParameters() + [self.sides, self.style]
 
 class PRESENTATION_STYLE_ASSIGNMENT(ReferencedEntity):
-	def __init__(self, red, green, blue):
+	def __init__(self, color):
 		super(PRESENTATION_STYLE_ASSIGNMENT, self).__init__()
-		self.styles = [SURFACE_STYLE_USAGE(red, green, blue)]
+		self.styles = [SURFACE_STYLE_USAGE(color)]
 	def _getParameters(self):
 		return super(PRESENTATION_STYLE_ASSIGNMENT, self)._getParameters() + [self.styles]
 
@@ -1357,11 +1393,15 @@ def export(filename, satHeader, satBodies):
 	name, x = os.path.splitext(f)
 	path = path.replace('\\', '/')
 
-	with open("%s/%s/subtypes.txt" %(path,name), 'w') as fp:
-		surfaces = Acis.subtypeTable['surface']
+	subpath = "%s/%s" %(path,name)
+	if (not os.path.exists(subpath)):
+		os.makedirs(subpath)
+	with open("%s/subtypes.txt" %(subpath), 'w') as fp:
+		surfaces = Acis.subtypeTable.get('surface', [])
 		for i, n in enumerate(surfaces):
 			s = repr(n)
-			if (s[-1] == '\n'): s = s[0:-1]
+			if (len(s) > 0) and (s[-1] == '\n'):
+				s = s[0:-1]
 			fp.write("%d\t%r\n" %(i, s))
 
 	glbLength     = UNIT((LENGTH_UNIT(None), NAMED_UNIT(AnyEntity()), SI_UNIT('MILLI','METRE')))
@@ -1378,6 +1418,7 @@ def export(filename, satHeader, satBodies):
 		aga = l
 
 	mdgpr = MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('', [], u)
+	_representations.append(mdgpr)
 
 	appDatTimAss = APPLIED_DATE_AND_TIME_ASSIGNMENT(dt)
 	appPrtDef    = APPLICATION_PROTOCOL_DEFINITION()
@@ -1394,9 +1435,12 @@ def export(filename, satHeader, satBodies):
 
 	prdRelPRdCat = PRODUCT_RELATED_PRODUCT_CATEGORY(name, name, [prd])
 
-	prsStyAss    = [PRESENTATION_STYLE_ASSIGNMENT(0.749019607843137,0.749019607843137,0.749019607843137)]
+	global _currentColor
+	_currentColor = COLOUR_RGB(0.749019607843137,0.749019607843137,0.749019607843137)
+	keyRGB = "%g,%g,%g" %(_currentColor.red, _currentColor.green, _currentColor.blue)
+	_assignments[keyRGB] = PRESENTATION_STYLE_ASSIGNMENT(_currentColor)
 	for body in satBodies:
-		_convertBody(body.node, bodies, advShpRpr, prsStyAss[0])
+		_convertBody(body.node, bodies, advShpRpr)
 
 #	_setExported(glbLength, True)
 #	_setExported(glbAngleSolid, True)
@@ -1499,9 +1543,8 @@ def export(filename, satHeader, satBodies):
 		step.write(appPrtDef.exportSTEP())
 #		prdDef.isexported = False
 		step.write(prdDef.exportSTEP())
-		for style in prsStyAss:
-#			prsStyAss[0].isexported = False
-			step.write(style.exportSTEP())
+		_exportList(step, _representations)
+		_exportList(step, _assignments)
 		step.write("ENDSEC;\n")
 		step.write("END-ISO-10303-21;")
 	logAlways(u"File written to '%s'.", stepfile)

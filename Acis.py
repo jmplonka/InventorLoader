@@ -802,12 +802,25 @@ def createBSplinesPCurve(pcurve, surface, sense):
 	if (surf is None):
 		return None
 	number_of_poles = len(pcurve.poles)
-	if (number_of_poles == 2): # if there are only two poles we can simply draw a line
-		g2d = Part.Geom2d.Line2dSegment(pcurve.poles[0], pcurve.poles[1])
+	bsc = Part.Geom2d.BSplineCurve2d()
+	if (pcurve.rational):
+		bsc.buildFromPolesMultsKnots(      \
+			poles    = pcurve.poles,   \
+			mults    = pcurve.uMults,  \
+			knots    = pcurve.uKnots,  \
+			periodic = False,          \
+			degree   = pcurve.uDegree, \
+			weights  = pcurve.weights  \
+		)
 	else:
-		g2d = Part.Geom2d.BSplineCurve2d()
-		g2d.buildFromPolesMultsKnots(pcurve.poles, pcurve.uMults, pcurve.uKnots, pcurve.uPeriodic, pcurve.uDegree, pcurve.weights)
-	shape = g2d.toShape(surf, g2d.FirstParameter, g2d.LastParameter)
+		bsc.buildFromPolesMultsKnots(      \
+			poles    = pcurve.poles,   \
+			mults    = pcurve.uMults,  \
+			knots    = pcurve.uKnots,  \
+			periodic = False,          \
+			degree   = pcurve.uDegree  \
+		)
+	shape = bsc.toShape(surf, bsc.FirstParameter, bsc.LastParameter)
 	if (shape is not None):
 		shape.Orientation = 'Reversed' if (sense == 'reversed') else 'Forward'
 	return shape
@@ -823,7 +836,7 @@ def createBSplinesCurve(nubs, sense):
 		try:
 			bsc = Part.BSplineCurve()
 			if (nubs.rational):
-				bsc.buildFromPolesMultsKnots(           \
+				bsc.buildFromPolesMultsKnots(       \
 					poles         = nubs.poles,     \
 					mults         = nubs.uMults,    \
 					knots         = nubs.uKnots,    \
@@ -832,13 +845,13 @@ def createBSplinesCurve(nubs, sense):
 					weights       = nubs.weights
 				)
 			else:
-				bsc.buildFromPolesMultsKnots(           \
+				bsc.buildFromPolesMultsKnots(       \
 					poles         = nubs.poles,     \
 					mults         = nubs.uMults,    \
 					knots         = nubs.uKnots,    \
 					periodic      = False,          \
 					degree        = nubs.uDegree
-			)
+				)
 			# periodic = nubs.uPeriodic
 			shape = bsc.toShape()
 		except Exception as e:
@@ -1358,6 +1371,23 @@ class Entity(object):
 	def __str__(self):   return "%s" % (self.entity)
 	def __repr__(self): return self.__str__()
 
+	def getAttribute(self, clsName):
+		a = self.getAttrib()
+		while (a is not None) and (a.getIndex() >= 0):
+			if (a.__class__.__name__ == clsName):
+				return a
+			a = a.getNext()
+		return None
+
+	def getName(self):
+		a = self.getAttribute('AttribGenName')
+		if (a is not None):
+			return a.text
+		return None
+
+	def getColor(self):
+		return self.getAttribute('AttribStRgbColor')
+
 class EyeRefinement(Entity):
 	def __init__(self): super(EyeRefinement, self).__init__()
 class VertexTemplate(Entity):
@@ -1863,6 +1893,11 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 					if (shp is not None):
 						others.append(shp)
 				self.shape = curve.multifuse(others)
+			elif (hasattr(self, 'surfaceProjection')):
+				(surface, pcurve) = self.surfaceProjection
+				if (self.singularity == 'summary'):
+					# try to create a curve from a surface projection
+					self.shape = createBSplinesPCurve(pcurve, surface, self.sense)
 			else:
 				if (type(self.curve) == int):
 					self.curve = getSubtypeNode('curve', self.curve)
@@ -1899,6 +1934,15 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		i = self.setCurve(chunks, index)
 		surface1, i = readSurface(chunks, i)
 		surface2, i = readSurface(chunks, i)
+		curve1, i   = readBS2Curve(chunks, i)
+		curve2, i   = readBS2Curve(chunks, i)
+		if (getVersion() > 15.0):
+			i += 2
+		range2, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+		if (getVersion() >= 2.0):
+			a1, i       = getFloatArray(chunks, i)
+			a2, i       = getFloatArray(chunks, i)
+			a3, i       = getFloatArray(chunks, i)
 
 		# Nasty workaround to fix sub_ident_table for correct ref values !?!
 		if (not surface1 is None):
@@ -1914,15 +1958,11 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				srf.entity = AcisEntity('null_surface')
 				srf.entity.index = self.getIndex()
 				addSubtypeNode('surface', srf)
-		curve1, i   = readBS2Curve(chunks, i)
-		curve2, i   = readBS2Curve(chunks, i)
-		if (getVersion() > 15.0):
-			i += 2
-		range2, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		if (getVersion() >= 2.0):
-			a1, i       = getFloatArray(chunks, i)
-			a2, i       = getFloatArray(chunks, i)
-			a3, i       = getFloatArray(chunks, i)
+		if (surface1 is not None) and (curve1 is not None):
+			self.surfaceProjection = (surface1, curve1)
+		elif (surface2 is not None) and (curve2 is not None):
+			self.surfaceProjection = (surface2, curve2)
+
 		return i
 	def setBlend(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor)
@@ -2829,7 +2869,7 @@ class SurfaceSpline(Surface):
 		vec, i = getVector(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
-	def setShadowTpr(self, chunks, index, inventor):
+	def setShadowTaper(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index)
 		c1, i = readCurve(chunks, i)
 		c2, i = readBS2Curve(chunks, i)
@@ -2861,7 +2901,7 @@ class SurfaceSpline(Surface):
 			arr.append(vbl)
 		a1, i = getFloats(chunks, i, 2) # int, float
 		return i
-	def setRuledTpr(self, chunks, index, inventor):
+	def setRuledTaper(self, chunks, index, inventor):
 		surf, i = readSurface(chunks, index)
 		curv, i = readCurve(chunks, i)
 		bs2curf, i = readBS2Curve(chunks, i)
@@ -2872,7 +2912,7 @@ class SurfaceSpline(Surface):
 		f3, i = getFloat(chunks, i)
 		f4, i = getFloat(chunks, i)
 		return i
-	def setSweptTpr(self, chunks, index, inventor):
+	def setSweptTaper(self, chunks, index, inventor):
 		surf, i = readSurface(chunks, index)
 		curv, i = readCurve(chunks, i)
 		bs2curf, i = readBS2Curve(chunks, i)
@@ -3093,10 +3133,14 @@ class AttribStNoCombine(AttribSt):
 class AttribStRgbColor(AttribSt):
 	def __init__(self):
 		super(AttribStRgbColor, self).__init__()
-		self.color = (0.5, 0.5, 0.5)
+		self.red   = 0.749
+		self.green = 0.749
+		self.blue  = 0.749
 	def set(self, entity):
 		i = super(AttribStRgbColor, self).set(entity)
-		self.color, i = getPoint(entity.chunks, i)
+		self.red,   i = getFloat(entity.chunks, i)
+		self.green, i = getFloat(entity.chunks, i)
+		self.blue,  i = getFloat(entity.chunks, i)
 		return i
 class AttribStDisplay(AttribSt):
 	def __init__(self): super(AttribStDisplay, self).__init__()
@@ -3520,7 +3564,7 @@ SURFACE_TYPES = {
 	'rot_spl_sur':          ('setRotation', 1,  True),
 	'sclclftsur':           ('setScaleClft', 0, False),
 	'scaled_cloft_spl_sur': ('setScaleClft', 1, True),
-	'shadow_tpr_spl_sur':   ('setShadowTpr', 1, True),
+	'shadow_tpr_spl_sur':   ('setShadowTaper', 1, True),
 	'skinsur':              ('setSkin', 0, False),
 	'skin_spl_sur':         ('setSkin', 1, True),
 	'sweepsur':             ('setSweep', 0, False),
@@ -3535,8 +3579,9 @@ SURFACE_TYPES = {
 	'sss_blend_spl_sur':    ('setBlendSupply', 1, True),
 	'sumsur':               ('setSum', 0, False),
 	'sum_spl_sur':          ('setSum', 1, True),
-	'ruled_tpr_spl_sur':    ('setRuledTpr', 1, True),
-	'swept_tpr_spl_sur':    ('setSweptTpr', 1, True),
+	'ruled_tpr_spl_sur':    ('setRuledTaper', 1, True),
+	'swepttapersur':		('setSweptTaper', 0, False),
+	'swept_tpr_spl_sur':    ('setSweptTaper', 1, True),
 }
 
 ENTITY_TYPES = {

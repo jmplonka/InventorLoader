@@ -274,14 +274,13 @@ def resolveNodes():
 				bodies.append(entity)
 	return bodies
 
-def getName(attrib):
-	name = ''
-	a = attrib
-	while (a is not None) and (a.getIndex() >= 0):
-		if (a.__class__.__name__ == "AttribGenName"):
-			return a.text
-		a = a.getNext()
-	return name
+_currentColor = (0.749019607843137, 0.749019607843137, 0.749019607843137)
+def setCurrentColor(lump):
+	if (lump is not None):
+		color = lump.getColor()
+		if (color is not None):
+			global _currentColor
+			_currentColor = color
 
 def createBody(doc, root, name, shape, transform):
 	if (shape is not None):
@@ -330,6 +329,8 @@ def buildLump(root, doc, lump, transform):
 	lumps += 1
 	name = "Lump%02d" %lumps
 	logInfo(u"    building lump '%s'...", name)
+
+	setCurrentColor(lump)
 
 	buildFaces(lump.getShells(), doc, root, name, transform)
 
