@@ -12,6 +12,34 @@ Parts (IPT) but nor assemblies (IAM) nor drawings (IDW) can be displayed.
   	files.
 - Minimum Version 0.17 of FreeCAD is required!
 
+## Installation
+Download the repository as a ZIP archive and expand its content directly into the
+FreeCAD module's folder "Mod".There exists two locations where FreeCAD searches for
+addons:  
+a) beside FreeCAD's bin folder  
+b) in user's application data (%APPDATA% on windows) or home folder (on linux/MAC).  
+A new folder "InvetorLoader-master" will be created.
+
+The next time FreeCAD will offer new import formats for ACIS' SAT (\*.sat) files and Autodesk
+Inventor's IPT (\*.ipt) files as supported import formats.
+
+As new python packages are required (ref. "Prerequisites") FreeCAD has to be restarted
+so that the new packages become available.
+
+### Solving installation problems
+Sometimes it can happen that the packages can't be installed.  
+a) navigate to the InventorLoader plugin (ILP) folder with your file-browser (e.g.
+   Windows-Explorer)
+b) Extract the libs.zip into the ILP's folder (a new folder libs should be created).
+c) open a command shell (e.g. `cmd` on windows or `sh` on linux)
+   i) adapt the PATH variable to point to FreeCAD's python: `set PATH="<PATH-TO-FREECAD>\bin";%PATH%`
+      (on linux you have to export the PATH variable - I think). Linux and MAC users
+      should use '/' instead of '\'!
+   ii) change the working folder to ILP's libs folder (e.g. `cd <PATH-TO-FREECAD>\Mod\InventorLoader-master\libs`)
+   iii) run the installation script: `python ./installLibs.py`  
+      This should install the required packages.
+d) reopen FreeCAD
+
 ## Status:
 > Alpha!
 
@@ -26,6 +54,8 @@ That allows it to embed Excel workboos e.g.
  -- SAT based: like STEP file, model will be imported based on FACE, EDGES and VERTICES.
 
 ## History:
+- 0.9.1 Added colos to STEP.  
+
 - 0.9 Added convertation to STEP.
 	IPT files can now either be imported
 	* based on features (nearest to FreeCAD so changing the model is easy)
