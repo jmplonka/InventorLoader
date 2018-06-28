@@ -54,7 +54,7 @@ That allows it to embed Excel workboos e.g.
  -- SAT based: like STEP file, model will be imported based on FACE, EDGES and VERTICES.
 
 ## History:
-- 0.9.1 Added colos to STEP.  
+- 0.9.1 Added colors to STEP.  
 
 - 0.9 Added convertation to STEP.
 	IPT files can now either be imported
