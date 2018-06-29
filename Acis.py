@@ -153,7 +153,9 @@ scale   = 1.0
 
 version = 7.0
 
-subtypeTable = {}
+subtypeTableCurves = []
+subtypeTablePCurves = []
+subtypeTableSurfaces = {}
 
 references = {}
 
@@ -166,29 +168,36 @@ def addNode(node):
 		if (i > 0):
 			subtype = subtype[0:i]
 
-def addSubtypeNode(subtype, node, overwrite_last = False):
-	global subtypeTable
-	try:
-		refs = subtypeTable[subtype]
-	except KeyError:
-		refs = []
-		subtypeTable[subtype] = refs
-	if (overwrite_last):
-		refs[-1] = node
-	else:
-		refs.append(node)
+def addSubtypeNodeCurve(node):
+	global subtypeTableCurves
+	subtypeTableCurves.append(node)
 
-def getSubtypeNode(subtype, index):
-	global subtypeTable
-	try:
-		refs = subtypeTable[subtype]
-		return refs[index]
-	except:
-		return None
+def addSubtypeNodePCurve(node):
+	global subtypeTablePCurves
+	subtypeTablePCurves.append(node)
+
+def addSubtypeNodeSurface(node, index):
+	global subtypeTableSurfaces
+	subtypeTableSurfaces[index] = node
+
+def getSubtypeNodeCurve(index):
+	global subtypeTableCurves
+	return subtypeTableCurves.get(index, None)
+
+def getSubtypeNodePCurve(index):
+	global subtypeTablePCurves
+	return subtypeTablePCurves.get(index, None)
+
+def getSubtypeNodeSurfaces(index):
+	global subtypeTableSurfaces
+	return subtypeTableSurfaces.get(index, None)
 
 def clearEntities():
-	global subtypeTable, references
-	subtypeTable.clear()
+	global subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces
+	global references
+	subtypeTableCurves[:] = []
+	subtypeTablePCurves[:] = []
+	subtypeTableSurfaces.clear()
 	references.clear()
 
 def setScale(value):
@@ -213,7 +222,7 @@ def createNode(entity):
 
 	try:
 		if (entity.index < 0):
-			return
+			return None
 		node = references[entity.index]
 		# this entity is overwriting a previus entity with the same index -> ignore it
 		logWarning(u"    Found 2nd '-%d %s' - IGNORED!", entity.index, entity.name)
@@ -240,6 +249,7 @@ def createNode(entity):
 			references[entity.index] = node
 		if (hasattr(node, 'set')):
 			node.set(entity)
+	return node
 
 def getValue(chunks, index):
 	val = chunks[index].val
@@ -1595,9 +1605,9 @@ class Face(Topology):
 		edges = []
 		loop = self.getLoop()
 		while (loop is not None):
-			coedges = loop.getCoEdges()
-			for coedge in coedges:
-				edge = coedge.build(doc)
+			coEdges = loop.getCoEdges()
+			for coEdge in coEdges:
+				edge = coEdge.build(doc)
 				if (edge is not None):
 					edges.append(edge)
 			loop = loop.getNext()
@@ -1622,6 +1632,33 @@ class Face(Topology):
 		else:
 			logWarning(u"    ... Don't know how to build surface '%s' - only edges displayed!", s.__class__.__name__)
 		return self.showEdges(edges)
+	def getSurfaceRef(self):
+		return getattr(self.getSurface(), 'ref', None)
+	def getCoEdgeRefs(self):
+		refs = []
+		loop = self.getLoop()
+		while (loop is not None):
+			refs += loop.getCoEdgeRefs()
+			loop = loop.getNext()
+		return refs
+	def getSurfaceRefs(self):
+		refs = self.getCoEdgeRefs()
+		ref  = self.getSurfaceRef()
+		if (ref is not None):
+			refs.append(ref)
+		return list(set(refs))
+	def getSurfaceDefinitions(self):
+		defs = []
+		srf  = self.getSurface()
+		if (isinstance(srf, SurfaceSpline)):
+			if (not hasattr(srf, 'ref')):
+				defs.append(srf)
+		loop = self.getLoop()
+		while (loop is not None):
+			defs += loop.getSurfaceDefinitions()
+			loop = loop.getNext()
+		defs.sort()
+		return defs
 class Loop(Topology):
 	def __init__(self):
 		super(Loop, self).__init__()
@@ -1650,6 +1687,23 @@ class Loop(Topology):
 			if ((ce is not None) and (ce.getIndex() == index)):
 				ce = None
 		return coedges
+	def getCoEdgeRefs(self):
+		refs = []
+		for ce in self.getCoEdges():
+			surface = getattr(ce.getCurve(), 'surface', None)
+			ref = getattr(surface, 'ref', None)
+			if (ref is not None):
+				refs.append(ref)
+		return refs
+	def getSurfaceDefinitions(self):
+		defs = []
+		for ce in self.getCoEdges():
+			pc = ce.getCurve()
+			srf = getattr(pc, 'surface', None)
+			if (srf is not None):
+				if (not hasattr(srf, 'ref')):
+					defs.append(srf)
+		return defs
 class Edge(Topology):
 	def __init__(self):
 		super(Edge, self).__init__()
@@ -1900,7 +1954,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 					self.shape = createBSplinesPCurve(pcurve, surface, self.sense)
 			else:
 				if (type(self.curve) == int):
-					self.curve = getSubtypeNode('curve', self.curve)
+					self.curve = getSubtypeNodeCurve(self.curve)
 				if (isinstance(self.curve, Curve)):
 					self.shape = self.curve.build(None, None)
 		return self.shape
@@ -1944,20 +1998,6 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			a2, i       = getFloatArray(chunks, i)
 			a3, i       = getFloatArray(chunks, i)
 
-		# Nasty workaround to fix sub_ident_table for correct ref values !?!
-		if (not surface1 is None):
-			if (not surface2 is None):
-				if (surface2.type != 'ref' and surface1.type == 'ref'):
-					global subtypeTable
-					lst = subtypeTable['surface']
-					lst[-2] = lst[-1]
-					subtypeTable['surface'] = lst[:-1]
-		elif (not inventor):
-			if (surface2 is None):
-				srf = Surface('null_surface')
-				srf.entity = AcisEntity('null_surface')
-				srf.entity.index = self.getIndex()
-				addSubtypeNode('surface', srf)
 		if (surface1 is not None) and (curve1 is not None):
 			self.surfaceProjection = (surface1, curve1)
 		elif (surface2 is not None) and (curve2 is not None):
@@ -1976,7 +2016,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		i = self.setSurfaceCurve(chunks, index, inventor)
 		a4, i       = getFloatArray(chunks, i)
 		count, i    = getInteger(chunks, i)
-		a5, i       = getFloats(chunks, im, count)
+		a5, i       = getFloats(chunks, i, count)
 		if (inventor):
 			i += 1 # 0x0A
 		self.curves = []
@@ -2152,7 +2192,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setSubtype(self, chunks, index):
 		self.sense, i  = getSense(chunks, index)
 		block, i      = getBlock(chunks, i)
-		addSubtypeNode('curve', self)
+		addSubtypeNodeCurve(self)
 		self.setBulk(block, 1)
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
@@ -2167,7 +2207,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				self.shape = curve.multifuse(others)
 			else:
 				if (type(self.curve) == int):
-					self.curve = getSubtypeNode('curve', self.curve)
+					self.curve = getSubtypeNodeCurve(self.curve)
 				if (isinstance(self.curve, Curve)):
 					self.shape = self.curve.build(start, end)
 		return self.shape
@@ -2200,13 +2240,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		tolerance, i = getFloat(chunks, i)
 		if (getVersion() > 15.0):
 			i += 1
-		global subtypeTable
-		l = len(subtypeTable)
 		self.surface, i = readSurface(chunks, i)
-		if (isinstance(self.surface, Surface)):
-			if (not isinstance(self.surface, SurfaceSpline)):
-				addSubtypeNode('surface', self.surface)
-
 		self.type = 'exppc'
 		return i
 	def setRef(self, chunks, index):
@@ -2224,7 +2258,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 	def setSubtype(self, chunks, index):
 		self.sense, i = getSense(chunks, index)
 		block, i = getBlock(chunks, i)
-		addSubtypeNode('pcurve', self)
+		addSubtypeNodePCurve(self)
 		self.setBulk(block, 1)
 		self.u, i = getFloat(chunks, i)
 		self.v, i = getFloat(chunks, i)
@@ -2244,7 +2278,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		if (self.shape is None):
 			if (self.type == 'ref'):
 				if (type(self.pcurve) == int):
-					self.pcurve = getSubtypeNode('pcurve', self.pcurve)
+					self.pcurve = getSubtypeNodePCurves(self.pcurve)
 				if (isinstance(self.pcurve, CurveP)):
 					self.shape = self.pcurve.build(start, end)
 			elif (self.type == 'exppc'):
@@ -2949,7 +2983,6 @@ class SurfaceSpline(Surface):
 			else:
 				self.entity.chunks = [AcisChunk(TAG_TRUE, 'reversed')] + block
 
-		addSubtypeNode('surface', self)
 		self.setBulk(block, 1)
 		self.rangeU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		self.rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -2961,7 +2994,7 @@ class SurfaceSpline(Surface):
 			self.failed = True # assume we can't build the surface!
 			if (self.type == 'ref'):
 				if (type(self.surface) == int):
-					self.surface = getSubtypeNode('surface', self.surface)
+					self.surface = getSubtypeNodeSurfaces(self.surface)
 			if (isinstance(self.surface, Surface)):
 				self.shape = self.surface.build()
 				if (self.shape is None):

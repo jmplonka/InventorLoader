@@ -257,7 +257,7 @@ def resolveEntityReferences(entities, lst):
 def resolveNode(entity):
 	try:
 		if (len(entity.name) > 0):
-			Acis.createNode(entity)
+			return Acis.createNode(entity)
 	except Exception as e:
 #		logError(u"ERROR: Can't resolve '%s' - %s", entity, e)
 		logError(traceback.format_exc())
@@ -266,12 +266,23 @@ def resolveNode(entity):
 def resolveNodes():
 	Acis.references = {}
 	bodies = []
+	faces  = []
 	model = getEntities()
 	for entity in model:
 		if (entity.valid):
-			resolveNode(entity)
-			if (entity.name == "body"):
+			node = resolveNode(entity)
+			if (entity.name == 'body'):
 				bodies.append(entity)
+			elif (entity.name == 'face'):
+				faces.append(node)
+
+	# resolve surface references
+	for face in faces:
+		refs  = face.getSurfaceRefs()
+		srfs  = face.getSurfaceDefinitions()
+		for i in range(len(refs)):
+			if (Acis.subtypeTableSurfaces.get(refs[i]) is None):
+				Acis.addSubtypeNodeSurface(srfs[i], refs[i])
 	return bodies
 
 _currentColor = (0.749019607843137, 0.749019607843137, 0.749019607843137)

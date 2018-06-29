@@ -201,7 +201,7 @@ def _createCurveEllipse(acisCurve):
 def _createCurveInt(acisCurve):
 	global _curveBSplines
 	shape = acisCurve.getShape()
-	if (shape is not None):
+	if (isinstance(shape, Part.Edge)):
 		bsc = shape.Curve
 		if (isinstance(bsc, Part.BSplineCurve)):
 			points = [_createCartesianPoint(v, 'Ctrl Pts') for v in bsc.getPoles()]
@@ -479,13 +479,13 @@ def _convertLump(acisLump, bodies, representation):
 			face = _convertFace(acisFace, shell)
 			shell.faces.append(face)
 			representation.items.append(lump)
-
+			bodies.append(lump)
 #		shell = _convertShell(acisShell)
 #		_lumpCounter += 1
 #		lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
 #		lump.items.append(shell)
 #		representation.items.append(lump)
-		bodies.append(lump)
+#		bodies.append(lump)
 
 def _convertBody(acisBody, bodies, representation):
 	for acisLump in acisBody.getLumps():
@@ -1393,12 +1393,12 @@ def export(filename, satHeader, satBodies):
 	name, x = os.path.splitext(f)
 	path = path.replace('\\', '/')
 
+	# Dump subtype-table for the surfaces
 	subpath = "%s/%s" %(path,name)
 	if (not os.path.exists(subpath)):
 		os.makedirs(subpath)
 	with open("%s/subtypes.txt" %(subpath), 'w') as fp:
-		surfaces = Acis.subtypeTable.get('surface', [])
-		for i, n in enumerate(surfaces):
+		for i, n in enumerate(Acis.subtypeTableSurfaces):
 			s = repr(n)
 			if (len(s) > 0) and (s[-1] == '\n'):
 				s = s[0:-1]
