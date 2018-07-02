@@ -412,7 +412,7 @@ def _createSurface(acisFace):
 			return surface, (acisFace.sense != 'forward')
 		return surface, (acisFace.sense == 'forward')
 	return None, False
-def _convertFace(acisFace, shell):
+def _convertFace(acisFace):
 	global _advancedFaces
 	global _currentColor
 	global _representations
@@ -420,6 +420,9 @@ def _convertFace(acisFace, shell):
 
 	boundaries     = _createBoundaries(acisFace.getLoops())
 	surface, sense = _createSurface(acisFace)
+	if (surface is None):
+		return None
+	
 	id = "None" if surface is None else surface.id
 	key = '(%s),%s,%s' %(_lst2str(boundaries), id, _bool2str(sense))
 	try:
@@ -440,11 +443,14 @@ def _convertFace(acisFace, shell):
 
 def _convertShell(acisShell):
 	# FIXME how to distinguish between open or closed shell?
-	shell = OPEN_SHELL('',[])
+	faces = []
 	for acisFace in acisShell.getFaces():
-		face = _convertFace(acisFace, shell)
-		shell.faces.append(face)
-	return shell
+		face = _convertFace(acisFace)
+		if (face is not None):
+			faces.append(face)
+	if (len(faces) > 0):
+		return OPEN_SHELL('', faces)
+	return None
 
 def getColor(acisLump):
 	color = acisLump.getColor()
@@ -457,7 +463,6 @@ def getColor(acisLump):
 		except:
 			rgb = COLOUR_RGB(color.red, color.green, color.blue)
 			_colorPalette[key] = rgb
-			logAlways("Found new used color (%s)" %(key))
 		return rgb
 	return None
 
@@ -472,14 +477,14 @@ def _convertLump(acisLump, bodies, representation):
 
 	for acisShell in acisLump.getShells():
 		for acisFace in acisShell.getFaces():
-			_lumpCounter += 1
-			lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
-			shell = OPEN_SHELL('',[])
-			lump.items.append(shell)
-			face = _convertFace(acisFace, shell)
-			shell.faces.append(face)
-			representation.items.append(lump)
-			bodies.append(lump)
+			face = _convertFace(acisFace)
+			if (face is not None):
+				_lumpCounter += 1
+				lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
+				shell = OPEN_SHELL('',[face])
+				lump.items.append(shell)
+				representation.items.append(lump)
+				bodies.append(lump)
 #		shell = _convertShell(acisShell)
 #		_lumpCounter += 1
 #		lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])

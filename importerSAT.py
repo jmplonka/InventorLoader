@@ -276,13 +276,16 @@ def resolveNodes():
 			elif (entity.name == 'face'):
 				faces.append(node)
 
-	# resolve surface references
+	# try to resolve surface references...
 	for face in faces:
 		refs  = face.getSurfaceRefs()
 		srfs  = face.getSurfaceDefinitions()
-		for i in range(len(refs)):
-			if (Acis.subtypeTableSurfaces.get(refs[i]) is None):
-				Acis.addSubtypeNodeSurface(srfs[i], refs[i])
+		j = 0
+		for ref in refs:
+			if (Acis.subtypeTableSurfaces.get(ref) is None):
+				if (j < len(srfs)):
+					Acis.addSubtypeNodeSurface(srfs[j], ref)
+					j += 1
 	return bodies
 
 _currentColor = (0.749019607843137, 0.749019607843137, 0.749019607843137)
