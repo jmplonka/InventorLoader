@@ -37,6 +37,7 @@ _advancedFaces   = {}
 _representations = []
 _assignments     = {}
 _lumpCounter     = 0
+_currentColor    = None
 
 #############################################################
 # private functions
@@ -422,7 +423,7 @@ def _convertFace(acisFace):
 	surface, sense = _createSurface(acisFace)
 	if (surface is None):
 		return None
-	
+
 	id = "None" if surface is None else surface.id
 	key = '(%s),%s,%s' %(_lst2str(boundaries), id, _bool2str(sense))
 	try:
@@ -455,7 +456,7 @@ def _convertShell(acisShell):
 def getColor(acisLump):
 	color = acisLump.getColor()
 	if (color is not None):
-		global _currentColor
+		global _colorPalette
 
 		key = "%g,%g,%g" %(color.red, color.green, color.blue)
 		try:
@@ -493,6 +494,12 @@ def _convertLump(acisLump, bodies, representation):
 #		bodies.append(lump)
 
 def _convertBody(acisBody, bodies, representation):
+	global _currentColor
+
+	color = getColor(acisBody)
+	if (color is not None):
+		_currentColor = color
+
 	for acisLump in acisBody.getLumps():
 		_convertLump(acisLump, bodies, representation)
 
@@ -520,6 +527,7 @@ def _initExport():
 	global _representations
 	global _assignments
 	global _colorPalette
+	global _currentColor
 
 	_entityId        = 10
 	_pointsVertex    = {}
@@ -543,7 +551,7 @@ def _initExport():
 	_representations = []
 	_assignments     = {}
 	_colorPalette    = {}
-
+	_currentColor    = None
 	return
 
 def _setExported(l, b):
@@ -563,7 +571,7 @@ def _exportList(step, l):
 		d = l.values()
 	d.sort()
 	for p in d:
-		step.write(p.exportSTEP())
+		step.write(unicode(p.exportSTEP()))
 
 #############################################################
 # global classes
@@ -914,10 +922,10 @@ class LENGTH_MEASURE(ValueObject):
 		super(LENGTH_MEASURE, self).__init__(value)
 
 class UNCERTAINTY_MEASURE_WITH_UNIT(ReferencedEntity):
-	def __init__(self, value, globalLength):
+	def __init__(self, value, length):
 		super(UNCERTAINTY_MEASURE_WITH_UNIT, self).__init__()
 		self.value = LENGTH_MEASURE(value)
-		self.length = globalLength
+		self.length = length
 		self.name = 'DISTANCE_ACCURACY_VALUE'
 		self.description = 'Maximum model space distance between geometric entities at asserted connectivities'
 	def _getParameters(self):
@@ -1385,7 +1393,7 @@ def export(filename, satHeader, satBodies):
 	user   = getAuthor()
 	desc   = getDescription()
 	orga   = ''
-	proc   = 'ST-DEVELOPER v16.5'
+	proc   = 'InventorImporter 0.9'
 	auth   = ''
 	bodies = []
 
