@@ -148,7 +148,7 @@ VAR_CHAMFER = {3: 'rounded_chamfer'}
 CLOSURE     = {0: 'open',   1: 'closed',  2: 'periodic', '0x0B': 'open', '0x0A': 'periodic'}
 SINGULARITY = {0: 'full',   1: 'v',       2: 'none',     '0x0B': 'none', '0x0A': 'full'}
 VBL_CIRLE   = {0: 'circle', 1: 'ellipse', 3: 'unknown', 'cylinder': 'circle'}
-
+CURV_DIR    = {0: 'left',   2: 'right'}
 scale   = 1.0
 
 version = 7.0
@@ -388,6 +388,9 @@ def getSurfNorm(chunks, index):
 
 def getSurfDir(chunks, index):
 	return getEnumByTag(chunks, index, SURF_DIR)
+
+def getCurvDir(chunks, index):
+	return getEnumByValue(chunks, index, CURV_DIR)
 
 def getSurfSweep(chunks, index):
 	return getEnumByTag(chunks, index, SURF_SWEEP)
@@ -1880,7 +1883,11 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setBlendSprng(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor)
-		txt, i      = getText(chunks, i)
+		if (inventor):
+			i += 1
+			direction, i = getCurvDir(chunks, i)
+		else:
+			direction, i = getText(chunks, i)
 		return i
 	def setComp(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor)
@@ -2012,7 +2019,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setParameterSilhouette(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor)
-		i1, i = getInteger(chunks, i)
+		if (inventor):
+			i1, i = getInteger(chunks, i)
 		v1, i = getVector(chunks, i) # direction
 		f1, i = getFloat(chunks, i)
 		return i
@@ -2027,27 +2035,6 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setRef(self, chunks, index):
 		self.curve, i = getInteger(chunks, index)
 		self.ref = self.curve
-		return i
-	def setSpring(self, chunks, index, inventor):
-		i = self.setCurve(chunks, index)
-		surface1, i = readSurface(chunks, i)
-		if (surface1 is None):
-			rangeU, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
-			rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
-		surface2, i = readSurface(chunks, i)
-		curve1, i   = readBS2Curve(chunks, i)
-		if (getVersion() == 18.0):
-			i += 2
-		curve2, i   = readBS2Curve(chunks, i)
-		if (getVersion() > 15.0):
-			i += 2
-		range2, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		a1, i       = getFloatArray(chunks, i)
-		a2, i       = getFloatArray(chunks, i)
-		a3, i       = getFloatArray(chunks, i)
-		# n, m ???
-		if (not self.setProjectionSurface(surface1, curve1)):
-			self.setProjectionSurface(surface2, curve2)
 		return i
 	def setSurface(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor)
@@ -2506,11 +2493,7 @@ class SurfaceSpline(Surface):
 			i += 1 # T
 
 		j, i    = getInteger(chunks, i)      # 1
-		spline, tol, i = readSplineSurface(chunks, i, True)
-		# FIXME: create a surface from these values! -> ../tutorials/2012/Tube and Pipe/Example_iparts/45Elbow.ipt
-		self.shape = createBSplinesSurface(spline)
-		if (getVersion() >= 2.0):
-			arr, i  = readArrayFloats(chunks, i, inventor)
+		i = self.setSurfaceShape(chunks, i, inventor)
 
 		if (inventor):
 			a, i = getIntegers(chunks, i, 3) # 0 0 0
@@ -2973,10 +2956,7 @@ class SurfaceSpline(Surface):
 		c1, i = readCurve(chunks, i)
 		c2, i = readBS2Curve(chunks, i)
 		f1, i = getFloat(chunks, i)
-		spline, self.tolerance, i = readSplineSurface(chunks, index, False)
-		self.shape = createBSplinesSurface(spline)
-		if (getVersion() >= 2.0):
-			arr, i  = readArrayFloats(chunks, i, inventor)
+		i = self.setSurfaceShape(chunks, i, inventor)
 		dir, i    = getVector(chunks, i)
 		valueU, i = getFloat(chunks, i)
 		valueV, i = getFloat(chunks, i)
@@ -3613,11 +3593,16 @@ CURVE_SET_DATA = {
 	'bldcur':            ('setBlend', 0, False),
 	'blend_int_cur':     ('setBlend', 1, True),
 	'blndsprngcur':      ('setBlendSprng', 0, False),
+	'spring_int_cur':    ('setBlendSprng', 1, True),
+#	'':                  ('setComp', 0, False),
 	'comp_int_cur':      ('setComp', 1, True),
+#	'':                  ('setDefm', 0, False),
 	'defm_int_cur':      ('setDefm', 1, True),
 	'exactcur':          ('setExact', 0, False),
 	'exact_int_cur':     ('setExact', 1, True),
+#	'':                  ('setHelix', 0, False),
 	'helix_int_cur':     ('setHelix', 1, True),
+#	'':                  ('setInt', 0, False),
 	'int_int_cur':       ('setInt', 1, True),
 	'lawintcur':         ('setLaw', 0, False),
 	'law_int_cur':       ('setLaw', 1, True),
@@ -3629,16 +3614,19 @@ CURVE_SET_DATA = {
 	'off_surf_int_cur':  ('setOffsetSurface', 1, True),
 	'parcur':            ('setParameter', 0, False),
 	'par_int_cur':       ('setParameter', 1, True),
+	'parasil':           ('setParameterSilhouette', 0, False),
 	'para_silh_int_cur': ('setParameterSilhouette', 1, True),
+#	'':                  ('setProject', 0, False),
 	'proj_int_cur':      ('setProject', 1, True),
-	'spring_int_cur':    ('setSpring', 1, True),
 	'surfintcur':        ('setSurface', 0, False),
 	'surf_int_cur':      ('setSurface', 1, True),
 }
 
 SURFACE_TYPES = {
+#	'':                     ('setClLoft', 0, False),
 	'cl_loft_spl_sur':      ('setClLoft', 1, True),
-	'comp_spl_sur':         ('setCompound', 1, True),
+#	'':                     ('setCompound', 0, False),
+	'comp_spl_sur':         ('setCompound', 1, True), # Inventor 2019
 	'cylsur':               ('setCylinder', 0, False),
 	'cyl_spl_sur':          ('setCylinder', 1, True),
 	'defmsur':              ('setDefm', 0, False),
@@ -3647,7 +3635,9 @@ SURFACE_TYPES = {
 	'exact_spl_sur':        ('setExact', 1, True),
 	'g2blnsur':             ('setG2Blend', 0, False),
 	'g2_blend_spl_sur':     ('setG2Blend', 1, True),
+#	'':                     ('setHelixCircle', 0, False),
 	'helix_spl_circ':       ('setHelixCircle', 1, True),
+#	'':                     ('setHelixLine', 0, False),
 	'helix_spl_line':       ('setHelixLine', 1, True),
 	'loftsur':              ('setLoft', 0, False),
 	'loft_spl_sur':         ('setLoft', 1, True),
@@ -3663,12 +3653,15 @@ SURFACE_TYPES = {
 	'rot_spl_sur':          ('setRotation', 1,  True),
 	'sclclftsur':           ('setScaleClft', 0, False),
 	'scaled_cloft_spl_sur': ('setScaleClft', 1, True),
+	'shadowtapersur':       ('setShadowTaper', 0, False),
 	'shadow_tpr_spl_sur':   ('setShadowTaper', 1, True),
 	'skinsur':              ('setSkin', 0, False),
 	'skin_spl_sur':         ('setSkin', 1, True),
 	'sweepsur':             ('setSweep', 0, False),
 	'sweep_spl_sur':        ('setSweep', 1, True),
+#	'':                     ('setSweepSpline', 0, False),
 	'sweep_sur':            ('setSweepSpline', 1, True),
+#	'':                     ('setTSpline', 0, False),
 	't_spl_sur':            ('setTSpline', 1, True),
 	'vertexblendsur':       ('setVertexBlend', 0, False),
 	'VBL_SURF':             ('setVertexBlend', 1, True),
@@ -3678,6 +3671,7 @@ SURFACE_TYPES = {
 	'sss_blend_spl_sur':    ('setBlendSupply', 1, True),
 	'sumsur':               ('setSum', 0, False),
 	'sum_spl_sur':          ('setSum', 1, True),
+	'ruledtapersur':        ('setRuledTaper', 0, False),
 	'ruled_tpr_spl_sur':    ('setRuledTaper', 1, True),
 	'swepttapersur':		('setSweptTaper', 0, False),
 	'swept_tpr_spl_sur':    ('setSweptTaper', 1, True),
