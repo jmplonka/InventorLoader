@@ -1594,12 +1594,8 @@ class Edge(Topology):
 			self.text, i = getText(entity.chunks, i)
 		self.unknown, i = getUnknownFT(entity.chunks, i)
 		return i
-	def getStart(self):
-		try:
-			return (0, 0, 0) if (self._start is None) else self._start.node.getPosition()
-		except Exception as e:
-			raise Exception("%s,%s - %s" %(self, self._start, e))
-	def getEnd(self):    return (0, 0, 0) if (self._end is None) else self._end.node.getPosition()
+	def getStart(self):  return CENTER if (self._start is None)  else self._start.node.getPosition()
+	def getEnd(self):    return CENTER if (self._end is None)    else self._end.node.getPosition()
 	def getParent(self): return None if (self._owner is None)    else self._owner.node
 	def getCurve(self):  return None if (self._curve is None)    else self._curve.node
 class EdgeTolerance(Edge):
@@ -1757,7 +1753,8 @@ class Curve(Geometry):
 		logWarning(u"    ... '%s' not yet supported - forced to straight-curve!", self.__class__.__name__)
 		if (self.shape is None):
 			# force everything else to straight line!
-			self.shape = createLine(start, end)
+			if (isinstance(start, VEC)):
+				self.shape = createLine(start, end)
 		return self.shape
 class CurveComp(Curve):    # compound curve "compcurv-curve"
 	def __init__(self):
@@ -1791,8 +1788,14 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 	def build(self, start, end):
 		ellipse = createEllipse(self.center, self.normal, self.major, self.ratio)
 		if (start != end):
-			a = ellipse.parameter(start)
-			b = ellipse.parameter(end)
+			if (isinstance(start, VEC)):
+				a = ellipse.parameter(start)
+			else:
+				a = start
+			if (isinstance(end, VEC)):
+				b = ellipse.parameter(end)
+			else:
+				b = end
 			self.range = Intervall(Range('F', a), Range('F', b))
 			ellipse = Part.ArcOfCircle(ellipse, a, b) if (self.ratio == 1) else Part.ArcOfEllipse(ellipse, a, b)
 		return ellipse.toShape()
@@ -2159,6 +2162,10 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, start, end):
+		if (type(start) == float) and (type(end) == float):
+			line = Part.Line(self.root, self.root + self.dir)
+			start = line.value(start)
+			end = line.value(end)
 		return createLine(start, end)
 class Surface(Geometry):
 	def __init__(self, name):
@@ -2945,10 +2952,18 @@ class SurfaceSpline(Surface):
 		p3, i = readBS3Curve(chunks, i)
 		return i
 	def setSum(self, chunks, index, inventor):
+		'''A linear sum of two curves.'''
 		c1, i = readCurve(chunks, index)
 		c2, i = readCurve(chunks, i)
-		vec, i = getVector(chunks, i)
+		p, i = getLocation(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
+		rngU = self.tolerance[2]
+		edge1 = c1.build(rngU.getLowerLimit(), rngU.getUpperLimit())
+		rngV = self.tolerance[3]
+		edge2 = c2.build(rngU.getLowerLimit(), rngU.getUpperLimit())
+		if ((edge1 is not None) and (edge2 is not None)):
+			self.surface = Part.makeRuledSurface(edge1, edge2)
+			self.surface.translate(p)
 		return i
 	def setShadowTaper(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index)

@@ -44,15 +44,13 @@ d) reopen FreeCAD
 
 ### Feature based import
 
-
 ### ACIS (sat) nativ import
-- Blending surfaces are omitted.
+- Blending surfaces are not yet supported.
 - Helix surfaces are also not yet supported.
+- Interpolated curves defined by laws are omitted.
 
 ### STEP conversion import
-- Due to missing support of STEP for blending surfaces these will be omitted.
-- Helix surfaces are also not yet supported.
-- Names for objects are omitted.
+STEP converts the ACIS data from SAT or IPT files. Therefore any limitation is inherited.
 
 ## Status:
 > Alpha!
