@@ -107,7 +107,7 @@ TAG_FLOAT         =  5	 # 32Bit IEEE Float value
 TAG_DOUBLE        =  6	 # 64Bit IEEE Float value
 TAG_UTF8_U8       =  7	 #  8Bit length + UTF8-Char
 TAG_UTF8_U16      =  8	 # 16Bit length + UTF8-Char
-TAG_UTF8_U32      =  9	 # 32Bit length + UTF8-Char
+TAG_UTF8_U32_A    =  9	 # 32Bit length + UTF8-Char
 TAG_TRUE          = 10	 # Logical true value
 TAG_FALSE         = 11	 # Logical false value
 TAG_ENTITY_REF    = 12	 # Entity reference
@@ -116,7 +116,7 @@ TAG_SUBIDENT      = 14	 # Base-Class-Namme
 TAG_SUBTYPE_OPEN  = 15	 # Opening block tag
 TAG_SUBTYPE_CLOSE = 16	 # Closing block tag
 TAG_TERMINATOR    = 17	 # '#' sign
-TAG_UTF8_U32      = 18	 # 32Bit length + UTF8-Char
+TAG_UTF8_U32_B    = 18	 # 32Bit length + UTF8-Char
 TAG_POSITION      = 19	 # 3D-Vector scaled (scaling will be done later because of text file handling!)
 TAG_VECTOR_3D     = 20	 # 3D-Vector normalized
 TAG_ENUM_VALUE    = 21	 # value of an enumeration
@@ -323,6 +323,9 @@ def getLength(chunks, index):
 	return l * getScale(), i
 
 def getText(chunks, index):
+	chunk = chunks[index]
+	if (chunk.tag == 6):
+		return getValue(chunks, index+1)
 	return getValue(chunks, index)
 
 def getEnumByTag(chunks, index, values):
@@ -3137,7 +3140,7 @@ class Attributes(Entity):
 		self._previous, i = getRefNode(entity, i, 'attrib')
 		self._owner, i    = getRefNode(entity, i, None)
 		if (getVersion() > 15.0):
-			i += 17 # skip ???
+			i += 18 # skip ???
 		return i
 	def getNext(self):     return None if (self._next is None)     else self._next.node
 	def getPrevious(self): return None if (self._previous is None) else self._previous.node
@@ -3447,7 +3450,7 @@ class AcisChunk():
 		if (self.tag == TAG_DOUBLE       ): return "%g "     %(self.val)
 		if (self.tag == TAG_UTF8_U8      ): return "@%d %s " %(len(self.val), self.val)
 		if (self.tag == TAG_UTF8_U16     ): return "%s"      %(self.val)
-		if (self.tag == TAG_UTF8_U32     ): return "%s "     %(self.val)
+		if (self.tag == TAG_UTF8_U32_A   ): return "%s "     %(self.val)
 		if (self.tag == TAG_TRUE         ): return "%s "     %(self.val)
 		if (self.tag == TAG_FALSE        ): return "%s "     %(self.val)
 		if (self.tag == TAG_ENTITY_REF   ): return "%s "     %(self.val)
@@ -3456,7 +3459,7 @@ class AcisChunk():
 		if (self.tag == TAG_SUBTYPE_OPEN ): return "%s "     %(self.val)
 		if (self.tag == TAG_SUBTYPE_CLOSE): return "%s "     %(self.val)
 		if (self.tag == TAG_TERMINATOR   ): return "%s\n"    %(self.val)
-		if (self.tag == TAG_UTF8_U32     ): return "@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U32_B   ): return "@%d %s " %(len(self.val), self.val)
 		if (self.tag == TAG_POSITION     ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == TAG_VECTOR_3D    ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == TAG_ENUM_VALUE   ): return "%d "     %(self.val)
@@ -3470,7 +3473,7 @@ class AcisChunk():
 		if (self.tag == TAG_DOUBLE       ): return "%g "   %(self.val)
 		if (self.tag == TAG_UTF8_U8      ): return "'%s' " %(self.val)
 		if (self.tag == TAG_UTF8_U16     ): return "'%s' " %(self.val)
-		if (self.tag == TAG_UTF8_U32     ): return "'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U32_A   ): return "'%s' " %(self.val)
 		if (self.tag == TAG_TRUE         ): return '0x0A '
 		if (self.tag == TAG_FALSE        ): return '0x0B '
 		if (self.tag == TAG_ENTITY_REF   ): return "%s "   %(self.val)
@@ -3479,7 +3482,7 @@ class AcisChunk():
 		if (self.tag == TAG_SUBTYPE_OPEN ): return '{ '
 		if (self.tag == TAG_SUBTYPE_CLOSE): return '} '
 		if (self.tag == TAG_TERMINATOR   ): return '#'
-		if (self.tag == TAG_UTF8_U32     ): return "'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U32_B   ): return "'%s' " %(self.val)
 		if (self.tag == TAG_POSITION     ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == TAG_VECTOR_3D    ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == TAG_ENUM_VALUE   ): return "%d "   %(self.val)
@@ -3560,7 +3563,7 @@ TAG_READER = {
 	TAG_DOUBLE       : getFloat64,      # 64Bit IEEE float value
 	TAG_UTF8_U8      : getStr1,         # 8Bit length + UTF8-Char
 	TAG_UTF8_U16     : getStr2,         # 16Bit length + UTF8-Char
-	TAG_UTF8_U32     : getStr4,         # 32Bit length + UTF8-Char
+	TAG_UTF8_U32_A   : getStr4,         # 32Bit length + UTF8-Char
 	TAG_TRUE         : getTagA,         # False
 	TAG_FALSE        : getTagB,         # True
 	TAG_ENTITY_REF   : getEntityRef,    # Entity reference
@@ -3569,7 +3572,7 @@ TAG_READER = {
 	TAG_SUBTYPE_OPEN : getTagOpen,      # Opening block tag
 	TAG_SUBTYPE_CLOSE: getTagClose,     # Closing block tag
 	TAG_TERMINATOR   : getTagTerminate, # '#' character
-	TAG_UTF8_U32     : getStr4,         # 32Bit length + UTF8-Char
+	TAG_UTF8_U32_B   : getStr4,         # 32Bit length + UTF8-Char
 	TAG_POSITION     : getTagFloats3D,  # Scaling will be done later because of text file handling!
 	TAG_VECTOR_3D    : getTagFloats3D,  # 3D-Vector normalized
 	TAG_ENUM_VALUE   : getUInt32,       # value of an enumeration
