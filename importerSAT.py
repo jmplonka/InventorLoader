@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime, ImportGui
-from importerUtils import logInfo, logWarning, logError, viewAxonometric, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
+from importerUtils import logDebug, logInfo, logWarning, logError, viewAxonometric, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
 from Acis          import AcisRef, AcisEntity, readNextSabChunk
 from Acis2Step     import export
 from math          import fabs
@@ -153,7 +153,6 @@ class Header():
 		self.records = int(tokens[1])
 		self.bodies  = int(tokens[2])
 		self.flags   = int(tokens[3])
-		logInfo(u"Reading ACIS file version %s", self.version)
 		if (self.version >= 2.0):
 			data = file.readline()
 			self.prodId, data = getNextText(data)
@@ -167,9 +166,9 @@ class Header():
 			if (self.version > 24.0):
 				file.readline() # skip T @52 E94NQRBTUCKCWQWFE_HB5PSXH48CGGNH9CMMPASCFADVJGQAYC84
 			Acis.setScale(self.scale)
-			logInfo(u"    product: '%s'", self.prodId)
-			logInfo(u"    version: '%s'", self.prodVer)
-			logInfo(u"    date:    %s",   self.date)
+			logDebug(u"    product: '%s'", self.prodId)
+			logDebug(u"    version: '%s'", self.prodVer)
+			logDebug(u"    date:    %s",   self.date)
 		Acis.setVersion(self.version)
 		return
 	def readBinary(self, data):
@@ -184,9 +183,9 @@ class Header():
 		tag, self.resabs, i  = readNextSabChunk(data, i)
 		tag, self.resnor, i  = readNextSabChunk(data, i)
 		self.version = int2version(self.version)
-		logInfo(u"    product: '%s'", self.prodId)
-		logInfo(u"    version: '%s'", self.prodVer)
-		logInfo(u"    date:    %s",   self.date)
+		logDebug(u"    product: '%s'", self.prodId)
+		logDebug(u"    version: '%s'", self.prodVer)
+		logDebug(u"    date:    %s",   self.date)
 		Acis.setVersion(self.version)
 		return i
 
@@ -283,15 +282,23 @@ def resolveNodes():
 		j = 0
 		for ref in refs:
 			if (Acis.subtypeTableSurfaces.get(ref) is None):
-				if (j < len(srfs)):
-					Acis.addSubtypeNodeSurface(srfs[j], ref)
-					j += 1
+				id = -1
+				n = 0
+				while (j < len(srfs)):
+					s = srfs[j]
+					if ((id == -1) or (s.getIndex() == id)):
+						Acis.addSubtypeNodeSurface(s, ref + n)
+						j += 1
+						n += 1
+						id = s.getIndex()
+					else:
+						break
 	return bodies
 
-_currentColor = (0.749019607843137, 0.749019607843137, 0.749019607843137)
-def setCurrentColor(lump):
-	if (lump is not None):
-		color = lump.getColor()
+_currentColor = (0xBE/255.0, 0xBE/255.0, 0xBE/255.0)
+def setCurrentColor(entity):
+	if (entity is not None):
+		color = entity.getColor()
 		if (color is not None):
 			global _currentColor
 			_currentColor = color
@@ -365,6 +372,8 @@ def buildBody(root, doc, entity):
 	if (entity.index >= 0 ):
 		node = entity.node
 		transform = node.getTransform()
+		setCurrentColor(node)
+
 		for lump in node.getLumps():
 			buildLump(root, doc, lump, transform)
 		for wire in node.getWires():

@@ -161,7 +161,7 @@ def getPropertySetName(properties, path, model):
 		name = path[-1][1:]
 
 	languageCode = properties[KEY_LANGUAGE_CODE] if (KEY_LANGUAGE_CODE in properties) else 1031 # en_EN
-	logAlways(u"\t'%s': (LC = %X)", name, languageCode)
+	logDebug(u"\t'%s': (LC = %X)", name, languageCode)
 
 	if (name not in model.iProperties):
 		model.iProperties[name] = {}

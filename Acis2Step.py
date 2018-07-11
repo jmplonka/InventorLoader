@@ -7,14 +7,13 @@ Acis2Step.py:
 from datetime      import datetime
 from importerUtils import isEqual
 from FreeCAD       import Vector as VEC
-from importerUtils import logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription
+from importerUtils import logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS
 import traceback, inspect, os, Acis, math, re, Part
 
 #############################################################
 # private variables
 #############################################################
 
-_entityId        = 10
 _pointsVertex    = {}
 _pointsCartesian = {}
 _directions      = {}
@@ -27,17 +26,8 @@ _planes          = {}
 _spheres         = {}
 _toroids         = {}
 _curveBSplines   = {}
-_surfaceBSplines = []
-_axisPlacements  = []
-_orientedEdges   = []
-_edgeLoops       = []
-_faceBounds      = []
-_faceOuterBounds = []
-_advancedFaces   = {}
-_representations = []
 _assignments     = {}
-_lumpCounter     = 0
-_currentColor    = None
+_entities        = []
 
 #############################################################
 # private functions
@@ -64,23 +54,23 @@ def _bool2str(v):
 	return '.T.' if v else '.F.'
 
 def _int2str(i):
-	return '%d' %(i)
+	return u"%d" %(i)
 
 def _str2str(s):
 	if (s is None):
 		return '$'
-	return "'%s'" %(s)
+	return u"'%s'" %(s)
 
 def _enum2str(e):
-	return "%r" %(e)
+	return u"%r" %(e)
 
 def _entity2str(e):
 	if (isinstance(e, AnonymEntity)):
-		return '%s' %(e)
+		return u"%s" %(e.__str__())
 	return '*'
 
 def _lst2str(l):
-	return "(%s)" %(",".join([_obj2str(i) for i in l]))
+	return u"(%s)" %(",".join([_obj2str(i) for i in l]))
 
 def _obj2str(o):
 	if (o is None):                   return _str2str(o)
@@ -96,8 +86,62 @@ def _obj2str(o):
 	if (type(o) == list):             return _lst2str(o)
 	if (type(o) == tuple):            return _lst2str(o)
 	raise Exception("Don't know how to convert '%s' into a string!" %(o.__class__.__name__))
+
 def _values3D(v):
 	return [v.x, v.y, v.z]
+
+def _writeStep(file, txt):
+	if (txt is unicode):
+		file.write(txt)
+	else:
+		file.write(txt.encode(ENCODING_FS))
+
+def getColor(entity):
+	color = entity.getColor()
+	if (color is not None):
+		global _colorPalette
+
+		key = "%g,%g,%g" %(color.red, color.green, color.blue)
+		try:
+			rgb = _colorPalette[key]
+		except:
+			rgb = COLOUR_RGB('', color.red, color.green, color.blue)
+			_colorPalette[key] = rgb
+		return rgb
+	return None
+
+def assignColor(color, item, context):
+	global _assignments
+
+	if (color is not None):
+		keyRGB = "%g,%g,%g" %(color.red, color.green, color.blue)
+		representation = MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('', [], context)
+		style = STYLED_ITEM('color', [], item)
+		representation.items.append(style)
+		try:
+			assignment = _assignments[keyRGB]
+		except:
+			assignment = PRESENTATION_STYLE_ASSIGNMENT(color);
+			_assignments[keyRGB] = assignment
+		style.styles = [assignment]
+
+def _createUnit(tolerance):
+	unit = UNIT()
+	uncr = GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT()
+	glob = GLOBAL_UNIT_ASSIGNED_CONTEXT()
+	repr = REPRESENTATION_CONTEXT()
+
+	length = ListEntity(LENGTH_UNIT(None), NAMED_UNIT(AnyEntity()), SI_UNIT('MILLI', 'METRE'))
+	angle1 = ListEntity(NAMED_UNIT(AnyEntity()), PLANE_ANGLE_UNIT(None), SI_UNIT(None, 'RADIAN'))
+	angle2 = ListEntity(NAMED_UNIT(AnyEntity()), SI_UNIT(None, 'STERADIAN'), SOLID_ANGLE_UNIT(None))
+	uncertainty = UNCERTAINTY_MEASURE_WITH_UNIT(tolerance, length)
+
+	uncr.units = (uncertainty,)
+
+	glob.assignements = (length, angle1, angle2)
+
+	unit.entities =  _createGeometricRepresentationList(uncr, glob, repr)
+	return unit
 
 def _createCartesianPoint(fcVec, name = ''):
 	global _pointsCartesian
@@ -144,20 +188,16 @@ def _createVector(fcVec, name = ''):
 	return vec
 
 def _createAxis1Placement(name, aPt, aName, bPt, bName):
-	global _axisPlacements
 	plc = AXIS1_PLACEMENT(name, None, None)
 	plc.location  = _createCartesianPoint(aPt, aName)
 	plc.axis      = _createDirection(bPt, bName)
-	_axisPlacements.append(plc)
 	return plc
 
 def _createAxis2Placement3D(name, aPt, aName, bPt, bName, cPt, cName):
-	global _axisPlacements
 	plc = AXIS2_PLACEMENT_3D(name, None, None, None)
 	plc.location  = _createCartesianPoint(aPt, aName)
 	plc.axis      = _createDirection(bPt, bName)
 	plc.direction = _createDirection(cPt, cName)
-	_axisPlacements.append(plc)
 	return plc
 
 def _createEdgeCurve(p1, p2, curve, sense):
@@ -211,15 +251,14 @@ def _createCurveInt(acisCurve):
 				curve = _curveBSplines[key]
 			except:
 				if (bsc.isRational()):
-					params = (
-						BOUNDED_CURVE(),
-						B_SPLINE_CURVE(name=None, degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False),
-						B_SPLINE_CURVE_WITH_KNOTS(mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED'),
-						CURVE(),
-						GEOMETRIC_REPRESENTATION_ITEM(),
-						RATIONAL_B_SPLINE_CURVE(bsc.getWeights()),
-						REPRESENTATION_ITEM(''))
-					curve = ListEntity(params)
+					p0 = BOUNDED_CURVE()
+					p1 = B_SPLINE_CURVE(name=None, degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False)
+					p2 = B_SPLINE_CURVE_WITH_KNOTS(mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
+					p3 = CURVE()
+					p4 = GEOMETRIC_REPRESENTATION_ITEM()
+					p5 = RATIONAL_B_SPLINE_CURVE(bsc.getWeights())
+					p6 = REPRESENTATION_ITEM('')
+					curve = ListEntity(p0, p1, p2, p3, p4, p5, p6)
 				else:
 					curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False, mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
 				_curveBSplines[key] = curve
@@ -276,11 +315,11 @@ def _createCoEdge(acisCoEdge):
 	acisEdge = acisCoEdge.getEdge()
 	curve    = _createCurve(acisEdge.getCurve())
 	if (curve is not None):
-		p1       = _createVertexPoint(acisEdge.getStart())
-		p2       = _createVertexPoint(acisEdge.getEnd())
-		e        = _createEdgeCurve(p1, p2, curve, (acisEdge.sense == 'forward'))
-		oe = ORIENTED_EDGE('', AnyEntity(), AnyEntity(), e, (acisCoEdge.sense == 'forward'))
-		_orientedEdges.append(oe)
+		oe = ORIENTED_EDGE((acisCoEdge.sense == 'forward'))
+		p1      = _createVertexPoint(acisEdge.getStart())
+		p2      = _createVertexPoint(acisEdge.getEnd())
+		e       = _createEdgeCurve(p1, p2, curve, (acisEdge.sense == 'forward'))
+		oe.edge = e
 		return oe
 	return None
 
@@ -288,7 +327,9 @@ def _createBoundaries(acisLoops):
 	boundaries = []
 	isouter = True
 	for acisLoop in acisLoops:
+		face = FACE_BOUND('', True)
 		loop = EDGE_LOOP('', [])
+		face.wire = loop
 		coedges = acisLoop.getCoEdges()
 		if (len(coedges) > 0):
 			for acisCoEdge in coedges:
@@ -296,10 +337,7 @@ def _createBoundaries(acisLoops):
 				if (edge is not None):
 					loop.edges.append(edge)
 		if (len(loop.edges) > 0):
-			_edgeLoops.append(loop)
-			face = FACE_BOUND('', loop, True)
 			boundaries.append(face)
-			_faceBounds.append(face)
 	return boundaries
 
 def _createSurfaceCone(acisSurface):
@@ -350,7 +388,6 @@ def _createSurfaceSphere(acisSurface):
 		_spheres[key] = sphere
 	return sphere
 def _createSurfaceSpline(acisSurface):
-	global _surfaceBSplines
 	shape = acisSurface.build()
 	if (hasattr(shape, 'Surface')):
 		if (isinstance(shape.Surface, Part.BSplineSurface)):
@@ -360,28 +397,29 @@ def _createSurfaceSpline(acisSurface):
 				p = [_createCartesianPoint(v, 'Ctrl Pts') for v in u]
 				points.append(p)
 			if (bss.isURational()):
-				params = (
-					BOUNDED_SURFACE(),
-					B_SPLINE_SURFACE(bss.UDegree, bss.VDegree, points, 'UNSPECIFIED', bss.isUClosed(), bss.isVClosed(), False),
-					B_SPLINE_SURFACE_WITH_KNOTS(uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED'),
-					GEOMETRIC_REPRESENTATION_ITEM(),
-					RATIONAL_B_SPLINE_SURFACE(bss.getWeights()),
-					REPRESENTATION_ITEM(''),
-					SURFACE())
-				spline = ListEntity(params)
+				p0 = BOUNDED_SURFACE()
+				p1 = B_SPLINE_SURFACE(bss.UDegree, bss.VDegree, points, 'UNSPECIFIED', bss.isUClosed(), bss.isVClosed(), False)
+				p2 = B_SPLINE_SURFACE_WITH_KNOTS(uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
+				p3 = GEOMETRIC_REPRESENTATION_ITEM()
+				p4 = RATIONAL_B_SPLINE_SURFACE(bss.getWeights())
+				p5 = REPRESENTATION_ITEM('')
+				p6 = SURFACE()
+				spline = ListEntity(p0, p1, p2, p3, p4, p5, p6)
 			else:
 				spline = B_SPLINE_SURFACE_WITH_KNOTS(name='', uDegree=bss.UDegree, vDegree=bss.VDegree, points=points, form='UNSPECIFIED', uClosed=bss.isUClosed(), vClosed=bss.isVClosed(), selfIntersecting=False, uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
-			_surfaceBSplines.append(spline)
 			spline.__acis__ = acisSurface
 			return spline
 		if (isinstance(shape.Surface, Part.SurfaceOfRevolution)):
-			node = acisSurface
-			while (node.type == 'ref'):
-				node = node.surface
-			profile   = _createCurve(node.profile)
-			placement = _createAxis1Placement('', node.loc, '', node.dir, '')
-			spline    = SURFACE_OF_REVOLUTION('', profile, placement)
-			_surfaceBSplines.append(spline)
+			srf = shape.Surface
+			spline = SURFACE_OF_REVOLUTION()
+			spline.curve     = _createCurve(node.profile)
+			spline.placement = _createAxis1Placement('', srf.Center, '', srf.Axis, '')
+			return spline
+		if (isinstance(shape.Surface, Part.Cylinder)):
+			srf = shape.Surface
+			spline = CYLINDRICAL_SURFACE()
+			spline.placement = _createAxis2Placement3D('', srf.Center, '', srf.Axis, '', srf.Axis.cross(VEC(0, 1, 0), ''))
+			spline.radius    = shape.Surface.Radius
 			return spline
 	logError(u"Spline-Surface not created for (%s)", acisSurface.__str__()[:-1])
 	return None
@@ -412,99 +450,80 @@ def _createSurface(acisFace):
 		if (acisSurface.minor < 0.0):
 			return surface, (acisFace.sense != 'forward')
 		return surface, (acisFace.sense == 'forward')
+	logError("Can't create surface for Acis.%s!" %(acisSurface.__class__.__name__))
 	return None, False
-def _convertFace(acisFace):
-	global _advancedFaces
-	global _currentColor
-	global _representations
-	global _assignments
 
-	boundaries     = _createBoundaries(acisFace.getLoops())
+def _convertFace(acisFace, representation, parentColor, context):
 	surface, sense = _createSurface(acisFace)
 	if (surface is None):
 		return None
 
-	id = "None" if surface is None else surface.id
-	key = '(%s),%s,%s' %(_lst2str(boundaries), id, _bool2str(sense))
-	try:
-		face = _advancedFaces[key]
-	except:
-		face = ADVANCED_FACE('', boundaries, surface, sense)
-		_advancedFaces[key] = face
-		keyRGB = "%g,%g,%g" %(_currentColor.red, _currentColor.green, _currentColor.blue)
-		try:
-			assignment = _assignments[keyRGB]
-		except:
-			assignment = PRESENTATION_STYLE_ASSIGNMENT(_currentColor);
-			_assignments[keyRGB] = assignment
-		items = [STYLED_ITEM('color', [assignment], face)]
-		_representations.append(MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('', items, _representations[0].context))
+	face = ADVANCED_FACE('', surface, sense)
+	face.bounds = _createBoundaries(acisFace.getLoops())
+
+	color = getColor(acisFace)
+	if (color is None):
+		color = parentColor
+	assignColor(color, face, context)
 
 	return face
 
-def _convertShell(acisShell):
+def _convertShell(acisShell, representation, shape, parentColor):
 	# FIXME how to distinguish between open or closed shell?
-	faces = []
-	for acisFace in acisShell.getFaces():
-		face = _convertFace(acisFace)
-		if (face is not None):
-			faces.append(face)
+	faces = acisShell.getFaces()
 	if (len(faces) > 0):
-		return OPEN_SHELL('', faces)
-	return None
+		color = getColor(acisShell)
+		defColor = parentColor if (color is None) else color
+		shell = OPEN_SHELL('',[])
 
-def getColor(acisLump):
-	color = acisLump.getColor()
-	if (color is not None):
-		global _colorPalette
-
-		key = "%g,%g,%g" %(color.red, color.green, color.blue)
-		try:
-			rgb = _colorPalette[key]
-		except:
-			rgb = COLOUR_RGB(color.red, color.green, color.blue)
-			_colorPalette[key] = rgb
-		return rgb
-	return None
-
-def _convertLump(acisLump, bodies, representation):
-	global _lumpCounter
-	global _colorPalette
-	global _currentColor
-
-	color = getColor(acisLump)
-	if (color is not None):
-		_currentColor = color
-
-	for acisShell in acisLump.getShells():
-		for acisFace in acisShell.getFaces():
-			face = _convertFace(acisFace)
+		for acisFace in faces:
+			face = _convertFace(acisFace, representation, defColor, representation.context)
 			if (face is not None):
-				_lumpCounter += 1
-				lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
-				shell = OPEN_SHELL('',[face])
-				lump.items.append(shell)
-				representation.items.append(lump)
-				bodies.append(lump)
-#		shell = _convertShell(acisShell)
-#		_lumpCounter += 1
-#		lump = SHELL_BASED_SURFACE_MODEL("Lump_%d" % (_lumpCounter), [])
-#		lump.items.append(shell)
-#		representation.items.append(lump)
-#		bodies.append(lump)
+				shell.faces.append(face)
 
-def _convertBody(acisBody, bodies, representation):
-	global _currentColor
+			assignColor(defColor, shell, representation.context)
+		return shell
 
-	color = getColor(acisBody)
-	if (color is not None):
-		_currentColor = color
+	return None
+
+def _convertLump(acisLump, name, appContext, parentColor):
+
+	name = "%s_L_%02d" %(name, acisLump.getIndex())
+	shape = SHAPE_DEFINITION_REPRESENTATION(name, appContext)
+
+	shapeRepresentation = SHAPE_REPRESENTATION()
+	lump = SHELL_BASED_SURFACE_MODEL()
+	shapeRepresentation.items.append(lump)
+	unit = _createUnit(1e-7)
+	shapeRepresentation.context = unit
+
+	shape.representation = shapeRepresentation
+	color = getColor(acisLump)
+	defColor = parentColor if (color is None) else color
+	for acisShell in acisLump.getShells():
+		shell = _convertShell(acisShell, shapeRepresentation, shape, defColor)
+		if (shell is not None):
+			lump.items.append(shell)
+
+	assignColor(defColor, lump, unit)
+
+	return shape
+
+def _convertBody(acisBody, appPrtDef):
+	bodies = []
+
+	name = acisBody.getName()
+	if ((name is None) or (len(name) == 0)):
+		name = "Body_%02d" %(acisBody.getIndex())
 
 	for acisLump in acisBody.getLumps():
-		_convertLump(acisLump, bodies, representation)
+		shape = _convertLump(acisLump, name, appPrtDef.application, getColor(acisBody))
+		if (shape is not None):
+			bodies.append(shape.getProduct())
+
+	return bodies
 
 def _initExport():
-	global _entityId
 	global _pointsVertex
 	global _pointsCartesian
 	global _directions
@@ -517,19 +536,10 @@ def _initExport():
 	global _spheres
 	global _toroids
 	global _curveBSplines
-	global _surfaceBSplines
-	global _axisPlacements
-	global _orientedEdges
-	global _edgeLoops
-	global _faceBounds
-	global _faceOuterBounds
-	global _advancedFaces
-	global _representations
 	global _assignments
 	global _colorPalette
-	global _currentColor
+	global _entities
 
-	_entityId        = 10
 	_pointsVertex    = {}
 	_pointsCartesian = {}
 	_directions      = {}
@@ -542,16 +552,9 @@ def _initExport():
 	_spheres         = {}
 	_toroids         = {}
 	_curveBSplines   = {}
-	_surfaceBSplines = []
-	_axisPlacements  = []
-	_orientedEdges   = []
-	_edgeLoops       = []
-	_faceBounds      = []
-	_advancedFaces   = {}
-	_representations = []
 	_assignments     = {}
 	_colorPalette    = {}
-	_currentColor    = None
+	_entities        = []
 	return
 
 def _setExported(l, b):
@@ -564,14 +567,18 @@ def _setExported(l, b):
 	if (isinstance(l, ExportEntity)):
 		l.isexported = b
 
-def _exportList(step, l):
+def _exportList(l):
+	step = u''
 	if (type(l) == list):
 		d = l
 	else:
 		d = l.values()
-	d.sort()
 	for p in d:
-		step.write(unicode(p.exportSTEP()))
+		step += p.exportSTEP()
+	return step
+
+def _createGeometricRepresentationList(*entities):
+	return (GEOMETRIC_REPRESENTATION_CONTEXT(len(entities)),) + entities
 
 #############################################################
 # global classes
@@ -583,19 +590,19 @@ class E(object):
 	def __str__(self):
 		return self.value
 	def __repr__(self):
-		return '.%s.' %(self.value)
+		return u".%s." %(self.value)
 
 class AnyEntity(object):
 	def __init__(self):
-		return super(AnyEntity, self).__init__()
+		super(AnyEntity, self).__init__()
 	def __repr__(self):
 		return '*'
 
 class AnonymEntity(object):
 	def __init__(self):
-		global _entityId
-		self.id = _entityId
-		_entityId += 1
+		global _entities
+		self.id = len(_entities) + 1
+		_entities.append(self)
 	def _getParameters(self):
 		return []
 	def _getClassName(self):
@@ -610,7 +617,7 @@ class AnonymEntity(object):
 		return self.toString()
 	def __repr__(self):
 		l = [_obj2str(p) for p in self._getParameters()]
-		return "#%d\t= %s(%s)" %(self.id, self._getClassName(), ",".join(l))
+		return u"#%d\t= %s(%s)" %(self.id, self._getClassName(), ",".join(l))
 
 class ExportEntity(AnonymEntity):
 	def __init__(self):
@@ -619,11 +626,11 @@ class ExportEntity(AnonymEntity):
 	def _getClassName(self):
 		return self.__class__.__name__
 	def exportProperties(self):
-		step = ''
-		variables = [i for i in dir(self) if not (inspect.ismethod(getattr(self, i)) or i.startswith('__'))]
+		step = u""
+		variables = self._getParameters()
 		for k in variables:
 			try:
-				a = getattr(self, k)
+				a = k
 				if (isinstance(a, ReferencedEntity)):
 					try:
 						step += a.exportSTEP()
@@ -639,13 +646,13 @@ class ExportEntity(AnonymEntity):
 	def exportSTEP(self):
 		if (self.isexported):
 			return ''
-		step = ""
+		step = u""
 		if (hasattr(self, '__acis__')):
 			if (self.__acis__.type == 'ref'):
-				step += "/*\n * ref = %d\n */\n" %(self.__acis__.ref)
+				step += u"/*\n * ref = %d\n */\n" %(self.__acis__.ref)
 			else:
-				step += "/*\n * $%d\n */\n" %(self.__acis__.getIndex())
-		step += "%r;\n" %(self)
+				step += u"/*\n * $%d\n */\n" %(self.__acis__.getIndex())
+		step += u"%s;\n" %(self.__repr__())
 		step += self.exportProperties()
 		self.isexported = True
 		return step
@@ -666,8 +673,8 @@ class NamedEntity(ReferencedEntity):
 		return super(NamedEntity, self)._getParameters() + [self.name]
 
 class COLOUR_RGB(NamedEntity):
-	def __init__(self, red = 0.749019607843137, green = 0.749019607843137, blue = 0.749019607843137):
-		super(COLOUR_RGB, self).__init__()
+	def __init__(self, name = '', red = 0.749019607843137, green = 0.749019607843137, blue = 0.749019607843137):
+		super(COLOUR_RGB, self).__init__(name)
 		self.red   = red
 		self.green = green
 		self.blue  = blue
@@ -731,21 +738,20 @@ class APPLICATION_PROTOCOL_DEFINITION(NamedEntity):
 		return super(APPLICATION_PROTOCOL_DEFINITION, self)._getParameters() + [self.schema, self.year, self.application]
 
 class PRODUCT_RELATED_PRODUCT_CATEGORY(NamedEntity):
-	def __init__(self, name, description = None, products = []):
+	def __init__(self, name, products):
 		super(PRODUCT_RELATED_PRODUCT_CATEGORY, self).__init__(name)
-		self.description = description if not description is None else name
+		self.description = None
 		self.products = products
 	def _getParameters(self):
 		return super(PRODUCT_RELATED_PRODUCT_CATEGORY, self)._getParameters() + [self.description, self.products]
 
 class PRODUCT(ReferencedEntity):
-	def __init__(self, id, name, description=None, context = APPLICATION_CONTEXT()):
+	def __init__(self, name, context = APPLICATION_CONTEXT()):
 		super(PRODUCT, self).__init__()
-		prdCtx = PRODUCT_CONTEXT(frame=context)
-		self.identifyer = id
+		self.identifyer = name
 		self.name = name
-		self.description = description
-		self.frames = [prdCtx]
+		self.description = ''
+		self.frames = [PRODUCT_CONTEXT('', context, 'mechanical')]
 	def _getParameters(self):
 		return super(PRODUCT, self)._getParameters() + [self.identifyer, self.name, self.description, self.frames]
 
@@ -812,7 +818,7 @@ class ELLIPSE(NamedEntity):
 		return super(ELLIPSE, self)._getParameters() + [self.placement, self.axis1, self.axis2]
 
 class AXIS1_PLACEMENT(NamedEntity):
-	def __init__(self, name, location, axis):
+	def __init__(self, name='', location=None, axis=None):
 		super(AXIS1_PLACEMENT, self).__init__(name)
 		self.location  = location
 		self.axis      = axis
@@ -820,30 +826,32 @@ class AXIS1_PLACEMENT(NamedEntity):
 		return super(AXIS1_PLACEMENT, self)._getParameters() + [self.location, self.axis]
 
 class AXIS2_PLACEMENT_3D(AXIS1_PLACEMENT):
-	def __init__(self, name, location, axis, direction):
+	def __init__(self, name='', location=None, axis=None, direction=None):
 		super(AXIS2_PLACEMENT_3D, self).__init__(name, location, axis)
 		self.direction = direction
 	def _getParameters(self):
 		return super(AXIS2_PLACEMENT_3D, self)._getParameters() + [self.direction]
 
 class ListEntity(ReferencedEntity):
-	def __init__(self, entities):
+	def __init__(self, *entities):
 		super(ListEntity, self).__init__()
 		self.entities = entities
 	def _getClassName(self):
 		return ""
 	def _getParameters(self):
-		return super(ListEntity, self)._getParameters() + [self.entities]
+		params = super(ListEntity, self)._getParameters() + [self.entities]
+		params.sort()
+		return params
 	def exportSTEP(self):
 		if (self.isexported):
 			return ''
-		step = ""
+		step = u""
 		if (hasattr(self, '__acis__')):
 			if (self.__acis__.type == 'ref'):
-				step += "/*\n * ref = %d\n */\n" %(self.__acis__.ref)
+				step += u"/*\n * ref = %d\n */\n" %(self.__acis__.ref)
 			else:
-				step += "/*\n * $%d\n */\n" %(self.__acis__.getIndex())
-		step += "%r;\n" %(self)
+				step += u"/*\n * $%d\n */\n" %(self.__acis__.getIndex())
+		step += u"%r;\n" %(self)
 		for e in self.entities:
 			try:
 				if (isinstance(e, ExportEntity)):
@@ -857,18 +865,17 @@ class ListEntity(ReferencedEntity):
 		self.isexported = True
 		return step
 	def __repr__(self):
-		return "#%d\t= (%s)" %(self.id, " ".join(["%s" % (e.toString()) for e in self.entities]))
+		return u"#%d\t= (%s)" %(self.id, " ".join(["%s" % (e.toString()) for e in self.entities]))
 
 class NamedListEntity(ListEntity):
 	def __init__(self, entities):
-		return super(NamedListEntity, self).__init__(entities)
-	def _getClassName(self):
-		return super(ListEntity, self)._getClassName()
+		super(NamedListEntity, self).__init__(entities)
 
 class NAMED_UNIT(ExportEntity):
 	def __init__(self, dimensions):
 		super(NAMED_UNIT, self).__init__()
 		self.dimensions = dimensions
+		self.isexported = True
 	def _getParameters(self):
 		l = super(NAMED_UNIT, self)._getParameters()
 		if (self.dimensions is not None):
@@ -916,10 +923,12 @@ class PLANE_ANGLE_MEASURE(ValueObject):
 class GEOMETRIC_REPRESENTATION_CONTEXT(ValueObject):
 	def __init__(self, value):
 		super(GEOMETRIC_REPRESENTATION_CONTEXT, self).__init__(value)
+		self.isexported = True
 
 class LENGTH_MEASURE(ValueObject):
 	def __init__(self, value):
 		super(LENGTH_MEASURE, self).__init__(value)
+		self.isexported = True
 
 class UNCERTAINTY_MEASURE_WITH_UNIT(ReferencedEntity):
 	def __init__(self, value, length):
@@ -932,19 +941,18 @@ class UNCERTAINTY_MEASURE_WITH_UNIT(ReferencedEntity):
 		return super(UNCERTAINTY_MEASURE_WITH_UNIT, self)._getParameters() + [self.value, self.length, self.name, self.description]
 
 class GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(ExportEntity):
-	def __init__(self, units):
+	def __init__(self):
 		super(GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT, self).__init__()
-		if (type(units) == tuple) or (type(units) == list):
-			self.units = units
-		else:
-			self.units = (units,)
+		self.units = []
+		self.isexported = True
 	def _getParameters(self):
 		return super(GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT, self)._getParameters() + [self.units]
 
 class GLOBAL_UNIT_ASSIGNED_CONTEXT(ExportEntity):
-	def __init__(self, assignements):
+	def __init__(self):
 		super(GLOBAL_UNIT_ASSIGNED_CONTEXT, self).__init__()
-		self.assignements = assignements
+		self.assignements = []
+		self.isexported = True
 	def _getParameters(self):
 		return super(GLOBAL_UNIT_ASSIGNED_CONTEXT, self)._getParameters() + [self.assignements]
 
@@ -953,6 +961,7 @@ class REPRESENTATION_CONTEXT(ExportEntity):
 		super(REPRESENTATION_CONTEXT, self).__init__()
 		self.identifyer = identifyer
 		self.type = t
+		self.isexported = True
 	def _getParameters(self):
 		return super(REPRESENTATION_CONTEXT, self)._getParameters() + [self.identifyer, self.type]
 
@@ -1032,39 +1041,41 @@ class APPLIED_DATE_AND_TIME_ASSIGNMENT(ReferencedEntity):
 		return super(APPLIED_DATE_AND_TIME_ASSIGNMENT, self)._getParameters() + [self.datetime, self.role, self.products]
 
 class PRODUCT_DEFINITION_SHAPE(NamedEntity):
-	def __init__(self, name = '', description=None, definition=None):
-		super(PRODUCT_DEFINITION_SHAPE, self).__init__(name)
-		self.description = description
-		self.definition  = definition
+	def __init__(self, name, context):
+		super(PRODUCT_DEFINITION_SHAPE, self).__init__()
+		self.description = ''
+		self.definition  = PRODUCT_DEFINITION(name, context)
 	def _getParameters(self):
 		return super(PRODUCT_DEFINITION_SHAPE, self)._getParameters() + [self.description, self.definition]
 
 class SHAPE_REPRESENTATION(NamedEntity):
-	def __init__(self, name = '', item=None, value=0.01, globalLength=None, globalSolidAngle=None, globalPlaneAngle=None):
-		super(SHAPE_REPRESENTATION, self).__init__(name)
-		self.items = [item]
-		uncertainty = UNCERTAINTY_MEASURE_WITH_UNIT(value, globalLength)
-		geom = GEOMETRIC_REPRESENTATION_CONTEXT(3)
-		uncr = GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(uncertainty)
-		glob = GLOBAL_UNIT_ASSIGNED_CONTEXT((globalLength, globalPlaneAngle, globalSolidAngle))
-		repr = REPRESENTATION_CONTEXT()
-		self.context = UNIT((geom, uncr, glob, repr));
+	def __init__(self):
+		super(SHAPE_REPRESENTATION, self).__init__('')
+		self.items = []
+		self.context = None
 	def _getParameters(self):
 		return super(SHAPE_REPRESENTATION, self)._getParameters() + [self.items, self.context]
 
+class MANIFOLD_SURFACE_SHAPE_REPRESENTATION(SHAPE_REPRESENTATION):
+	def __init__(self):
+		super(MANIFOLD_SURFACE_SHAPE_REPRESENTATION, self).__init__()
+
 class SHAPE_DEFINITION_REPRESENTATION(ReferencedEntity):
-	def __init__(self, product, representation):
+	def __init__(self, name, context):
 		super(SHAPE_DEFINITION_REPRESENTATION, self).__init__()
-		self.definition = PRODUCT_DEFINITION_SHAPE('', None, product)
-		self.representation = representation
+		self.definition = PRODUCT_DEFINITION_SHAPE(name, context)
+		self.representation = None
 	def _getParameters(self):
 		return super(SHAPE_DEFINITION_REPRESENTATION, self)._getParameters() + [self.definition, self.representation]
-
+	def getProduct(self):
+		return self.definition.definition.formation.product
+	def getAppContext(self):
+		return self.definition.definition.frame.context
 class PRODUCT_DEFINITION_FORMATION(NamedEntity):
-	def __init__(self, name = '', description = None, product = None):
-		super(PRODUCT_DEFINITION_FORMATION, self).__init__(name)
-		self.description = description
-		self.product     = product
+	def __init__(self, name, context):
+		super(PRODUCT_DEFINITION_FORMATION, self).__init__('')
+		self.description = ''
+		self.product     = PRODUCT(name, context)
 	def _getParameters(self):
 		return super(PRODUCT_DEFINITION_FORMATION, self)._getParameters() + [self.description, self.product]
 
@@ -1077,11 +1088,11 @@ class PRODUCT_DEFINITION_CONTEXT(NamedEntity):
 		return super(PRODUCT_DEFINITION_CONTEXT, self)._getParameters() + [self.context, self.stage]
 
 class PRODUCT_DEFINITION(NamedEntity):
-	def __init__(self, name, description, product, context):
-		super(PRODUCT_DEFINITION, self).__init__(name)
-		self.description = description
-		self.formation   = PRODUCT_DEFINITION_FORMATION(product = product)
-		self.frame       = PRODUCT_DEFINITION_CONTEXT(context = context)
+	def __init__(self, name, context):
+		super(PRODUCT_DEFINITION, self).__init__('design')
+		self.description = ''
+		self.formation   = PRODUCT_DEFINITION_FORMATION(name, context)
+		self.frame       = PRODUCT_DEFINITION_CONTEXT('part definition', context, 'design')
 	def _getParameters(self):
 		return super(PRODUCT_DEFINITION, self)._getParameters() + [self.description, self.formation, self.frame]
 
@@ -1125,9 +1136,9 @@ class OPEN_SHELL(NamedEntity):
 		return super(OPEN_SHELL, self)._getParameters() + [self.faces]
 
 class SHELL_BASED_SURFACE_MODEL(NamedEntity):
-	def __init__(self, name, items):
-		super(SHELL_BASED_SURFACE_MODEL, self).__init__(name)
-		self.items = items
+	def __init__(self, ):
+		super(SHELL_BASED_SURFACE_MODEL, self).__init__('')
+		self.items = []
 	def _getParameters(self):
 		return super(SHELL_BASED_SURFACE_MODEL, self)._getParameters() + [self.items]
 
@@ -1154,9 +1165,9 @@ class EDGE_LOOP(NamedEntity):
 		return super(EDGE_LOOP, self)._getParameters() + [self.edges]
 
 class FACE_BOUND(NamedEntity):
-	def __init__(self, name, wire, bound):
+	def __init__(self, name, bound):
 		super(FACE_BOUND, self).__init__(name)
-		self.wire = wire
+		self.wire = []
 		self.bound = bound
 	def _getParameters(self):
 		return super(FACE_BOUND, self)._getParameters() + [self.wire, self.bound]
@@ -1170,9 +1181,9 @@ class FACE_OUTER_BOUND(NamedEntity):
 		return super(FACE_OUTER_BOUND, self)._getParameters() + [self.wire, self.bound]
 
 class ADVANCED_FACE(NamedEntity):
-	def __init__(self, name, bounds, surface, bound):
+	def __init__(self, name, surface, bound):
 		super(ADVANCED_FACE, self).__init__(name)
-		self.bounds    = bounds
+		self.bounds  = []
 		self.surface = surface
 		self.bound   = bound
 	def _getParameters(self):
@@ -1220,11 +1231,11 @@ class TOROIDAL_SURFACE(NamedEntity):
 		return super(TOROIDAL_SURFACE, self)._getParameters() + [self.placement, self.major, self.minor]
 
 class ORIENTED_EDGE(NamedEntity):
-	def __init__(self, name, start, end, edge, orientation):
-		super(ORIENTED_EDGE, self).__init__(name)
-		self.start       = start
-		self.end         = end
-		self.edge        = edge
+	def __init__(self, orientation):
+		super(ORIENTED_EDGE, self).__init__('')
+		self.start       = AnyEntity()
+		self.end         = AnyEntity()
+		self.edge        = None
 		self.orientation = orientation
 	def _getParameters(self):
 		return super(ORIENTED_EDGE, self)._getParameters() + [self.start, self.end, self.edge, self.orientation]
@@ -1287,17 +1298,15 @@ class B_SPLINE_CURVE_WITH_KNOTS(B_SPLINE_CURVE):
 		if (self.form2            is not None): l.append(self.form2)
 		return l
 
-class SURFACE_OF_REVOLUTION(ReferencedEntity):
+class SURFACE_OF_REVOLUTION(NamedEntity):
 	def __init__(self, name=None, curve=None, position=None):
-		super(SURFACE_OF_REVOLUTION, self).__init__()
-		self.name      = name
+		super(SURFACE_OF_REVOLUTION, self).__init__('')
 		self.curve     = curve
-		self.positions = position
+		self.placement = position
 	def _getParameters(self):
 		l = super(SURFACE_OF_REVOLUTION, self)._getParameters()
-		if (self.name      is not None): l.append(self.name)
 		if (self.curve     is not None): l.append(self.curve)
-		if (self.positions is not None): l.append(self.positions)
+		if (self.placement is not None): l.append(self.placement)
 		return l
 
 class BOUNDED_SURFACE(ReferencedEntity):
@@ -1352,11 +1361,11 @@ class B_SPLINE_SURFACE_WITH_KNOTS(ReferencedEntity):
 
 class GEOMETRIC_REPRESENTATION_ITEM(ReferencedEntity):
 	def __init__(self):
-		return super(GEOMETRIC_REPRESENTATION_ITEM, self).__init__()
+		super(GEOMETRIC_REPRESENTATION_ITEM, self).__init__()
 
 class SURFACE(ReferencedEntity):
 	def __init__(self):
-		return super(SURFACE, self).__init__()
+		super(SURFACE, self).__init__()
 
 class RATIONAL_B_SPLINE_SURFACE(ReferencedEntity):
 	def __init__(self, weights):
@@ -1395,7 +1404,6 @@ def export(filename, satHeader, satBodies):
 	orga   = ''
 	proc   = 'InventorImporter 0.9'
 	auth   = ''
-	bodies = []
 
 	_initExport()
 
@@ -1406,7 +1414,7 @@ def export(filename, satHeader, satBodies):
 	name, x = os.path.splitext(f)
 	path = path.replace('\\', '/')
 
-	# Dump subtype-table for the surfaces
+	# Dump subtype-table for the surfaces (debugging purposes)
 	subpath = "%s/%s" %(path,name)
 	if (not os.path.exists(subpath)):
 		os.makedirs(subpath)
@@ -1417,148 +1425,33 @@ def export(filename, satHeader, satBodies):
 				s = s[0:-1]
 			fp.write("%d\t%r\n" %(i, s))
 
-	glbLength     = UNIT((LENGTH_UNIT(None), NAMED_UNIT(AnyEntity()), SI_UNIT('MILLI','METRE')))
-	glbAngleSolid = UNIT((NAMED_UNIT(AnyEntity()), SI_UNIT(None,'STERADIAN'), SOLID_ANGLE_UNIT(None)))
-	dimExp        = DIMENSIONAL_EXPONENTS()
-	pamwu         = PLANE_ANGLE_MEASURE_WITH_UNIT(0.01745329252)
-	glbAnglePlane = UNIT((CONVERSION_BASED_UNIT('degree', pamwu), NAMED_UNIT(dimExp), PLANE_ANGLE_UNIT(None)))
-
-	l =	UNCERTAINTY_MEASURE_WITH_UNIT(satHeader.resabs, glbLength)
-	u = UNIT((GEOMETRIC_REPRESENTATION_CONTEXT(3), GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(l), GLOBAL_UNIT_ASSIGNED_CONTEXT((glbLength, glbAngleSolid, glbAnglePlane)), REPRESENTATION_CONTEXT()))
-	if (len(bodies) > 0):
-		aga = APPLIED_GROUP_ASSIGNMENT(bodies)
-	else:
-		aga = l
-
-	mdgpr = MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('', [], u)
-	_representations.append(mdgpr)
-
-	appDatTimAss = APPLIED_DATE_AND_TIME_ASSIGNMENT(dt)
 	appPrtDef    = APPLICATION_PROTOCOL_DEFINITION()
-	prd          = PRODUCT(name, name, desc, appPrtDef.application)
-	prdDef       = PRODUCT_DEFINITION(name, name, prd, appPrtDef.application)
-
-	placement    = _createAxis2Placement3D('placement', VEC(0,0,0), '', VEC(0,0,1), 'axis', VEC(1,0,0), 'refdir')
-	shpRpr       = SHAPE_REPRESENTATION('', placement, 0.01, glbLength, glbAngleSolid, glbAnglePlane)
-	appDatTimAss.products.append(prdDef)
-	advShpRpr    = ADVANCED_BREP_SHAPE_REPRESENTATION('', [], shpRpr.context)
-	shpRepRel    = SHAPE_REPRESENTATION_RELATIONSHIP('SRR', 'None', shpRpr, advShpRpr)
-
-	shpDefRep    = SHAPE_DEFINITION_REPRESENTATION(prdDef, shpRpr)
-
-	prdRelPRdCat = PRODUCT_RELATED_PRODUCT_CATEGORY(name, name, [prd])
-
-	global _currentColor
-	_currentColor = COLOUR_RGB(0.749019607843137,0.749019607843137,0.749019607843137)
-	keyRGB = "%g,%g,%g" %(_currentColor.red, _currentColor.green, _currentColor.blue)
-	_assignments[keyRGB] = PRESENTATION_STYLE_ASSIGNMENT(_currentColor)
+	bodies = []
 	for body in satBodies:
-		_convertBody(body.node, bodies, advShpRpr)
-
-#	_setExported(glbLength, True)
-#	_setExported(glbAngleSolid, True)
-#	_setExported(glbAnglePlane, True)
-#	_setExported(shpRepRel, True)
-#	_setExported(prdRelPRdCat, True)
-#	_setExported(appPrtDef, True)
-#	_setExported(shpDefRep, True)
-#	_setExported(appDatTimAss, True)
-#	_setExported(prsStyAss[0], True)
-#	_setExported(pamwu, True)
-#	_setExported(prdDef, True)
-#
-#	_setExported(_pointsCartesian, True)
-#	_setExported(_directions, True)
-#	_setExported(_axisPlacements, True)
-#	_setExported(_orientedEdges, True)
-#	_setExported(_edgeCurves, True)
-#	_setExported(_pointsVertex, True)
-#	_setExported(_lines, True)
-#	_setExported(_ellipses, True)
-#	_setExported(_edgeLoops, True)
-#	_setExported(_faceBounds, True)
-#	_setExported(_vectors, True)
-#	_setExported(_cones, True)
-#	_setExported(_planes, True)
-#	_setExported(_spheres, True)
-#	_setExported(_toroids, True)
-#	_setExported(_curveBSplines, True)
-#	_setExported(_surfaceBSplines, False)
-#	_setExported(_faceOuterBounds, True)
-#	_setExported(_advancedFaces, True)
+		bodies += _convertBody(body.node, appPrtDef)
+	PRODUCT_RELATED_PRODUCT_CATEGORY('part', bodies)
 
 	stepfile = "%s/%s.step" %(path, name)
-	with open(stepfile, 'w') as step:
-		step.write("ISO-10303-21;\n")
-		step.write("HEADER;\n")
-		step.write("/* Generated by software containing ST-Developer\n")
-		step.write(" * from STEP Tools, Inc. (www.steptools.com) \n")
-		step.write(" */\n")
-		step.write("\n");
-		step.write("FILE_DESCRIPTION(\n")
-		step.write("/* description */ (''),\n")
-		step.write("/* implementation_level */ '2;1');\n")
-		step.write("\n");
-		step.write("FILE_NAME(\n")
-		step.write("/* name */ '%s',\n" %(stepfile))
-		step.write("/* time_stamp */ '%s',\n" %(dt.strftime("%Y-%m-%dT%H:%M:%S")))
-		step.write("/* author */ ('%s'),\n" %(user))
-		step.write("/* organization */ ('%s'),\n" %(orga))
-		step.write("/* preprocessor_version */ '%s',\n" %(proc))
-		step.write("/* originating_system */ 'Autodesk Inventor 2017',\n")
-		step.write("/* authorisation */ '%s');\n" %(auth))
-		step.write("\n");
-		step.write("FILE_SCHEMA (('AUTOMOTIVE_DESIGN { 1 0 10303 214 3 1 1 }'));\n")
-		step.write("ENDSEC;\n")
-		step.write("\n");
-		step.write("DATA;\n")
-		step.write(mdgpr.exportSTEP())
-		step.write(aga.exportSTEP())
+	step = u"ISO-10303-21;\n"
+	step += u"HEADER;\n"
+	step += u"FILE_DESCRIPTION(('FreeCAD Model'),'2;1');\n"
+	step += u"FILE_NAME('%s'," %(stepfile)
+	step += u"'%s'," %(dt.strftime("%Y-%m-%dT%H:%M:%S"))
+	step += u"('%s')," %(user.decode('utf8'))
+	step += u"('%s')," %(orga)
+	step += u"'%s'," %(proc)
+	step += u"'FreeCAD','%s');\n" %(auth)
+	step += u"FILE_SCHEMA (('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1}'));\n"
+	step += u"ENDSEC;\n"
+	step += u"\n"
+	step += u"DATA;\n"
 
-#		_exportList(step, _faceOuterBounds)
-#		_exportList(step, _toroids)
-#		_exportList(step, _planes)
-#		_exportList(step, _ellipses)
-#		_exportList(step, _spheres)
-#		_exportList(step, _faceBounds)
-#		_exportList(step, _edgeLoops)
-#		_exportList(step, _lines)
-#		_exportList(step, _vectors)
-#		_exportList(step, _curveBSplines)
-#		_exportList(step, _pointsVertex)
-#		_exportList(step, _edgeCurves)
-#		_exportList(step, _orientedEdges)
-#		_exportList(step, _cones)
-#		_exportList(step, _surfaceBSplines)
-#		_exportList(step, _advancedFaces)
-#		appDatTimAss.isexported = False
-		step.write(appDatTimAss.exportSTEP())
-#		_exportList(step, _axisPlacements)
-#		_exportList(step, _directions)
-#		_exportList(step, _pointsCartesian)
+	step += _exportList(_entities)
 
-#		glbLength.isexported = False
-		step.write(glbLength.exportSTEP())
-#		glbAngleSolid.isexported = False
-		step.write(glbAngleSolid.exportSTEP())
-		step.write(dimExp.exportSTEP())
-#		glbAnglePlane.isexported = False
-		step.write(glbAnglePlane.exportSTEP())
-#		pamwu.isexported = False
-		step.write(pamwu.exportSTEP())
-#		shpDefRep.isexported = False
-		step.write(shpDefRep.exportSTEP())
-#		shpRepRel.isexported = False
-		step.write(shpRepRel.exportSTEP())
-#		prdRelPRdCat.isexported = False
-		step.write(prdRelPRdCat.exportSTEP())
-#		appPrtDef.isexported = False
-		step.write(appPrtDef.exportSTEP())
-#		prdDef.isexported = False
-		step.write(prdDef.exportSTEP())
-		_exportList(step, _representations)
-		_exportList(step, _assignments)
-		step.write("ENDSEC;\n")
-		step.write("END-ISO-10303-21;")
-	logAlways(u"File written to '%s'.", stepfile)
+	step += u"ENDSEC;\n"
+	step += u"END-ISO-10303-21;"
+
+	with open(stepfile, 'w') as stepFile:
+		_writeStep(stepFile, step)
+	logAlways(u"    File written to '%s'.", stepfile)
 	return stepfile

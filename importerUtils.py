@@ -727,7 +727,7 @@ def setFileVersion(ole):
 		_fileVersion = int(float(v))
 		if (_fileVersion == 134): # early version of 2010
 			_fileVersion = 2010
-	logAlways(u"Autodesk Inventor %s (Build %d) file" %(_fileVersion, b))
+	logDebug(u"Autodesk Inventor %s (Build %d) file" %(_fileVersion, b))
 
 def getInventorFile():
 	global _inventor_file

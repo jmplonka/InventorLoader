@@ -32,14 +32,14 @@
 
 # SAT files
 ## Incomplete Features
-	* spline-surface - missing creation of Helix surface.
-	* references - sometime references can't be resolved
+	* spline-surface - missing creation of Helix surface, VBL_SURF.
+	* references - sometime references can't be resolved :(
 
 ## missing Features
 	* mesh-surfaces
 	* compu-, int-int-curves
 
 ## unsupported
-	* attributes
+	* attributes (except colors)
 	* annotations
 	* splines other than nurbs or nubs (e.g. "summary" or "none")

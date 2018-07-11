@@ -17,7 +17,7 @@ from importerFreeCAD   import FreeCADImporter, createGroup
 from importerSAT       import readEntities, importModel, convertModel
 
 def ReadIgnorable(fname, data):
-	logInfo(u"\t>>> IGNORED: %r", '/'.join(fname))
+	logDebug(u"\t>>> IGNORED: %r", '/'.join(fname))
 #	logDebug(HexAsciiDump(data))
 	return len(data)
 

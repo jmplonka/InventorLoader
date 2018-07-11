@@ -66,7 +66,7 @@ def dumpSat(node):
 	filename = "%s\%04X.sat" %(folder, node.index)
 	header, entities = node.get('SAT')
 	content = '%s' %(header)
-	content += ''.join(['%s' %(ntt) for ntt in entities])
+	content += ''.join(['%s' %(ntt.getStr()) for ntt in entities if ntt.index >= 0])
 	with open(filename, 'w') as sat:
 		sat.write(content)
 		sat.write("End-of-ACIS-data\n")
@@ -489,7 +489,7 @@ class SegmentReader(object):
 
 		hdrSize = 5 if (vers > 2014) else 4
 
-		logInfo(u">I0002: Reading %s binary buffer ...", seg.name)
+		logDebug(u">D0002: Reading %s binary buffer ...", seg.name)
 
 		try:
 			i = 4

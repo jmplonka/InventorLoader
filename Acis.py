@@ -5,10 +5,10 @@ Acis.py:
 Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) files.
 '''
 
-import traceback, FreeCAD, Part, Draft
+import traceback, FreeCAD, Part, Draft, os, json, re
 from importerUtils              import logWarning, logError,logAlways, isEqual, isEqual1D, getUInt8, getUInt16, getSInt16, getSInt32, getFloat32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
-from math                       import pi, fabs, degrees, asin, tan, atan
+from math                       import pi, fabs, degrees, asin, tan, atan2
 from BOPTools.GeneralFuseResult import GeneralFuseResult
 
 __author__     = 'Jens M. Plonka'
@@ -83,6 +83,16 @@ ENTIY_VERSIONS = {
 	'WIREBOOL_VERSION': 1.7,
 }
 
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colors.json")) as colorPalette:
+	_colorNames = json.load(colorPalette)
+	for n in _colorNames:
+		if (not n.startswith('_')):
+			rgb =  _colorNames[n]
+			r   = int(rgb[1:3], 0x10) / 255.0
+			g   = int(rgb[3:5], 0x10) / 255.0
+			b   = int(rgb[5:7], 0x10) / 255.0
+			_colorNames[n] = (r, g, b)
+
 MIN_0   = 0.0
 MIN_PI  = -pi
 MIN_PI2 = -pi / 2
@@ -156,6 +166,7 @@ version = 7.0
 subtypeTableCurves = []
 subtypeTablePCurves = []
 subtypeTableSurfaces = {}
+invSubtypeTableSurfaces = {}
 
 references = {}
 
@@ -168,17 +179,21 @@ def addNode(node):
 		if (i > 0):
 			subtype = subtype[0:i]
 
-def addSubtypeNodeCurve(node):
+def addSubtypeNodeCurve(curve):
 	global subtypeTableCurves
-	subtypeTableCurves.append(node)
+	subtypeTableCurves.append(curve)
 
-def addSubtypeNodePCurve(node):
+def addSubtypeNodePCurve(pcurve):
 	global subtypeTablePCurves
-	subtypeTablePCurves.append(node)
+	subtypeTablePCurves.append(pcurve)
 
-def addSubtypeNodeSurface(node, index):
+def addSubtypeNodeSurface(surface, index):
 	global subtypeTableSurfaces
-	subtypeTableSurfaces[index] = node
+	global invSubtypeTableSurfaces
+
+	entityID = surface.getIndex()
+	subtypeTableSurfaces[index] = surface
+	invSubtypeTableSurfaces[entityID] = index
 
 def getSubtypeNodeCurve(index):
 	global subtypeTableCurves
@@ -403,7 +418,9 @@ def getCircleSmoothing(chunks, index):
 
 def getVarRadius(chunks, index):
 	radius, i = getEnumByValue(chunks, index, VAR_RADIUS)
-	return radius.lower(), i
+	if (type(radius) == str):
+		return radius.lower(), i
+	return radius, i
 
 def getVarChamfer(chunks, index):
 	chamfer, i = getEnumByValue(chunks, index, VAR_CHAMFER)
@@ -1054,7 +1071,10 @@ def getBlendValues(chunks, index):
 		a, i   = getFloats(chunks, i, 1)
 		s, i   = getLength(chunks, i)
 		bsc, i = readBS2Curve(chunks, i)
-		r, i   = getFloat(chunks, i)
+		if (type(chunks[i].val) == float):
+			r, i   = getFloat(chunks, i)
+		else:
+			r, i   = getValue(chunks, i)
 		return (name, c, t, a, [s], bsc, r, None), i
 	if (name == 'const'):
 		a, i   = getFloats(chunks, i, 2)
@@ -1063,7 +1083,37 @@ def getBlendValues(chunks, index):
 		ct, i  = getChamferType(chunks, i)  # 0x0A = radius, 0x0B = const
 		bv, i  = getBlendValues(chunks, i)  # two_ends ...
 		return (name, c, t, a, [s], bsc, r, (vc, ct, bv)), i
+	if (name == 'interp'):
+		a, i   = getFloats(chunks, i, 2)
+		bsc, i = readBS2Curve(chunks, i)
+		n, i   = getInteger(chunks, i)
+		m, i   = getInteger(chunks, i)
+		r, i   = getFloat(chunks, i)
+		a1, i  = getFloats(chunks, i, 3)
+		v1, i  = getLocation(chunks, i)
+		d1, i  = getVector(chunks, i)
+		r1, i  = getFloat(chunks, i)
+		a2, i  = getFloats(chunks, i, 3)
+		v2, i  = getLocation(chunks, i)
+		d2, i  = getVector(chunks, i)
+		r2, i  = getFloat(chunks, i)
+		return (name, c, t, a, [s], bsc, r, [(a1, v1, d1, r1),(a2, v2, d2, r2)]), i
 	raise Exception("Unknown BlendValue %s!" %(name))
+
+def addSurfaceDefs(surface, defs):
+	global invSubtypeTableSurfaces
+
+	if (isinstance(surface, SurfaceSpline)):
+		if (not hasattr(surface, 'ref')):
+			if (surface.getIndex() not in invSubtypeTableSurfaces):
+				defs.append(surface)
+		for srf in surface.surfaces:
+			addSurfaceDefs(srf, defs)
+
+def addCurveSurfaceDefs(curve, defs):
+	srf = getattr(curve, 'surface', None)
+	addSurfaceDefs(srf, defs)
+
 class VBL():
 	def __init__(self):
 		self.t  = ''
@@ -1150,13 +1200,13 @@ class Helix():
 	def	getPitch(self):
 		return self.dirPitch.Length
 	def	getHeight(self):
-		assert (isEqual1D(self.radAngles.getLowerLimit(), 0)), 'Helix: start angle not supported!'
-		return self.getPitch() * self.radAngles.getUpperLimit() / 2.0 / pi
+		angle = self.radAngles.getLimit()
+		return self.getPitch() * angle / 2.0 / pi
 	def	getRadius(self):
 		assert (isEqual1D(self.dirMajor.Length, self.dirMinor.Length)), 'Helix: elliptical helix not supported!'
 		return self.dirMajor.Length
 	def	getApexAngle(self):
-		radApexAngle = atan(self.facApex * self.getRadius() / self.getPitch())
+		radApexAngle = atan2(self.facApex * self.getRadius(), self.getPitch())
 		return degrees(radApexAngle)
 	def isLeftHanded(self):
 		angle = self.vecAxis.getAngle(self.dirMajor.cross(self.dirMinor))
@@ -1167,6 +1217,9 @@ class Helix():
 		radius     = self.getRadius()
 		apexAngle  = self.getApexAngle()
 		leftHanded = self.isLeftHanded()
+		if (height == 0):
+			logError('Helix: spiral not supported!')
+			return None
 		wire = Part.makeLongHelix(pitch, height, radius, apexAngle, leftHanded)
 		angle = degrees(DIR_Z.getAngle(self.vecAxis))
 		if (angle != 0):
@@ -1242,8 +1295,10 @@ class Entity(object):
 		return None
 
 	def getColor(self):
-		return self.getAttribute('AttribStRgbColor')
-
+		color = self.getAttribute('AttribStRgbColor')
+		if color is None:
+			color = self.getAttribute('AttribNamingMatchingNMxFFColorEntity')
+		return color
 class EyeRefinement(Entity):
 	def __init__(self): super(EyeRefinement, self).__init__()
 class VertexTemplate(Entity):
@@ -1497,17 +1552,18 @@ class Face(Topology):
 		return refs
 	def getSurfaceDefinitions(self):
 		defs = []
-		srf  = self.getSurface()
-		if (isinstance(srf, SurfaceSpline)):
-			if (not hasattr(srf, 'ref')):
-				defs.append(srf)
-			for s in srf.surfaces:
-				if (not hasattr(s, 'ref')):
-					defs.append(s)
+		addSurfaceDefs(self.getSurface(), defs)
 		loop = self.getLoop()
 		while (loop is not None):
 			defs += loop.getSurfaceDefinitions()
 			loop = loop.getNext()
+		attr = self.getAttribute('AttribNamingMatchingNMxFeatureOrientation')
+		entity = getattr(attr, 'ref1', None)
+		if (entity is not None):
+			addCurveSurfaceDefs(entity.node, defs)
+		entity = getattr(attr, 'ref2', None)
+		if (entity is not None):
+			addCurveSurfaceDefs(entity.node, defs)
 		defs.sort()
 		return defs
 class Loop(Topology):
@@ -1555,20 +1611,10 @@ class Loop(Topology):
 	def getSurfaceDefinitions(self):
 		defs = []
 		for ce in self.getCoEdges():
-			srf = getattr(ce.getCurve(), 'surface', None)
-			if (isinstance(srf, SurfaceSpline)):
-				if (not hasattr(srf, 'ref')):
-					defs.append(srf)
-				for s in srf.surfaces:
-					if (not hasattr(s, 'ref')):
-						defs.append(s)
-
+			addCurveSurfaceDefs(ce.getCurve(), defs)
 			e = ce.getEdge()
 			if (e is not None):
-				srf = getattr(e.getCurve(), 'surface', None)
-				if (srf is not None):
-					if (not hasattr(srf, 'ref')):
-						defs.append(srf)
+				addCurveSurfaceDefs(e.getCurve(), defs)
 		return defs
 class Edge(Topology):
 	def __init__(self):
@@ -1583,10 +1629,14 @@ class Edge(Topology):
 		i = super(Edge, self).set(entity)
 		self._start, i = getRefNode(entity, i, 'vertex')
 		if (getVersion() > 4.0):
-			i += 1 # skip double
+			self.parameter1, i = getFloat(entity.chunks, i)
+		else:
+			self.parameter1 = 0.0
 		self._end, i   = getRefNode(entity, i, 'vertex')
 		if (getVersion() > 4.0):
-			i += 1 # skip double
+			self.parameter2, i = getFloat(entity.chunks, i)
+		else:
+			self.parameter2 = 1.0
 		self._owner, i = getRefNode(entity, i, 'coedge')
 		self._curve, i = getRefNode(entity, i, 'curve')
 		self.sense, i  = getSense(entity.chunks, i)
@@ -1758,14 +1808,14 @@ class Curve(Geometry):
 		return self.shape
 class CurveComp(Curve):    # compound curve "compcurv-curve"
 	def __init__(self):
-		return super(CurveComp, self).__init__('compcurv')
+		super(CurveComp, self).__init__('compcurv')
 	def setSubtype(self, chunks, index):
 		return index
 class CurveDegenerate(Curve):    # degenerate curve "degenerate-curve"
 	def __init__(self):
-		return super(CurveDegenerate, self).__init__('degenerate')
+		super(CurveDegenerate, self).__init__('degenerate')
 	def setSubtype(self, chunks, index):
-		v1, i = getLocation(chunks, index)
+		self._start, i = getLocation(chunks, index)
 		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		return i
 class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
@@ -1807,6 +1857,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.type    = ''
 		self.surface = None
 		self.curve   = None
+		self.ignore  = False
 	def getShape(self):
 		if (self.shape is None):
 			if (hasattr(self, 'curves')):
@@ -1885,12 +1936,33 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		txt, i      = getText(chunks, i)
 		return i
 	def setBlendSprng(self, chunks, index, inventor):
-		i = self.setSurfaceCurve(chunks, index, inventor)
+		i = self.setCurve(chunks, index)
+		surface1, i = readSurface(chunks, i)
+		if (surface1 is None):
+			ruS1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+			rvS1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+		surface2, i = readSurface(chunks, i)
+		if (surface2 is None):
+			ruS2, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+			rvS2, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+		curve1, i   = readBS2Curve(chunks, i)
+		if (curve1 is None):
+			ruC1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+		curve2, i   = readBS2Curve(chunks, i)
+		ruC2, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+		if (getVersion() >= 2.0):
+			a1, i       = getFloatArray(chunks, i)
+			a2, i       = getFloatArray(chunks, i)
+			a3, i       = getFloatArray(chunks, i)
+
 		if (inventor):
 			i += 1
 			direction, i = getCurvDir(chunks, i)
 		else:
 			direction, i = getText(chunks, i)
+
+		if (not self.setProjectionSurface(surface1, curve1)):
+			self.setProjectionSurface(surface2, curve2)
 		return i
 	def setComp(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor)
@@ -2035,6 +2107,14 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		if (inventor):
 			i += 1
 		return i
+	def setSSS(self, chunks, index, inventor):
+		i = index
+		i = self.setSurfaceCurve(chunks, i, inventor)
+		n, i = getInteger(chunks, i)
+		s, i = readSurface(chunks, i)
+		p, i = readBS2Curve(chunks, i)
+		return i
+
 	def setRef(self, chunks, index):
 		self.curve, i = getInteger(chunks, index)
 		self.ref = self.curve
@@ -2061,7 +2141,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, start, end):
-		if (self.shape is None):
+		if (self.shape is None) and not self.ignore:
+			self.ignore = True # Don't try to create me more than once
 			if (hasattr(self, 'curves')):
 				curve = self.curves[0].build(None, None)
 				others = []
@@ -2092,7 +2173,7 @@ class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 		logError(u"    Curve-Int-Int: unknown subtype %s !", self.type)
 		return self.setCurve(chunks, i)
 class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: point3D = surface.value(u, v)
-	'''An approximation to a curve lying on a surface, defined in terms of the surfaceâ€™s u-v parameters.'''
+	'''An approximation to a curve lying on a surface, defined in terms of the surface's u-v parameters.'''
 	def __init__(self):
 		super(CurveP, self).__init__('pcurve')
 		self.type   = -1    # The PCurve's type
@@ -2296,7 +2377,7 @@ class SurfaceSpline(Surface):
 		self.surface = None
 		self.surfaces = []
 	def _addSurface(self, surface):
-		if (isinstance(surface, SurfaceSphere)):
+		if (isinstance(surface, SurfaceSpline)):
 			self.surfaces.append(surface)
 	def _readBlendSurface(self, chunks, index, inventor):
 		name, i    = getValue(chunks, index)
@@ -2376,7 +2457,7 @@ class SurfaceSpline(Surface):
 		return (txt, srf, cur, bs2, vec, None), i
 	def _readScaleClLoft(self, chunks, index):
 		if (chunks[index].tag in [TAG_TRUE, TAG_FALSE]):
-			## fixme!
+			## FIXME!
 			return None, index
 		n, i = getInteger(chunks, index)
 		lofts = []
@@ -2386,7 +2467,7 @@ class SurfaceSpline(Surface):
 			lk, i = self._readLoftData(chunks, i)
 			lofts.append([nk, ck, lk])
 		if (not chunks[i].tag in [TAG_UTF8_U8, TAG_IDENT, TAG_SUBIDENT]):
-			## fixme!
+			## FIXME!
 			return None, index
 		cur, i = readCurve(chunks, i)
 		n, i = getInteger(chunks, i) # 1
@@ -2426,7 +2507,7 @@ class SurfaceSpline(Surface):
 		skin.law, i  = readFormula(chunks, i)
 		skin.pcur, i = readCurve(chunks, i)
 		return skin, i
-	def _readVertexBlend(self, chunks, index, inventor):
+	def _readVertexBodyGeometry(self, chunks, index, inventor):
 		vbl = VBL()
 		vbl.t, i = getText(chunks, index)
 		vbl.n, i = getCircleType(chunks, i)
@@ -2483,12 +2564,13 @@ class SurfaceSpline(Surface):
 
 		tol1, i = getFloats(chunks, i, 2)    # 0, 0
 		r1,  i  = getVarRadius(chunks, i)    # 0 = single_radius, 1 = two_radii ## convert SAT to STEP!!!
-		bv1, i  = getBlendValues(chunks, i)  # two_ends ...
-		if (r1 == 'two_radii'):
-			bv2, i  = getBlendValues(chunks, i)  # two_ends ...
-			n, i    = getVarChamfer(chunks, i)   # 3 = rounded_chamfer
-			t, i    = getChamferType(chunks, i)  # 0x0A = radius, 0x0B = const
-			bv3, i  = getBlendValues(chunks, i)  # two_ends ...
+		if (r1 != 0xFFFFFFFF):
+			bv1, i  = getBlendValues(chunks, i)  # two_ends ...
+			if (r1 == 'two_radii'):
+				bv2, i  = getBlendValues(chunks, i)  # two_ends ...
+				n, i    = getVarChamfer(chunks, i)   # 3 = rounded_chamfer
+				t, i    = getChamferType(chunks, i)  # 0x0A = radius, 0x0B = const
+				bv3, i  = getBlendValues(chunks, i)  # two_ends ...
 		rU, i   = getInterval(chunks, i, 0, 1, 1.0)
 		rV, i   = getInterval(chunks, i, 0, 1, 1.0)
 
@@ -2504,13 +2586,24 @@ class SurfaceSpline(Surface):
 
 		if (inventor):
 			a, i = getIntegers(chunks, i, 3) # 0 0 0
-		curve, i = readCurve(chunks, i)
-		t, i     = getConvexity(chunks, i)   # 0x0A = convex
-		t, i     = getRenderBlend(chunks, i) # 0x0A = rb_envelope, 0x0B = rb_snapshop
-		if (inventor):
-			r, i  = getInterval(chunks, i, 0.0, 1.0, 1.0)
-			bs, i = readBS3Curve(chunks, i)
-			bs, i = readBS2Curve(chunks, i)  # nullbs
+		if (r1 == 0xFFFFFFFF):
+			t,  i = getText(chunks, i)
+			s,  i = readSurface(chunks, i)
+			c,  i = readCurve(chunks, i)
+			b1, i = readBS3Curve(chunks, i)
+			p,  i = getPoint(chunks, i)
+			b2, i = readBS3Curve(chunks, i)  # nullbs
+			n,  i = getInteger(chunks, i)
+			b3, i = readBS2Curve(chunks, i)
+			e,  i = getEnum(chunks, i)
+		else:
+			curve, i = readCurve(chunks, i)
+			t, i     = getConvexity(chunks, i)   # 0x0A = convex
+			t, i     = getRenderBlend(chunks, i) # 0x0A = rb_envelope, 0x0B = rb_snapshop
+			if (inventor):
+				r, i  = getInterval(chunks, i, 0.0, 1.0, 1.0)
+				bs, i = readBS3Curve(chunks, i)
+				bs, i = readBS2Curve(chunks, i)  # nullbs
 		return i
 	def setClLoft(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
@@ -2538,40 +2631,46 @@ class SurfaceSpline(Surface):
 			self.surfaces.append(f)
 		return i
 	def setCylinder(self, chunks, index, inventor):
-		c1, i = readCurve(chunks, index)
-		v1, i = getVector(chunks, i)
-		v2, i = getVector(chunks, i)
+		self.profile, i = readCurve(chunks, index) # the curve on the cylinder's surface
+		self.axis,    i = getVector(chunks, i)     # the cylinder's axis
+		self.center,  i = getVector(chunks, i)     # the cylinder's center
 		i = self.setSurfaceShape(chunks, i, inventor)
+		self.type = 'cyl_spl_sur'
 		return i
 	def setDefm(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index)
 		self._addSurface(self.surface)
-		a1, i = getInteger(chunks, i) # 3, 8
-		v11, i = getVector(chunks, i)
-		v12, i = getVector(chunks, i)
-		v13, i = getVector(chunks, i)
-		v14, i = getVector(chunks, i)
-		t1, i = getInteger(chunks, i) # 0, 1
-		if (t1 == 1):
-			e21, i = getEnum(chunks, i)
-			e22, i = getEnum(chunks, i)
-			e23, i = getEnum(chunks, i)
-			v21, i = getVector(chunks, i)
-			v22, i = getVector(chunks, i)
-			v23, i = getVector(chunks, i)
-			f21, i = getFloat(chunks, i)
-			e24, i = getEnum(chunks, i)
-			e25, i = getEnum(chunks, i)
-			v24, i = getPoint(chunks, i)
-			e26, i = getEnum(chunks, i)
-			e27, i = getEnum(chunks, i)
-			e28, i = getEnum(chunks, i)
-			e29, i = getEnum(chunks, i)
-			e2A, i = getEnum(chunks, i)
-			a21, i = getIntegers(chunks, i, 2)
-		elif (t1 != 0):
-			raise Exception()
-		i = self.setSurfaceShape(chunks, i, inventor)
+		a1, i = getInteger(chunks, i) # 1, 3, 5, 8
+		if (a1 == 5):
+			self.surface, i = readSurface(chunks, i)
+			self._addSurface(self.surface)
+#		elif
+		else:
+			v11, i = getVector(chunks, i)
+			v12, i = getVector(chunks, i)
+			v13, i = getVector(chunks, i)
+			v14, i = getVector(chunks, i)
+			t1, i = getInteger(chunks, i) # 0, 1
+			if (t1 == 1):
+				e21, i = getEnum(chunks, i)
+				e22, i = getEnum(chunks, i)
+				e23, i = getEnum(chunks, i)
+				v21, i = getVector(chunks, i)
+				v22, i = getVector(chunks, i)
+				v23, i = getVector(chunks, i)
+				f21, i = getFloat(chunks, i)
+				e24, i = getEnum(chunks, i)
+				e25, i = getEnum(chunks, i)
+				v24, i = getPoint(chunks, i)
+				e26, i = getEnum(chunks, i)
+				e27, i = getEnum(chunks, i)
+				e28, i = getEnum(chunks, i)
+				e29, i = getEnum(chunks, i)
+				e2A, i = getEnum(chunks, i)
+				a21, i = getIntegers(chunks, i, 2)
+			elif (t1 != 0):
+				raise Exception()
+			i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setExact(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
@@ -2642,11 +2741,9 @@ class SurfaceSpline(Surface):
 				normal = e.tangentAt(e.FirstParameter)
 				profile = Part.makeCircle(radius, center, normal, degrees(angle.getLowerLimit()), degrees(angle.getUpperLimit()))
 				f = Part.makeSweepSurface(e, profile)
-				Part.show(f)
 				faces.append(f)
+#			self.shape = faces[0]
 #			if (len(faces) > 1):
-#				for f in faces:
-#					Part.show(f)
 #				self.shape = faces[0].multiFuse(faces[1:])
 		except:
 			logError(traceback.format_exc())
@@ -2703,14 +2800,15 @@ class SurfaceSpline(Surface):
 	def setOffset(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index)
 		self._addSurface(self.surface)
-		f1, i = getFloat(chunks, i)
-		senseU, i = getSense(chunks, i)
-		senseV, i = getSense(chunks, i)
+		self.offset, i = getFloat(chunks, i)
+		self.senseU, i = getSense(chunks, i)
+		self.senseV, i = getSense(chunks, i)
 		if (inventor):
 			e3, i = getEnum(chunks, i) # 0x0B
 			if (chunks[i].tag in [TAG_TRUE, TAG_FALSE]):
 				i += 1
 		i = self.setSurfaceShape(chunks, i, inventor)
+		self.type = 'off_spl_sur'
 		return i
 	def setOrtho(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index)
@@ -2768,9 +2866,7 @@ class SurfaceSpline(Surface):
 		self.loc, i     = getLocation(chunks, i)
 		self.dir, i     = getVector(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
-		if (self.surface is None):
-			# create a rotation shape from the profile
-			self.shape = Part.SurfaceOfRevolution(self.profile.build(None, None).Curve, self.loc, self.dir).toShape()
+		self.type = 'rot_spl_sur'
 		return i
 	def setSkin(self, chunks, index, inventor):
 		skins = []
@@ -2953,17 +3049,11 @@ class SurfaceSpline(Surface):
 		return i
 	def setSum(self, chunks, index, inventor):
 		'''A linear sum of two curves.'''
-		c1, i = readCurve(chunks, index)
-		c2, i = readCurve(chunks, i)
-		p, i = getLocation(chunks, i)
+		self.profile1, i = readCurve(chunks, index)
+		self.profile2, i = readCurve(chunks, i)
+		self.loc, i = getLocation(chunks, i)
 		i = self.setSurfaceShape(chunks, i, inventor)
-		rngU = self.tolerance[2]
-		edge1 = c1.build(rngU.getLowerLimit(), rngU.getUpperLimit())
-		rngV = self.tolerance[3]
-		edge2 = c2.build(rngU.getLowerLimit(), rngU.getUpperLimit())
-		if ((edge1 is not None) and (edge2 is not None)):
-			self.surface = Part.makeRuledSurface(edge1, edge2)
-			self.surface.translate(p)
+		self.type = 'sum_spl_sur'
 		return i
 	def setShadowTaper(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index)
@@ -2976,6 +3066,33 @@ class SurfaceSpline(Surface):
 		valueU, i = getFloat(chunks, i)
 		valueV, i = getFloat(chunks, i)
 		return i
+	def setSSSBend(self, chunks, index, inventor):
+		i = index
+		rb1, i = self._readRbBlend(chunks, i, inventor)
+		rb2, i = self._readRbBlend(chunks, i, inventor)
+		if (getVersion() > 22.0):
+			i += 2 # 43, 1e-10
+		# read remaining data
+		c3, i = readCurve(chunks, i)
+		if (getVersion() > 22.0):
+			cT, i = readCurve(chunks, i)
+			cT, i = readCurve(chunks, i)
+			cT, i = readCurve(chunks, i)
+			cT, i = readCurve(chunks, i)
+		a1, i = getFloats(chunks, i, 2)
+		f1, i = getValue(chunks, i); # -1 = no_radius, float
+		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+		r1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
+		a2, i = getFloats(chunks, i, 3)
+		if (getVersion() > 22.0):
+			i += 1 # T
+		i += 1 # 1
+		i = self.setSurfaceShape(chunks, i, inventor)
+		if (inventor):
+			a7, i = getFloatArray(chunks, i)
+			a8, i = getFloatArray(chunks, i)
+			a9, i = getFloatArray(chunks, i)
+		return i
 	def setTSpline(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
 		rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -2987,12 +3104,14 @@ class SurfaceSpline(Surface):
 		# int
 		return i
 	def setVertexBlend(self, chunks, index, inventor):
-		n, i = getInteger(chunks, index)
-		arr  = []
+		n, i = getInteger(chunks, index)      # vertexblendsur”
+		self.boundaries = []
 		for j in range(0, n):
-			vbl, i = self._readVertexBlend(chunks, i, inventor)
-			arr.append(vbl)
-		a1, i = getFloats(chunks, i, 2) # int, float
+			vbl, i = self._readVertexBodyGeometry(chunks, i, inventor)
+			self.boundaries.append(vbl)
+		grid,      i = getInteger(chunks, i)  # Grid-Size
+		tolerance, i = getFloat(chunks, i)    # fit tolerance
+		self.type = 'VBL_SURF'
 		return i
 	def setRuledTaper(self, chunks, index, inventor):
 		surf, i = readSurface(chunks, index)
@@ -3056,6 +3175,50 @@ class SurfaceSpline(Surface):
 			if (self.type == 'ref'):
 				if (type(self.surface) == int):
 					self.surface = getSubtypeNodeSurfaces(self.surface)
+			elif (self.type == 'cyl_spl_sur'):
+				if (self.surface is None):
+					# create a cylinder surface from the profile
+					self.surface = Part.Cylinder()
+					rotateShape(self.surface, self.axis)
+					self.surface.Center = self.center
+					curve = self.profile.build(curve.range.getLowerLimit(), curve.range.getUpperLimit())
+					if (curve is not None):
+						point = curve.Curve.StartPoint
+						u, v = self.surface.parameter(point)
+						radius = point - self.surface.value(u, v)
+						self.surface.Radius = radius.Length + 1.0
+						self.shape = self.surface.toShape()
+					else:
+						logError("Can't create cylinder from edge(%r)" %(self.edge))
+			elif (self.type == 'VBL_SURF'):
+				if (self.surface is not None):
+					pass # TODO!
+			elif (self.type == 'off_spl_sur'):
+				if (self.surface is not None):
+					#self.offset
+					pass # TODO!
+			elif (self.type == 'rot_spl_sur'):
+				if (self.surface is None):
+					# create a rotation shape from the profile
+					curve = self.profile.build(None, None)
+					if (curve is not None):
+						self.shape = Part.SurfaceOfRevolution(curve.Curve, self.loc, self.dir).toShape()
+					else:
+						logError("Can't create curve for revolution of (%r)" %(self.profile))
+			elif (self.type == 'sum_spl_sur'):
+				rngU = self.tolerance[2]
+				curve1 = self.profile1.build(rngU.getLowerLimit(), rngU.getUpperLimit())
+				if (curve1 is not None):
+					rngV = self.tolerance[3]
+					curve2 = self.profile2.build(rngV.getLowerLimit(), rngV.getUpperLimit())
+					if (curve2 is not None):
+						self.shape = Part.makeRuledSurface(curve1, curve2)
+						self.shape.translate(self.loc)
+					else:
+						logError("Can't create ruled surface of 2nd curve - (%r)" %(self.profile2))
+				else:
+					logError("Can't create ruled surface of 1st curve - (%r)" %(self.profile1))
+
 			if (isinstance(self.surface, Surface)):
 				self.shape = self.surface.build()
 				if (self.shape is None):
@@ -3121,7 +3284,8 @@ class Point(Geometry):
 		self.position, i = getLocation(entity.chunks, i)
 		return i
 class Refinement(Entity):
-	def __init__(self): return super(Refinement, self).__init__()
+	def __init__(self):
+		super(Refinement, self).__init__()
 # abstract super class for all attributes
 class Attributes(Entity):
 	def __init__(self):
@@ -3145,7 +3309,12 @@ class Attrib(Attributes):
 class AttribADesk(Attrib):
 	def __init__(self): super(AttribADesk, self).__init__()
 class AttribADeskColor(AttribADesk):
-	def __init__(self): super(AttribADeskColor, self).__init__()
+	def __init__(self):
+		super(AttribADeskColor, self).__init__()
+	def set(self, entity):
+		i = super(AttribADeskColor, self).set(entity)
+		coloridx, i = getInteger(entity.chunks, i)
+		return i
 class AttribAnsoft(Attrib):
 	def __init__(self): super(AttribAnsoft, self).__init__()
 class AttribAnsoftId(AttribAnsoft):
@@ -3186,8 +3355,6 @@ class AttribGenNameInteger(AttribGenName):
 		self.value = 0
 	def set(self, entity):
 		i = super(AttribGenNameInteger, self).set(entity)
-		if (getVersion() > 10):
-			self.name, i  = getText(entity.chunks, i)
 		self.value, i = getInteger(entity.chunks, i)
 		return i
 class AttribGenNameString(AttribGenName):
@@ -3255,7 +3422,11 @@ class AttribSysVertedge(AttribSys):
 class AttribTsl(Attrib):
 	def __init__(self): super(AttribTsl, self).__init__()
 class AttribTslColour(AttribTsl):
-	def __init__(self): super(AttribTslColour, self).__init__()
+	def __init__(self):
+		super(AttribTslColour, self).__init__()
+	def set(self, entity):
+		i = super(AttribTslColour, self).set(entity)
+		return i
 class AttribTslId(AttribTsl):
 	def __init__(self): super(AttribTslId, self).__init__()
 class AttribMixOrganization(Attrib):
@@ -3270,10 +3441,18 @@ class AttribMixOrganizationCreEntityQuality(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationCreEntityQuality, self).__init__()
 class AttribMixOrganizationBendExtendPlane(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationBendExtendPlane, self).__init__()
+class AttribMixOrganizationBendCenterEdge(AttribMixOrganization):
+	def __init__(self): super(AttribMixOrganizationBendCenterEdge, self).__init__()
+class AttribMixOrganizationBendExtendedEdge(AttribMixOrganization):
+	def __init__(self): super(AttribMixOrganizationBendExtendedEdge, self).__init__()
+class AttribMixOrganizationBendExtendedEdgeProgenitorTagIds(AttribMixOrganization):
+	def __init__(self): super(AttribMixOrganizationBendExtendedEdgeProgenitorTagIds, self).__init__()
 class AttribMixOrganizationCornerEdge(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationCornerEdge, self).__init__()
 class AttribMixOrganizationFlangeTrimEdge(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationFlangeTrimEdge, self).__init__()
+class AttribMixOrganizationFlatPatternVis(AttribMixOrganization):
+	def __init__(self): super(AttribMixOrganizationFlatPatternVis, self).__init__()
 class AttribMixOrganizationJacobiCornerEdge(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationJacobiCornerEdge, self).__init__()
 class AttribMixOrganizationLimitTrackingFraceFrom(AttribMixOrganization):
@@ -3282,6 +3461,8 @@ class AttribMixOrganizationNoBendRelief(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationNoBendRelief, self).__init__()
 class AttribMixOrganizationNoCenterline(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationNoCenterline, self).__init__()
+class AttribMixOrganizationRolExtents(AttribMixOrganization):
+	def __init__(self): super(AttribMixOrganizationRolExtents, self).__init__()
 class AttribMixOrganizationSmoothBendEdge(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationSmoothBendEdge, self).__init__()
 class AttribMixOrganizationTraceFace(AttribMixOrganization):
@@ -3303,11 +3484,47 @@ class AttribNamingMatchingNMxDup(AttribNamingMatching):
 class AttribNamingMatchingNMxPuchtoolBRep(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxPuchtoolBRep, self).__init__()
 class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
-	def __init__(self): super(AttribNamingMatchingNMxFFColorEntity, self).__init__()
+	def __init__(self):
+		super(AttribNamingMatchingNMxFFColorEntity, self).__init__()
+		self.red = self.green = self.blue = 0xBE / 255.0 # light gray
+	def set(self, entity):
+		i = super(AttribNamingMatchingNMxFFColorEntity, self).set(entity)
+		self.a,  i = getIntegers(entity.chunks, i, 2)
+		if (type(entity.chunks[i].val) != str):
+			j, i = getInteger(entity.chunks,i)
+			self.a.append(j)
+		else:
+			self.a.insert(0, 38)
+		name,    i = getText(entity.chunks, i)
+		name = name.decode('utf8')
+		self.a2, i = getIntegers(entity.chunks, i, len(entity.chunks) - i - 1)
+		try:
+			m = re.search('(Alias_)?(\d+),(\d+),(\d+)', name)
+			if (m is None):
+				color = _colorNames[name]
+				self.red   = color[0]
+				self.green = color[1]
+				self.blue  = color[2]
+			else:
+				self.red   = m.group(2)
+				self.green = m.group(3)
+				self.blue  = m.group(4)
+		except KeyError:
+			logWarning(u"Color '%s' not defined in color table - using gray!" %(name))
+			_colorNames[name] = (self.red, self.green, self.blue) # ignore future complains...
+		return i
 class AttribNamingMatchingNMxThreadEntity(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxThreadEntity, self).__init__()
 class AttribNamingMatchingNMxFeatureOrientation(AttribNamingMatching):
-	def __init__(self): super(AttribNamingMatchingNMxFeatureOrientation, self).__init__()
+	def __init__(self):
+		super(AttribNamingMatchingNMxFeatureOrientation, self).__init__()
+	def set(self, entity):
+		i = super(AttribNamingMatchingNMxFeatureOrientation, self).set(entity)
+		if (entity.chunks[i].tag != TAG_ENTITY_REF):
+			i += 1
+		self.ref1, i = getRefNode(entity, i, 'curve')
+		self.ref2, i = getRefNode(entity, i, 'curve')
+		return i
 class AttribNamingMatchingNMxGenTagDisambiguation(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxGenTagDisambiguation, self).__init__()
 class AttribNamingMatchingNMxFeatureDependency(AttribNamingMatching):
@@ -3350,6 +3567,8 @@ class AttribNamingMatchingNMxBrepTagNameTweakFace(AttribNamingMatchingNMxBrepTag
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameTweakFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameTweakReblend(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameTweakReblend, self).__init__()
+class AttribNamingMatchingNMxBrepTagNameUnfoldBendLine(AttribNamingMatchingNMxBrepTagName):
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameUnfoldBendLine, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameVertexBlend(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameVertexBlend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameLoftSurface(AttribNamingMatchingNMxBrepTagName):
@@ -3366,6 +3585,8 @@ class AttribNamingMatchingNMxBrepTagNameBend(AttribNamingMatchingNMxBrepTagName)
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBendPart(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBendPart, self).__init__()
+class AttribNamingMatchingNMxBrepTagBendLineFeature(AttribNamingMatchingNMxBrepTagName):
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagBendLineFeature, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameCutXBendRimFaceTag(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameCutXBendRimFaceTag, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameDeleteFace(AttribNamingMatchingNMxBrepTagName):
@@ -3410,6 +3631,8 @@ class AttribAtUfldFfldPosTransf(AttribAtUfld):
 	def __init__(self): super(AttribAtUfldFfldPosTransf, self).__init__()
 class AttribAtUfldFfldPosTransfMixUfContourRollTrack(AttribAtUfldFfldPosTransf):
 	def __init__(self): super(AttribAtUfldFfldPosTransfMixUfContourRollTrack, self).__init__()
+class AttribAtUfldFfldPosTransfMixUfTransformTrack(AttribAtUfldFfldPosTransf):
+	def __init__(self): super(AttribAtUfldFfldPosTransfMixUfTransformTrack, self).__init__()
 class AttribAtUfldNonMergeBend(AttribAtUfld):
 	def __init__(self): super(AttribAtUfldNonMergeBend, self).__init__()
 class AttribAtUfldPosTrack(AttribAtUfld):
@@ -3444,8 +3667,8 @@ class AcisChunk():
 		if (self.tag == TAG_FLOAT        ): return "%g "     %(self.val)
 		if (self.tag == TAG_DOUBLE       ): return "%g "     %(self.val)
 		if (self.tag == TAG_UTF8_U8      ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_UTF8_U16     ): return "%s"      %(self.val)
-		if (self.tag == TAG_UTF8_U32_A   ): return "%s "     %(self.val)
+		if (self.tag == TAG_UTF8_U16     ): return "@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U32_A   ): return "@%d %s " %(len(self.val), self.val)
 		if (self.tag == TAG_TRUE         ): return "%s "     %(self.val)
 		if (self.tag == TAG_FALSE        ): return "%s "     %(self.val)
 		if (self.tag == TAG_ENTITY_REF   ): return "%s "     %(self.val)
@@ -3472,7 +3695,7 @@ class AcisChunk():
 		if (self.tag == TAG_TRUE         ): return '0x0A '
 		if (self.tag == TAG_FALSE        ): return '0x0B '
 		if (self.tag == TAG_ENTITY_REF   ): return "%s "   %(self.val)
-		if (self.tag == TAG_IDENT        ): return "$%s "  %(self.val)
+		if (self.tag == TAG_IDENT        ): return "%s "   %(self.val)
 		if (self.tag == TAG_SUBIDENT     ): return "%s-"   %(self.val)
 		if (self.tag == TAG_SUBTYPE_OPEN ): return '{ '
 		if (self.tag == TAG_SUBTYPE_CLOSE): return '} '
@@ -3493,8 +3716,13 @@ class AcisEntity():
 
 	def add(self, key, val):
 		self.chunks.append(AcisChunk(key, val))
-	def getStr(self): return "-%d %s %s" %(self.index, self.name, ''.join('%s' %c for c in self.chunks))
-	def __repr__(self): return "%s %s" %(self.name, ''.join('%r' %c for c in self.chunks))
+
+	def getStr(self):
+		return "-%d %s %s" %(self.index, self.name, ''.join('%s' %(str(c)) for c in self.chunks))
+
+	def __repr__(self):
+		return "%s %s" %(self.name, ''.join('%r' %c for c in self.chunks))
+
 	def __str__(self):
 		if (self.index < 0):
 			if (self.index == -2):
@@ -3635,6 +3863,8 @@ CURVE_SET_DATA = {
 	'proj_int_cur':      ('setProject', 1, True),
 	'surfintcur':        ('setSurface', 0, False),
 	'surf_int_cur':      ('setSurface', 1, True),
+#	'':                  ('setSSS', 0, False),
+	'sss_int_cur':       ('setSSS', 1, True),
 }
 
 SURFACE_TYPES = {
@@ -3676,6 +3906,8 @@ SURFACE_TYPES = {
 	'sweep_spl_sur':        ('setSweep', 1, True),
 #	'':                     ('setSweepSpline', 0, False),
 	'sweep_sur':            ('setSweepSpline', 1, True),
+#	'':                     ('setSSSBend', 0, False),
+	'sss_blend_spl_sur':    ('setSSSBend', 1, True),
 #	'':                     ('setTSpline', 0, False),
 	't_spl_sur':            ('setTSpline', 1, True),
 	'vertexblendsur':       ('setVertexBlend', 0, False),
@@ -3711,6 +3943,7 @@ ENTITY_TYPES = {
 	"ufld_dev_pair_attrib-at_ufld-attrib":                                                         AttribAtUfldDevPair,
 	"ufld_pos_transf_attrib-at_ufld-attrib":                                                       AttribAtUfldFfldPosTransf,
 	"mix_UF_ContourRoll_Track-ufld_pos_transf_attrib-at_ufld-attrib":                              AttribAtUfldFfldPosTransfMixUfContourRollTrack,
+	"mix_UF_Transform_Track-ufld_pos_transf_attrib-at_ufld-attrib":                                AttribAtUfldFfldPosTransfMixUfTransformTrack,
 	"ufld_non_merge_bend_attrib-at_ufld-attrib":                                                   AttribAtUfldNonMergeBend,
 	"ufld_pos_track_attrib-at_ufld-attrib":                                                        AttribAtUfldPosTrack,
 	"mix_UF_RobustPositionTrack-ufld_pos_track_attrib-at_ufld-attrib":                             AttribAtUfldPosTrackMixUfRobustPositionTrack,
@@ -3732,6 +3965,9 @@ ENTITY_TYPES = {
 	"ptlist-lwd-attrib":                                                                           AttribLwdPtList,
 	"ref_vt-lwd-attrib":                                                                           AttribLwdRefVT,
 	"mix_Organizaion-attrib":                                                                      AttribMixOrganization,
+	"mix_BendCenterEdge-mix_Organizaion-attrib":                                                   AttribMixOrganizationBendCenterEdge,
+	"mix_BendExtentEdge-mix_Organizaion-attrib":                                                   AttribMixOrganizationBendExtendedEdge,
+	"mix_BendExtentEdge_Progenitor_TagIds-mix_Organizaion-attrib":                                 AttribMixOrganizationBendExtendedEdgeProgenitorTagIds,
 	"mix_BendExtendPlane-mix_Organizaion-attrib":                                                  AttribMixOrganizationBendExtendPlane,
 	"mix_CornerEdge-mix_Organizaion-attrib":                                                       AttribMixOrganizationCornerEdge,
 	"mix_CREEntityQuality-mix_Organizaion-attrib":                                                 AttribMixOrganizationCreEntityQuality,
@@ -3739,10 +3975,12 @@ ENTITY_TYPES = {
 	"mix_DetailEdgeInfo-mix_Organizaion-attrib":                                                   AttribMixOrganizationDetailEdgeInfo,
 	"mix_EntityQuality-mix_Organizaion-attrib":                                                    AttribMixOrganizationEntityQuality,
 	"mix_FlangeTrimEdge-mix_Organizaion-attrib":                                                   AttribMixOrganizationFlangeTrimEdge,
+	"mix_FlatPatternVis-mix_Organizaion-attrib":                                                   AttribMixOrganizationFlatPatternVis,
 	"mix_JacobiCornerEdge-mix_Organizaion-attrib":                                                 AttribMixOrganizationJacobiCornerEdge,
 	"mix_LimitTrackingFaceFrom-mix_Organizaion-attrib":                                            AttribMixOrganizationLimitTrackingFraceFrom,
 	"mix_NoBendRelief-mix_Organizaion-attrib":                                                     AttribMixOrganizationNoBendRelief,
 	"mix_NoCenterline-mix_Organizaion-attrib":                                                     AttribMixOrganizationNoCenterline,
+	"mix_RollExtents-mix_Organizaion-attrib":                                                      AttribMixOrganizationRolExtents,
 	"mix_SmoothBendEdge-mix_Organizaion-attrib":                                                   AttribMixOrganizationSmoothBendEdge,
 	"mix_TrackFace-mix_Organizaion-attrib":                                                        AttribMixOrganizationTraceFace,
 	"mix_UF_ContourRoll_Extent_Track-mix_Organizaion-attrib":                                      AttribMixOrganizationUfContourRollExtentTrack,
@@ -3755,6 +3993,7 @@ ENTITY_TYPES = {
 	"NMx_BPatch_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                         AttribNamingMatchingNMxBrepTagNameBPatch,
 	"NMx_bend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                           AttribNamingMatchingNMxBrepTagNameBend,
 	"NMx_bend_part_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                      AttribNamingMatchingNMxBrepTagNameBendPart,
+	"NMx_Bend_Line_Feature_Tag_Attrib-NamingMatching-attrib":                                      AttribNamingMatchingNMxBrepTagBendLineFeature,
 	"NMx_blend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                          AttribNamingMatchingNMxBrepTagNameBlend,
 	"NMx_body_split_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameBodySplit,
 	"NMx_Composite_feature_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":              AttribNamingMatchingNMxBrepTagNameCompositeFeature,
@@ -3791,6 +4030,7 @@ ENTITY_TYPES = {
 	"NMx_Trim_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                           AttribNamingMatchingNMxBrepTagNameTrim,
 	"NMx_tweak_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameTweakFace,
 	"NMx_tweak_reblend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                  AttribNamingMatchingNMxBrepTagNameTweakReblend,
+	"NMx_unfold_bend_line_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameUnfoldBendLine,
 	"NMx_vertex_blend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                   AttribNamingMatchingNMxBrepTagNameVertexBlend,
 	"NMx_stitch_tag-NMx_Brep_tag-NamingMatching-attrib":                                           AttribNamingMatchingNMxBrepTagSwitch,
 	"NMx_Dup_Attrib-NamingMatching-attrib":                                                        AttribNamingMatchingNMxDup,
