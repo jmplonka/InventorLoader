@@ -6,7 +6,7 @@ As Inventor files contains a complete ACIS model representation, SAT and SAB fil
 imported into FreeCAD.
 
 ## Prerequisites
-- The AddON requires additional python packages in the FreeCAD python installation:
+- The AddOn requires additional python packages in the FreeCAD python installation:
   - https://pypi.python.org/pypi/xlrd - for reading embedded Excel workbooks
   - http://pypi.python.org/pypi/xlutils - for preparing imported Excel workbooks to
     be stored
@@ -17,11 +17,11 @@ imported into FreeCAD.
 
 ## Installation
 Download the repository as a ZIP archive and expand its content directly into the
-FreeCAD module's folder "Mod".There exists two locations where FreeCAD searches for
-addons:
-a) beside FreeCAD's bin folder
+FreeCAD module's folder "Mod". There exists two locations where FreeCAD searches for
+addons:  
+a) beside FreeCAD's bin folder  
 b) in user's application data (%APPDATA% on windows) or home folder (on linux/MAC).
-A new folder "InvetorLoader-master" will be created.
+A new folder "InvetorLoader-master" will be created.  
 
 The next time FreeCAD will offer new import formats for ACIS' SAT (\*.sat) files and Autodesk
 Inventor's IPT (\*.ipt) files as supported import formats.
@@ -45,11 +45,11 @@ Sometimes it can happen that the packages can't be installed.
 
 ## Limitations
 
-Export will not be supported - nither to IPT nor to SAT file.
+Export will not be supported - neither to IPT nor to SAT file.
 
 ### Feature based import
 
-### ACIS (sat) nativ import
+### ACIS (sat) native import
 - Blending surfaces are not yet supported.
 - Helix surfaces are also not yet supported.
 - Interpolated curves defined by laws are omitted.
@@ -61,10 +61,10 @@ STEP converts the ACIS data from SAT or IPT files. Therefore any limitation is i
 > Alpha!
 
 Autodesk Inventor files have a OLE2 files.
-That allows it to embed Excel workboos e.g.
+That allows it to embed Excel workbooks e.g.
 
 - The addon is able to read Inventor files from 2010 till 2019.
-- Read the iProperties (only a few can be applied in FreeCAD).
+- Read the iProperties (Note: only a few can be applied in FreeCAD).
 - Display embedded workbooks as a new spreadsheet when importing as features.
 - Three strategies are provided:
  -- feature base: the addon tries to rebuild all the features.
@@ -76,11 +76,11 @@ That allows it to embed Excel workboos e.g.
 
 - 0.9.1 Added colors to STEP.
 
-- 0.9 Added convertation to STEP.
+- 0.9 Added conversion to STEP.
 	IPT files can now either be imported
 	* based on features (nearest to FreeCAD so changing the model is easy)
 	* based on SAT (model is imported based on stored Surfaces and Edges)
-	* based on STEP (SAT model is converted to STEP and importd into FreeCAD using built in reader)
+	* based on STEP (SAT model is converted to STEP and imported into FreeCAD using built-in reader)
 
 - 0.8.1 Fixed support of cone surfaces.
 
@@ -163,5 +163,5 @@ That allows it to embed Excel workboos e.g.
 
 ## Next steps in unsorted order:
 - Features like Grave, etc.
-- Features like Fillet, Champher, Draft, etc.
+- Features like Fillet, Chamfer, Draft, etc.
 - Preferences page
