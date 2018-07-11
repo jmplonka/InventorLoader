@@ -21,7 +21,7 @@
 	"Bronze - satiniert":          "#B56C2D",
 	"Metal-Steel (Polished)":      "#B6B6BA",
 	"Metal-AL-6061 (Polished)":    "#BBBABE",
-	"Defalt":                      "#BCBCBC",
+	"Default":                     "#BCBCBC",
 	"As Part":                     "#BCBCBC",
 	"Grey - Light":                "#BFBFBF",
 	"Glatt - rot":                 "#CC0000",
@@ -53,7 +53,7 @@
 	"Weiß(1)":                     "#FFFFFF",
 	"White (Clear)":               "#FFFFFF",
 	"White":                       "#FFFFFF",
-	
+
 	"__TODO__": [
 		"3.5MTH, 0",
 		"AX_.400X.100_.031, 330K",
