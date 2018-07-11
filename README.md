@@ -31,17 +31,17 @@ so that the new packages become available.
 
 ### Solving installation problems
 Sometimes it can happen that the packages can't be installed.
-a) navigate to the InventorLoader plugin (ILP) folder with your file-browser (e.g.
+1. navigate to the InventorLoader plugin (ILP) folder with your file-browser (e.g.
    Windows-Explorer)
-b) Extract the libs.zip into the ILP's folder (a new folder libs should be created).
-c) open a command shell (e.g. `cmd` on windows or `sh` on linux)
-   i) adapt the PATH variable to point to FreeCAD's python: `set PATH="<PATH-TO-FREECAD>\bin";%PATH%`
+2. Extract the libs.zip into the ILP's folder (a new folder libs should be created).
+3. open a command shell (e.g. `cmd` on windows or `sh` on linux)
+   1. adapt the PATH variable to point to FreeCAD's python: `set PATH="<PATH-TO-FREECAD>\bin";%PATH%`
       (on linux you have to export the PATH variable - I think). Linux and MAC users
       should use '/' instead of '\'!
-   ii) change the working folder to ILP's libs folder (e.g. `cd <PATH-TO-FREECAD>\Mod\InventorLoader-master\libs`)
-   iii) run the installation script: `python ./installLibs.py`
+   2. change the working folder to ILP's libs folder (e.g. `cd <PATH-TO-FREECAD>\Mod\InventorLoader-master\libs`)
+   3. run the installation script: `python ./installLibs.py`
       This should install the required packages.
-d) reopen FreeCAD
+4. reopen FreeCAD
 
 ## Limitations
 
