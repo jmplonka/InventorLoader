@@ -2,6 +2,9 @@
 Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD (min. Version 0.17). Until now only
 Parts (IPT) but nor assemblies (IAM) nor drawings (IDW) can be displayed.
 
+As Inventor files contains a complete ACIS model representation, SAT and SAB files can also be
+imported into FreeCAD.
+
 ## Prerequisites
 - The AddON requires additional python packages in the FreeCAD python installation:
   - https://pypi.python.org/pypi/xlrd - for reading embedded Excel workbooks
@@ -9,7 +12,7 @@ Parts (IPT) but nor assemblies (IAM) nor drawings (IDW) can be displayed.
     be stored
   - https://pypi.python.org/pypi/xlwt - for writing embedded Excel workbooks
   - http://www.decalage.info/python/olefileio - olefile for reading Microsoft OLE(2)
-  	files.
+    files.
 - Minimum Version 0.17 of FreeCAD is required!
 
 ## Installation
@@ -42,6 +45,8 @@ d) reopen FreeCAD
 
 ## Limitations
 
+Export will not be supported - nither to IPT nor to SAT file.
+
 ### Feature based import
 
 ### ACIS (sat) nativ import
@@ -59,13 +64,16 @@ Autodesk Inventor files have a OLE2 files.
 That allows it to embed Excel workboos e.g.
 
 - The addon is able to read Inventor files from 2010 till 2019.
-- Read the iProperties (only a few can be applied in FreeCAD)
-- Display embedded workbooks as a new spreadsheet
-- Two strategies are provided:
+- Read the iProperties (only a few can be applied in FreeCAD).
+- Display embedded workbooks as a new spreadsheet when importing as features.
+- Three strategies are provided:
  -- feature base: the addon tries to rebuild all the features.
  -- SAT based: like STEP file, model will be imported based on FACE, EDGES and VERTICES.
+ -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
+- 0.9.2 Added named colors to STEP.
+
 - 0.9.1 Added colors to STEP.
 
 - 0.9 Added convertation to STEP.
