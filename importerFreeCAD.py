@@ -1557,7 +1557,7 @@ class FreeCADImporter:
 
 	def addSketch_Dimension_OffsetSpline2D(self, dimensionNode, sketchObj):
 		'''
-		Create distnace contraint for an offset spline.
+		Create distance constraint for an offset spline.
 		'''
 		if (SKIP_CONSTRAINTS & BIT_DIM_OFFSET_SPLINE == 0): return
 		dimensionNode.setSketchEntity(-1, None)

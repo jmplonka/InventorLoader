@@ -138,7 +138,7 @@ def _createUnit(tolerance):
 
 	uncr.units = (uncertainty,)
 
-	glob.assignements = (length, angle1, angle2)
+	glob.assignments = (length, angle1, angle2)
 
 	unit.entities =  _createGeometricRepresentationList(uncr, glob, repr)
 	return unit
@@ -951,10 +951,10 @@ class GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(ExportEntity):
 class GLOBAL_UNIT_ASSIGNED_CONTEXT(ExportEntity):
 	def __init__(self):
 		super(GLOBAL_UNIT_ASSIGNED_CONTEXT, self).__init__()
-		self.assignements = []
+		self.assignments = []
 		self.isexported = True
 	def _getParameters(self):
-		return super(GLOBAL_UNIT_ASSIGNED_CONTEXT, self)._getParameters() + [self.assignements]
+		return super(GLOBAL_UNIT_ASSIGNED_CONTEXT, self)._getParameters() + [self.assignments]
 
 class REPRESENTATION_CONTEXT(ExportEntity):
 	def __init__(self, identifyer = '', t = '3D'):
@@ -974,7 +974,7 @@ class PLANE_ANGLE_MEASURE_WITH_UNIT(ReferencedEntity):
 		return super(PLANE_ANGLE_MEASURE_WITH_UNIT, self)._getParameters() + [self.value, self.unit]
 
 class DIMENSIONAL_EXPONENTS(ReferencedEntity):
-	def __init__(self, length = 0.0, mass = 0.0, time = 0.0, current = 0.0, temperature = 0.0, amount = 0.0, luminousity = 0.0):
+	def __init__(self, length = 0.0, mass = 0.0, time = 0.0, current = 0.0, temperature = 0.0, amount = 0.0, luminosity = 0.0):
 		super(DIMENSIONAL_EXPONENTS, self).__init__()
 		self.length      = length
 		self.mass        = mass
@@ -982,9 +982,9 @@ class DIMENSIONAL_EXPONENTS(ReferencedEntity):
 		self.current     = current
 		self.temperature = temperature
 		self.amount      = amount
-		self.luminousity = luminousity
+		self.luminosity = luminosity
 	def _getParameters(self):
-		return super(DIMENSIONAL_EXPONENTS, self)._getParameters() +[self.length, self.mass, self.time, self.current, self.temperature, self.amount, self.luminousity]
+		return super(DIMENSIONAL_EXPONENTS, self)._getParameters() +[self.length, self.mass, self.time, self.current, self.temperature, self.amount, self.luminosity]
 
 class UNIT(ListEntity):
 	def __init__(self, units=()):
