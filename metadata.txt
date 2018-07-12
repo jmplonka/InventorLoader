@@ -1,15 +1,15 @@
-; An example for this metadata.txt from 
+; An example for this metadata.txt from
 ; http://docs.qgis.org/testing/en/docs/pyqgis_developer_cookbook/plugins.html#plugin-metadata
 ; the next section is mandatory
 
 [general]
 name=InventorLoader
-email=me@example.com
+email=jens.m.plonka@gmail.com
 author=jmplonka
 qgisMinimumVersion=2.0
-description=This plugin enables FreeCAD to import Inventor part files (*.IPT)
+description=This plugin enables FreeCAD to import Inventor part files (*.IPT) and ACIS SAT files
 about=
-version=version 0.6
+version=version 0.9
 tracker=https://github.com/jmplonka/InventorLoader/issues
 repository=https://github.com/jmplonka/InventorLoader
 ; end of mandatory metadata
@@ -17,8 +17,11 @@ repository=https://github.com/jmplonka/InventorLoader
 ; start of optional metadata
 category=
 changelog=The changelog lists the plugin versions and their changes:
-	0.6 - added Coil Feature workaround for installing 3rd Party libraries
-	0.5 - added Sweep, Loft and Thicken Feature
+    0.9 - Added conversion to STEP.
+    0.8 - Added handling of Inventor 2019 file format.
+    0.7 - added ACIS file format reading for IPT and SAT files.
+    0.6 - added Coil Feature workaround for installing 3rd Party libraries
+    0.5 - added Sweep, Loft and Thicken Feature
     0.4 - added Rectangular-/Circular-Pattern, Mirror and Hole Feature
     0.3 - added Extrude and Revolve Featrues
     0.2 - added parameter table
@@ -28,7 +31,7 @@ changelog=The changelog lists the plugin versions and their changes:
 ; tag name.
 ; Tags should be in English language. Please also check for existing tags and
 ; synonyms before creating a new one.
-tags=Autodesk,Inventor,IPT
+tags=Autodesk,Inventor,IPT,ACIS,SAT
 
 ; these metadata can be empty, they will eventually become mandatory.
 homepage=https://github.com/jmplonka/InventorLoader
@@ -45,5 +48,5 @@ qgisMaximumVersion=
 
 [dependencies]
 workbenches=Part,Draft,Sketcher
-pylibs=xlutils,xlrd,olefile
+pylibs=xlutils,xlrd,xlwt,olefile
 FCaddon=sheetmetal@4db5840

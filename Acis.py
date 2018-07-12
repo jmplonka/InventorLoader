@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
 '''
 Acis.py:
@@ -1201,7 +1201,8 @@ class Helix():
 		return self.dirPitch.Length
 	def	getHeight(self):
 		angle = self.radAngles.getLimit()
-		return self.getPitch() * angle / 2.0 / pi
+		pitch = self.getPitch()
+		return pitch * angle / 2.0 / pi
 	def	getRadius(self):
 		assert (isEqual1D(self.dirMajor.Length, self.dirMinor.Length)), 'Helix: elliptical helix not supported!'
 		return self.dirMajor.Length
@@ -1247,6 +1248,7 @@ class Intervall():
 	def getLowerLimit(self): return self.lower.getLimit()
 	def getUpperType(self):  return self.upper.type
 	def getUpperLimit(self): return self.upper.getLimit()
+	def getLimit(self):      return self.getUpperLimit() - self.getLowerLimit()
 class BeginOfAcisHistoryData(): pass
 class EndOfAcisHistorySection(): pass
 class EndOfAcisData(): pass
@@ -3104,7 +3106,7 @@ class SurfaceSpline(Surface):
 		# int
 		return i
 	def setVertexBlend(self, chunks, index, inventor):
-		n, i = getInteger(chunks, index)      # vertexblendsur�
+		n, i = getInteger(chunks, index)      # vertexblendsur”
 		self.boundaries = []
 		for j in range(0, n):
 			vbl, i = self._readVertexBodyGeometry(chunks, i, inventor)
