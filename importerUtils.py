@@ -112,7 +112,7 @@ def getDescription():
 
 def chooseImportStrategyAcis():
 	btnCnvrt = QPushButton('&Convert to STEP')
-	btnNativ = QPushButton('&nativ')
+	btnNativ = btnDefault = QPushButton('&nativ')
 	msgBox   = QMessageBox()
 	msgBox.setIcon(QMessageBox.Question)
 	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
@@ -121,8 +121,8 @@ def chooseImportStrategyAcis():
 	msgBox.addButton(btnNativ, QMessageBox.NoRole)
 	param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
 
-	btnMapping = {STRATEGY_STEP: btnCnvrt, STRATEGY_SAT: btnNativ}
-	msgBox.setDefaultButton(btnMapping[param.GetInt("strategy")])
+	btnDefault = btnCnvrt if (param.GetInt("strategy") == STRATEGY_STEP) else btnNativ
+	msgBox.setDefaultButton(btnDefault)
 
 	result = msgBox.exec_()
 
