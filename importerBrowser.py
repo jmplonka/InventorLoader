@@ -589,8 +589,8 @@ class BrowserReader(SegmentReader):
 		i = node.ReadCrossRef(i)
 		i = node.ReadLen32Text16(i)
 		i = node.ReadList4(i, AbstractNode._TYP_STRING8_, 'lst0')
-		i = node.ReadUInt16A(i, 3, 'a1')
-
+		i = node.ReadUInt16(i, 'u16')
+		i = node.ReadLen32Text16(i, 'val')
 		return i
 
 	def Read_E079A121(self, node): return 0

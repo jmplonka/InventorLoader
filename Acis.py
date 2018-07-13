@@ -5,8 +5,8 @@ Acis.py:
 Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) files.
 '''
 
-import traceback, FreeCAD, Part, Draft, os, json, re
-from importerUtils              import logWarning, logError,logAlways, isEqual, isEqual1D, getUInt8, getUInt16, getSInt16, getSInt32, getFloat32, getFloat64, getFloat64A, getUInt32, ENCODING_FS
+import traceback, FreeCAD, Part, Draft, os
+from importerUtils              import logWarning, logError,logAlways, isEqual, isEqual1D, getUInt8, getUInt16, getSInt16, getSInt32, getFloat32, getFloat64, getFloat64A, getUInt32, ENCODING_FS, getColor, setColor
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
 from math                       import pi, fabs, degrees, asin, tan, atan2
 from BOPTools.GeneralFuseResult import GeneralFuseResult
@@ -82,16 +82,6 @@ ENTIY_VERSIONS = {
 	'VBLEND_AUTO_VERSION': 4.0,
 	'WIREBOOL_VERSION': 1.7,
 }
-
-with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colors.json")) as colorPalette:
-	_colorNames = json.load(colorPalette)
-	for n in _colorNames:
-		if (not n.startswith('_')):
-			rgb =  _colorNames[n]
-			r   = int(rgb[1:3], 0x10) / 255.0
-			g   = int(rgb[3:5], 0x10) / 255.0
-			b   = int(rgb[5:7], 0x10) / 255.0
-			_colorNames[n] = (r, g, b)
 
 MIN_0   = 0.0
 MIN_PI  = -pi
@@ -245,7 +235,7 @@ def createNode(entity):
 		if (entity.index < 0):
 			return None
 		node = references[entity.index]
-		# this entity is overwriting a previus entity with the same index -> ignore it
+		# this entity is overwriting a previous entity with the same index -> ignore it
 		logWarning(u"    Found 2nd '-%d %s' - IGNORED!", entity.index, entity.name)
 		entity.node = node
 	except:
@@ -410,7 +400,7 @@ def getCurvDir(chunks, index):
 def getSurfSweep(chunks, index):
 	return getEnumByTag(chunks, index, SURF_SWEEP)
 
-def getCircleType(chunks, index):
+def getVblType(chunks, index):
 	return getEnumByTag(chunks, index, CIRC_TYP)
 
 def getCircleSmoothing(chunks, index):
@@ -685,7 +675,7 @@ def readArrayFloats(chunks, index, inventor):
 def rotateShape(shape, dir):
 	# Setting the axis directly doesn't work for directions other than x-axis!
 	angle = degrees(DIR_Z.getAngle(dir))
-	if (angle != 0):
+	if (isEqual1D(angle, 0)):
 		axis = DIR_Z.cross(dir) if angle != 180 else DIR_X
 		shape.rotate(PLC(CENTER, axis, angle))
 	return
@@ -811,12 +801,9 @@ def applyBoundary(face, edges):
 
 def createEllipse(center, normal, major, ratio):
 	radius = major.Length
-	if (ratio == 1):
-		ellipse = Part.Circle(center, normal, radius)
-	else:
-		ellipse = Part.Ellipse(center, radius, radius*ratio)
-		ellipse.Axis  = normal
-		ellipse.XAxis = major
+	ellipse = Part.Ellipse(center, radius, radius*ratio)
+	ellipse.Axis  = normal
+	ellipse.XAxis = major
 	return ellipse
 
 def createLine(start, end):
@@ -1114,10 +1101,54 @@ def addCurveSurfaceDefs(curve, defs):
 	srf = getattr(curve, 'surface', None)
 	addSurfaceDefs(srf, defs)
 
-class VBL():
+class BDY_GEOM(object):
+	def __init__(self, svId):
+		self.svId  = svId
+		self.shape = None
+	def build(self):
+		if (self.shape is None):
+			self.buildCurve()
+		return self.shape
+class BDY_GEOM_CIRCLE(BDY_GEOM):
 	def __init__(self):
-		self.t  = ''
-		self.n  = 'cross'
+		super(BDY_GEOM_CIRCLE, self).__init__('circle')
+		self.curve      = None
+		self.twist      = (None, None)
+		self.parameters = (MIN_0, MAX_2PI)
+		self.sense      = 'forward'
+	def buildCurve(self):
+		if (not self.curve is None):
+			u = self.parameters[0]
+			v = self.parameters[1]
+			self.shape = self.curve.build(u, v)
+class BDY_GEOM_DEG(BDY_GEOM):
+	def __init__(self):
+		super(BDY_GEOM_DEG, self).__init__('deg')
+		self.location = VEC(0.0, 0.0, 0.0)
+		self.normal1  = VEC(1.0, 0.0, 0.0)
+		self.normal2  = VEC(0.0, 1.0, 0.0)
+	def buildCurve(self):
+		self.shape = Part.Point(self.location).toShape()
+class BDY_GEOM_PCURVE(BDY_GEOM):
+	def __init__(self):
+		super(BDY_GEOM_PCURVE, self).__init__('pcurve')
+		self.surface      = None
+		self.pcurve       = None
+		self.sense        = 'forward'
+		self.fittolerance = 0.0
+	def buildCurve(self):
+		self.shape = createBSplinesPCurve(self.pcurve, self.surface, self.sense)
+class BDY_GEOM_PLANE(BDY_GEOM):
+	def __init__(self):
+		super(BDY_GEOM_PLANE, self).__init__('plane')
+		self.normal     = VEC(0.0, 0.0, 1.0)
+		self.parameters = (MIN_0, 1.0)
+		self.curve      = None
+	def buildCurve(self):
+		if (not self.curve is None):
+			u = self.parameters[0]
+			v = self.parameters[1]
+			self.shape = self.curve.build(u, v)
 class LoftData():
 	def __init__(self):
 		self.surface = None
@@ -1849,7 +1880,7 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 			else:
 				b = end
 			self.range = Intervall(Range('F', a), Range('F', b))
-			ellipse = Part.ArcOfCircle(ellipse, a, b) if (self.ratio == 1) else Part.ArcOfEllipse(ellipse, a, b)
+			ellipse = Part.ArcOfEllipse(ellipse, a, b)
 		return ellipse.toShape()
 class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def __init__(self, name = ''):
@@ -2229,7 +2260,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 				if (isinstance(self.pcurve, CurveP)):
 					self.shape = self.pcurve.build(start, end)
 			elif (self.type == 'exppc'):
-				shelf.shape = createBSplinesPCurve(self.pcurve, self.surface, self.sense)
+				self.shape = createBSplinesPCurve(self.pcurve, self.surface, self.sense)
 		return self.shape
 class CurveStraight(Curve):# straight curve "straight-curve"
 	def __init__(self):
@@ -2509,40 +2540,44 @@ class SurfaceSpline(Surface):
 		skin.law, i  = readFormula(chunks, i)
 		skin.pcur, i = readCurve(chunks, i)
 		return skin, i
-	def _readVertexBodyGeometry(self, chunks, index, inventor):
-		vbl = VBL()
-		vbl.t, i = getText(chunks, index)
-		vbl.n, i = getCircleType(chunks, i)
-		vbl.p, i = getLocation(chunks, i)
-		vbl.u, i = getCircleSmoothing(chunks, i)
-		vbl.v, i = getCircleSmoothing(chunks, i)
-		vbl.a, i = getFloat(chunks, i)
-		if (vbl.t == 'circle'):
-			vbl.o, i = readCurve(chunks, i)
-			vbl.type, i = getVblCirleType(chunks, i)
-			if (vbl.type == 'circle'):
-				v1 = v2 = None
-			elif (vbl.type == 'ellipse'):
+	def _readBoundaryGeometry(self, chunks, index, inventor):
+		svId,           i = getText(chunks, index)        # boundary sv id
+		vbl = VBL_CLASSES[svId]()
+		vbl.type,       i = getVblType(chunks, i)         #
+		vbl.magic,      i = getLocation(chunks, i)        # magic
+		vbl.uSmoothing, i = getCircleSmoothing(chunks, i) # u smoothing
+		vbl.vSmoothing, i = getCircleSmoothing(chunks, i) # v smoothing
+		vbl.fullness,   i = getFloat(chunks, i)           # fullness
+		if (svId == 'circle'):
+			vbl.curve, i = readCurve(chunks, i)
+			subType, i = getVblCirleType(chunks, i)
+			if (subType== 'circle'):
+				vbl.twist = (None, None)
+			elif (subType == 'ellipse'):
 				v1, i = getLocation(chunks, i)
-				v2 = None
-			elif (vbl.type == 'unknown'):
+				vbl.twist = (v1, None)
+			elif (subType == 'unknown'):
 				v1, i = getLocation(chunks, i)
 				v2, i = getLocation(chunks, i)
+				vbl.twist = (v1, v2)
 			else:
-				raise Exception("Unknown VBL-Circle:form '%s'" %(self.type))
-			vbl.v = (v1, v2)
-			vbl.angles, i = getFloats(chunks, i, 2)
+				raise Exception("Unknown VBL-Circle:form '%s'" %(subType))
+			vbl.parameters, i = getFloats(chunks, i, 2)
 			vbl.sense, i  = getSense(chunks, i)
-		elif (vbl.t == 'plane'):
-			vbl.v, i = getLocation(chunks, i)
-			vbl.a, i = getFloats(chunks, i, 2)
-			vbl.o, i = readCurve(chunks, i)
-		elif (vbl.t == 'pcurve'):
-			vbl.o, i  = readSurface(chunks, i)
-			self._addSurface(vbl.o)
-			vbl.c, i  = readBS2Curve(chunks, i)
-			vbl.e6, i = getSense(chunks, i)
-			vbl.f, i  = getFloat(chunks, i)
+		elif (svId == 'deg'): # degenerated curve (e.g. cone's Apex)
+			vbl.location, i = getLocation(chunks, i)
+			vbl.normal1, i = getVector(chunks, i)
+			vbl.normal2, i = getVector(chunks, i)
+		elif (svId == 'pcurve'):
+			vbl.surface, i       = readSurface(chunks, i)
+			vbl.pcurve, i        = readBS2Curve(chunks, i)
+			vbl.sense, i         = getSense(chunks, i)
+			vbl.fittolerance, i  = getFloats(chunks, i, 1)
+			self._addSurface(vbl.surface)
+		elif (svId == 'plane'):
+			vbl.normal, i     = getVector(chunks, i)
+			vbl.parameters, i = getFloats(chunks, i, 2)
+			vbl.curve, i      = readCurve(chunks, i)
 		else:
 			raise Exception("Unknown VBL-type '%s'" %(self.t))
 		return vbl, i
@@ -2635,7 +2670,7 @@ class SurfaceSpline(Surface):
 	def setCylinder(self, chunks, index, inventor):
 		self.profile, i = readCurve(chunks, index) # the curve on the cylinder's surface
 		self.axis,    i = getVector(chunks, i)     # the cylinder's axis
-		self.center,  i = getVector(chunks, i)     # the cylinder's center
+		self.center,  i = getLocation(chunks, i)   # the cylinder's center
 		i = self.setSurfaceShape(chunks, i, inventor)
 		self.type = 'cyl_spl_sur'
 		return i
@@ -2736,12 +2771,12 @@ class SurfaceSpline(Surface):
 		i = curve.setHelix(chunks, i, inventor)
 		helix = curve.helix
 		radius, i   = getLength(chunks, i) # radius of the circle
+		center = helix.posCenter + helix.dirMajor
+		normal = helix.vecAxis.cross(helix.dirMajor)
+		profile = Part.makeCircle(radius, center, normal, degrees(angle.getLowerLimit()), degrees(angle.getUpperLimit()))
 		try :
 			faces = []
 			for e in curve.shape.Edges:
-				center = e.valueAt(e.FirstParameter)
-				normal = e.tangentAt(e.FirstParameter)
-				profile = Part.makeCircle(radius, center, normal, degrees(angle.getLowerLimit()), degrees(angle.getUpperLimit()))
 				f = Part.makeSweepSurface(e, profile)
 				faces.append(f)
 #			self.shape = faces[0]
@@ -3109,7 +3144,7 @@ class SurfaceSpline(Surface):
 		n, i = getInteger(chunks, index)      # vertexblendsur”
 		self.boundaries = []
 		for j in range(0, n):
-			vbl, i = self._readVertexBodyGeometry(chunks, i, inventor)
+			vbl, i = self._readBoundaryGeometry(chunks, i, inventor)
 			self.boundaries.append(vbl)
 		grid,      i = getInteger(chunks, i)  # Grid-Size
 		tolerance, i = getFloat(chunks, i)    # fit tolerance
@@ -3183,7 +3218,7 @@ class SurfaceSpline(Surface):
 					self.surface = Part.Cylinder()
 					rotateShape(self.surface, self.axis)
 					self.surface.Center = self.center
-					curve = self.profile.build(curve.range.getLowerLimit(), curve.range.getUpperLimit())
+					curve = self.profile.build(self.profile.range.getLowerLimit(), self.profile.range.getUpperLimit())
 					if (curve is not None):
 						point = curve.Curve.StartPoint
 						u, v = self.surface.parameter(point)
@@ -3193,8 +3228,17 @@ class SurfaceSpline(Surface):
 					else:
 						logError("Can't create cylinder from edge(%r)" %(self.edge))
 			elif (self.type == 'VBL_SURF'):
-				if (self.surface is not None):
-					pass # TODO!
+				if (self.surface is None):
+					edges = []
+					for vbl in self.boundaries:
+						edge = vbl.build()
+						if (not edge is None):
+							edges.append(edge)
+					try:
+						self.shape = Part.makeFilledFace(edges)
+					except:
+						for edge in edges:
+							Part.show(edge)
 			elif (self.type == 'off_spl_sur'):
 				if (self.surface is not None):
 					#self.offset
@@ -3272,7 +3316,8 @@ class SurfaceTorus(Surface):
 				torus.Center = self.center
 				torus.MajorRadius = major
 				torus.MinorRadius = minor
-				self.shape = Part.Face(torus)
+				self.shape = Part.Face([])
+				self.shape.Surface = torus
 			except Exception as e:
 				logError(u"    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s:\n\t%s", major, minor, self.center, self.axis, e)
 		return self.shape
@@ -3499,21 +3544,16 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 			self.a.insert(0, 38)
 		name,    i = getText(entity.chunks, i)
 		name = name.decode('utf8')
+		self.idxCreator, i = getInteger(entity.chunks, i)
 		self.a2, i = getIntegers(entity.chunks, i, len(entity.chunks) - i - 1)
-		try:
-			m = re.search('(Alias_)?(\d+),(\d+),(\d+)', name)
-			if (m is None):
-				color = _colorNames[name]
-				self.red   = color[0]
-				self.green = color[1]
-				self.blue  = color[2]
-			else:
-				self.red   = m.group(2)
-				self.green = m.group(3)
-				self.blue  = m.group(4)
-		except KeyError:
+		color = getColor(name)
+		if (color is None):
 			logWarning(u"Color '%s' not defined in color table - using gray!" %(name))
-			_colorNames[name] = (self.red, self.green, self.blue) # ignore future complains...
+			setColor(name, self.red, self.green, self.blue) # ignore future complains...
+		else:
+			self.red   = color[0]
+			self.green = color[1]
+			self.blue  = color[2]
 		return i
 class AttribNamingMatchingNMxThreadEntity(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxThreadEntity, self).__init__()
@@ -3924,6 +3964,13 @@ SURFACE_TYPES = {
 	'ruled_tpr_spl_sur':    ('setRuledTaper', 1, True),
 	'swepttapersur':		('setSweptTaper', 0, False),
 	'swept_tpr_spl_sur':    ('setSweptTaper', 1, True),
+}
+
+VBL_CLASSES = {
+	"circle": BDY_GEOM_CIRCLE,
+	"deg":    BDY_GEOM_DEG,
+	"pcurve": BDY_GEOM_PCURVE,
+	"plane":  BDY_GEOM_PLANE
 }
 
 ENTITY_TYPES = {

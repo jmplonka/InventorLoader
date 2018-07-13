@@ -281,7 +281,7 @@ class AppReader(SegmentReader):
 			i = node.ReadUUID(i, 'uid_0')
 		else:
 			node.content += ' u16_0=0000 txt_1=\'\' txt_2=\'\' txt_3=\'\' txt_4=\'\' a2=[0000,0000] uid_0=None'
-		i = node.ReadColorRGBA(i, 'c0')
+		i = node.ReadColorRGBA(i, 'color')
 		i = node.ReadColorRGBA(i, 'c1')
 		i = node.ReadColorRGBA(i, 'c2')
 		i = node.ReadColorRGBA(i, 'c3')
@@ -308,14 +308,18 @@ class AppReader(SegmentReader):
 		if (vers > 2012):
 			i = node.ReadFloat32A(i, 2, 'a6')
 		if (vers > 2014):
-			i = node.ReadFloat64A(i, 3, 'a7')
+			i = node.ReadLen32Text16(i, 'txt_9')
 			i = node.ReadUInt8(i, 'u8_2')
 		if (vers > 2016):
-			i = node.ReadFloat32A(i, 17, 'a8')
+			i = node.ReadFloat32(i, 'f32_2')
+			i = node.ReadUInt8A(i, 3, 'a7')
+			i = node.ReadFloat32A(i, 3, 'a8')
 			i = node.ReadUInt8(i, 'u8_3')
-		a0, j = getUInt8A(node.data, i, l - i)
-		if (len(a0) > 0):
-			logError(u"%s\t%s\t%s", getInventorFile()[0:getInventorFile().index('\\')], node.typeName, ' '.join(['%0{0}X'.format(2) %(h) for h in a0]))
+			i = node.ReadFloat32A(i, 10, 'a8')
+			i = node.ReadUInt8(i, 'u8_4')
+			i = node.ReadFloat32A(i, 7, 'a9')
+		color = node.get('color')
+		setColor(node.name, color.red, color.green, color.blue)
 		return i
 
 	def Read_6759D870(self, node):
@@ -510,6 +514,9 @@ class AppReader(SegmentReader):
 
 	def Read_D4227E2D(self, node):
 		i = node.Read_Header0()
+		n, i = getUInt32(node.data, i)
+		i = node.ReadFloat64A(i, n, 'a0')
+		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
 	def Read_D72E4F21(self, node):
@@ -630,6 +637,9 @@ class AppReader(SegmentReader):
 		if (type == 0x01):
 			i = node.ReadUInt8(j, 'u8_0')
 			i = node.ReadUInt16A(i, 8, 'a0')
+			if (getFileVersion() > 2017):
+				i = node.ReadUInt32(i, 'u32_0')
+				i = node.ReadUInt16(i, 'u16_0')
 			i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 			i = node.ReadUInt32(i, 'u32_0')
 		elif (type == 0x02):

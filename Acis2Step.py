@@ -418,7 +418,7 @@ def _createSurfaceSpline(acisSurface):
 		if (isinstance(shape.Surface, Part.Cylinder)):
 			srf = shape.Surface
 			spline = CYLINDRICAL_SURFACE()
-			spline.placement = _createAxis2Placement3D('', srf.Center, '', srf.Axis, '', srf.Axis.cross(VEC(0, 1, 0), ''))
+			spline.placement = _createAxis2Placement3D('', srf.Center, '', srf.Axis, '', srf.Axis.cross(VEC(0, 1, 0)), '')
 			spline.radius    = shape.Surface.Radius
 			return spline
 	logError(u"Spline-Surface not created for (%s)", acisSurface.__str__()[:-1])
@@ -1197,7 +1197,7 @@ class PLANE(NamedEntity):
 		return super(PLANE, self)._getParameters() + [self.placement]
 
 class CYLINDRICAL_SURFACE(NamedEntity):
-	def __init__(self, name, placement, radius):
+	def __init__(self, name="", placement=None, radius=None):
 		super(CYLINDRICAL_SURFACE, self).__init__(name)
 		self.placement = placement
 		self.radius    = radius

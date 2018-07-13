@@ -5,7 +5,7 @@ importerUtils.py:
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import os, sys, datetime, FreeCAD, FreeCADGui, numpy
+import os, sys, datetime, FreeCAD, FreeCADGui, numpy, json
 from PySide.QtCore import *
 from PySide.QtGui  import *
 from uuid          import UUID
@@ -80,6 +80,33 @@ STRATEGY_STEP   = 2
 
 _author = ''
 _description = None
+
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colors.json")) as colorPalette:
+	_colorNames = json.load(colorPalette)
+	for n in _colorNames:
+		if (not n.startswith('_')):
+			rgb =  _colorNames[n]
+			r   = int(rgb[1:3], 0x10) / 255.0
+			g   = int(rgb[3:5], 0x10) / 255.0
+			b   = int(rgb[5:7], 0x10) / 255.0
+			_colorNames[n] = (r, g, b)
+
+def getColor(name):
+	global _colorNames
+	return _colorNames.get(name, None)
+
+def setColor(name, r,g,b):
+	global _colorNames
+	oldColorDef = _colorNames.get(name, None)
+	sNew = "#%02X%02X%02X" % (r*255.0, g*255.0, b*255.0)
+	if (oldColorDef is None):
+		logWarning(u"Found new color '%s': %s - please add to colors.json!" %(name, sNew))
+	else:
+		sOld = "#%02X%02X%02X" % (oldColorDef[0]*255.0, oldColorDef[1]*255.0, oldColorDef[2]*255.0)
+		if (sOld == sNew):
+			return
+		logWarning(u"Overwriting color '%s': %s with new definition %s!" %(name, sOld, sNew))
+	_colorNames[name] = (r, g, b)
 
 def getStrategy():
 	if getFileVersion() < 2010: return STRATEGY_SAT
@@ -779,4 +806,7 @@ class Color():
 		g = int(self.green * 0xFF)
 		b = int(self.blue  * 0xFF)
 		a = int(self.alpha * 0xFF)
-		return u'#%02X%02X%02X%02X' %(a, r, g, b)
+		return u'#%02X%02X%02X%02X' %(r, g, b, a)
+
+	def __repr__(self):
+		return self.__str__()

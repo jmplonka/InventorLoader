@@ -10,7 +10,7 @@ from importerClasses     import *
 #from importerSegment     import SegmentReader
 from importerBRep        import BRepReader
 from importerDC          import DCReader
-#from importerApp         import AppReader
+from importerApp         import AppReader
 #from importerBrowser     import BrowserReader
 #from importerDesignView  import DesignViewReader
 #from importerEeData      import EeDataReader
@@ -1079,14 +1079,14 @@ def findSegment(segRef):
 def getReader(seg):
 	reader = None
 	seg.AcisList = []
-	if (RSeMetaData.isBRep(seg)): # BoundaryRepresentation
+	if (RSeMetaData.isBRep(seg)): # BoundaryRepresentation for SAT/STEP based import
 		if (isStrategySat() or isStrategyStep()):
 			reader = BRepReader()
 	elif (RSeMetaData.isDC(seg)):
-		if (isStrategyNative()):
+		if (isStrategyNative()):   # DocumentComponent for featured base import
 			reader = DCReader()
-#	elif (RSeMetaData.isApp(seg)): # ApplicationSettings
-#		reader = AppReader()
+	elif (RSeMetaData.isApp(seg)): # ApplicationSettings for colors
+		reader = AppReader()
 #	elif (RSeMetaData.isBrowser(seg)):
 #		reader = BrowserReader()
 #	elif (RSeMetaData.isDefault(seg)):
