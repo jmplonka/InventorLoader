@@ -3312,12 +3312,11 @@ class SurfaceTorus(Surface):
 			minor = fabs(self.minor)
 			try:
 				torus = Part.Toroid()
-				rotateShape(torus, self.axis)
+				torus.Axis = self.axis
 				torus.Center = self.center
 				torus.MajorRadius = major
 				torus.MinorRadius = minor
-				self.shape = Part.Face([])
-				self.shape.Surface = torus
+				self.shape = torus.toShape()
 			except Exception as e:
 				logError(u"    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s:\n\t%s", major, minor, self.center, self.axis, e)
 		return self.shape

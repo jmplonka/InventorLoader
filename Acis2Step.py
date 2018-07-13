@@ -24,7 +24,6 @@ _vectors         = {}
 _cones           = {}
 _planes          = {}
 _spheres         = {}
-_toroids         = {}
 _curveBSplines   = {}
 _assignments     = {}
 _entities        = []
@@ -354,7 +353,7 @@ def _createSurfaceCone(acisSurface):
 		if (isEqual1D(acisSurface.sine, 0.0)):
 			cone = CYLINDRICAL_SURFACE('', plc, radius)
 		else:
-			angle  = math.degrees(math.asin(acisSurface.sine))
+			angle  = math.asin(acisSurface.sine)
 			cone = CONICAL_SURFACE('', plc, radius, math.fabs(angle))
 		_cones[key] = cone
 	return cone
@@ -424,14 +423,8 @@ def _createSurfaceSpline(acisSurface):
 	logError(u"Spline-Surface not created for (%s)", acisSurface.__str__()[:-1])
 	return None
 def _createSurfaceTorus(acisSurface):
-	global _toroids
-	key = "%s,%s,%s,%r,%r" %(acisSurface.center, acisSurface.axis, acisSurface.uvorigin, acisSurface.major, acisSurface.minor)
-	try:
-		torus = _toroids[key]
-	except:
-		torus = TOROIDAL_SURFACE('', None, acisSurface.major, math.fabs(acisSurface.minor))
-		torus.placement = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis, 'center_axis', acisSurface.uvorigin, 'ref_axis')
-		_toroids[key] = torus
+	torus = TOROIDAL_SURFACE('', None, acisSurface.major, math.fabs(acisSurface.minor))
+	torus.placement = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis, 'center_axis', acisSurface.uvorigin, 'ref_axis')
 	return torus
 
 def _createSurface(acisFace):
@@ -534,7 +527,6 @@ def _initExport():
 	global _cones
 	global _planes
 	global _spheres
-	global _toroids
 	global _curveBSplines
 	global _assignments
 	global _colorPalette
@@ -550,7 +542,6 @@ def _initExport():
 	_cones           = {}
 	_planes          = {}
 	_spheres         = {}
-	_toroids         = {}
 	_curveBSplines   = {}
 	_assignments     = {}
 	_colorPalette    = {}
