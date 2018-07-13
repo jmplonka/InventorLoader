@@ -381,56 +381,55 @@ def replacePoint(edges, pOld, line, pNew):
 		return replaceEntity(edges, line, createLine(p2v(pNew), l.EndPoint))
 	return replaceEntity(edges, line, createLine(l.StartPoint, p2v(pNew)))
 
-def createEdgeFromNode(wires, sketchEdge):
+def createEdgeFromNode(wires, sketchEdge, direct):
 	sketch = sketchEdge.get('refSketch')
-	e      = sketch.data.associativeIDs.get(sketchEdge.get('entityAI'))
-	p1     = sketch.data.associativeIDs.get(sketchEdge.get('point1AI'))
-	p2     = sketch.data.associativeIDs.get(sketchEdge.get('point2AI'))
+	if (direct):
+		e      = sketchEdge.get('refCurve')
+		p1     = sketchEdge.get('refPoint1')
+		p2     = sketchEdge.get('refPoint2')
+	else:
+		e      = sketch.data.associativeIDs.get(sketchEdge.get('entityAI'))
+		p1     = sketch.data.associativeIDs.get(sketchEdge.get('point1AI'))
+		p2     = sketch.data.associativeIDs.get(sketchEdge.get('point2AI'))
 	typ    = e.typeName
 	edge   = e.sketchEntity
 	if (typ[0:4] == 'Line'):
 		edge = None
 		if (isSamePoint(p1, p2) == False):
 			edge = createLine(p2v(p1), p2v(p2))
-	elif (e.sketchEntity):
+	elif ((typ[0:3] == 'Arc') or (typ[0:6] == 'Circle')):
 		c = e.sketchEntity.Center
-		if ((typ[0:3] == 'Arc') or (typ[0:6] == 'Circle')):
-			edge = Part.Circle(c, e.sketchEntity.Axis, e.sketchEntity.Radius)
-			if (isSamePoint(p1, p2) == False):
-				edge  = Part.Circle(c, e.sketchEntity.Axis, e.sketchEntity.Radius)
-				alpha   = edge.parameter(p2v(p1))
-				beta    = edge.parameter(p2v(p2))
-				if (sketchEdge.get('posDir')):
-					edge = Part.ArcOfCircle(edge, alpha, beta)
-				else:
-					edge = Part.ArcOfCircle(edge, beta, alpha)
-		elif (typ[0:7] == 'Ellipse'):
-			r1 = e.sketchEntity.MajorRadius
-			r2 = e.sketchEntity.MinorRadius
-			edge = Part.Ellipse(c, r1, r2)
-			if (isSamePoint(p1, p2) == False):
-				alpha   = edge.parameter(p2v(p1))
-				beta    = edge.parameter(p2v(p2))
-				if (sketchEdge.get('posDir')):
-					edge = Part.ArcOfEllipse(edge, alpha, beta)
-				else:
-					edge = Part.ArcOfEllipse(edge, beta, alpha)
-		elif (typ[0: 6] == 'Spline'):
-			points = []
-			for point in e.get('points'):
-				if (point.typeName[0:5] == 'Point'): points.append(p2v(point))
-			edge = Part.BSplineCurve()
-			edge.interpolate(points)
-#		elif (typ[0: 4] == 'Text'):
-#		elif (typ[0:12] == 'OffsetSpline'):
-#		elif (typ[0:12] == 'SplineHandle'):
-#		elif (typ[0: 5] == 'Block'):
-		elif (typ[0:12] == 'BSplineCurve'):
-			points = []
-			for p in e.get('points'): points.append(p2v(p))
-			edge = Part.BSplineCurve()
-			edge.interpolate(points)
-#		elif (typ[0: 5] == 'Image'):
+		edge = Part.Circle(c, edge.Axis, edge.Radius)
+		if (isSamePoint(p1, p2) == False):
+			alpha   = edge.parameter(p2v(p1))
+			beta    = edge.parameter(p2v(p2))
+			if (sketchEdge.get('posDir')):
+				edge = Part.ArcOfCircle(edge, alpha, beta)
+			else:
+				edge = Part.ArcOfCircle(edge, beta, alpha)
+	elif (typ[0:7] == 'Ellipse'):
+		c  = edge.Center
+		r1 = edge.MajorRadius
+		r2 = edge.MinorRadius
+		edge = Part.Ellipse(c, r1, r2)
+		if (isSamePoint(p1, p2) == False):
+			alpha   = edge.parameter(p2v(p1))
+			beta    = edge.parameter(p2v(p2))
+			if (sketchEdge.get('posDir')):
+				edge = Part.ArcOfEllipse(edge, alpha, beta)
+			else:
+				edge = Part.ArcOfEllipse(edge, beta, alpha)
+	elif (typ[0: 6] == 'Spline'):
+		points = []
+		for point in e.get('points'):
+			if (point.typeName[0:5] == 'Point'): points.append(p2v(point))
+		edge = Part.BSplineCurve()
+		edge.interpolate(points)
+#	elif (typ[0: 4] == 'Text'):
+#	elif (typ[0:12] == 'OffsetSpline'):
+#	elif (typ[0:12] == 'SplineHandle'):
+#	elif (typ[0: 5] == 'Block'):
+#	elif (typ[0: 5] == 'Image'):
 
 	if (edge):
 		wires.append(edge.toShape())
@@ -780,7 +779,7 @@ class FreeCADImporter:
 			if ((boundarySketch is not None) and (boundarySketch.typeName[0:-2] == 'Sketch')):
 				boundary = self.getEntity(boundarySketch) # ensure that the sketch is already created!
 			for sketchEdges in next.get('lst0'):
-				if (sketchEdges.typeName == 'A3277869'):
+				if (sketchEdges.typeName in ['A3277869', '1E3A132C']):
 					cnt += len(sketchEdges.get('lst0'))
 					edges = []
 					for sketchEdge in sketchEdges.get('lst0'): # should be SketchEntityRef
@@ -788,7 +787,7 @@ class FreeCADImporter:
 						if (boundarySketch is None):
 							boundarySketch = sketch
 							boundary = self.getEntity(sketch) # ensure that the sketch is already created!
-						createEdgeFromNode(edges, sketchEdge)
+						createEdgeFromNode(edges, sketchEdge, sketchEdges.typeName == '1E3A132C')
 					shapeEdges += edges
 					if (len(edges) > 0):
 						w = Part.Wire(edges)
@@ -798,7 +797,7 @@ class FreeCADImporter:
 							wire.fuse(w)
 
 						if (w.isClosed()):
-							f = Part.Face(w)
+							f = Part.Face([w])
 							if(face is None):
 								face = f
 							else:
@@ -809,7 +808,6 @@ class FreeCADImporter:
 									face = face.cut(f)
 						else:
 							useFace = False
-
 			if (len(shapeEdges) > 0):
 				# check if we can use the complete sketch
 				if (len(boundarySketch.data.sketchEdges) != cnt):
@@ -2569,6 +2567,8 @@ class FreeCADImporter:
 		bspline = Part.BSplineCurve()
 		bspline.interpolate(points, False)
 		addSketch3D(edges, bspline, isConstructionMode(bsplineNode), bsplineNode)
+		bezierNode = bsplineNode.get('refBezier')
+		bezierNode.setSketchEntity(-1, bspline)
 		return
 
 	def addSketch_Bezier3D(self, bezierNode, edges):
