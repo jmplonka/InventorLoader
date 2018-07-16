@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 '''
 
 import traceback, FreeCAD, Part, Draft, os
-from importerUtils              import logWarning, logError,logAlways, isEqual, isEqual1D, getUInt8, getUInt16, getSInt16, getSInt32, getFloat32, getFloat64, getFloat64A, getUInt32, ENCODING_FS, getColor, setColor
+from importerUtils              import *
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
 from math                       import pi, fabs, degrees, asin, tan, atan2
 from BOPTools.GeneralFuseResult import GeneralFuseResult

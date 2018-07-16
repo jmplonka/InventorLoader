@@ -80,6 +80,7 @@ STRATEGY_STEP   = 2
 
 _author = ''
 _description = None
+_colorDefault = None
 
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colors.json")) as colorPalette:
 	_colorNames = json.load(colorPalette)
@@ -91,11 +92,20 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colors.json")
 			b   = int(rgb[5:7], 0x10) / 255.0
 			_colorNames[n] = (r, g, b)
 
-def getColor(name):
-	global _colorNames
-	return _colorNames.get(name, None)
+def setColorDefault(r, g, b):
+	global _colorDefault
+	_colorDefault = (r, g, b)
 
-def setColor(name, r,g,b):
+def getColorDefault():
+	global _colorDefault
+	return _colorDefault
+
+def getColor(name):
+	global _colorNames, _colorDefault
+
+	return _colorNames.get(name, _colorDefault)
+
+def setColor(name, r, g, b):
 	global _colorNames
 	oldColorDef = _colorNames.get(name, None)
 	sNew = "#%02X%02X%02X" % (r*255.0, g*255.0, b*255.0)

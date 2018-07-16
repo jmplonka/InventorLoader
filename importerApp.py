@@ -17,6 +17,7 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 class AppReader(SegmentReader):
 	def __init__(self):
 		super(AppReader, self).__init__(False)
+		self.defStyle = None
 
 	def createNewNode(self):
 		return AppNode()
@@ -30,20 +31,23 @@ class AppReader(SegmentReader):
 
 	def Read_11FBECCD(self, node):
 		i = node.Read_Header0()
-		i = node.ReadCrossRef(i, 'cld_0')
-		i = node.ReadCrossRef(i, 'cld_1')
-		i = node.ReadCrossRef(i, 'cld_2')
-		i = node.ReadCrossRef(i, 'cld_3')
-		i = node.ReadCrossRef(i, 'cld_4')
-		i = node.ReadCrossRef(i, 'cld_5')
-		i = node.ReadCrossRef(i, 'cld_6')
-		i = node.ReadCrossRef(i, 'cld_7')
-		i = node.ReadCrossRef(i, 'cld_8')
+		i = node.ReadChildRef(i, 'material')
+		i = node.ReadChildRef(i, 'renderingStyle')
+		i = node.ReadChildRef(i, 'cld_2')
+		i = node.ReadChildRef(i, 'cld_3')
+		i = node.ReadChildRef(i, 'cld_4')
+		i = node.ReadChildRef(i, 'cld_5')
+		i = node.ReadChildRef(i, 'cld_6')
+		i = node.ReadChildRef(i, 'cld_7')
+		i = node.ReadChildRef(i, 'cld_8')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		if (getFileVersion() == 2011):
 			dummy, i = getUInt32(node.data, i)
 		i = node.ReadChildRef(i, 'cld_9')
+
+		self.defStyle = node.get('renderingStyle')
+
 		return i
 
 	def Read_1C4CFF13(self, node):
@@ -693,8 +697,8 @@ class AppReader(SegmentReader):
 	def Read_F8A779FD(self, node):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_X_REF_, 'lst1')
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst1')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
@@ -729,6 +733,10 @@ class AppReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_TEXT16_REF_, 'lst0')
 		return i
+
+	def postRead(self, segment):
+		color = self.defStyle.get('color')
+		setColorDefault(color.red, color.green, color.blue)
 
 	# override importerSegment.setNodeData
 	def setNodeData(self, node, data):

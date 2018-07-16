@@ -7,7 +7,7 @@ Acis2Step.py:
 from datetime      import datetime
 from importerUtils import isEqual
 from FreeCAD       import Vector as VEC
-from importerUtils import logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS
+from importerUtils import logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS, getColorDefault
 import traceback, inspect, os, Acis, math, re, Part
 
 #############################################################
@@ -96,18 +96,26 @@ def _writeStep(file, txt):
 		file.write(txt.encode(ENCODING_FS))
 
 def getColor(entity):
+	global _colorPalette
+
+	r = g = b = None
+
 	color = entity.getColor()
 	if (color is not None):
-		global _colorPalette
-
-		key = "%g,%g,%g" %(color.red, color.green, color.blue)
-		try:
-			rgb = _colorPalette[key]
-		except:
-			rgb = COLOUR_RGB('', color.red, color.green, color.blue)
-			_colorPalette[key] = rgb
-		return rgb
-	return None
+		r, g, b = color.red, color.green, color.blue
+	else:
+		color = getColorDefault()
+		if (color is not None):
+			r, g, b = color
+		else:
+			return None
+	key = "#%02X%02X%02X" %(r*255.0, g*255.0, b*255.0)
+	try:
+		rgb = _colorPalette[key]
+	except:
+		rgb = COLOUR_RGB('', r, g, b)
+		_colorPalette[key] = rgb
+	return rgb
 
 def assignColor(color, item, context):
 	global _assignments

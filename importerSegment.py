@@ -478,6 +478,9 @@ class SegmentReader(object):
 		dumpSat(node)
 		return i
 
+	def postRead(self, segment):
+		return
+
 	def ReadSegmentData(self, file, buffer, seg):
 		vers = getFileVersion()
 		showTree = False
@@ -512,5 +515,6 @@ class SegmentReader(object):
 			if (showTree):
 				tree = buildTree(file, seg)
 				seg.tree = tree
+				self.postRead(seg)
 
 		return
