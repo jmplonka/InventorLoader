@@ -334,16 +334,16 @@ def _createBoundaries(acisLoops):
 	boundaries = []
 	isouter = True
 	for acisLoop in acisLoops:
-		face = FACE_BOUND('', True)
-		loop = EDGE_LOOP('', [])
-		face.wire = loop
 		coedges = acisLoop.getCoEdges()
-		if (len(coedges) > 0):
-			for acisCoEdge in coedges:
-				edge = _createCoEdge(acisCoEdge)
-				if (edge is not None):
-					loop.edges.append(edge)
-		if (len(loop.edges) > 0):
+		edges = []
+		for acisCoEdge in coedges:
+			edge = _createCoEdge(acisCoEdge)
+			if (edge is not None):
+				edges.append(edge)
+		if (len(edges) > 0):
+			face = FACE_BOUND('', True)
+			loop = EDGE_LOOP('', edges)
+			face.wire = loop
 			boundaries.append(face)
 	return boundaries
 
