@@ -3235,7 +3235,7 @@ class SurfaceSpline(Surface):
 						self.surface.Radius = radius.Length + 1.0
 						self.shape = self.surface.toShape()
 					else:
-						logError("Can't create cylinder from edge(%r)" %(self.edge))
+						logError("Can't create cylinder from profile (%r)" %(self.profile))
 			elif (self.type == 'VBL_SURF'):
 				if (self.surface is None):
 					edges = []

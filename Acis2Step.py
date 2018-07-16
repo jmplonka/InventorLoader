@@ -419,7 +419,7 @@ def _createSurfaceSpline(acisSurface):
 		if (isinstance(shape.Surface, Part.SurfaceOfRevolution)):
 			srf = shape.Surface
 			spline = SURFACE_OF_REVOLUTION()
-			spline.curve     = _createCurve(node.profile)
+			spline.curve     = _createCurve(acisSurface.profile)
 			spline.placement = _createAxis1Placement('', srf.Center, '', srf.Axis, '')
 			return spline
 		if (isinstance(shape.Surface, Part.Cylinder)):
