@@ -56,8 +56,9 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt16A(i, 7, 'a0')
 		i = node.ReadCrossRef(i, 'xref_0')
 		i = node.ReadLen32Text16(i)
-		i = node.ReadUInt16A(i, 3, 'a1')
-		i = node.ReadLen32Text16(i, 'txt_0')
+		i = node.ReadLen32Text16(i, 'txt_1')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadLen32Text16(i, 'txt_2')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 		return i
@@ -129,8 +130,9 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt16A(i, 7, 'a0')
 		i = node.ReadCrossRef(i, 'xref_0')
 		i = node.ReadLen32Text16(i)
-		i = node.ReadUInt16A(i, 3, 'a1')
-		i = node.ReadLen32Text16(i)
+		i = node.ReadLen32Text16(i, 'txt_0')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadLen32Text16(i, 'txt_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'xref_0')
 		i = self.skipBlockSize(i)
@@ -368,7 +370,7 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadLen32Text16(i, 'txt_0')
 		return i
-	
+
 	def Read_6D8A4AC9(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUUID(i, 'uid_0')
@@ -395,7 +397,6 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_6EAE8DFD(self, node):
-		node.typeName = 'Parameter'
 		i = node.Read_Header0()
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16A(i, 7, 'a0')
@@ -436,6 +437,17 @@ class AppReader(SegmentReader):
 
 	def Read_81AFC10F(self, node):
 		i = node.Read_Header0()
+		return i
+
+	def Read_8C8E316C(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt16A(i, 7, 'a0')
+		i = node.ReadParentRef(i)
+		i = node.ReadLen32Text16(i)
+		i = node.ReadLen32Text16(i, 'txt_1')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadLen32Text16(i, 'txt_2')
 		return i
 
 	def Read_958DB976(self, node):
@@ -608,6 +620,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
+		i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
 	def Read_F4DD03EC(self, node):
@@ -650,64 +663,65 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_F8A779F9(self, node):
-		i = node.ReadLen32Text8(0)
-		type, j = getUInt16(node.data, i)
-		node.typeName = 'ObjectDefault_%02X' % (type)
-		subType = 0
-		if (type == 0x01):
-			i = node.ReadUInt8(j, 'u8_0')
-			i = node.ReadUInt16A(i, 8, 'a0')
-			if (getFileVersion() > 2017):
-				i = node.ReadUInt32(i, 'u32_0')
-				i = node.ReadUInt16(i, 'u16_0')
-			i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
-			i = node.ReadUInt32(i, 'u32_0')
-		elif (type == 0x02):
-			i = self.skipBlockSize(j)
-			i = node.ReadChildRef(i, 'cld_0')
-			i = node.ReadChildRef(i, 'cld_1')
-		elif (type == 0x0A):
-			i = node.ReadUInt32(j, 'u32_0')
-			i = node.ReadFloat32(i, 'f32_0')
-			i = node.ReadList6(i, AbstractNode._TYP_MAP_TEXT8_X_REF_, 'lst0')
-			subType, i = getUInt32(node.data, i)
-			i = node.ReadUInt32(i, 'u32_1')
-			i = node.ReadUInt16(i, 'u16_0')
-			if (subType < 0x110):
-				i = node.ReadUInt8(i, 'u8_0')
-				i = node.ReadUInt16A(i, 7, 'a1')
-				i = node.ReadParentRef(i)
-				i = node.ReadLen32Text16(i, 'txt_0')
-				i = node.ReadLen32Text16(i, 'txt_1')
-				i = node.ReadUInt16(i, 'u16_1')
-				i = node.ReadLen32Text16(i, 'txt_2')
-				i = node.ReadLen32Text16(i, 'txt_3')
-				i = node.ReadLen32Text16(i, 'txt_4')
-				i = node.ReadLen32Text16(i, 'txt_5')
-				i = node.ReadUInt32(i, 'u32_1')
-				i = node.ReadUUID(i, 'uid_0')
-				i = node.ReadFloat64A(i, 8, 'a2')
-				i = node.ReadUInt8(i, 'u8_1')
-				i = node.ReadUInt16A(i, 2, 'a3')
-				i = node.ReadLen32Text16(i, 'txt_6')
-			elif (subType >= 0x0110 and subType < 0x0120):
-				i = node.ReadFloat64A(i, 14, 'a0')
-				i = node.ReadUUID(i, 'uid_0')
-				i = node.ReadUInt8(i, 'u8_0')
-				i = node.ReadFloat64A(i, 2, 'a1')
-				i = node.ReadUInt8A(i, 2, 'a2')
-				i = node.ReadFloat64A(i, 6, 'a3')
-			elif (subType > 0x0121):
-				i = node.ReadUInt8(i, 'u8_0')
-				i = node.ReadUInt16A(i, 7, 'a0')
-				i = node.ReadParentRef(i)
-				i = node.ReadLen32Text16(i, 'txt_0')
-				i = node.ReadLen32Text16(i, 'txt_1')
-				i = node.ReadUInt16(i, 'u16_1')
-				i = node.ReadLen32Text16(i, 'txt_2')
-				i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
-		else:
-			logError(u"Unknown type: %04X", type)
+		i = node.Read_Header0()
+#		i = node.ReadLen32Text8(i)
+#		type, j = getUInt16(node.data, i)
+#		node.typeName = 'ObjectDefault_%02X' % (type)
+#		subType = 0
+#		if (type == 0x01):
+#			i = node.ReadUInt8(j, 'u8_0')
+#			i = node.ReadUInt16A(i, 8, 'a0')
+#			if (getFileVersion() > 2017):
+#				i = node.ReadUInt32(i, 'u32_0')
+#				i = node.ReadUInt16(i, 'u16_0')
+#			i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+#			i = node.ReadUInt32(i, 'u32_0')
+#		elif (type == 0x02):
+#			i = self.skipBlockSize(j)
+#			i = node.ReadChildRef(i, 'cld_0')
+#			i = node.ReadChildRef(i, 'cld_1')
+#		elif (type == 0x0A):
+#			i = node.ReadUInt32(j, 'u32_0')
+#			i = node.ReadFloat32(i, 'f32_0')
+#			i = node.ReadList6(i, AbstractNode._TYP_MAP_TEXT8_X_REF_, 'lst0')
+#			subType, i = getUInt32(node.data, i)
+#			i = node.ReadUInt32(i, 'u32_1')
+#			i = node.ReadUInt16(i, 'u16_0')
+#			if (subType < 0x110):
+#				i = node.ReadUInt8(i, 'u8_0')
+#				i = node.ReadUInt16A(i, 7, 'a1')
+#				i = node.ReadParentRef(i)
+#				i = node.ReadLen32Text16(i, 'txt_0')
+#				i = node.ReadLen32Text16(i, 'txt_1')
+#				i = node.ReadUInt16(i, 'u16_1')
+#				i = node.ReadLen32Text16(i, 'txt_2')
+#				i = node.ReadLen32Text16(i, 'txt_3')
+#				i = node.ReadLen32Text16(i, 'txt_4')
+#				i = node.ReadLen32Text16(i, 'txt_5')
+#				i = node.ReadUInt32(i, 'u32_1')
+#				i = node.ReadUUID(i, 'uid_0')
+#				i = node.ReadFloat64A(i, 8, 'a2')
+#				i = node.ReadUInt8(i, 'u8_1')
+#				i = node.ReadUInt16A(i, 2, 'a3')
+#				i = node.ReadLen32Text16(i, 'txt_6')
+#			elif (subType >= 0x0110 and subType < 0x0120):
+#				i = node.ReadFloat64A(i, 14, 'a0')
+#				i = node.ReadUUID(i, 'uid_0')
+#				i = node.ReadUInt8(i, 'u8_0')
+#				i = node.ReadFloat64A(i, 2, 'a1')
+#				i = node.ReadUInt8A(i, 2, 'a2')
+#				i = node.ReadFloat64A(i, 6, 'a3')
+#			elif (subType > 0x0121):
+#				i = node.ReadUInt8(i, 'u8_0')
+#				i = node.ReadUInt16A(i, 7, 'a0')
+#				i = node.ReadParentRef(i)
+#				i = node.ReadLen32Text16(i, 'txt_0')
+#				i = node.ReadLen32Text16(i, 'txt_1')
+#				i = node.ReadUInt16(i, 'u16_1')
+#				i = node.ReadLen32Text16(i, 'txt_2')
+#				i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+#		else:
+#			logError(u"Unknown type: %04X", type)
 		return i
 
 	def Read_F8A779FD(self, node):
