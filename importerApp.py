@@ -86,6 +86,10 @@ class AppReader(SegmentReader):
 
 	def Read_2AE52C91(self, node):
 		i = node.Read_Header0()
+		i = node.ReadUInt16A(i, 2, 'u16_0')
+		i = node.ReadLen32Text16(i, 'txt_0')
+		i = node.ReadLen32Text16(i, 'txt_1')
+		i = node.ReadLen32Text16(i, 'txt_2')
 		return i
 
 	def Read_2F6A0C3F(self, node):
@@ -164,7 +168,12 @@ class AppReader(SegmentReader):
 
 	def Read_473180FD(self, node): return 0
 
-	def Read_55231213(self, node): return 0
+	def Read_55231213(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadLen32Text16(i, 'txt_0')
+		return i
 
 	def Read_5C30CDF2(self, node):
 		i = node.Read_Header0()
@@ -353,6 +362,13 @@ class AppReader(SegmentReader):
 		i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
+	def Read_6D8A4AC8(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadLen32Text16(i, 'txt_0')
+		return i
+	
 	def Read_6D8A4AC9(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUUID(i, 'uid_0')
@@ -577,7 +593,7 @@ class AppReader(SegmentReader):
 
 	def Read_EBEE69D0(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList3(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
 		i = node.ReadLen32Text16(i)
 		i = self.skipBlockSize(i)
 		return i
@@ -725,6 +741,13 @@ class AppReader(SegmentReader):
 	def Read_FD1E899B(self, node): return 0
 
 	def Read_FD1E899D(self, node): return 0
+
+	def Read_FD1F3F21(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadLen32Text16(i, 'txt_0')
+		return i
 
 	def Read_FDA6D020(self, node):
 		i = node.Read_Header0()
