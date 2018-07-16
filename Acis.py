@@ -162,6 +162,15 @@ references = {}
 
 _currentEntityId = -2
 
+def init():
+	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces
+
+	references = {}
+	subtypeTableCurves = []
+	subtypeTablePCurves = []
+	subtypeTableSurfaces = {}
+	invSubtypeTableSurfaces = {}
+
 def addNode(node):
 	if (node.entity is not None):
 		subtype = node.getType()

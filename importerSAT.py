@@ -263,7 +263,8 @@ def resolveNode(entity):
 	return
 
 def resolveNodes():
-	Acis.references = {}
+	Acis.init()
+
 	bodies = []
 	faces  = []
 	model = getEntities()
