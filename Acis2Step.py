@@ -1417,12 +1417,12 @@ def export(filename, satHeader, satBodies):
 	subpath = "%s/%s" %(path,name)
 	if (not os.path.exists(subpath)):
 		os.makedirs(subpath)
-	with open("%s/subtypes.txt" %(subpath), 'w') as fp:
-		for i, n in enumerate(Acis.subtypeTableSurfaces):
-			s = repr(n)
-			if (len(s) > 0) and (s[-1] == '\n'):
-				s = s[0:-1]
-			fp.write("%d\t%r\n" %(i, s))
+#	with open("%s/subtypes.txt" %(subpath), 'w') as fp:
+#		for i, n in enumerate(Acis.subtypeTableSurfaces):
+#			s = repr(n)
+#			if (len(s) > 0) and (s[-1] == '\n'):
+#				s = s[0:-1]
+#			fp.write("%d\t%r\n" %(i, s))
 
 	appPrtDef    = APPLICATION_PROTOCOL_DEFINITION()
 	bodies = []
