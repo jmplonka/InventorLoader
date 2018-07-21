@@ -58,30 +58,6 @@ class DCReader(SegmentReader):
 		'''
 		return True
 
-	#overrides
-	def setNodeData(self, node, data):
-		'''
-		Called by importerSegment.py -> SegmentReader.newNode
-		'''
-		offset = node.offset
-		nodeTypeID, i = getUInt8(data, offset - 4)
-		node.typeID = getNodeType(nodeTypeID, node.segment)
-		if (isinstance(node.typeID, UUID)):
-			node.typeName = '%08X' % (node.typeID.time_low)
-			i = offset + node.size
-			s, dummy = getUInt32(data, i)
-			id = node.typeID.time_low
-			if ((s != node.size) and ((id == 0x2B48A42B) or (id == 0x90874D63))):
-				s, dummy = getUInt32(data, i)
-				while ((s != node.size) and (i < len(data))):
-					i += 1
-					s, dummy = getUInt32(data, i)
-				node.size = i - offset
-		else:
-			node.typeName = '%08X' % (node.typeID)
-
-		node.data = data[offset:offset + node.size]
-
 ########################################
 # usability functions
 
