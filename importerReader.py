@@ -1105,8 +1105,9 @@ def getReader(seg):
 #		reader = FBAttributeReader()
 #	elif (RSeMetaData.isNBNotebook(seg)):
 #		reader = NotebookReader()
-#	elif (seg.segRef is not None):
-#		logWarning(u"    %s will be read, but not considered!", seg.name)
+	elif (seg.segRef is not None):
+		logInfo(u"    %s will not be considered!", seg.name)
+		#reader = SegmentReader()
 	return reader
 
 def ReadRSeMetaDataB(dataB, seg):
