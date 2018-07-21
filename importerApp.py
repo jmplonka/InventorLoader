@@ -25,6 +25,17 @@ class AppReader(SegmentReader):
 	def skipDumpRawData(self):
 		return True
 
+	def readHeaderStyle(self, node, typeName = None):
+		if (name is not None):
+			node.typeName = typeName
+
+		i = node.Read_Header0()
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt16A(i, 7, 'a0')
+		i = node.ReadCrossRef(i, 'xref_0')
+		i = node.ReadLen32Text16(i)
+		return i
+
 	def Read_10389219(self, node): return 0
 
 	def Read_10D6C06B(self, node): return 0
@@ -51,11 +62,7 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_1C4CFF13(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadCrossRef(i, 'xref_0')
-		i = node.ReadLen32Text16(i)
+		i = self.readHeaderStyle(node)
 		i = node.ReadLen32Text16(i, 'txt_1')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadLen32Text16(i, 'txt_2')
@@ -63,13 +70,12 @@ class AppReader(SegmentReader):
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 		return i
 
-	def Read_1E5CBB86(self, node):
-		node.typeName = 'Lighting'
+	def Read_1DA4647D(self, node):
 		i = node.Read_Header0()
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadCrossRef(i, 'xref_0')
-		i = node.ReadLen32Text16(i)
+		return i
+
+	def Read_1E5CBB86(self, node):
+		i = self.readHeaderStyle(node, 'Lighting')
 		i = node.ReadUInt16A(i, 3, 'a1')
 		i = node.ReadLen32Text16(i, 'txt_0')
 		i = self.skipBlockSize(i)
@@ -125,11 +131,7 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_36BC43F4(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadCrossRef(i, 'xref_0')
-		i = node.ReadLen32Text16(i)
+		i = self.readHeaderStyle(node)
 		i = node.ReadLen32Text16(i, 'txt_0')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadLen32Text16(i, 'txt_0')
@@ -237,13 +239,9 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_6759D86E(self, node):
-		node.typeName = 'Material'
+		i = self.readHeaderStyle(node, 'Material')
 		vers = getFileVersion()
-		i = node.Read_Header0()
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadParentRef(i)
-		i = node.ReadLen32Text16(i)
+
 		if (vers < 2013):
 			i = node.ReadUInt16A(i, 3, 'a1')
 		i = node.ReadLen32Text16(i, 'txt_0')
@@ -272,14 +270,8 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_6759D86F(self, node):
-		node.typeName = 'RenderingStyle'
-
+		i = self.readHeaderStyle(node, 'RenderingStyle')
 		vers = getFileVersion()
-		i = node.Read_Header0()
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadParentRef(i)
-		i = node.ReadLen32Text16(i)
 		if (vers < 2013):
 			i = node.ReadUInt16A(i, 3, 'a1')
 		else:
@@ -340,8 +332,8 @@ class AppReader(SegmentReader):
 	def Read_6759D870(self, node):
 		node.typeName = 'Settings'
 		i = node.Read_Header0()
-		i = self.skipBlockSize(i)
 		if (getFileVersion() < 2013):
+			i = self.skipBlockSize(i)
 			i = node.ReadList6(i, AbstractNode._TYP_MAP_TEXT8_REF_, 'lst0')
 		else:
 			i = node.ReadList7(i, AbstractNode._TYP_MAP_TEXT8_REF_, 'lst0')
@@ -383,25 +375,13 @@ class AppReader(SegmentReader):
 		i = node.ReadLen32Text8(i)
 		i = node.ReadChildRef(i, 'cld_0')
 		i = node.ReadParentRef(i)
-		i = node.ReadUInt16A(i, 8, 'a0')
-		i = node.ReadLen32Text16(i, 'txt_0')
-		i = node.ReadChildRef(i, 'cld_1')
-		if (i == len(node.data) - 4):
-			i = node.ReadUInt32(i, 'codpage')
-		else:
-			i = node.ReadLen32Text16(i, 'txt_1')
-#			i = node.ReadChildRef(i, 'cld_2')
-#			i = node.ReadUInt32(i, 'codpage')
-
+		i = node.ReadList6(i, AbstractNode._TYP_MAP_TEXT16_REF_, 'lst0')
+		i = node.ReadUInt32(i, 'codpage')
 		i = self.skipBlockSize(i)
 		return i
 
 	def Read_6EAE8DFD(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadParentRef(i)
-		i = node.ReadLen32Text16(i, 'txt_0')
+		i = self.readHeaderStyle(node)
 		return i
 
 	def Read_7313FAC3(self, node):
@@ -420,12 +400,7 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_7F644248(self, node):
-		node.typeName = 'Text'
-		i = node.Read_Header0()
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadParentRef(i)
-		i = node.ReadLen32Text16(i)
+		i = self.readHeaderStyle(node, 'Text')
 		i = node.ReadUInt16A(i, 3, 'a1')
 		i = node.ReadLen32Text16(i, 'txt_0')
 		i = self.skipBlockSize(i)
@@ -440,11 +415,7 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_8C8E316C(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadParentRef(i)
-		i = node.ReadLen32Text16(i)
+		i = self.readHeaderStyle(node)
 		i = node.ReadLen32Text16(i, 'txt_1')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadLen32Text16(i, 'txt_2')
@@ -664,64 +635,8 @@ class AppReader(SegmentReader):
 
 	def Read_F8A779F9(self, node):
 		i = node.Read_Header0()
-#		i = node.ReadLen32Text8(i)
-#		type, j = getUInt16(node.data, i)
-#		node.typeName = 'ObjectDefault_%02X' % (type)
-#		subType = 0
-#		if (type == 0x01):
-#			i = node.ReadUInt8(j, 'u8_0')
-#			i = node.ReadUInt16A(i, 8, 'a0')
-#			if (getFileVersion() > 2017):
-#				i = node.ReadUInt32(i, 'u32_0')
-#				i = node.ReadUInt16(i, 'u16_0')
-#			i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
-#			i = node.ReadUInt32(i, 'u32_0')
-#		elif (type == 0x02):
-#			i = self.skipBlockSize(j)
-#			i = node.ReadChildRef(i, 'cld_0')
-#			i = node.ReadChildRef(i, 'cld_1')
-#		elif (type == 0x0A):
-#			i = node.ReadUInt32(j, 'u32_0')
-#			i = node.ReadFloat32(i, 'f32_0')
-#			i = node.ReadList6(i, AbstractNode._TYP_MAP_TEXT8_X_REF_, 'lst0')
-#			subType, i = getUInt32(node.data, i)
-#			i = node.ReadUInt32(i, 'u32_1')
-#			i = node.ReadUInt16(i, 'u16_0')
-#			if (subType < 0x110):
-#				i = node.ReadUInt8(i, 'u8_0')
-#				i = node.ReadUInt16A(i, 7, 'a1')
-#				i = node.ReadParentRef(i)
-#				i = node.ReadLen32Text16(i, 'txt_0')
-#				i = node.ReadLen32Text16(i, 'txt_1')
-#				i = node.ReadUInt16(i, 'u16_1')
-#				i = node.ReadLen32Text16(i, 'txt_2')
-#				i = node.ReadLen32Text16(i, 'txt_3')
-#				i = node.ReadLen32Text16(i, 'txt_4')
-#				i = node.ReadLen32Text16(i, 'txt_5')
-#				i = node.ReadUInt32(i, 'u32_1')
-#				i = node.ReadUUID(i, 'uid_0')
-#				i = node.ReadFloat64A(i, 8, 'a2')
-#				i = node.ReadUInt8(i, 'u8_1')
-#				i = node.ReadUInt16A(i, 2, 'a3')
-#				i = node.ReadLen32Text16(i, 'txt_6')
-#			elif (subType >= 0x0110 and subType < 0x0120):
-#				i = node.ReadFloat64A(i, 14, 'a0')
-#				i = node.ReadUUID(i, 'uid_0')
-#				i = node.ReadUInt8(i, 'u8_0')
-#				i = node.ReadFloat64A(i, 2, 'a1')
-#				i = node.ReadUInt8A(i, 2, 'a2')
-#				i = node.ReadFloat64A(i, 6, 'a3')
-#			elif (subType > 0x0121):
-#				i = node.ReadUInt8(i, 'u8_0')
-#				i = node.ReadUInt16A(i, 7, 'a0')
-#				i = node.ReadParentRef(i)
-#				i = node.ReadLen32Text16(i, 'txt_0')
-#				i = node.ReadLen32Text16(i, 'txt_1')
-#				i = node.ReadUInt16(i, 'u16_1')
-#				i = node.ReadLen32Text16(i, 'txt_2')
-#				i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
-#		else:
-#			logError(u"Unknown type: %04X", type)
+		i = node.ReadChildRef(i, 'ref1')
+		i = node.ReadChildRef(i, 'ref2')
 		return i
 
 	def Read_F8A779FD(self, node):
@@ -773,24 +688,5 @@ class AppReader(SegmentReader):
 
 	def postRead(self, segment):
 		color = self.defStyle.get('color')
-		setColorDefault(color.red, color.green, color.blue)
-
-	# override importerSegment.setNodeData
-	def setNodeData(self, node, data):
-		offset = node.offset
-		nodeTypeID, i = getUInt8(data, offset - 4)
-		node.typeID = getNodeType(nodeTypeID, node.segment)
-		if (isinstance(node.typeID, UUID)):
-			node.typeName = '%08X' % (node.typeID.time_low)
-			i = offset + node.size
-			s, dummy = getUInt32(data, i)
-			if ((s != node.size) and (node.typeID.time_low == 0xF8A779F9)):
-				s, dummy = getUInt32(data, i)
-				while ((s != node.size) and (i < len(data))):
-					i += 1
-					s, dummy = getUInt32(data, i)
-				node.size = i - offset
-		else:
-			node.typeName = '%08X' % (node.typeID)
-
-		node.data = data[offset:offset + node.size]
+		if (color is not None):
+			setColorDefault(color.red, color.green, color.blue)
