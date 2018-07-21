@@ -7,7 +7,7 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 
 import re, traceback
 from importerClasses   import *
-from importerSegNode   import isList, BinaryNode, NodeRef
+from importerSegNode   import isList, CheckList, BinaryNode, NodeRef
 from importerUtils     import *
 from Acis              import clearEntities
 from importerSAT       import readEntityBinary, Header
@@ -312,6 +312,9 @@ class SegmentReader(object):
 		self.analyseLists = analyseLists
 		self.fmt_old = (getFileVersion() < 2011)
 
+	def postRead(self, seg):
+		return
+
 	def createNewNode(self):
 		return BinaryNode()
 
@@ -379,7 +382,7 @@ class SegmentReader(object):
 		except Exception as e:
 			if (not isinstance(e, AttributeError)):
 				logError(traceback.format_exc())
-			else:
+			elif (self.__class__.__name__ != "SegmentReader"):
 				logError(u"ERROR> (%04X) - %s: %s", node.index, node.typeName, e)
 
 		try:
@@ -390,14 +393,13 @@ class SegmentReader(object):
 		return
 
 	def setNodeData(self, node, data):
-		offset = node.offset
-		nodeTypeID, i = getUInt8(data, offset - 4)
+		nodeTypeID, i = getUInt8(data, node.offset)
 		node.typeID = getNodeType(nodeTypeID, node.segment)
 		if (isinstance(node.typeID, UUID)):
 			node.typeName = '%08X' % (node.typeID.time_low)
 		else:
 			node.typeName = '%08X' % (node.typeID)
-		node.data = data[offset:offset + node.size]
+		node.data = data[i + 3:i + 3 + node.size]
 
 	def newNode(self, size, offset, data, seg):
 		self.nodeCounter += 1
@@ -421,10 +423,9 @@ class SegmentReader(object):
 		return False
 
 	def skipBlockSize(self, offset, l = 4):
-		i = offset
 		if (self.fmt_old):
-			i += l
-		return i
+			return offset + l
+		return offset
 
 	def dumpRawData(self, seg, data):
 #		filename = '%s\\%sB.bin' %(getInventorFile()[0:-4], seg.name)
@@ -478,11 +479,32 @@ class SegmentReader(object):
 		dumpSat(node)
 		return i
 
-	def postRead(self, segment):
-		return
+	def ReadTrailer(self, buffer, offset):
+		i = offset
+		if (getFileVersion() > 2014):
+			u8_0, i = getUInt8(buffer, i)
+			if (u8_0  == 1):
+				n, i = getUInt32(buffer, i)
+				txt = []
+				while (n > 0):
+					n -= 1
+					k, i = getLen32Text8(buffer, i)
+					u32_1, i = getUInt32(buffer, i)
+					if (u32_1 == 0x01):   v, i = getUInt8A(buffer, i, 3)
+					elif (u32_1 == 0x03): v, i = getUInt16A(buffer, i, 2)
+					elif (u32_1 == 0x0A): v, i = getUInt16A(buffer, i, 3)
+					else: raise("Unknown property value type 0x%02X!" %(u32_i))
+					txt.append((k,v))
+				i = CheckList(buffer, i, 0x0006)
+				cnt, i = getUInt32(buffer, i)
+				if (cnt > 0):
+					arr32, i = getUInt32A(buffer, i, 2)
+					j = 0
+					while (j < cnt):
+						pass #???
+		return i
 
 	def ReadSegmentData(self, file, buffer, seg):
-		vers = getFileVersion()
 		showTree = False
 
 		if (not self.skipDumpRawData()):
@@ -490,25 +512,24 @@ class SegmentReader(object):
 
 		self.nodeCounter = 0
 
-		hdrSize = 5 if (vers > 2014) else 4
-
 		logDebug(u">D0002: Reading %s binary buffer ...", seg.name)
 
 		try:
-			i = 4
+			i = 0
 
 			seg.elementNodes = {}
 			seg.indexNodes   = {}
+			#SECTION = [UUID_IDX_U8][RES_U24 = 0x000001][DATA][DATA_LENGTH_U32][TRAILER]
 			for sec in seg.sec1:
 				if (sec.flags == 1):
 					l = sec.length
-					start = i - 4
+					start = i
 					data = self.ReadBlock(file, buffer, i, l, seg)
-					i += data.size
-					t = '%08X' % (data.typeID.time_low)
+					i += data.size + 4
 					u32_0, i = getUInt32(buffer, i)
-					assert (u32_0 == l), '%s: BLOCK[%X] - incorrect block size %X != %X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, u32_0, start, data.typeName)
-					i += hdrSize
+					i = self.ReadTrailer(buffer, i)
+					if ((u32_0 != 0) and (u32_0 != l)):
+						logError('%s: BLOCK[%04X] - incorrect block size %X != 	%X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, u32_0, start, data.typeName))
 			showTree = True
 
 		finally:
@@ -516,5 +537,4 @@ class SegmentReader(object):
 				tree = buildTree(file, seg)
 				seg.tree = tree
 				self.postRead(seg)
-
 		return

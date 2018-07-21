@@ -53,6 +53,7 @@ class AbstractNode(AbstractData):
 	_TYP_STRING8_              = 0x0015
 	_TYP_RESULT_ITEM4_         = 0x0016
 	_TYP_NODE_X_REF_           = 0x0017
+	_TYP_U32_TXT_TXT_DATA      = 0x0018
 
 	_TYP_LIST_GUESS_           = 0x8000
 	_TYP_LIST_2D_UINT16_       = 0x8001
@@ -407,9 +408,34 @@ class AbstractNode(AbstractData):
 							i += 4
 						a, i = getUInt8A(self.data, i, 4)
 						val.append(a)
+						if (skipBlockSize): i += 4
+						s = '(%s) %X [%s]' %(FloatArr2Str(f), u, IntArr2Str(a, 1))
+					elif (t == AbstractNode._TYP_U32_TXT_TXT_DATA):
+						n1, i = getUInt32(self.data, i)
+						t1, i = getLen32Text16(self.data, i)
+						t2, i = getLen32Text16(self.data, i)
+						l1 = []
+						while (True):
+							m, i = getSInt16(self.data, i)
+							if (m == -1):
+								break
+							l1.append(m)
+						a1, i = getUInt8A(self.data, i, 3)
+						m, i = getUInt16(self.data, i)
+						l2, i = getFloat64A(self.data, i, m)
+						n2, i = getUInt32(self.data, i)
 						if (skipBlockSize):
 							i += 4
-						s = '(%s) %X [%s]' %(FloatArr2Str(f), u, IntArr2Str(a, 1))
+						else:
+							a2, i = getFloat32A(self.data, i, 2)
+						c1, i = getColorRGBA(self.data, i)
+						if (skipBlockSize):
+							i += 4
+						n3, i = getUInt8(self.data, i)
+						n4, i = getUInt32(self.data, i)
+						if (skipBlockSize): i += 8
+						val = [n1, t1, t2, l1, a1, l2, n2, c1, n3, n4]
+						s = '%d, %s, %s, [%s], [%s], [%s], %04X, %s, %d, %X' %(n1, t1, t2, IntArr2Str(l1, 4), IntArr2Str(a1, 2), FloatArr2Str(l2), n2, c1, n3, n4)
 					elif (t == AbstractNode._TYP_LIST_GUESS_):
 						i = self.ReadList2(i, AbstractNode._TYP_GUESS_, 'lst_tmp')
 						val = self.get('lst_tmp')
