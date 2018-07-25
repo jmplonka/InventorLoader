@@ -26,7 +26,7 @@ class AppReader(SegmentReader):
 		return True
 
 	def readHeaderStyle(self, node, typeName = None):
-		if (name is not None):
+		if (typeName is not None):
 			node.typeName = typeName
 
 		i = node.Read_Header0()
