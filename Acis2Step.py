@@ -40,10 +40,10 @@ def _getE(o):
 def _dbl2str(d):
 	if (d == 0.0):
 		return "0."
-	if (math.fabs(d) > 1e5):
+	if (math.fabs(d) > 5e5):
 		s = ('%E' % d).split('E')
 		return s[0].rstrip('0') + 'E+' + s[1][1:].lstrip('0')
-	if (math.fabs(d) < 1e-5):
+	if (math.fabs(d) < 5e-5):
 		s = ('%E' % d).split('E')
 		return s[0].rstrip('0') + 'E-' + s[1][1:].lstrip('0')
 	s = "%r" %(d)
