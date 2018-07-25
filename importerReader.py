@@ -161,7 +161,7 @@ def getPropertySetName(properties, path, model):
 		name = path[-1][1:]
 
 	languageCode = properties[KEY_LANGUAGE_CODE] if (KEY_LANGUAGE_CODE in properties) else 1031 # en_EN
-	logDebug(u"\t'%s': (LC = %X)", name, languageCode)
+	logInfo(u"\t'%s': (LC = %X)", name, languageCode)
 
 	if (name not in model.iProperties):
 		model.iProperties[name] = {}
@@ -190,7 +190,7 @@ def ReadInventorSummaryInformation(doc, properties, path):
 					val = writeThumbnail(val)
 				elif (key == KEY_THUMBNAIL_2):
 					val = writeThumbnail(val)
-				logDebug(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val)
+				logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val)
 				model.iProperties[name][key] = (Inventor_Summary_Information.get(key, key), val)
 	return
 
@@ -206,7 +206,7 @@ def ReadInventorDocumentSummaryInformation(doc, properties, path):
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
 			if (val is not None):
-				logDebug(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val)
+				logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val)
 				model.iProperties[name][key] = (Inventor_Document_Summary_Information.get(key, key), val)
 	return
 
@@ -219,140 +219,10 @@ def ReadOtherProperties(properties, path, keynames={}):
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
 			if (val is not None):
-				logDebug(u"\t\t%s = %s", keynames.get(key, key), val)
+				logInfo(u"\t\t%s = %s", keynames.get(key, key), val)
 				model.iProperties[name][key] = (keynames.get(key, key), val)
 
 	return
-
-def ReadUFRxDoc(data):
-	global model
-
-#	try:
-	model.UFRxDoc = UFRxDocument()
-	model.UFRxDoc.version, i = getUInt16(data, 0)
-	cnt, i = getUInt16(data, i)
-	model.UFRxDoc.arr1, i = getUInt16A(data, i, cnt)
-	logDebug(u"\t[%s]", IntArr2Str(model.UFRxDoc.arr1, 4))
-	model.UFRxDoc.arr2, i = getUInt16A(data, i, 4)
-	logDebug(u"\t[%s]", IntArr2Str(model.UFRxDoc.arr2, 4))
-	model.UFRxDoc.dat1, i = getDateTime(data, i)
-	# logDebug(u"\t%s", model.UFRxDoc.dat1)
-	model.UFRxDoc.arr3, i = getUInt16A(data, i, 4)
-	logDebug(u"\t[%s]", IntArr2Str(model.UFRxDoc.arr3, 4))
-	model.UFRxDoc.dat2, i = getDateTime(data, i)
-	# logDebug(u"\t%s", model.UFRxDoc.dat2)
-	model.UFRxDoc.comment, i  = getLen32Text16(data, i)
-	logDebug(u"\t%r", model.UFRxDoc.comment)
-	model.UFRxDoc.arr4, i = getUInt16A(data, i, 8)
-	logDebug(u"\t[%s]", IntArr2Str(model.UFRxDoc.arr4, 4))
-	model.UFRxDoc.arr5, i = getUInt16A(data, i, 4)
-	logDebug(u"\t[%s]", IntArr2Str(model.UFRxDoc.arr5, 4))
-	model.UFRxDoc.dat3, i = getDateTime(data, i)
-	# logDebug(u"\t%s", model.UFRxDoc.dat3)
-	model.UFRxDoc.revisionRef, i = getUUID(data, i, 'UFRxDoc.revisionRef')
-	# logDebug(u"\t%s", model.UFRxDoc.revisionRef)
-	if (model.UFRxDoc.version == 0x08):
-		model.UFRxDoc.ui1, i  = getUInt16(data, i)
-	else:
-		model.UFRxDoc.ui1, i  = getUInt32(data, i)
-	logDebug(u"\t%X", model.UFRxDoc.ui1)
-	model.UFRxDoc.dbRef, i = getUUID(data, i, 'UFRxDoc.dbRef')
-	# logDebug(u"\t%s", model.UFRxDoc.dbRef)
-	model.UFRxDoc.filename, i  = getLen32Text16(data, i)
-	logDebug(u"\t%r", model.UFRxDoc.filename)
-	model.UFRxDoc.arr6, i = getUInt16(data, i)
-
-	cnt, i = getUInt32(data, i)
-	if (cnt>0):
-		return i-4
-
-	logDebug(u"\t%04X", model.UFRxDoc.arr6)
-	cnt, i = getUInt32(data, i)
-	j = 1
-	while (j <= cnt):
-		txt, i = getLen32Text16(data, i)
-		key, i = getLen32Text16(data, i)
-		model.UFRxDoc.prps[key] = txt
-		logDebug(u"\t%d: %s=%r", j, key, txt)
-		j += 1
-
-	# cnt, i = getUInt32(data, i)
-	# j = 1
-	# while (j <= cnt):
-	# 	txt, i = getLen32Text16(data, i)
-	# 	key, i = getLen32Text16(data, i)
-	# 	model.UFRxDoc.prps[key] = txt
-	# 	logDebug(u"\t%d: %s=%r", j, key, txt)
-	# 	j += 1
-	# model.UFRxDoc.ui2, i  = getUInt32(data, i)
-	# logDebug(u"\t\t%d", model.UFRxDoc.ui2)
-	# model.UFRxDoc.txt3, i  = getLen32Text16(data, i)
-	# logDebug(u"\t%r", model.UFRxDoc.txt3)
-	# model.UFRxDoc.ui3, i  = getUInt32(data, i)
-	# logDebug(u"\t\t%d", model.UFRxDoc.ui3)
-	# model.UFRxDoc.arr7, i = getUInt16A(data, i, 9)
-	# logDebug(u"\t[%s]", IntArr2Str(model.UFRxDoc.arr7, 4))
-	# if (model.UFRxDoc.arr7[0] == 0x17):
-	# 	uid1, i =  getUUID(data, i , 'UFRxDoc.uid1')
-	# 	uid2, i =  getUUID(data, i , 'UFRxDoc.uid2')
-	# 	u16, i = getUInt16(data, i)
-	# 	logDebug(u"\t%s,%s,%04X", uid1, uid1, u16)
-	# model.UFRxDoc.arr8, i = getUInt32A(data, i, 4)
-	# logDebug(U"\t[%s]", IntArr2Str(model.UFRxDoc.arr8, 4))
-	# cnt, i = getUInt32(data, i)
-	# j = 1
-	# while (j <= cnt):
-	# 	#01 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00,'Embedding 1:{00020820-0000-0000-C000-000000000046}\',                   FF FF FF FF,'',         00 00,'',              00 00 00 00 00 00 00 00
-	# 	arr1, i = getUInt32A(data, i, 5)
-	# 	txt1, i = getLen32Text16(data, i)
-	# 	u32, i  = getUInt32(data, i)
-	# 	txt2, i = getLen32Text16(data, i)
-	# 	u16, i = getUInt16(data, i)
-	# 	txt3, i = getLen32Text16(data, i)
-	# 	arr2, i = getUInt32A(data, i, 2)
-	# 	logDebug(u"\t\t%d: [%s],'%s',%08X,'%s',%04X,'%s',[%s]", j, IntArr2Str(arr1, 1), txt1, u32, txt2, u16, txt3, IntArr2Str(arr2, 4))
-	# 	j += 1
-	# model.UFRxDoc.arr9, i = getUInt32A(data, i, 4)
-	# logDebug(u"\t[%s]", IntArr2Str(model.UFRxDoc.arr9, 4))
-	# model.UFRxDoc.arrA, i = getUInt8A(data, i, 9)
-	# logDebug(u"\t[%s]", IntArr2Str(model.UFRxDoc.arrA, 2))
-	# next = True
-	# while (next):
-	# 	u8, i = getUInt8(data, i)
-	# 	if (u8 == 0x1D):
-	# 		u8, i = getUInt8(data, i)
-	# 		logDebug(u"\t1D,%02X", u8)
-	# 	elif ((u8 == 0) or (u8 == 1)):
-	# 		i -= 1
-	# 		next = False
-	# 	else:
-	# 		uid1, i = getUUID(data, i, 'UFRxDoc[%X].uid1' % (u8))
-	# 		if ((u8 == 0x11) or (u8 == 0x13) or (u8 == 0x16) or (u8 == 0x17) or (u8 == 0x18) or (u8 == 0x1F) or (u8 == 0x24) or (u8 == 0x25)):
-	# 			uid2, i = getUUID(data, i, 'UFRxDoc[%X].uid2' % (u8))
-	# 			logDebug(u"\t%02X,%s,%s", u8, uid1, uid2)
-	# 		else:
-	# 			logDebug(u"\t%02X,%s", u8, uid1)
-	# u16, i = getUInt16(data, i)
-	# logDebug(u"\t%04X", u16)
-	# cnt, i = getUInt32(data, i)
-	# j = 1
-	# while (j <= cnt):
-	# 	uid3, i = getUUID(data, i, 'UFRxDoc[%d].uid3' % (j))
-	# 	logDebug(u"\t%02X: %s", j, uid3)
-	# 	j += 1
-	# cnt, i = getUInt32(data, i)
-	# j = 1
-	# while (j <= cnt):
-	# 	uid4, i = getUUID(data, i, 'UFRxDoc[%d].uid4' % (j))
-	# 	u8a, i = getUInt8A(data, i, 11)
-	# 	txt1, i = getLen32Text16(data, i)
-	# 	logDebug(u"\t%02X: %s,[%s],'%s'", j, uid4, IntArr2Str(u8a, 2), txt1)
-	# 	j += 1
-#	except Exception as err:
-#		exc_type, exc_obj, exc_tb = sys.exc_info()
-#		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-#		logError(u"ERROR in %s, line %d: %s", fname, exc_tb.tb_lineno, err)
-	return i
 
 def ReadProtein(data):
 	size, i = getSInt32(data, 0)
@@ -362,7 +232,6 @@ def ReadProtein(data):
 	protein = open ('%s\\Protein.zip' %(folder), 'wb')
 	protein.write(zip)
 	protein.close()
-	# logInfo(u"\t>>>INFO: found protein - stored as '%s/%s'!", folder, 'Protein.zip')
 	return size + 4
 
 def ReadWorkbook(doc, data, name, stream):
@@ -410,9 +279,7 @@ def ReadRSeSegment(data, offset, idx, count):
 
 	model.RSeSegInfo.segments[seg.ID] = seg
 
-	logDebug(u"\t%s", seg.name)
-	logDebug(u"\t\t[%s,%s]", seg.value1, IntArr2Str(seg.arr1, 4))
-	logDebug(u"\t\t%d: [%s]", seg.type, IntArr2Str(seg.arr2, 4))
+	logInfo(u"\t%s", seg.name)
 
 	return seg, i
 
@@ -439,8 +306,6 @@ def ReadRSeSegmentNode(data, offset, seg, count, idx):
 	node.values, i = getUInt16A(data, i, count)
 	node.number, i = getUInt16(data, i)
 	seg.nodes.append(node)
-
-	logDebug(u"\t\t%2X: %s", idx, node)
 
 	return node, i
 
@@ -557,22 +422,22 @@ def ReadRSeSegInfo15(data, offset):
 		idx += 1
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeSegInfo.val, 4))
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeSegInfo.val, 4))
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logDebug(u"\tList 1")
+	logInfo(u"\tList 1")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logDebug(u"\t\t%02X: %r", idx, txt)
+		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList1.append(txt)
 		idx += 1
 
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logDebug(u"\tList 2")
+	logInfo(u"\tList 2")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logDebug(u"\t\t%02X: %r", idx, txt)
+		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList2.append(txt)
 		idx += 1
 
@@ -594,22 +459,22 @@ def ReadRSeSegInfo1A(data, offset):
 		idx += 1
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeSegInfo.val, 4))
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeSegInfo.val, 4))
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logDebug(u"\tList 1")
+	logInfo(u"\tList 1")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logDebug(u"\t\t%02X: %r", idx, txt)
+		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList1.append(txt)
 		idx += 1
 
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logDebug(u"\tList 2")
+	logInfo(u"\tList 2")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logDebug(u"\t\t%02X: %r", idx, txt)
+		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList2.append(txt)
 		idx += 1
 
@@ -631,22 +496,22 @@ def ReadRSeSegInfo1D(data):
 		idx += 1
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
-	logDebug(u"\t[%s]" , IntArr2Str(model.RSeSegInfo.val, 4))
+	logInfo(u"\t[%s]" , IntArr2Str(model.RSeSegInfo.val, 4))
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logDebug(u"\tList 1")
+	logInfo(u"\tList 1")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logDebug(u"\t\t%02X: %r", idx, txt)
+		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList1.append(txt)
 		idx += 1
 
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logDebug(u"\tList 2")
+	logInfo(u"\tList 2")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logDebug(u"\t\t%02X: %r", idx, txt)
+		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList2.append(txt)
 		idx += 1
 
@@ -668,26 +533,21 @@ def ReadRSeSegInfo1F(data):
 		idx += 1
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeSegInfo.val, 4))
 
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logDebug(u"\tList 1")
 	while (idx < cnt):
 		uid, i = getUUID(data, i,'RSeSegInfo.List1[%X].uid' % idx)
 		txt = getUidText(uid)
 		model.RSeSegInfo.uidList1.append(txt)
-		logDebug(u"\t\t%02X: %r", idx, txt)
 		idx += 1
 
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logDebug(u"\tList 2")
 	while (idx < cnt):
 		uid, i = getUUID(data, i, 'RSeSegInfo.List2[%X].uid' % idx)
 		txt = getUidText(uid)
 		model.RSeSegInfo.uidList2.append(txt)
-		logDebug(u"\t\t%02X: %r", idx, txt)
 		idx += 1
 
 	return i
@@ -704,10 +564,10 @@ def ReadRSeDb10(data, offset):
 	model.RSeDb.txt, i = getLen32Text16(data, i)
 	model.RSeDb.arr5, i = getUInt32A(data, i, 6)
 
-	logDebug(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.comment)
-	logDebug(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
+	logInfo(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.comment)
+	logInfo(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
 
 	i = ReadRSeSegInfo10(data, i)
 
@@ -727,13 +587,13 @@ def ReadRSeDb15(data, offset):
 	model.RSeDb.txt, i = getLen32Text16(data, i)
 	model.RSeDb.arr5, i = getUInt32A(data, i, 6)
 
-	logDebug(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.comment)
-	logDebug(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
-	logDebug(u"\t[%s]: %s", IntArr2Str(model.RSeDb.arr3, 4), model.RSeDb.uid2)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr4, 4))
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr5, 4))
+	logInfo(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.comment)
+	logInfo(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
+	logInfo(u"\t[%s]: %s", IntArr2Str(model.RSeDb.arr3, 4), model.RSeDb.uid2)
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr4, 4))
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr5, 4))
 
 	i = ReadRSeSegInfo15(data, i)
 
@@ -757,15 +617,15 @@ def ReadRSeDb1A(data, offset):
 	model.RSeDb.txt3, i = getLen32Text16(data, i)
 	model.RSeDb.arr6, i = getUInt32A(data, i, 4)
 
-	logDebug(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.txt2)
-	logDebug(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
-	logDebug(u"\t[%s]: %s", IntArr2Str(model.RSeDb.arr3, 4), model.RSeDb.uid2)
-	logDebug(u"\t%d: [%s]", model.RSeDb.u16, IntArr2Str(model.RSeDb.arr4, 4))
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr5, 4))
-	logDebug(u"\t%r", model.RSeDb.txt3)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr6, 4))
+	logInfo(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.txt2)
+	logInfo(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
+	logInfo(u"\t[%s]: %s", IntArr2Str(model.RSeDb.arr3, 4), model.RSeDb.uid2)
+	logInfo(u"\t%d: [%s]", model.RSeDb.u16, IntArr2Str(model.RSeDb.arr4, 4))
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr5, 4))
+	logInfo(u"\t%r", model.RSeDb.txt3)
+	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr6, 4))
 
 	i = ReadRSeSegInfo1A(data, i)
 
@@ -779,11 +639,6 @@ def ReadRSeDb1D(data, offset):
 	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
-
-	logDebug(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.comment)
-	logDebug(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
-	logDebug(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
 
 	return i
 
@@ -820,7 +675,6 @@ def ReadRSeDbRevisionInfo(data):
 	model.RSeDbRevisionInfoMap = {}
 	model.RSeDbRevisionInfoList = []
 	cnt, i = getSInt32(data, i)
-	logDebug(u"\tversion = %s", version)
 	n = 0
 	while (n < cnt):
 		info = RSeDbRevisionInfo()
@@ -847,7 +701,6 @@ def ReadRSeDbRevisionInfo(data):
 		model.RSeDbRevisionInfoMap[info.ID] = info
 		model.RSeDbRevisionInfoList.append(info)
 
-		# logDebug(u"\t%4X: %s", n, info)
 		n += 1
 	return i
 
@@ -1077,6 +930,7 @@ def findSegment(segRef):
 	return model.RSeSegInfo.segments.get(segRef)
 
 def getReader(seg):
+	logInfo(u"--: '%s'", seg.name)
 	reader = None
 	seg.AcisList = []
 	if (RSeMetaData.isBRep(seg)): # BoundaryRepresentation for SAT/STEP based import
@@ -1106,7 +960,7 @@ def getReader(seg):
 #	elif (RSeMetaData.isNBNotebook(seg)):
 #		reader = NotebookReader()
 	elif (seg.segRef is not None):
-		logInfo(u"    %s will not be considered!", seg.name)
+		logInfo(u"    IGNORED!")
 		#reader = SegmentReader()
 	return reader
 
@@ -1214,64 +1068,7 @@ def ReadRSeMetaDataM(dataM, name):
 	# logError(u"ERROR> STREAM CORRUPTED")
 	setDumpLineLength(bak)
 	model.RSeStorageData[value.name] = value
-	logDebug(u"\t>>> SEE %s/%sM.txt <<<", folder, value.name)
 	return value
-
-def ReadRSeEmbeddingsDatabaseInterfaces(data):
-	global model
-
-	model.DatabaseInterfaces = {}
-	i = 0
-	uid1, i = getUUID(data, i, 'RSeEmbeddings.DatabaseInterfaces.uid1')
-	cnt, i  = getUInt16(data, i)
-	uid2, i = getUUID(data, i, 'RSeEmbeddings.DatabaseInterfaces.uid2')
-	logDebug(u"\t%s %4X %s", uid1, cnt, uid2)
-	n = 0
-	while i < len(data):
-		name, i = getLen32Text8(data, i)
-		dbInterface = DbInterface(name)
-		dbInterface.type, i = getSInt32(data, i)
-		dbInterface.data = data[i:i+dbInterface.type]
-		i += dbInterface.type
-		dbInterface.uid, i = getUUID(data, i, 'RSeEmbeddings.DatabaseInterfaces[%X].uid' % (n))
-		if (dbInterface.type  == 0x01):
-			dbInterface.value = 'YES' if (struct.unpack('<?', dbInterface.data)[0]) else 'NO'
-		elif (dbInterface.type== 0x04):
-			dbInterface.value = struct.unpack('<i', dbInterface.data)[0]
-		elif (dbInterface.type== 0x10):
-			dbInterface.value = getUUID(dbInterface.data, 0, 'RSeEmbeddings.DatabaseInterfaces.Item.uidRef')
-#		elif (dbInterface.type== 0x30):
-#			dbInterface.value = getFloat64A(dbInterface.data, 0, 6)
-		else:
-			dbInterface.value = '[%s]' % (', '.join(['%02X' % ord(h) for h in dbInterface.data]))
-
-		model.DatabaseInterfaces[dbInterface.name] = dbInterface
-		n += 1
-
-	# To return a new list, use the sorted() built-in function...
-	for dbi in (sorted(model.DatabaseInterfaces.values(), key=operator.attrgetter('name'))):
-		logDebug(u"\t%s", dbi)
-
-	return i
-
-def ReadRSeEmbeddingsCompObj(data):
-	i = 0
-	reserved1, i    = getUInt32(data, i)
-	version, i      = getUInt32(data, i)
-	val4, i         = getSInt32(data, i)
-	clsId, i        = getUUID(data, i, 'CompObj.CLSID')
-	ansiName, i     = getLen32Text8(data, i)
-	ansiFmt, i      = getLen32Text8(data, i)
-	ansiKey, i      = getLen32Text8(data, i)
-	marker, i       = getUInt32(data, i)
-	unicodeName, i  = getLen32Text8(data, i)
-	unicodeFmt, i   = getLen32Text8(data, i)
-	unicodeKey, i   = getLen32Text8(data, i)
-	logDebug(u"\t%s:", clsId)
-	logDebug(u"\t\t%s: %s='%s'", ansiFmt, ansiKey, ansiName)
-	logDebug(u"\t\t%s: %s='%s'", unicodeFmt, unicodeKey, unicodeName)
-
-	return i
 
 def ReadRSeEmbeddingsContentsText16(data, offset):
 	len, i = getUInt8A(data, offset, 4)
@@ -1279,22 +1076,6 @@ def ReadRSeEmbeddingsContentsText16(data, offset):
 	buf = data[i: end]
 	txt = buf.decode('UTF-16LE').encode(ENCODING_FS)
 	return txt, end
-
-def ReadRSeEmbeddingsContents(data):
-	p = re.compile('\xFF\xFE\xFF.')
-
-	arr1, i = getUInt32A(data, 0, 4)
-	logDebug(u"\t[%s]", IntArr2Str(arr1, 4))
-	m = p.search(data, i)
-	while (m):
-		iOld = i
-		i = m.start()
-		logAlways(HexAsciiDump(data[iOld:i], 0))
-		txt, i = ReadRSeEmbeddingsContentsText16(data, i)
-		logInfo(u"\t%r", txt)
-		m = p.search(data, i)
-
-	logAlways(HexAsciiDump(data[i:len(data)], i))
 
 def dumpRemaining(data, offset):
 	i = offset
@@ -1316,14 +1097,14 @@ def dumpRemaining(data, offset):
 			i2 = len(data)
 
 		if (i1 <= i2):
-			logDebug(HexAsciiDump(data[iOld:i1], iOld, False))
+			logInfo(HexAsciiDump(data[iOld:i1], iOld, False))
 			txt, i = getLen32Text16(data, i1)
 			m1 = p1.search(data, i)
 		else:
-			logDebug(HexAsciiDump(data[iOld:i2], iOld, False))
+			logInfo(HexAsciiDump(data[iOld:i2], iOld, False))
 			txt, i = getLen32Text8(data, i2)
 			m2 = p2.search(data, i)
 
-		logDebug(u"\t%r", txt)
+		logInfo(u"\t%r", txt)
 
-	logDebug(HexAsciiDump(data[i:len(data)], i, False))
+	logInfo(HexAsciiDump(data[i:len(data)], i, False))

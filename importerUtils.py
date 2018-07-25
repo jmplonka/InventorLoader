@@ -271,14 +271,6 @@ def setThumbnail(ole):
 	if (t is not None):
 		writeThumbnail(t)
 
-class LOG():
-	LOG_DEBUG   = 1
-	LOG_INFO    = 2
-	LOG_WARNING = 4
-	LOG_ERROR   = 8
-	LOG_ALWAYS  = 16
-	LOG_FILTER  = LOG_INFO | LOG_WARNING | LOG_ERROR
-
 UINT8    = Struct('<B').unpack_from
 UINT16   = Struct('<H').unpack_from
 SINT16   = Struct('<h').unpack_from
@@ -692,37 +684,17 @@ def _log(caller, method, msg, args):
 		Console.PrintError("msg   = " + msg)
 		if (len(args) > 0): Console.PrintError("*args = (%s)" %(",".join(args)))
 
-def logDebug(msg, *args):
-	if ((LOG.LOG_DEBUG & LOG.LOG_FILTER) != 0):
-		_log("logDebug", Console.PrintMessage, msg, args)
-
 def logInfo(msg, *args):
-	if ((LOG.LOG_INFO & LOG.LOG_FILTER) != 0):
-		_log("logInfo", Console.PrintMessage, msg, args)
+	_log("logInfo", Console.PrintLog, msg, args)
 
 def logWarning(msg, *args):
-	if ((LOG.LOG_WARNING & LOG.LOG_FILTER) != 0):
-		_log("logWarning", Console.PrintWarning, msg, args)
+	_log("logWarning", Console.PrintWarning, msg, args)
 
 def logError(msg, *args):
-	if ((LOG.LOG_ERROR & LOG.LOG_FILTER) != 0):
-		_log("logError", Console.PrintError, msg, args)
+	_log("logError", Console.PrintError, msg, args)
 
 def logAlways(msg, *args):
 	_log("logAlways", Console.PrintMessage, msg, args)
-
-def logMessage(msg, level=LOG.LOG_DEBUG):
-	if (level == LOG.LOG_DEBUG):
-		return logDebug(msg)
-	if (level == LOG.LOG_INFO):
-		return logInfo(msg)
-	if (level == LOG.LOG_WARNING):
-		return logWarning(msg)
-	if (level == LOG.LOG_ERROR):
-		return logError(msg)
-	if (level == LOG.LOG_ALWAYS):
-		return logAlways(msg)
-	return
 
 def getDumpLineLength():
 	global _dumpLineLength
@@ -764,7 +736,7 @@ def setFileVersion(ole):
 		_fileVersion = int(float(v))
 		if (_fileVersion == 134): # early version of 2010
 			_fileVersion = 2010
-	logDebug(u"Autodesk Inventor %s (Build %d) file" %(_fileVersion, b))
+	logInfo(u"Autodesk Inventor %s (Build %d) file" %(_fileVersion, b))
 
 def getInventorFile():
 	global _inventor_file

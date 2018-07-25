@@ -17,9 +17,7 @@ from importerFreeCAD   import FreeCADImporter, createGroup
 from importerSAT       import readEntities, importModel, convertModel
 
 def ReadIgnorable(fname, data):
-	logDebug(u"\t>>> IGNORED: %r", '/'.join(fname))
-#	logDebug(HexAsciiDump(data))
-	return len(data)
+	logInfo(u'    IGNORED!')
 
 def skip(data):
 	return
@@ -37,7 +35,7 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 
 	if (len(stream)>0):
 		if (len(fname) == 1):
-			logDebug(u"%2d: %s",counter, path)
+			logInfo(u"%2d: %s", counter, path)
 			if (name.startswith('\x05')):
 				if (readProperties):
 					props = ole.getproperties(fname, convert_time=True)
@@ -57,32 +55,21 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 					else:
 						ReadOtherProperties(props, fname)
 			elif (name == 'UFRxDoc'):
-				ReadUFRxDoc(stream)
+#				ReadUFRxDoc(stream)
+				ReadIgnorable(fname, stream)
 			elif (name == 'Protein'):
-				ReadProtein(stream)
+#				ReadProtein(stream)
+				ReadIgnorable(fname, stream)
 			else:
 				ReadIgnorable(fname, stream)
 		elif (fname[0]=='CacheGraphics'):
 			skip(stream)
 		elif (fname[0]=='RSeStorage'):
 			if (isEmbeddings(fname)):
-				if (name.startswith('\x05')):
-					# ReadOtherProperties(ole.getproperties(fname, convert_time=True), fname)
-					skip(stream)
-				elif (name == '\x01Ole'):
-#					ReadRSeEmbeddingsOle(stream)
-					skip(stream)
-				elif (name == '\x01CompObj'):
-					ReadRSeEmbeddingsCompObj(stream)
-				elif (name == 'DatabaseInterfaces'):
-					ReadRSeEmbeddingsDatabaseInterfaces(stream)
-				elif (name == 'Contents'):
-#					ReadRSeEmbeddingsContents(stream)
-					skip(stream)
-				elif (name == 'Workbook'):
+				if (name == 'Workbook'):
 					ReadWorkbook(doc, stream, fname[-2], name)
 				else:
-					ReadIgnorable(fname, stream)
+					skip(stream)
 			else:
 				if (name == 'RSeDb'):
 					ReadRSeDb(stream)
@@ -123,7 +110,6 @@ def read(doc, filename, readProperties):
 	list = {}
 	counters = {}
 
-	# LOG.LOG_FILTER = LOG.LOG_FILTER | LOG.LOG_DEBUG
 	if (isOleFile(filename)):
 		setInventorFile(filename)
 		ole = OleFileIO(filename)

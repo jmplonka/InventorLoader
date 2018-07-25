@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime, ImportGui
-from importerUtils import logDebug, logInfo, logWarning, logError, viewAxonometric, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
+from importerUtils import logInfo, logWarning, logError, viewAxonometric, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
 from Acis          import AcisRef, AcisEntity, readNextSabChunk
 from Acis2Step     import export
 from math          import fabs
@@ -166,9 +166,9 @@ class Header():
 			if (self.version > 24.0):
 				file.readline() # skip T @52 E94NQRBTUCKCWQWFE_HB5PSXH48CGGNH9CMMPASCFADVJGQAYC84
 			Acis.setScale(self.scale)
-			logDebug(u"    product: '%s'", self.prodId)
-			logDebug(u"    version: '%s'", self.prodVer)
-			logDebug(u"    date:    %s",   self.date)
+			logInfo(u"    product: '%s'", self.prodId)
+			logInfo(u"    version: '%s'", self.prodVer)
+			logInfo(u"    date:    %s",   self.date)
 		Acis.setVersion(self.version)
 		return
 	def readBinary(self, data):
@@ -183,9 +183,9 @@ class Header():
 		tag, self.resabs, i  = readNextSabChunk(data, i)
 		tag, self.resnor, i  = readNextSabChunk(data, i)
 		self.version = int2version(self.version)
-		logDebug(u"    product: '%s'", self.prodId)
-		logDebug(u"    version: '%s'", self.prodVer)
-		logDebug(u"    date:    %s",   self.date)
+		logInfo(u"    product: '%s'", self.prodId)
+		logInfo(u"    version: '%s'", self.prodVer)
+		logInfo(u"    date:    %s",   self.date)
 		Acis.setVersion(self.version)
 		return i
 

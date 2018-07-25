@@ -512,8 +512,6 @@ class SegmentReader(object):
 
 		self.nodeCounter = 0
 
-		logDebug(u">D0002: Reading %s binary buffer ...", seg.name)
-
 		try:
 			i = 0
 

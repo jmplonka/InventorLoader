@@ -4,7 +4,7 @@
 importerFreeCAD.py
 '''
 import sys, Draft, Part, Sketcher, traceback, re
-from importerUtils   import logDebug, logInfo, logWarning, logError, IntArr2Str, FloatArr2Str, getFileVersion, isEqual, isEqual1D
+from importerUtils   import logInfo, logWarning, logError, IntArr2Str, FloatArr2Str, getFileVersion, isEqual, isEqual1D
 from importerClasses import RSeMetaData, Scalar, Angle, Length, ParameterNode, ParameterTextNode, ValueNode, FeatureNode, AbstractValue, DataNode
 from importerSegNode import AbstractNode, NodeRef
 from math            import sqrt, fabs, tan, degrees, pi
@@ -544,7 +544,7 @@ class FreeCADImporter:
 				if (baseGeo is None):
 					logWarning(u"    Base2 (%04X): %s -> (%04X): %s not yet created!", base.index, baseNode.typeName, bodyNode.index, bodyNode.typeName)
 				else:
-					logDebug(u"        ... Base2 = '%s'", name)
+					logInfo(u"        ... Base2 = '%s'", name)
 			else:
 				logWarning(u"    Base2 (%04X): %s -> '%s' nod found!", base.index, base.typeName, name)
 		else:
@@ -572,7 +572,7 @@ class FreeCADImporter:
 							logWarning(u"        Tool (%04X): %s -> (%04X): %s not yet created", node.index, node.typeName, toolData.index, toolData.typeName)
 						else:
 							geometries.append(toolGeo)
-							logDebug(u"        ... Tool = '%s'", name)
+							logInfo(u"        ... Tool = '%s'", name)
 					else:
 						logWarning(u"    Tool (%04X): %s -> '%s' nod found!", node.index, node.typeName, name)
 			else:
@@ -629,10 +629,10 @@ class FreeCADImporter:
 				typ1 = 'Point'
 				if (isinstance(fix[0], NodeRef)): typ1 = fix[0].typeName[0:-2]
 				if (move[2] is None):
-					logDebug(u"        ... added point on object constraint between %s %s/%s and %s %s", typ1, fix[1], fix[2], move[0].typeName[0:-2], move[1])
+					logInfo(u"        ... added point on object constraint between %s %s/%s and %s %s", typ1, fix[1], fix[2], move[0].typeName[0:-2], move[1])
 					constraint = Sketcher.Constraint('PointOnObject', fix[1], fix[2], move[1])
 				else:
-					logDebug(u"        ... added coincident constraint between %s %s/%s and %s %s/%s", typ1, fix[1], fix[2], move[0].typeName[0:-2], move[1], move[2])
+					logInfo(u"        ... added coincident constraint between %s %s/%s and %s %s/%s", typ1, fix[1], fix[2], move[0].typeName[0:-2], move[1], move[2])
 					constraint = Sketcher.Constraint('Coincident', fix[1], fix[2], move[1], move[2])
 		return constraint
 
@@ -721,7 +721,7 @@ class FreeCADImporter:
 				if (constraint):
 					index = self.addDimensionConstraint(sketchObj, dimension, constraint, key, (pos1 != 3) and (pos2 != 3))
 					dimensionNode.setSketchEntity(index, constraint)
-					logDebug(u"        ... added %sdistance '%s' = %s", prefix, constraint.Name, dimension.getValue())
+					logInfo(u"        ... added %sdistance '%s' = %s", prefix, constraint.Name, dimension.getValue())
 				else:
 					logWarning(u"        ... can't create dimension constraint between (%04X): %s and (%04X): %s - not supported by FreeCAD!", entity1.index, entity1.typeName[0:-2], entity2.index, entity2.typeName[0:-2])
 		return
@@ -959,7 +959,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Symmetric', lineIdx, 1, lineIdx, 2, symmetryIdx, symmetryPos)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added symmetric constraint between Point %s and %s %s", symmetryIdx, moving.typeName[0:-2], lineIdx)
+				logInfo(u"        ... added symmetric constraint between Point %s and %s %s", symmetryIdx, moving.typeName[0:-2], lineIdx)
 		return
 
 	def addSketch_Geometric_SymmetryLine2D(self, constraintNode, sketchObj):
@@ -988,7 +988,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Symmetric',idx1, pos1, idx2, pos2, idxSym)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added symmetric line constraint between %s %d/%d and %s %d/%d, symmetry is %s %d", entity1.typeName[0:-2], idx1, pos1, entity2.typeName[0:-2], idx2, pos2, symmetry.typeName[0:-2], idxSym)
+				logInfo(u"        ... added symmetric line constraint between %s %d/%d and %s %d/%d, symmetry is %s %d", entity1.typeName[0:-2], idx1, pos1, entity2.typeName[0:-2], idx2, pos2, symmetry.typeName[0:-2], idxSym)
 		return
 
 	def addSketch_Geometric_Parallel2D(self, constraintNode, sketchObj):
@@ -1006,7 +1006,7 @@ class FreeCADImporter:
 			constraint = Sketcher.Constraint('Parallel', index1, index2)
 			index = self.addConstraint(sketchObj, constraint, key)
 			constraintNode.setSketchEntity(index, constraint)
-			logDebug(u"        ... added parallel constraint between lines %s and %s", index1, index2)
+			logInfo(u"        ... added parallel constraint between lines %s and %s", index1, index2)
 		return
 
 	def addSketch_Geometric_Perpendicular2D(self, constraintNode, sketchObj):
@@ -1027,7 +1027,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Perpendicular', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added perpendicular constraint between lines %s and %s", index1, index2)
+				logInfo(u"        ... added perpendicular constraint between lines %s and %s", index1, index2)
 		return
 
 	def addSketch_Geometric_Collinear2D(self, constraintNode, sketchObj):
@@ -1048,7 +1048,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Tangent', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added collinear constraint between Line %s and Line %s", index1, index2)
+				logInfo(u"        ... added collinear constraint between Line %s and Line %s", index1, index2)
 		return
 
 	def addSketch_Geometric_Tangential2D(self, constraintNode, sketchObj):
@@ -1073,7 +1073,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Tangent', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added tangential constraint between %s %s and %s %s", entity1Name, index1, entity2Name, index2)
+				logInfo(u"        ... added tangential constraint between %s %s and %s %s", entity1Name, index1, entity2Name, index2)
 		return
 
 	def addSketch_Geometric_Vertical2D(self, constraintNode, sketchObj):
@@ -1088,7 +1088,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Vertical', index)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added vertical constraint to line %s", index)
+				logInfo(u"        ... added vertical constraint to line %s", index)
 		return
 
 	def addSketch_Geometric_Horizontal2D(self, constraintNode, sketchObj):
@@ -1105,7 +1105,7 @@ class FreeCADImporter:
 					constraint = Sketcher.Constraint('Horizontal', index)
 					index = self.addConstraint(sketchObj, constraint, key)
 					constraintNode.setSketchEntity(index, constraint)
-					logDebug(u"        ... added horizontal constraint to line %s", index)
+					logInfo(u"        ... added horizontal constraint to line %s", index)
 		else:
 			logWarning(u"        ... can't add a horizontal constraint to (%04x): %s", entity.index, entity.typeName)
 		return
@@ -1127,7 +1127,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Equal', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added equal length constraint between line %s and %s", index1, index2)
+				logInfo(u"        ... added equal length constraint between line %s and %s", index1, index2)
 		return
 
 	def addSketch_Geometric_EqualRadius2D(self, constraintNode, sketchObj):
@@ -1147,7 +1147,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Equal', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added equal radius constraint between circle %s and %s", index1, index2)
+				logInfo(u"        ... added equal radius constraint between circle %s and %s", index1, index2)
 		return
 
 	def addSketch_Point2D(self, pointNode, sketchObj):
@@ -1223,7 +1223,7 @@ class FreeCADImporter:
 			y1 = getY(points[0])
 			x2 = getX(points[1])
 			y2 = getY(points[1])
-			logDebug(u"        ... added line (%g,%g)-(%g,%g) %r = %s", x1, y1, x2, y2, mode, lineNode.sketchIndex)
+			logInfo(u"        ... added line (%g,%g)-(%g,%g) %r = %s", x1, y1, x2, y2, mode, lineNode.sketchIndex)
 		return
 
 	def addSketch_Line3D(self, lineNode, edges):
@@ -1237,7 +1237,7 @@ class FreeCADImporter:
 			x2 = lineNode.get('dirX') + x1
 			y2 = lineNode.get('dirY') + y1
 			z2 = lineNode.get('dirZ') + z1
-			logDebug(u"        ... added line (%g,%g,%g)-(%g,%g,%g) %r", x1, y1, z1, x2, y2, z2, isConstructionMode(lineNode))
+			logInfo(u"        ... added line (%g,%g,%g)-(%g,%g,%g) %r", x1, y1, z1, x2, y2, z2, isConstructionMode(lineNode))
 		return
 
 	def addSketch_Spline2D(self, splineNode, sketchObj):
@@ -1259,7 +1259,7 @@ class FreeCADImporter:
 			self.createLine2D(sketchObj, points[len(points) - 1], points[1], mode, splineNode)
 		else:
 			self.createLine2D(sketchObj, points[0], points[1], mode, splineNode)
-			logDebug(u"        ... added spline = %s", splineNode.sketchIndex)
+			logInfo(u"        ... added spline = %s", splineNode.sketchIndex)
 
 		return
 
@@ -1273,7 +1273,7 @@ class FreeCADImporter:
 		p2 = p2v(points[1])
 		p3 = p2v(points[2])
 		arc = Part.ArcOfCircle(p1, p3, p2)
-		logDebug(u"        ... added Arc-Circle start=%s, end=%s and %s ...", p1, p2, p3)
+		logInfo(u"        ... added Arc-Circle start=%s, end=%s and %s ...", p1, p2, p3)
 		addSketch2D(sketchObj, arc, mode, arcNode)
 		return
 
@@ -1294,12 +1294,12 @@ class FreeCADImporter:
 		# Everything else will be handled as a circle!
 		if ((point1 is None) and (point2 is None)):
 			addSketch2D(sketchObj, circle, mode, circleNode)
-			logDebug(u"        ... added Circle M=(%g,%g) R=%g...", x, y, r)
+			logInfo(u"        ... added Circle M=(%g,%g) R=%g...", x, y, r)
 		else:
 			a = circle.parameter(p2v(point1))
 			b = circle.parameter(p2v(point2))
 			arc = Part.ArcOfCircle(circle, a, b)
-			logDebug(u"        ... added Arc-Circle M=(%g,%g) R=%g, from %s to %s ...", x, y, r, a, b)
+			logInfo(u"        ... added Arc-Circle M=(%g,%g) R=%g, from %s to %s ...", x, y, r, a, b)
 			addSketch2D(sketchObj, arc, mode, circleNode)
 
 		return
@@ -1318,12 +1318,12 @@ class FreeCADImporter:
 		# Everything else will be handled as a circle!
 		if (len(points) < 2):
 			addSketch3D(edges, part, isConstructionMode(circleNode), circleNode)
-			logDebug(u"        ... added Circle M=(%g,%g,%g) R=%g...", x, y, z, r)
+			logInfo(u"        ... added Circle M=(%g,%g,%g) R=%g...", x, y, z, r)
 		if (len(points) == 2):
 			a = Angle(circleNode.get('startAngle'), pi/180.0, u'\xb0')
 			b = Angle(circleNode.get('sweepAngle'), pi/180.0, u'\xb0')
 			arc = Part.ArcOfCircle(part, a.getRAD(), b.getRAD())
-			logDebug(u"        ... added Arc-Circle M=(%g,%g,%g) R=%g, from %s to %s ...", x, y, z, r, a, b)
+			logInfo(u"        ... added Arc-Circle M=(%g,%g,%g) R=%g, from %s to %s ...", x, y, z, r, a, b)
 			addSketch3D(edges, arc, isConstructionMode(circleNode), circleNode)
 		else:
 			logWarning(u"        ... can't Arc-Circle more than 2 points - SKIPPED!", x, y, r, a, b)
@@ -1359,11 +1359,11 @@ class FreeCADImporter:
 		a = ellipseNode.get('alpha')
 		b = ellipseNode.get('beta')
 		if (isEqual1D(a, b)):
-			logDebug(u"        ... added 2D-Ellipse  c=(%g,%g) a=(%g,%g) b=(%g,%g) ...", c_x, c_y, a_x, a_y, b_x, b_y)
+			logInfo(u"        ... added 2D-Ellipse  c=(%g,%g) a=(%g,%g) b=(%g,%g) ...", c_x, c_y, a_x, a_y, b_x, b_y)
 		else:
 			a = Angle(a, pi/180.0, u'\xb0')
 			b = Angle(b, pi/180.0, u'\xb0')
-			logDebug(u"        ... added 2D-Arc-Ellipse  c=(%g,%g) a=(%g,%g) b=(%g,%g) from %s to %s ...", c_x, c_y, a_x, a_y, b_x, b_y, a, b)
+			logInfo(u"        ... added 2D-Arc-Ellipse  c=(%g,%g) a=(%g,%g) b=(%g,%g) from %s to %s ...", c_x, c_y, a_x, a_y, b_x, b_y, a, b)
 			part = Part.ArcOfEllipse(part, a.getGRAD(), b.getGRAD())
 		addSketch2D(sketchObj, part, isConstructionMode(ellipseNode), ellipseNode)
 		return
@@ -1377,11 +1377,11 @@ class FreeCADImporter:
 		a1 = ellipseNode.get('startAngle')
 		a2 = ellipseNode.get('sweepAngle')
 		if (isEqual1D(a1, a2)):
-			logDebug(u"        ... added 3D-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) ...", c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z)
+			logInfo(u"        ... added 3D-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) ...", c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z)
 		else:
 			a1 = Angle(a1, pi/180.0, u'\xb0')
 			a2 = Angle(a2, pi/180.0, u'\xb0')
-			logDebug(u"        ... added 3D-Arc-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) from %s to %s ...", c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z, a1, a2)
+			logInfo(u"        ... added 3D-Arc-Ellipse  c=(%g,%g,%g) a=(%g,%g,%g) b=(%g,%g,%g) from %s to %s ...", c.x, c.y, c.z, a.x, a.y, a.z, b.x, b.y, b.z, a1, a2)
 			arc = Part.ArcOfEllipse(part, a1.getGRAD(), a2.getGRAD())
 			addSketch3D(edges, arc, isConstructionMode(ellipseNode), ellipseNode)
 		return
@@ -1449,7 +1449,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Radius',  index, radius)
 				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
 				dimensionNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added radius '%s' = %s", constraint.Name, dimension.getValue())
+				logInfo(u"        ... added radius '%s' = %s", constraint.Name, dimension.getValue())
 		return
 
 	def addSketch_Dimension_RadiusA2D(self, dimensionNode, sketchObj):
@@ -1489,7 +1489,7 @@ class FreeCADImporter:
 				dimension = getDimension(dimensionNode, 'refParameter')
 				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key, False)
 				dimensionNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added diameter '%s' = %s (r = %s mm)", constraint.Name, dimension.getValue(), radius)
+				logInfo(u"        ... added diameter '%s' = %s (r = %s mm)", constraint.Name, dimension.getValue(), radius)
 		return
 
 	def addSketch_Dimension_Angle3Point2D(self, dimensionNode, sketchObj):
@@ -1550,7 +1550,7 @@ class FreeCADImporter:
 				constraint = Sketcher.Constraint('Angle', index1, pos1, index2, pos2, angle.getRAD())
 				index      = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
 				dimensionNode.setSketchEntity(index, constraint)
-				logDebug(u"        ... added dimension angle '%s' = %s (%s)", constraint.Name, angle, key)
+				logInfo(u"        ... added dimension angle '%s' = %s (%s)", constraint.Name, angle, key)
 		return
 
 	def addSketch_Dimension_OffsetSpline2D(self, dimensionNode, sketchObj):
@@ -1770,13 +1770,13 @@ class FreeCADImporter:
 
 			if (midplane):
 				len2 = len1
-				logDebug(u"        ... based on '%s' (symmetric len=%s) ...", baseName, len1)
+				logInfo(u"        ... based on '%s' (symmetric len=%s) ...", baseName, len1)
 			elif (dimLength2 is not None):
 				len2 = getMM(dimLength2)
-				logDebug(u"        ... based on '%s' (rev=%s, len=%s, len2=%s) ...", baseName, reversed, len1, len2)
+				logInfo(u"        ... based on '%s' (rev=%s, len=%s, len2=%s) ...", baseName, reversed, len1, len2)
 			else:
 				len2 = 0.0
-				logDebug(u"        ... based on '%s' (rev=%s, len=%s) ...", baseName, reversed, len1)
+				logInfo(u"        ... based on '%s' (rev=%s, len=%s) ...", baseName, reversed, len1)
 
 			x    = dirX * (len1 + len2)
 			y    = dirY * (len1 + len2)
@@ -1848,20 +1848,20 @@ class FreeCADImporter:
 					alpha = getGRAD(angle1)
 					if (angle2 is None):
 						if (direction.get('value') == 0): # positive
-							logDebug(u"    ... based on '%s' (alpha=%s) ...", pathName, angle1.getValue())
+							logInfo(u"    ... based on '%s' (alpha=%s) ...", pathName, angle1.getValue())
 							revolution = self.createRevolve(revolveNode.name, alpha, 0.0, boundary, axis, base, solid)
 						elif (direction.get('value') == 1): # negative
-							logDebug(u"    ... based on '%s' (alpha=%s, inverted) ...", pathName, angle1.getValue())
+							logInfo(u"    ... based on '%s' (alpha=%s, inverted) ...", pathName, angle1.getValue())
 							revolution = self.createRevolve(revolveNode.name, 0.0, alpha, boundary, axis, base, solid)
 						elif (direction.get('value') == 2): # symmetric
-							logDebug(u"    ... based on '%s' (alpha=%s, symmetric) ...", pathName, angle1.getValue())
+							logInfo(u"    ... based on '%s' (alpha=%s, symmetric) ...", pathName, angle1.getValue())
 							revolution = self.createRevolve(revolveNode.name, alpha / 2.0, alpha / 2.0, boundary, axis, base, solid)
 					else:
-						logDebug(u"    ... based on '%s' (alpha=%s, beta=%s) ...", pathName, angle1.getValue(), angle2.getValue())
+						logInfo(u"    ... based on '%s' (alpha=%s, beta=%s) ...", pathName, angle1.getValue(), angle2.getValue())
 						beta = getGRAD(angle2)
 						revolution = self.createRevolve(revolveNode.name, alpha, beta, boundary, axis, base, solid)
 				elif (extend1.get('value') == 3): # 'Path' => FullSweepExtend
-					logDebug(u"    ... based on '%s' (full) ...", pathName)
+					logInfo(u"    ... based on '%s' (full) ...", pathName)
 					revolution = self.createRevolve(revolveNode.name, 360.0, 0.0, boundary, axis, base, solid)
 			else:
 				logError(u"    Can't create revolution '%s' out of boundary (%04X)!", revolveNode.name,  patch.index)
@@ -1931,7 +1931,7 @@ class FreeCADImporter:
 			angle = Angle(getNominalValue(angleRef), pi/180.0, u'\xb0')
 			center = p2v(axisData)
 			axis   = center - p2v(axisData, 'dirX', 'dirY', 'dirZ')
-			logDebug(u"        ... count=%d, angle=%s ...", count, angle)
+			logInfo(u"        ... count=%d, angle=%s ...", count, angle)
 			namePart = name
 			if (len(participants) > 1):
 				namePart = name + '_0'
@@ -2811,7 +2811,7 @@ class FreeCADImporter:
 					except Exception as e:
 						logError(u"    Can't set alias name for B%d - invalid name '%s' - %s!", r, aliasValue, e)
 
-					logDebug(u"        A%d='%s'; B%d='%s'%s'%s%s", r, key, r, value, mdlValue, tlrValue, remValue)
+					logInfo(u"        A%d='%s'; B%d='%s'%s'%s%s", r, key, r, value, mdlValue, tlrValue, remValue)
 					return r + 1
 		else:
 			assert False, 'ERROR: %s not found in parameters!' %(key)
