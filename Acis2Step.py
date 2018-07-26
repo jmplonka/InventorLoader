@@ -1384,14 +1384,6 @@ class GROUP(NamedEntity):
 	def _getParameters(self):
 		return super(GROUP, self)._getParameters() + [self.desc]
 
-class APPLIED_GROUP_ASSIGNMENT(ReferencedEntity):
-	def __init__(self, items):
-		super(APPLIED_GROUP_ASSIGNMENT, self).__init__()
-		self.group = GROUP('Sweeping-Fl\X\E4che1', None)
-		self.items = items
-	def _getParameters(self):
-		return super(APPLIED_GROUP_ASSIGNMENT, self)._getParameters() + [self.group, self.items]
-
 #############################################################
 # Global functions
 #############################################################

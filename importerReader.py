@@ -279,8 +279,6 @@ def ReadRSeSegment(data, offset, idx, count):
 
 	model.RSeSegInfo.segments[seg.ID] = seg
 
-	logInfo(u"\t%s", seg.name)
-
 	return seg, i
 
 def ReadRSeSegmentObject(data, offset, seg, idx):
@@ -930,7 +928,7 @@ def findSegment(segRef):
 	return model.RSeSegInfo.segments.get(segRef)
 
 def getReader(seg):
-	logInfo(u"--: '%s'", seg.name)
+	logInfo(u"%2d: '%s' ('%s')", seg.index, seg.file, seg.name)
 	reader = None
 	seg.AcisList = []
 	if (RSeMetaData.isBRep(seg)): # BoundaryRepresentation for SAT/STEP based import
@@ -959,7 +957,7 @@ def getReader(seg):
 #		reader = FBAttributeReader()
 #	elif (RSeMetaData.isNBNotebook(seg)):
 #		reader = NotebookReader()
-	elif (seg.segRef is not None):
+	if (reader is None):
 		logInfo(u"    IGNORED!")
 		#reader = SegmentReader()
 	return reader

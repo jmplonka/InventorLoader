@@ -241,7 +241,6 @@ class AppReader(SegmentReader):
 	def Read_6759D86E(self, node):
 		i = self.readHeaderStyle(node, 'Material')
 		vers = getFileVersion()
-
 		if (vers < 2013):
 			i = node.ReadUInt16A(i, 3, 'a1')
 		i = node.ReadLen32Text16(i, 'txt_0')

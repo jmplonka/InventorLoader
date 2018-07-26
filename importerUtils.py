@@ -110,12 +110,12 @@ def setColor(name, r, g, b):
 	oldColorDef = _colorNames.get(name, None)
 	sNew = "#%02X%02X%02X" % (r*255.0, g*255.0, b*255.0)
 	if (oldColorDef is None):
-		logWarning(u"Found new color '%s': %s - please add to colors.json!" %(name, sNew))
+		logWarning(u"    Found new color '%s': %s - please add to colors.json!" %(name, sNew))
 	else:
 		sOld = "#%02X%02X%02X" % (oldColorDef[0]*255.0, oldColorDef[1]*255.0, oldColorDef[2]*255.0)
 		if (sOld == sNew):
 			return
-		logWarning(u"Overwriting color '%s': %s with new definition %s!" %(name, sOld, sNew))
+		logWarning(u"    Overwriting color '%s': %s with new definition %s!" %(name, sOld, sNew))
 	_colorNames[name] = (r, g, b)
 
 def getStrategy():
@@ -736,7 +736,7 @@ def setFileVersion(ole):
 		_fileVersion = int(float(v))
 		if (_fileVersion == 134): # early version of 2010
 			_fileVersion = 2010
-	logInfo(u"Autodesk Inventor %s (Build %d) file" %(_fileVersion, b))
+	logAlways(u"   created with Autodesk Inventor %s (Build %d)" %(_fileVersion, b))
 
 def getInventorFile():
 	global _inventor_file

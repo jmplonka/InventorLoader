@@ -8,7 +8,7 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 import traceback, FreeCAD, Part, Draft, os
 from importerUtils              import *
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
-from math                       import pi, fabs, degrees, asin, tan, atan2
+from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil
 from BOPTools.GeneralFuseResult import GeneralFuseResult
 
 __author__     = 'Jens M. Plonka'
@@ -1237,6 +1237,9 @@ class Helix():
 		self.dirPitch  = DIR_Z
 		self.facApex   = MIN_0
 		self.vecAxis   = DIR_Z
+	def __str__(self):
+		return "%s %s %s %s %s %g %s" %(self.radAngles, self.posCenter, self.dirMajor, self.dirMinor, self.dirPitch
+			, self.facApex, self.vecAxis)
 	def	getPitch(self):
 		return self.dirPitch.Length
 	def	getHeight(self):
@@ -1250,25 +1253,85 @@ class Helix():
 		radApexAngle = atan2(self.facApex * self.getRadius(), self.getPitch())
 		return degrees(radApexAngle)
 	def isLeftHanded(self):
-		angle = self.vecAxis.getAngle(self.dirMajor.cross(self.dirMinor))
-		return (fabs(angle) < 0.1)
+		return (self.vecAxis.cross(self.dirMajor).getAngle(self.dirMinor) < 0.1)
+	def rotateShape(self, shape, vec_1, vec_2, vec_3):
+		angle = degrees(vec_1.getAngle(vec_2))
+		if (angle > 1e-5):
+			axis = vec_1.cross(vec_2) if (angle != 180.0) else vec_3
+			shape.rotate(PLC(CENTER, axis, angle))
+	@staticmethod
+	def calcSteps(a, b, numSegments = 6):
+		startSegment = 0.05 # ~1 degree to smooth start
+		steps = [a, a + startSegment]
+
+		d = (b - a)
+		step = d / int(ceil(numSegments * d / 2 / pi)) # number of segements per turn
+		c = a
+		while c < (b - startSegment):
+			c += step
+			steps.append(c)
+
+		steps.insert(len(steps)-1, b - startSegment)
+
+		return steps
+	@staticmethod
+	def calcPoint(u, min_U, a, r_maj, r_min, handed, pitch):
+		delta_U = (u - min_U) / 2 / pi
+		fac     = 1 + a * delta_U
+		x       = r_maj * fac * cos(u)
+		y       = r_min * fac * sin(u) * handed
+		z       = pitch * delta_U
+		return VEC(x, y, z)
+
 	def build(self):
-		pitch      = self.getPitch()
-		height     = self.getHeight()
-		radius     = self.getRadius()
-		apexAngle  = self.getApexAngle()
-		leftHanded = self.isLeftHanded()
-		if (height == 0):
-			logError('Helix: spiral not supported!')
-			return None
-		wire = Part.makeLongHelix(pitch, height, radius, apexAngle, leftHanded)
-		angle = degrees(DIR_Z.getAngle(self.vecAxis))
-		if (angle != 0):
-			axis = DIR_Z.cross(self.vecAxis) if angle != 180 else DIR_X
-		else:
-			axis = DIR_Z
-		wire.Placement = PLC(self.posCenter, ROT(axis, angle), CENTER)
-		return wire
+		min_U   = self.radAngles.getLowerLimit()
+		max_U   = self.radAngles.getUpperLimit()
+		r_maj   = self.dirMajor.Length
+		r_min   = self.dirMinor.Length
+		pitch   = self.dirPitch.Length
+		steps_U = Helix.calcSteps(min_U, max_U)
+		handed  = 1 if (self.isLeftHanded()) else -1
+		points  = []
+
+		for u in steps_U:
+			c = Helix.calcPoint(u, min_U, self.facApex, r_maj, r_min, handed, pitch)
+			points.append(c)
+
+		# bring the helix into the correct position:
+		helix = Part.BSplineCurve()
+		helix.interpolate(points)
+		self.rotateShape(helix, DIR_X, VEC(self.dirMajor.x, self.dirMajor.y, 0), DIR_Z)
+		self.rotateShape(helix, DIR_Z, self.vecAxis, DIR_X)
+		helix.translate(self.posCenter)
+		return helix.toShape()
+
+	def buildSurfaceCircle(self, r, min_V, max_V):
+		min_U   = self.radAngles.getLowerLimit()
+		max_U   = self.radAngles.getUpperLimit()
+		r_maj   = self.dirMajor.Length
+		r_min   = self.dirMinor.Length
+		pitch   = self.dirPitch.Length
+		steps_U = Helix.calcSteps(min_U, max_U, 8)
+		steps_V = Helix.calcSteps(min_V, max_V, 6)
+		handed  = 1 if (self.isLeftHanded()) else -1
+		points  = []
+
+		for u  in steps_U:
+			c = Helix.calcPoint(u, min_U, self.facApex, r_maj, r_min, handed, pitch)
+			circle = []
+			m = MAT(cos(u), sin(u), 0, 0, -sin(u), cos(u), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+			for v in steps_V:
+				p = m.multiply(VEC(r * cos(v), 0, r * sin(v)))
+				circle.append(p + c)
+			points.append(circle)
+
+		# bring the helix into the correct position:
+		helix = Part.BSplineSurface()
+		helix.interpolate(points)
+		self.rotateShape(helix, DIR_X, VEC(self.dirMajor.x, self.dirMajor.y, 0), DIR_Z)
+		self.rotateShape(helix, DIR_Z, self.vecAxis, DIR_X)
+		helix.translate(self.posCenter)
+		return helix.toShape()
 
 class Range():
 	def __init__(self, type, limit, scale = 1.0):
@@ -2778,21 +2841,9 @@ class SurfaceSpline(Surface):
 		curve = CurveInt()
 		curve.type = "helix_int_cur"
 		i = curve.setHelix(chunks, i, inventor)
-		helix = curve.helix
 		radius, i   = getLength(chunks, i) # radius of the circle
-		center = helix.posCenter + helix.dirMajor
-		normal = helix.vecAxis.cross(helix.dirMajor)
-		profile = Part.makeCircle(radius, center, normal, degrees(angle.getLowerLimit()), degrees(angle.getUpperLimit()))
-		try :
-			faces = []
-			for e in curve.shape.Edges:
-				f = Part.makeSweepSurface(e, profile)
-				faces.append(f)
-#			self.shape = faces[0]
-#			if (len(faces) > 1):
-#				self.shape = faces[0].multiFuse(faces[1:])
-		except:
-			logError(traceback.format_exc())
+		helix = curve.helix
+		self.shape = helix.buildSurfaceCircle(radius, angle.getLowerLimit(), angle.getUpperLimit())
 		return i
 	def setHelixLine(self, chunks, index, inventor):
 		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)

@@ -89,6 +89,8 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 						fnameB.append(n)
 					fnameB[-1] = 'B' + name[1:]
 					seg = ReadRSeMetaDataM(stream, name[1:])
+					seg.file = name[1:]
+					seg.index = counter
 					dataB = ole.openstream(fnameB).read()
 					ReadRSeMetaDataB(dataB, seg)
 				else:
