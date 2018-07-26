@@ -3301,8 +3301,14 @@ class SurfaceSpline(Surface):
 							Part.show(edge)
 			elif (self.type == 'off_spl_sur'):
 				if (self.surface is not None):
-					#self.offset
-					pass # TODO!
+					source = self.surface.build()
+					if (source is not None):
+						distance  = self.offset
+						tolerance = 1e-6
+						mode = 0 # 0=skin, 1=pipe, 2=rect-verso
+						join = 0 # 0=arc, 1=tangent, 2=intersection
+						fill = False
+						self.shape = source.makeOffsetShape(distance, tolerance, False, False, mode, join, fill)
 			elif (self.type == 'rot_spl_sur'):
 				if (self.surface is None):
 					# create a rotation shape from the profile
