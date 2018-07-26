@@ -190,7 +190,10 @@ def ReadInventorSummaryInformation(doc, properties, path):
 					val = writeThumbnail(val)
 				elif (key == KEY_THUMBNAIL_2):
 					val = writeThumbnail(val)
-				logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val)
+				if (type(val) == str):
+					logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val.decode('utf8'))
+				else:
+					logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val)
 				model.iProperties[name][key] = (Inventor_Summary_Information.get(key, key), val)
 	return
 
@@ -219,8 +222,18 @@ def ReadOtherProperties(properties, path, keynames={}):
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
 			if (val is not None):
-				logInfo(u"\t\t%s = %s", keynames.get(key, key), val)
-				model.iProperties[name][key] = (keynames.get(key, key), val)
+				keyName = keynames.get(key, key)
+				if (keyName == 'PartIcon'):
+					logInfo(u"\t\t%s = [ICON]", keyName)
+				elif (type(val) == str):
+					try:
+						logInfo(u"\t\t%s = %s", keyName, val.decode('utf8'))
+					except:
+						logInfo(u"\t\t%s = %r", keyName, val)
+				else:
+					logInfo(u"\t\t%s = %s", keyName, val)
+
+				model.iProperties[name][key] = (keyName, val)
 
 	return
 
