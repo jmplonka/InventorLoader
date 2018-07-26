@@ -3308,6 +3308,24 @@ class SurfaceSpline(Surface):
 						mode = 0 # 0=skin, 1=pipe, 2=rect-verso
 						join = 0 # 0=arc, 1=tangent, 2=intersection
 						fill = False
+
+						s = source.Surface
+						if (s.Continuity == 'C0'):
+							"""Try to approximate 'in_surf' to C1 continuity, with given tolerance 'tol' """
+							tmp = s.copy()
+							while (i < s.NbUKnots):
+								m = tmp.getUMultiplicity(i)
+								if (m > 2):
+									tmp.removeUKnot(i, m - 1, 1e-1)
+								i += 1
+							i = 2
+							while (i < s.NbVKnots):
+								m = tmp.getVMultiplicity(i)
+								if (m > 2):
+									tmp.removeVKnot(i, m - 1, 1e-1)
+								i += 1
+							source  = tmp.toShape()
+
 						self.shape = source.makeOffsetShape(distance, tolerance, False, False, mode, join, fill)
 			elif (self.type == 'rot_spl_sur'):
 				if (self.surface is None):
