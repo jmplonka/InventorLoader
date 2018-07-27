@@ -51,14 +51,15 @@ Export will not be supported - neither to IPT nor to SAT file.
 
 ### ACIS (sat) native import
 - Blending surfaces are not yet supported.
-- Helix surfaces are also not yet supported.
-- Interpolated curves defined by laws are omitted.
+- Helix surfaces are not yet supported for lines.
+- Interpolated curves and surfaces defined by laws are omitted if they don't have a
+  BSpline data.
 
 ### STEP conversion import
 STEP converts the ACIS data from SAT or IPT files. Therefore any limitation is inherited.
 
 ## Status:
-> Alpha!
+> BETA!
 
 Autodesk Inventor files have a OLE2 files.
 That allows it to embed Excel workbooks e.g.
@@ -72,6 +73,9 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
+- 0.9.3 Adde support of offset surfaces and spring surfaces (circle that is seepted along
+        a helix)
+
 - 0.9.2 Added named colors to STEP.
 
 - 0.9.1 Added colors to STEP.
