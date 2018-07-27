@@ -32,7 +32,7 @@
 
 # SAT files
 ## Incomplete Features
-	* spline-surface - missing creation of Helix surface, offset surface.
+	* spline-surface - missing creation of helical lines, vertex-blends and summary surfaces
 	* references - sometime references can't be resolved :(
 
 ## missing Features
