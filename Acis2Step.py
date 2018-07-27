@@ -417,10 +417,10 @@ def _createSurfaceSpline(acisSurface):
 			spline.__acis__ = acisSurface
 			return spline
 		if (isinstance(shape.Surface, Part.SurfaceOfRevolution)):
-			srf = acisSurface.surface
+			revolution = shape.Surface
 			spline = SURFACE_OF_REVOLUTION()
-			spline.curve     = _createCurve(srf.profile)
-			spline.placement = _createAxis1Placement('', srf.loc, '', srf.dir, '')
+			spline.curve     = _createCurve(acisSurface.profile)
+			spline.placement = _createAxis1Placement('', revolution.Location, '', revolution.Direction, '')
 			return spline
 		if (isinstance(shape.Surface, Part.Cylinder)):
 			srf = shape.Surface

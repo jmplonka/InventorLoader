@@ -209,7 +209,10 @@ def ReadInventorDocumentSummaryInformation(doc, properties, path):
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
 			if (val is not None):
-				logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val)
+				if (type(val) == str):
+					logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val.decode('utf8'))
+				else:
+					logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val)
 				model.iProperties[name][key] = (Inventor_Document_Summary_Information.get(key, key), val)
 	return
 

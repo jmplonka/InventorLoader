@@ -3255,7 +3255,10 @@ class SurfaceSpline(Surface):
 			self.failed = True # assume we can't build the surface!
 			if (self.type == 'ref'):
 				if (type(self.surface) == int):
-					self.surface = getSubtypeNodeSurfaces(self.surface)
+					ref = getSubtypeNodeSurfaces(self.surface)
+					if (ref is not None) and (ref.type == 'rot_spl_sur'):
+						self.profile = ref.profile
+					self.surface = ref
 			elif (self.type == 'cyl_spl_sur'):
 				if (self.surface is None):
 					# create a cylinder surface from the profile
@@ -3294,7 +3297,7 @@ class SurfaceSpline(Surface):
 						fill = False
 
 						s = source.Surface
-						if (s.Continuity == 'C0'):
+						if (s.Continuity == 'C0') and (isinstance(s, Part.BSplineCurve)):
 							"""Try to approximate 'in_surf' to C1 continuity, with given tolerance 'tol' """
 							tol = 1e-2
 							tmp = s.copy()
@@ -3455,9 +3458,11 @@ class AttribGenName(AttribGen):
 		self.text = ''
 	def set(self, entity):
 		i = super(AttribGenName, self).set(entity)
-		if (getVersion() < 16.0):
-			i += 4 # [(keep|copy) , (keep_keep), (ignore), (copy)]
-		self.text, i = getText(entity.chunks, i)
+		vers = getVersion()
+		if (vers > 1.7):
+			if (vers < 16.0):
+				i += 4 # [(keep|copy) , (keep_keep), (ignore), (copy)]
+			self.text, i = getText(entity.chunks, i)
 		return i
 class AttribGenNameInteger(AttribGenName):
 	def __init__(self):

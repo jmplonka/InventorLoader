@@ -544,8 +544,8 @@ class AppReader(SegmentReader):
 
 	def Read_E454FA4D(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList2(i, AbstractNode._TYP_U32_TXT_TXT_DATA, 'lst0')
-		i = node.ReadUInt32(i, 'u32_0')
+#		i = node.ReadList2(i, AbstractNode._TYP_U32_TXT_TXT_DATA, 'lst0')
+#		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_E5DDE747(self, node):
