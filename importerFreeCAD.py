@@ -40,6 +40,8 @@ BIT_DIM_OFFSET_SPLINE       = 1 << 22 # not supported
 
 INVALID_NAME = re.compile('^[0-9].*')
 
+DIR_Z = VEC(0, 0, 1)
+
 # x 10                      2   2   1   1   0   0   0
 # x  1                      4   0   6   2   8   4   0
 #SKIP_CONSTRAINTS_DEFAULT = 0b11111111111111111111111
@@ -117,12 +119,18 @@ def ignoreBranch(node):
 	return None
 
 def notSupportedNode(node):
-	logWarning(u"        ... %s not supported (yet?) - sorry!", node.typeName)
+	if (node.typeName == 'Feature'):
+		logWarning(u"        ... %s '%s' not supported (yet?) - sorry!", node.typeName, node.getSubTypeName())
+	else:
+		logWarning(u"        ... %s not supported (yet?) - sorry!", node.typeName)
 	node.setSketchEntity(-1, None)
 	return None
 
 def notYetImplemented(node):
-	logWarning(u"        ... %s not implemented yet - sorry!", node.typeName)
+	if (node.typeName == 'Feature'):
+		logWarning(u"        ... %s '%s' not implemented yet - sorry!", node.typeName, node.getSubTypeName())
+	else:
+		logWarning(u"        ... %s not implemented yet - sorry!", node.typeName)
 	node.setSketchEntity(-1, None)
 	return None
 
@@ -1574,7 +1582,21 @@ class FreeCADImporter:
 		blockNode.setSketchEntity(-1, None)
 		return
 	def addSketch_BSplineCurve2D(self, splineNode, sketchObj):
-		splineNode.setSketchEntity(-1, None)
+		poleInfo = splineNode.get('poles')
+		poles  = [VEC(p[0] * 10.0, p[1] * 10.0, 0.0) for p in poleInfo['values']]
+		mode   = isConstructionMode(splineNode)
+		c = []
+		r = 2.0
+		# arguments: poles, weights, knots, periodic, degree, multiplicities, checkrational
+		bsc = Part.BSplineCurve(poles, None, None, False, 3, None, False)
+		addSketch2D(sketchObj, bsc, mode, splineNode)
+		for i, p in enumerate(poles):
+			j = sketchObj.addGeometry(Part.Circle(p, DIR_Z, r), True)
+			c.append(Sketcher.Constraint('InternalAlignment:Sketcher::BSplineControlPoint', j, 3, splineNode.sketchIndex, i))
+		sketchObj.addConstraint(c)
+		sketchObj.exposeInternalGeometry(splineNode.sketchIndex)
+
+		logInfo(u"        ... added BSpline = %s", splineNode.sketchIndex)
 		return
 	def addSketch_Image2D(self, imageNode, sketchObj):
 		imageNode.setSketchEntity(-1, None)
@@ -2491,7 +2513,7 @@ class FreeCADImporter:
 	def Create_FxFilletRule(self, filletNode):                   return notYetImplemented(filletNode)
 	def Create_FxFreeform(self, freeformNode):                   return notYetImplemented(freeformNode)
 	def Create_FxGrill(self, grillNode):                         return notYetImplemented(grillNode)
-	def Create_FxiFeature(self, iFeatureNode):                   return notYetImplemented(iFeatureNode)
+	def Create_FxiFeature(self, iFeatureNode):                   return notSupportedNode(iFeatureNode)
 	def Create_FxLip(self, lipNode):                             return notYetImplemented(lipNode)
 	def Create_FxMesh(self, meshNode):                           return notYetImplemented(meshNode)
 	def Create_FxMidSurface(self, midSurfaceNode):               return notYetImplemented(midSurfaceNode)

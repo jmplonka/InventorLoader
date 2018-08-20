@@ -411,6 +411,32 @@ class DCReader(SegmentReader):
 		node.set(name, lst)
 		return i
 
+
+	def readTypedList(self, node, index, key, count, size, tolerance):
+		meta, i = getUInt32A(node.data, index, count)
+		j = 0
+		lst = []
+		s = ''
+		sep = ''
+		while (j < meta[0]):
+			if (size == 1):
+				f, i = getFloat64(node.data, i)
+				s += "%s%g" %(sep, f)
+			else:
+				f, i = getFloat64A(node.data, i, size)
+				s += "%s[%s]" %(sep, FloatArr2Str(f))
+			sep = ','
+			lst.append(f)
+			j += 1
+		if (tolerance):
+			tol, i = getFloat64(node.data, i)
+			node.content += " %s=(%s,[%s],%g)" %(key, IntArr2Str(meta[1:], 2), s, tol)
+		else:
+			tol = None
+			node.content += " %s=(%s,[%s])" %(key, IntArr2Str(meta[1:], 2), s)
+		node.set(key, {'meta': meta, 'values': lst, 'tolerance': tol})
+		return i
+
 ########################################
 # Functions for reading sections
 
@@ -3067,7 +3093,7 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'refGroup')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'list0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadCrossRef(i, 'refSketch')
 		if (getFileVersion() > 2012):
@@ -5808,10 +5834,11 @@ class DCReader(SegmentReader):
 			i = node.ReadUInt32(i, 'u32_0')
 			i = node.ReadUInt32(i, 'u32_1')
 		else:
-			i = self.skipBlockSize(i, 16)
 			node.set('u32_0', 0)
 			node.set('u32_1', 0)
+			node.content += " u32_0=000000 u32_1=000000"
 		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i, 4)
 		return i
 
 	def Read_96058864(self, node):
@@ -7437,7 +7464,7 @@ class DCReader(SegmentReader):
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2012):
-			i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'list0')
+			i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
 		else:
 			addEmptyLists(node, [0])
 		# RootPoint
@@ -8813,59 +8840,30 @@ class DCReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadUInt16A(i, 5, 'a1')
 		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst2')
-#		i = node.ReadUInt32A(i, 3, 'a0')
-#		cnt = node.get('a0')[1]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst0', 2)
-#		i = node.ReadFloat64(i, 'f64_1')
-#
-#		i = node.ReadUInt32A(i, 3, 'a1')
-#		cnt = node.get('a1')[2]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst1', 2)
-#
-#		i = node.ReadUInt32A(i, 4, 'a2')
-#		cnt = node.get('a2')[1]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst2', 2)
-#		i = node.ReadFloat64(i, 'f64_2')
-#
-#		i = node.ReadUInt32A(i, 2, 'a3')
-#		cnt = node.get('a3')[1]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst3', 2)
-#
-#		i = node.ReadUInt32A(i, 3, 'a4')
-#		cnt = node.get('a4')[1]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst4', 2)
-#
-#		i = node.ReadUInt32A(i, 2, 'u32_0')
-#		i = node.ReadUInt8(i, 'u8_0')
-#		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst5')
-#		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst6')
-#		i = node.ReadUInt8(i, 'u8_1')
-#		i = node.ReadFloat64(i, 'f64_2')
-#		i = node.ReadUInt32A(i, 2, 'a7')
-#		i = node.ReadUInt8(i, 'u8_2')
-#		i = node.ReadUInt32A(i, 2, 'a8')
-#		i = node.ReadFloat64(i, 'f64_3')
-#
-#		i = node.ReadUInt32A(i, 3, 'a5')
-#		cnt = node.get('a5')[2]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst5', 2)
-#
-#		i = node.ReadUInt32A(i, 4, 'a6')
-#		cnt = node.get('a6')[2]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst6', 2)
-#		i = node.ReadFloat64(i, 'f64_4')
-#
-#		i = node.ReadUInt32A(i, 2, 'a7')
-#		cnt = node.get('a7')[1]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst7', 2)
-#
-#		i = node.ReadUInt32A(i, 4, 'a8')
-#		cnt = node.get('a8')[1]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst8', 2)
-#
-#		i = node.ReadUInt32A(i, 3, 'a9') # 0,0,2
-#		cnt = node.get('a9')[2]
-#		i = self.ReadFloat64A(node, i, cnt, 'lst9', 2)
+
+		i = self.readTypedList(node, i, 'a2',    3, 1, True)  # really 1?
+		i = self.readTypedList(node, i, 'a3',    3, 1, False)
+		i = self.readTypedList(node, i, 'a4',    3, 1, False) # really 1?
+		i = self.readTypedList(node, i, 'poles', 3, 2, True)  # poles
+		i = self.readTypedList(node, i, 'a5',    2, 2, False)
+		i = self.readTypedList(node, i, 'a6',    3, 1, False) # really 1?
+
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'handles')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'arcs')
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadFloat64(i, 'f64_6')
+		i = node.ReadUInt32(i, 'u32_6')
+		i = node.ReadUInt8(i, 'u8_2')
+
+		# redundant information of a2..a6:
+		i = self.readTypedList(node, i, 'a7',  3, 1, True)
+		i = self.readTypedList(node, i, 'a8',  3, 1, False)
+		i = self.readTypedList(node, i, 'a9',  3, 1, False)
+		i = self.readTypedList(node, i, 'a10', 3, 2, True)
+		i = self.readTypedList(node, i, 'a11', 2, 2, False)
+		i = self.readTypedList(node, i, 'a12', 3, 2, False)
+
 		return i
 
 	def Read_F94FF0D9(self, node): # Spline3D_Curve
