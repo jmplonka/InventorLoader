@@ -3000,6 +3000,19 @@ class DCReader(SegmentReader):
 		i = self.ReadContentHeader(node)
 		return i
 
+	def Read_45825754(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt16A(i, 4, 'a0')
+		i = node.ReadParentRef(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadSInt32(i, 's32_0')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadCrossRef(i, 'refTransformation')
+		i = node.ReadCrossRef(i, 'refParameter')
+		i = node.ReadCrossRef(i, 'refEntity3D')
+		i = node.ReadUInt8(i, 'u8_0')
+		return i
+
 	def Read_46407F70(self, node):
 		node.typeName = 'ClearanceHole'
 		i = self.ReadChildHeader1(node)
@@ -8839,7 +8852,7 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt16A(i, 5, 'a0')
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadUInt16A(i, 5, 'a1')
-		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst2')
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'ptIdcs')
 
 		i = self.readTypedList(node, i, 'a2',    3, 1, True)  # really 1?
 		i = self.readTypedList(node, i, 'a3',    3, 1, False)

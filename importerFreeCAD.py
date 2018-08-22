@@ -1582,18 +1582,19 @@ class FreeCADImporter:
 		blockNode.setSketchEntity(-1, None)
 		return
 	def addSketch_BSplineCurve2D(self, splineNode, sketchObj):
-		poleInfo = splineNode.get('poles')
-		poles  = [VEC(p[0] * 10.0, p[1] * 10.0, 0.0) for p in poleInfo['values']]
-		mode   = isConstructionMode(splineNode)
-		c = []
-		r = 2.0
-		# arguments: poles, weights, knots, periodic, degree, multiplicities, checkrational
-		bsc = Part.BSplineCurve(poles, None, None, False, 3, None, False)
+		ptIndices = splineNode.get('ptIdcs')
+		poleInfo  = splineNode.get('poles')
+		poles     = [VEC(p[0] * 10.0, p[1] * 10.0, 0.0) for p in poleInfo['values']]
+		mode      = isConstructionMode(splineNode)
+
+		weights  = None
+		knots    = None
+		periodic = (ptIndices[0] == ptIndices[-1])
+		degree   = 3
+		multiplicities = None
+		checkrational  = False
+		bsc = Part.BSplineCurve(poles, weights, knots, periodic, degree, multiplicities, checkrational)
 		addSketch2D(sketchObj, bsc, mode, splineNode)
-		for i, p in enumerate(poles):
-			j = sketchObj.addGeometry(Part.Circle(p, DIR_Z, r), True)
-			c.append(Sketcher.Constraint('InternalAlignment:Sketcher::BSplineControlPoint', j, 3, splineNode.sketchIndex, i))
-		sketchObj.addConstraint(c)
 		sketchObj.exposeInternalGeometry(splineNode.sketchIndex)
 
 		logInfo(u"        ... added BSpline = %s", splineNode.sketchIndex)
