@@ -43,6 +43,13 @@ Sometimes it can happen that the packages can't be installed.
       This should install the required packages.
 4. reopen FreeCAD
 
+#### Constraints in Native-IPT import:
+Please disable Dimension constraints in user.cfg:
+```xml
+<FCBool Name="Sketch.Constraint.Dimension.Angle2Line" Value="0"/>
+<FCBool Name="Sketch.Constraint.Dimension.Angle3Point" Value="0"/>
+```
+
 ## Limitations
 
 Export will not be supported - neither to IPT nor to SAT file.
