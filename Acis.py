@@ -302,6 +302,16 @@ def getIntegers(chunks, index, count):
 		arr.append(n)
 	return arr, i
 
+def getIntegerMap(chunks, index, count, size):
+	i = index
+	n = count
+	m = []
+	while (n > 0):
+		a, i = getIntegers(chunks, i, size)
+		m.append(a)
+		n -= 1
+	return m, i
+
 def getLong(chunks, index):
 	val, i = getValue(chunks, index)
 	return long(val), i
@@ -3379,16 +3389,8 @@ class SurfaceTorus(Surface):
 			minor = fabs(self.minor)
 			if (major > minor):
 				try:
-					torus = Part.Toroid()
-					torus.Axis = self.axis
-					torus.Center = self.center
-					if (minor < torus.MajorRadius):
-						torus.MinorRadius = minor
-						torus.MajorRadius = major
-					elif (major > torus.MinorRadius):
-						torus.MajorRadius = major
-						torus.MinorRadius = minor
-					self.shape = torus.toShape()
+					torus = Part.makeTorus(major, minor, self.center,self.axis)
+					self.shape = torus.Faces[0]
 				except Exception as e:
 					logError(u"    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s\n\t%s", major, minor, self.center, self.axis, e)
 			else:
@@ -3647,7 +3649,16 @@ class AttribNamingMatchingNMxGenTagDisambiguation(AttribNamingMatching):
 class AttribNamingMatchingNMxFeatureDependency(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxFeatureDependency, self).__init__()
 class AttribNamingMatchingNMxBrepTag(AttribNamingMatching):
-	def __init__(self): super(AttribNamingMatchingNMxBrepTag, self).__init__()
+	def __init__(self):
+		super(AttribNamingMatchingNMxBrepTag, self).__init__()
+		self.mapping = []
+	def set(self, entity):
+		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
+		n, i = getInteger(entity.chunks, i)
+		if (n > 30): # since Inventor 2011 there is an identifyer added!
+			n, i = getInteger(entity.chunks, i)
+		self.mapping, i = getIntegerMap(entity.chunks, i, n, 2)
+		return i
 class AttribNamingMatchingNMxBrepTagFeature(AttribNamingMatchingNMxBrepTag):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagFeature, self).__init__()
 class AttribNamingMatchingNMxBrepTagSwitch(AttribNamingMatchingNMxBrepTag):
@@ -3726,6 +3737,9 @@ class AttribNamingMatchingNMxBrepTagNameFoldFace(AttribNamingMatchingNMxBrepTagN
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameFoldFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameGenerated(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameGenerated, self).__init__()
+	def set(self, entity):
+		i = super(AttribNamingMatchingNMxBrepTagNameGenerated, self).set(entity)
+		return i
 class AttribNamingMatchingNMxBrepTagNameGrillOffsetBrep(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameGrillOffsetBrep, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSweepGenerated(AttribNamingMatchingNMxBrepTagName):

@@ -46,7 +46,7 @@ DIR_Z = VEC(0, 0, 1)
 # x  1                      4   0   6   2   8   4   0
 #SKIP_CONSTRAINTS_DEFAULT = 0b11111111111111111111111
 #SKIP_CONSTRAINTS_DEFAULT = 0b00000000000000000001000 # Only geometric coincidens
-SKIP_CONSTRAINTS_DEFAULT  = 0b01110101011111011011111 # default values: no workarounds, nor unsupported constraints!
+SKIP_CONSTRAINTS_DEFAULT  = 0b00110001011111011011111 # default values: no workarounds, nor unsupported constraints!
 SKIP_CONSTRAINTS = SKIP_CONSTRAINTS_DEFAULT # will be updated by stored preferences!
 PART_LINE = Part.Line
 if (hasattr(Part, "LineSegment")):
@@ -708,7 +708,7 @@ class FreeCADImporter:
 		if ((index1 is None) or (index2 is None)):
 			logWarning(u"        ... skipped %sdimension between %s and %s - not (yet) supported!", prefix, entity1.node.getRefText(), entity2.node.getRefText())
 		else:
-			if (pos1 is None and entity1.typeName == 'Point2D'):
+			if (pos1 is None and entity1.typeName == 'Point2D' and index1 != index2):
 				logWarning(u"        ... skipped %sdimension - can't find geometry for %s (entity2: %s,%s)!", prefix, entity1.node.getRefText(), index2, pos2)
 				return
 			constraint = None
