@@ -117,6 +117,7 @@ class BRepReader(SegmentReader):
 	def Read_6985F652(self, node):
 		i = node.Read_Header0()
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_X_REF_, 'lst0')
+		i = self.skipBlockSize(i)
 		return i
 
 	def Read_6D0B7807(self, node):

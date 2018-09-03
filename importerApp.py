@@ -143,9 +143,9 @@ class AppReader(SegmentReader):
 
 	def Read_37186901(self, node):
 		i = node.Read_Header0()
-		# i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
-		# i = self.skipBlockSize(i)
-		# i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadList2(i, AbstractNode._TYP_APP_1_, 'lst0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_422ECBCE(self, node):

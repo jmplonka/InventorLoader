@@ -1639,9 +1639,9 @@ class Face(Topology):
 			return surface
 		if (hasattr(s, 'type')):
 			if (s.type != 'ref'):
-				logWarning(u"    ... Don't know how to build surface '%s::%s' - only edges displayed!", s.__class__.__name__, s.type)
+				logWarning(u"    ... Don't know how to build surface '-%d %s::%s' - only edges displayed!", s.getIndex(), s.__class__.__name__, s.type)
 		else:
-			logWarning(u"    ... Don't know how to build surface '%s' - only edges displayed!", s.__class__.__name__)
+			logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", s.getIndex(), s.__class__.__name__)
 		return self.showEdges(edges)
 	def getSurfaceRef(self):
 		return getattr(self.getSurface(), 'ref', None)
@@ -2259,7 +2259,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 					if (shp): others.append(shp)
 				self.shape = curve.multifuse(others)
 			else:
-				if (type(self.curve) == int):
+				while (type(self.curve) == int):
 					self.curve = getSubtypeNodeCurve(self.curve)
 				if (isinstance(self.curve, Curve)):
 					self.shape = self.curve.build(start, end)
@@ -3337,11 +3337,11 @@ class SurfaceSpline(Surface):
 				if (self.shape is None):
 					if (hasattr(self.surface, 'type')):
 						if (self.surface.type == 'ref'):
-							logWarning(u"    ... Don't know how to build surface '%s::ref %d' - only edges displayed!", self.surface.__class__.__name__, self.surface.ref)
+							logWarning(u"    ... Don't know how to build surface '-%d %s::ref %d' - only edges displayed!", self.surface.getIndex(), self.surface.__class__.__name__, self.surface.ref)
 						else:
-							logWarning(u"    ... Don't know how to build surface '%s::%s' - only edges displayed!", self.surface.__class__.__name__, self.surface.type)
+							logWarning(u"    ... Don't know how to build surface '-%d %s::%s' - only edges displayed!", self.surface.getIndex(), self.surface.__class__.__name__, self.surface.type)
 					else:
-						logWarning(u"    ... Don't know how to build surface '%s' - only edges displayed!", self.surface.__class__.__name__)
+						logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", self.surface.getIndex(), self.surface.__class__.__name__)
 #				elif (not (isinstance(self.shape.Surface, Part.BSplineSurface) or isinstance(self.shape.Surface, Part.SurfaceOfRevolution))):
 #					logWarning(u"    ... referenced spline surface is of incompatible type '%s' - only edges displayed!", self.shape.Surface.__class__.__name__)
 #					self.shape = None
@@ -3377,15 +3377,22 @@ class SurfaceTorus(Surface):
 		if (self.shape is None):
 			major = fabs(self.major)
 			minor = fabs(self.minor)
-			try:
-				torus = Part.Toroid()
-				torus.Axis = self.axis
-				torus.Center = self.center
-				torus.MajorRadius = major
-				torus.MinorRadius = minor
-				self.shape = torus.toShape()
-			except Exception as e:
-				logError(u"    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s:\n\t%s", major, minor, self.center, self.axis, e)
+			if (major > minor):
+				try:
+					torus = Part.Toroid()
+					torus.Axis = self.axis
+					torus.Center = self.center
+					if (minor < torus.MajorRadius):
+						torus.MinorRadius = minor
+						torus.MajorRadius = major
+					elif (major > torus.MinorRadius):
+						torus.MajorRadius = major
+						torus.MinorRadius = minor
+					self.shape = torus.toShape()
+				except Exception as e:
+					logError(u"    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s\n\t%s", major, minor, self.center, self.axis, e)
+			else:
+				logError(u"    Creation of torus failed for major=%g < minor=%g, center=%s, axis=%s!", major, minor, self.center, self.axis)
 		return self.shape
 class Point(Geometry):
 	def __init__(self):
