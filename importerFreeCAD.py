@@ -137,8 +137,8 @@ def notYetImplemented(node):
 def newObject(doc, className, name):
 	v = name.encode('utf8')
 	if (INVALID_NAME.match(name)):
-		v = b'_' + name.encode('utf8')
-	obj = doc.addObject(className, str(v))
+		v = b'_' + v
+	obj = doc.addObject(className, v.decode())
 	if (obj):
 		obj.Label = name
 	return obj
