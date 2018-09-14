@@ -80,7 +80,7 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
-- 9.9.4 InventorLoader is now compatible with python 2 and 3
+- 0.9.4 InventorLoader is now compatible with python 2 and 3
 
 - 0.9.3 Added support of offset surfaces and spring surfaces (circle that is seepted along
         a helix)
