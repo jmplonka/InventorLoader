@@ -92,11 +92,20 @@ class DCReader(SegmentReader):
 		i = node.ReadCrossRef(i, name)
 		return i
 
-	def ReadCntHdr2SRef(self, node, name = 'ref_1'):
+	def ReadCntHdr2S(self, node):
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i, 8)
 		if (getFileVersion() > 2018): i += 4
+		return i
+
+	def ReadCntHdr2SRef(self, node, name = 'ref_1'):
+		i = self.ReadCntHdr2S(node)
 		i = node.ReadCrossRef(i, name)
+		return i
+
+	def ReadCntHdr2SChild(self, node, name = 'ref_1'):
+		i = self.ReadCntHdr2S(node)
+		i = node.ReadChildRef(i, name)
 		return i
 
 	def ReadCntHdr3S(self, node):
@@ -288,34 +297,6 @@ class DCReader(SegmentReader):
 			j += 1
 			lst.append([ref, u32])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%04X)' %(r[0], r[1]) for r in lst]))
-		node.set(name, lst)
-		return i
-
-	def ReadRefU32AList(self, node, offset, name, size, type):
-		cnt, i = getUInt32(node.data, offset)
-		j = 0
-		lst = []
-		while (j < cnt):
-			ref, i = self.ReadNodeRef(node, i, j, type)
-			a, i = getUInt32A(node.data, i, size)
-			j += 1
-			lst.append([ref, a])
-		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%s)' %(r[0], IntArr2Str(r[1], 4)) for r in lst]))
-		node.set(name, lst)
-		return i
-
-	def ReadRefU32ARefU32List(self, node, offset, name, size):
-		cnt, i = getUInt32(node.data, offset)
-		j = 0
-		lst = []
-		while (j < cnt):
-			ref1, i = self.ReadNodeRef(node, i, j, NodeRef.TYPE_CROSS)
-			u32, i = getUInt32(node.data, i)
-			ref2, i = self.ReadNodeRef(node, i, j, NodeRef.TYPE_CROSS)
-			a, i = getUInt32A(node.data, i, size)
-			j += 1
-			lst.append([ref1, a, ref2, u32])
-		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%04X,%s,%s)' %(r[0], r[1], r[2], r[3], IntArr2Str(4)) for r in lst]))
 		node.set(name, lst)
 		return i
 
@@ -1540,14 +1521,12 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
-	def Read_1FBB3C01(self, node): # String
-		node.typeName = 'String'
+	def Read_1FBB3C01(self, node): # The content of the RTF formatted text {rtf1 [:RtfContent:]}
+		node.typeName = 'RtfContent'
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i, 8)
 		if (getFileVersion() > 2018): i += 4
-		i = node.ReadFloat64(i, 'x1')
-		i = node.ReadFloat64(i, 'y1')
-		i = node.ReadFloat64(i, 'z1')
+		i = node.ReadVec3D(i, 'loc', 10.0)
 		i = node.ReadUInt16A(i, 18, 'a1')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
@@ -1558,12 +1537,8 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 4, 'a2')
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst1')
-		i = node.ReadFloat64(i, 'x2')
-		i = node.ReadFloat64(i, 'y2')
-		i = node.ReadFloat64(i, 'z2')
-		i = node.ReadFloat64(i, 'x3')
-		i = node.ReadFloat64(i, 'y3')
-		i = node.ReadFloat64(i, 'z3')
+		i = node.ReadVec3D(i, 'vec1', 1.0)
+		i = node.ReadVec3D(i, 'vec2', 1.0)
 		i = node.ReadUInt16A(i, 3, 'a3')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadParentRef(i)
@@ -2078,6 +2053,8 @@ class DCReader(SegmentReader):
 							node.set('properties', properties)
 					elif( t == 0x30000008):
 						node.typeName = 'Sketch2D'
+						node.sketchEdges = {}
+						node.associativeIDs = {}
 						i = node.ReadList8(i, AbstractNode._TYP_NODE_X_REF_,'entities')
 						i = node.ReadCrossRef(i, 'refTransformation')
 						i = node.ReadCrossRef(i, 'refDirection')
@@ -3062,7 +3039,7 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16(i, 'u16_1')
-		i = node.ReadCrossRef(i, 'ref_5')
+		i = node.ReadCrossRef(i, 'refFxDims')
 		return i
 
 	def Read_481DFC84(self, node):
@@ -3434,7 +3411,7 @@ class DCReader(SegmentReader):
 		else:
 			i = self.skipBlockSize(i, 8)
 		i = node.ReadUInt32(i, 'u32_0')
-		if (node.get('u32_0' > 0)):
+		if (node.get('u32_0') > 0):
 			i = node.ReadUInt32(i, 'u32_1')
 			i = node.ReadFloat64A(i, 3, 'a2')
 			i = node.ReadFloat64(i, 'f64_0')
@@ -5252,6 +5229,8 @@ class DCReader(SegmentReader):
 
 	def Read_90874D11(self, node): # PlanarSketch {2C16787F-83FF-11D4-8DDB-0010B541CAA8}
 		node.typeName = 'Sketch2D'
+		node.sketchEdges = {}
+		node.associativeIDs = {}
 		i = self.ReadHeadersS32ss(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'numEntities')
@@ -5912,7 +5891,7 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a3')
 		i = node.ReadFloat64A(i, 6, 'a4')
 		i = node.ReadUInt16A(i, 6, 'a5')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'refParameter')
 		i = node.ReadUInt32A(i, 6, 'a6')
 		return i
 
@@ -6204,7 +6183,7 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_A477243B(self, node):
-		i = self.ReadCntHdr2SRef(node, 'refWrapper')
+		i = self.ReadCntHdr2SChild(node, 'refWrapper')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
@@ -7994,6 +7973,14 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, cnt, 'a1')
 		return i
 
+	def Read_DD80AC37(self, node): # something to do with text-alignment
+		i = self.ReadContentHeader(node)
+		i = node.ReadSInt32(i, 's32_0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'faces')
+		i = node.ReadCrossRef(i, 'refEdge')
+		i = node.ReadCrossRef(i, 'refString')
+		return i
+
 	def Read_DDCF0E1C(self, node):
 		i = node.Read_Header0()
 		return i
@@ -9112,9 +9099,8 @@ class DCReader(SegmentReader):
 		i = self.Read_5F9D0022(node)
 		i = self.skipBlockSize(i)
 		node.typeName = u'Unit' + unitName
-		if (isinstance(abbreviation, unicode)):
-			node.set('Unit', abbreviation)
-		else:
+		node.set('Unit', abbreviation)
+		if (sys.version_info.major < 3) and (not isinstance(abbreviation, unicode)):
 			node.set('Unit', unicode(abbreviation))
 		node.set('UnitOffset', offset)
 		node.set('UnitFactor', factor)

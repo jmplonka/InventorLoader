@@ -14,14 +14,11 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 def decode(name):
 	"decodes encoded strings"
+	decodedName = name
 	try:
-		decodedName = name.encode("utf8")
+		decodedName = name.encode(sys.getfilesystemencoding()).decode("utf8")
 	except UnicodeEncodeError:
-		try:
-			decodedName = name.encode(sys.getfilesystemencoding())
-		except UnicodeEncodeError:
-			FreeCAD.Console.PrintError("Error: Couldn't determine character encoding!\n")
-			decodedName = name
+		FreeCAD.Console.PrintError("Error: Couldn't determine character encoding!\n")
 	return decodedName
 
 def insertGroup(doc, filename):
@@ -83,8 +80,7 @@ def open(filename, skip = [], only = [], root = None):
 	if (checkfile(filename)):
 		logAlways(u"Reading: %s", filename)
 		name = os.path.splitext(os.path.basename(filename))[0]
-		name = decode(name)
-		doc = FreeCAD.newDocument(name)
+		doc = FreeCAD.newDocument(decode(name))
 		doc.Label = name
 		reader = read(doc, filename, True)
 		if (reader is not None):

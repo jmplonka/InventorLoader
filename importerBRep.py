@@ -40,7 +40,7 @@ class BRepReader(SegmentReader):
 	def Read_09780457(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadParentRef(i)
-		i = node.ReadSInt32(i, 's32_0')
+		i = node.ReadSInt32(i, 'key')
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
 		return i
 
@@ -110,7 +110,10 @@ class BRepReader(SegmentReader):
 	def Read_66085B35(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt16(i, 'u16_0')
+		if (getFileVersion() > 2009):
+			i = node.ReadUInt16(i, 'u16_0')
+		else:
+			i = node.ReadUInt8(i, 'u16_0')
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
 		return i
 
@@ -191,6 +194,7 @@ class BRepReader(SegmentReader):
 		i = node.ReadUInt16A(i, 4, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_0')
+		i = node.ReadCrossRef(i, 'ref_1')
 		return i
 
 	def Read_BFED36A9(self, node):
@@ -207,8 +211,9 @@ class BRepReader(SegmentReader):
 	def Read_CADD6468(self, node):
 		i = node.Read_Header0()
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
-		i = node.ReadLen32Text16(i)
-		i = node.ReadLen32Text16(i, 'txt_0')
+		if (getFileVersion() > 2009):
+			i = node.ReadLen32Text16(i)
+			i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
 	def Read_CC0F7521(self, node):
@@ -225,7 +230,30 @@ class BRepReader(SegmentReader):
 		i = node.Read_Header0()
 		i = node.ReadSInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_0')
+		i = node.ReadChildRef(i, 'ref_1')
+		i = self.ReadRefU32AList(node, i, 'lst0', 2, NodeRef.TYPE_CHILD)
+		i = self.ReadRefU32ARefU32List(node, i, 'lst1', 2)
+		i = self.ReadRefU32ARefU32List(node, i, 'lst2', 1)
+		cnt, i = getUInt32(node.data, i)
+		j = 0
+		sep = ''
+		node.content += ' lst3=['
+		lst = []
+		# remember node content as it will be overwritten by ReadList2!
+		c = node.content
+		while (j < cnt):
+			u32_0, i = getUInt32(node.data, i)
+			i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
+			lst0 = node.get('lst0')
+			u32_1, i = getUInt32(node.data, i)
+			i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2) # this is ref + uint!
+			lst1 = node.get('lst0')
+			j += 1
+			c += '%s[%04X,%s,%04X,%s]' %(sep, u32_0, Int2DArr2Str(lst0, 4), u32_1, Int2DArr2Str(lst1, 4))
+			lst.append([u32_0, lst0, u32_1, lst1])
+			sep = ','
+		node.content = c +']'
+		node.set('lst3', lst)
 		return i
 
 	def Read_CCE92042(self, node):
@@ -233,14 +261,19 @@ class BRepReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
-		cnt, i = getUInt32(node.data, i)
-		lst = {}
-		j = 0
-		while j < cnt:
-			u, i = getUInt32(node.data, i)
-			r, i = self.ReadNodeRef(node, i, u, NodeRef.TYPE_CHILD)
-			lst[u] = r
-			j += 1
+		if (getFileVersion() < 2009):
+			i = node.ReadUUID(i, 'uid')
+			i = node.ReadUInt32(i, 'u32_0')
+			i = node.ReadUInt32(i, 'u32_1')
+		else:
+			cnt, i = getUInt32(node.data, i)
+			lst = {}
+			j = 0
+			while j < cnt:
+				u, i = getUInt32(node.data, i)
+				r, i = self.ReadNodeRef(node, i, u, NodeRef.TYPE_CHILD)
+				lst[u] = r
+				j += 1
 		return i
 
 	def Read_D797B7B9(self, node):
@@ -267,7 +300,7 @@ class BRepReader(SegmentReader):
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
-		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst0')
-		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst1')
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'keys')
+		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'mapping')
 		i = node.ReadChildRef(i, 'ref_1')
 		return i

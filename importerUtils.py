@@ -68,6 +68,9 @@ _fileVersion     = None
 _can_import      = True
 _use_sheet_metal = True
 
+__prmPrefOW__ = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/OutputWindow")
+__prmPrefIL__ = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
+
 # The file the be imported
 _inventor_file = None
 
@@ -77,6 +80,7 @@ foundUids = {}
 STRATEGY_SAT    = 0
 STRATEGY_NATIVE = 1
 STRATEGY_STEP   = 2
+__strategy__ = __prmPrefIL__.GetInt("strategy", STRATEGY_SAT)
 
 _author = ''
 _description = None
@@ -108,19 +112,28 @@ def getColor(name):
 def setColor(name, r, g, b):
 	global _colorNames
 	oldColorDef = _colorNames.get(name, None)
-	sNew = "#%02X%02X%02X" % (r*255.0, g*255.0, b*255.0)
+	sNew = "#%02X%02X%02X" % (int(r*255.0), int(g*255.0), int(b*255.0))
 	if (oldColorDef is None):
 		logInfo(u"    Found new color '%s': %s - please add to colors.json!" %(name, sNew))
 	else:
-		sOld = "#%02X%02X%02X" % (oldColorDef[0]*255.0, oldColorDef[1]*255.0, oldColorDef[2]*255.0)
+		sOld = "#%02X%02X%02X" % (int(oldColorDef[0]*255.0), int(oldColorDef[1]*255.0), int(oldColorDef[2]*255.0))
 		if (sOld == sNew):
 			return
 		logInfo(u"    Overwriting color '%s': %s with new definition %s!" %(name, sOld, sNew))
 	_colorNames[name] = (r, g, b)
 
 def getStrategy():
-	if getFileVersion() < 2010: return STRATEGY_SAT
-	return FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetInt("strategy", STRATEGY_SAT)
+	global __strategy__
+	v = getFileVersion()
+	if (v is None):
+		return __strategy__
+
+	return STRATEGY_SAT if (v < 2010) else __strategy__
+
+def setStrategy(newStrategy):
+	global __strategy__
+	__strategy__ = newStrategy
+	__prmPrefIL__.SetInt("strategy", newStrategy)
 
 def isStrategySat():
 	return getStrategy() == STRATEGY_SAT
@@ -156,16 +169,15 @@ def chooseImportStrategyAcis():
 	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
 	msgBox.addButton(btnCnvrt, QMessageBox.ActionRole)
 	msgBox.addButton(btnNativ, QMessageBox.NoRole)
-	param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
 
-	btnDefault = btnCnvrt if (param.GetInt("strategy") == STRATEGY_STEP) else btnNativ
+	btnDefault = btnCnvrt if (getStrategy() == STRATEGY_STEP) else btnNativ
 	msgBox.setDefaultButton(btnDefault)
 
 	result = msgBox.exec_()
 
 	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT}
 	strategy = resultMapping[result]
-	param.SetInt("strategy", strategy)
+	setStrategy(strategy)
 	return strategy
 
 def chooseImportStrategy():
@@ -184,16 +196,15 @@ def chooseImportStrategy():
 	msgBox.addButton(btnCnvrt, QMessageBox.ActionRole)
 	msgBox.addButton(btnSat, QMessageBox.YesRole)
 	msgBox.addButton(btnNativ, QMessageBox.NoRole)
-	param = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
 
 	btnMapping = {STRATEGY_SAT: btnSat, STRATEGY_NATIVE: btnNativ, STRATEGY_STEP: btnCnvrt}
-	msgBox.setDefaultButton(btnMapping[param.GetInt("strategy")])
+	msgBox.setDefaultButton(btnMapping[getStrategy()])
 
 	result = msgBox.exec_()
 
 	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE}
 	strategy = resultMapping[result]
-	param.SetInt("strategy", strategy)
+	setStrategy(strategy)
 	return strategy
 
 def setCanImport(canImport):
@@ -225,7 +236,7 @@ class Thumbnail(object):
 		self.width, i = getUInt16(data, 0x0A)
 		self.height, i = getUInt16(data, i)
 
-		if (buffer[0x1:0x4] == 'PNG'):
+		if (buffer[0x1:0x4] == b'PNG'):
 			self.type = 'PNG'
 			self.data_ = buffer
 		else: # it's old BMP => rebuild header
@@ -238,7 +249,7 @@ class Thumbnail(object):
 			else:
 				raise AssertionError("Unknown thumbnail format %d" %(fmt))
 			size, dummy = getUInt32(data, offset + 20)
-			buffer = 'BM' + pack('LLL', size + 0x36, 0, 0x36)
+			buffer = b'BM' + pack('LLL', size + 0x36, 0, 0x36)
 			buffer += data[offset:]
 		self._data = buffer
 	def length(self):
@@ -310,9 +321,9 @@ def getUInt8A(data, offset, size):
 		The array of unsigned 8-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	end = offset + size
+	end = int(offset + size)
 	assert end <= len(data), "Trying to read UInt8 array beyond data end (%d, %X > %X)" %(size, end, len(data))
-	val = unpack_from('<' +'B'*size, data, offset)
+	val = unpack_from('<' +'B'*int(size), data, offset)
 	val = list(val)
 	return val, end
 
@@ -345,9 +356,9 @@ def getUInt16A(data, offset, size):
 		The array of unsigned 16-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	val = unpack_from('<' +'H'*size, data, offset)
+	val = unpack_from('<' +'H'*int(size), data, offset)
 	val = list(val)
-	return val, offset + 2*size
+	return val, int(offset + 2 * size)
 
 def getSInt16(data, offset):
 	'''
@@ -378,9 +389,9 @@ def getSInt16A(data, offset, size):
 		The array of unsigned 32-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	val = unpack_from('<' +'h'*size, data, offset)
+	val = unpack_from('<' +'h'*int(size), data, offset)
 	val = list(val)
-	return val, offset + 2 * size
+	return val, int(offset + 2 * size)
 
 def getUInt32(data, offset):
 	'''
@@ -411,9 +422,9 @@ def getUInt32A(data, offset, size):
 		The array of unsigned 32-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	val = unpack_from('<' +'L'*size, data, offset)
+	val = unpack_from('<' +'L'*int(size), data, offset)
 	val = list(val)
-	return val, offset + 4 * size
+	return val, int(offset + 4 * size)
 
 def getSInt32(data, offset):
 	'''
@@ -444,9 +455,9 @@ def getSInt32A(data, offset, size):
 		The array of signed 32-Bit values at offset.
 		The new position in the 'stream'.
 	'''
-	val = unpack_from('<' + 'l'*size, data, offset)
+	val = unpack_from('<' + 'l'*int(size), data, offset)
 	val = list(val)
-	return val, offset + 4 * size
+	return val, int(offset + 4 * size)
 
 def getFloat32(data, offset):
 	'''
@@ -478,9 +489,9 @@ def getFloat32A(data, offset, size):
 		The array of double precision float values from a list of single ones at offset.
 		The new position in the 'stream'.
 	'''
-	singles = unpack_from('<' + 'f'*size, data, offset)
+	singles = unpack_from('<' + 'f'*int(size), data, offset)
 	val = [float(s) for s in singles]
-	return val, offset + 4 * size
+	return val, int(offset + 4 * size)
 
 def getFloat64(data, offset):
 	'''
@@ -511,9 +522,9 @@ def getFloat64A(data, offset, size):
 		The array of double precision float values at offset.
 		The new position in the 'stream'.
 	'''
-	val = unpack_from('<' + 'd'*size, data, offset)
+	val = unpack_from('<' + 'd'*int(size), data, offset)
 	val = list(val)
-	return val, offset + 8 * size
+	return val, int(offset + 8 * size)
 
 def getColorRGBA(data, offset):
 	r, g, b, a = RGBA(data, offset)
@@ -657,7 +668,7 @@ def decode(filename, utf=False):
 		else:
 			import sys
 			encoding = sys.getfilesystemencoding()
-		filename = filename.encode(encoding)
+		filename = filename.encode(encoding).decode("utf-8")
 	return filename
 
 def isEmbeddings(names):
@@ -684,14 +695,19 @@ def _log(caller, method, msg, args):
 		Console.PrintError("msg   = " + msg)
 		if (len(args) > 0): Console.PrintError("*args = (%s)" %(",".join(args)))
 
+def setLoggingInfo(val):
+	__prmPrefOW__.SetInt("checkLogging", val)
+def setLoggingWarn(val):
+	__prmPrefOW__.SetInt("checkWarning", val)
+def setLoggingWarn(val):
+	__prmPrefOW__.SetInt("checkError", val)
+
 def logInfo(msg, *args):
-	_log("logInfo", Console.PrintLog, msg, args)
-
+	if (__prmPrefOW__.GetInt("checkLogging", 0) == 1): _log("logInfo", Console.PrintLog, msg, args)
 def logWarning(msg, *args):
-	_log("logWarning", Console.PrintWarning, msg, args)
-
+	if (__prmPrefOW__.GetInt("checkWarning", 0) == 1): _log("logWarning", Console.PrintWarning, msg, args)
 def logError(msg, *args):
-	_log("logError", Console.PrintError, msg, args)
+	if (__prmPrefOW__.GetInt("checkError", 0)   == 1): _log("logError", Console.PrintError, msg, args)
 
 def logAlways(msg, *args):
 	_log("logAlways", Console.PrintMessage, msg, args)
@@ -736,7 +752,7 @@ def setFileVersion(ole):
 		_fileVersion = int(float(v))
 		if (_fileVersion == 134): # early version of 2010
 			_fileVersion = 2010
-	logAlways(u"    created with Autodesk Inventor %s (Build %d)" %(_fileVersion, b))
+	logInfo(u"    created with Autodesk Inventor %s (Build %d)" %(_fileVersion, b))
 
 def getInventorFile():
 	global _inventor_file

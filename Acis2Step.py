@@ -7,8 +7,8 @@ Acis2Step.py:
 from datetime      import datetime
 from importerUtils import isEqual
 from FreeCAD       import Vector as VEC
-from importerUtils import logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS, getColorDefault
-import traceback, inspect, os, Acis, math, re, Part
+from importerUtils import logInfo, logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS, getColorDefault
+import traceback, inspect, os, sys, Acis, math, re, Part
 
 #############################################################
 # private variables
@@ -74,11 +74,12 @@ def _lst2str(l):
 def _obj2str(o):
 	if (o is None):                   return _str2str(o)
 	if (type(o) == int):              return _int2str(o)
-	if (type(o) == long):             return _int2str(o)
+	if (sys.version_info.major < 3):
+		if (type(o) == long):         return _int2str(o)
+		if (type(o) == unicode):      return _str2str(o)
 	if (type(o) == float):            return _dbl2str(o)
 	if (type(o) == bool):             return _bool2str(o)
 	if (type(o) == str):              return _str2str(o)
-	if (type(o) == unicode):          return _str2str(o)
 	if (isinstance(o, AnyEntity)):    return "*"
 	if (isinstance(o, E)):            return _enum2str(o)
 	if (isinstance(o, AnonymEntity)): return _entity2str(o)
@@ -90,10 +91,7 @@ def _values3D(v):
 	return [v.x, v.y, v.z]
 
 def _writeStep(file, txt):
-	if (txt is unicode):
-		file.write(txt)
-	else:
-		file.write(txt.encode(ENCODING_FS))
+	file.write(txt.encode(ENCODING_FS))
 
 def getColor(entity):
 	global _colorPalette
@@ -109,7 +107,7 @@ def getColor(entity):
 			r, g, b = color
 		else:
 			return None
-	key = "#%02X%02X%02X" %(r*255.0, g*255.0, b*255.0)
+	key = "#%02X%02X%02X" %(int(r*255.0), int(g*255.0), int(b*255.0))
 	try:
 		rgb = _colorPalette[key]
 	except:
@@ -253,7 +251,15 @@ def _createCurveInt(acisCurve):
 		bsc = shape.Curve
 		if (isinstance(bsc, Part.BSplineCurve)):
 			points = [_createCartesianPoint(v, 'Ctrl Pts') for v in bsc.getPoles()]
-			key = "(%s),(%s),(%s)" %(",".join(["#%d"%(p.id) for p in points]), ",".join(["%d" %(d) for d in bsc.getMultiplicities()]), ",".join(["%r" %(r) for r in bsc.getKnots()]))
+			k1 = ",".join(["#%d"%(p.id) for p in points])
+			k2 = ""
+			mults = bsc.getMultiplicities()
+			if (mults is not None):
+				k2 = ",".join(["%d" %(d) for d in mults])
+			k3 = ""
+			knots = bsc.getKnots()
+			if (knots is not None): k3 = ",".join(["%r" %(r) for r in knots])
+			key = "(%s),(%s),(%s)" %(k1, k2, k3)
 			try:
 				curve = _curveBSplines[key]
 			except:
@@ -634,13 +640,13 @@ class ExportEntity(AnonymEntity):
 					try:
 						step += a.exportSTEP()
 					except:
-						print traceback.format_exc()
+						logError(traceback.format_exc())
 				elif (type(a) == list):
 					step += _exportList_(a)
 				elif (type(a) == tuple):
 					step += _exportList_(a)
 			except:
-				print traceback.format_exc()
+				logError(traceback.format_exc())
 		return step
 	def exportSTEP(self):
 		if (self.isexported):
@@ -839,7 +845,7 @@ class ListEntity(ReferencedEntity):
 		return ""
 	def _getParameters(self):
 		params = super(ListEntity, self)._getParameters() + [self.entities]
-		params.sort()
+		params = sorted(params)
 		return params
 	def exportSTEP(self):
 		if (self.isexported):
@@ -860,7 +866,7 @@ class ListEntity(ReferencedEntity):
 				elif (type(e) == tuple):
 					step += _exportList_(e)
 			except:
-				print traceback.format_exc()
+				logError(traceback.format_exc())
 		self.isexported = True
 		return step
 	def __repr__(self):
@@ -1422,7 +1428,10 @@ def export(filename, satHeader, satBodies):
 	step += u"FILE_DESCRIPTION(('FreeCAD Model'),'2;1');\n"
 	step += u"FILE_NAME('%s'," %(stepfile)
 	step += u"'%s'," %(dt.strftime("%Y-%m-%dT%H:%M:%S"))
-	step += u"('%s')," %(user.decode('utf8'))
+	if (sys.version_info.major < 3):
+		step += u"('%s')," %(user.decode('utf8'))
+	else:
+		step += u"('%s')," %(user)
 	step += u"('%s')," %(orga)
 	step += u"'%s'," %(proc)
 	step += u"'FreeCAD','%s');\n" %(auth)
@@ -1436,7 +1445,8 @@ def export(filename, satHeader, satBodies):
 	step += u"ENDSEC;\n"
 	step += u"END-ISO-10303-21;"
 
-	with open(stepfile, 'w') as stepFile:
+	with open(stepfile, 'wb') as stepFile:
 		_writeStep(stepFile, step)
-	logAlways(u"    File written to '%s'.", stepfile)
+		logInfo(u"    File written to '%s'.", stepfile)
+
 	return stepfile

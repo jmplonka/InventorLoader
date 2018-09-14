@@ -672,11 +672,11 @@ class DataNode():
 		node = self.data
 		if (node is not None):
 			content = node.content
-			if (not isinstance(content, unicode)):
+			if (sys.version_info.major < 3) and (not isinstance(content, unicode)):
 				content = unicode(content)
 			name = node.name
 			if (name):
-				if (not isinstance(name, unicode)):
+				if (sys.version_info.major < 3) and (not isinstance(name, unicode)):
 					name = unicode(name)
 				return u'(%04X): %s \'%s\'%s' %(node.index, node.typeName, name, content)
 			return u'(%04X): %s%s' %(node.index, node.typeName, content)
@@ -774,10 +774,14 @@ class ParameterNode(DataNode):
 					return u'=' + self.getParameterFormula(refValue, True)
 				except BaseException as be:
 					# replace by nominal value and unit!
-					value = unicode(self.getValue())
-					logWarning(u"    %s - replacing by nominal value %s!", be, value)
+					value = self.getValue()
+					if (sys.version_info.major < 3):
+						value = unicode(value)
+					logWarning(u"    %s - replacing by nominal value %s!" %(be, value))
 			else:
-				value = unicode(data.get('valueModel'))
+				value = data.get('valueModel')
+				if (sys.version_info.major < 3):
+					value = unicode(value)
 			return u'=%s' %(value)
 		return u''
 

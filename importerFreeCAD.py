@@ -46,7 +46,7 @@ DIR_Z = VEC(0, 0, 1)
 # x  1                      4   0   6   2   8   4   0
 #SKIP_CONSTRAINTS_DEFAULT = 0b11111111111111111111111
 #SKIP_CONSTRAINTS_DEFAULT = 0b00000000000000000001000 # Only geometric coincidens
-SKIP_CONSTRAINTS_DEFAULT  = 0b00110001011111011011111 # default values: no workarounds, nor unsupported constraints!
+SKIP_CONSTRAINTS_DEFAULT  = 0b00110000001111011011111 # default values: no workarounds, nor unsupported constraints!
 SKIP_CONSTRAINTS = SKIP_CONSTRAINTS_DEFAULT # will be updated by stored preferences!
 PART_LINE = Part.Line
 if (hasattr(Part, "LineSegment")):
@@ -135,10 +135,10 @@ def notYetImplemented(node):
 	return None
 
 def newObject(doc, className, name):
+	v = name.encode('utf8')
 	if (INVALID_NAME.match(name)):
-		obj = doc.addObject(className, '_' + name.encode('utf8'))
-	else:
-		obj = doc.addObject(className, name.encode('utf8'))
+		v = b'_' + name.encode('utf8')
+	obj = doc.addObject(className, str(v))
 	if (obj):
 		obj.Label = name
 	return obj
@@ -379,7 +379,7 @@ def setPlacement(geo, placement, base):
 	return
 
 def replaceEntity(edges, node, geo):
-	node.sketchEntity = geo
+	node.data.sketchEntity = geo
 	edges[node.index] = geo
 	return geo
 
@@ -389,59 +389,14 @@ def replacePoint(edges, pOld, line, pNew):
 		return replaceEntity(edges, line, createLine(p2v(pNew), l.EndPoint))
 	return replaceEntity(edges, line, createLine(l.StartPoint, p2v(pNew)))
 
-def createEdgeFromNode(wires, sketchEdge, direct):
-	sketch = sketchEdge.get('refSketch')
-	if (direct):
-		e      = sketchEdge.get('refCurve')
-		p1     = sketchEdge.get('refPoint1')
-		p2     = sketchEdge.get('refPoint2')
+def setTableValue(table, col, row, val):
+	if (sys.version_info.major > 2):
+		if (type(val) != str):
+			table.set(u"%s%d" %(col, row), str(val))
+		else:
+			table.set(u"%s%d" %(col, row), val)
 	else:
-		e      = sketch.data.associativeIDs.get(sketchEdge.get('entityAI'))
-		p1     = sketch.data.associativeIDs.get(sketchEdge.get('point1AI'))
-		p2     = sketch.data.associativeIDs.get(sketchEdge.get('point2AI'))
-	typ    = e.typeName
-	edge   = e.sketchEntity
-	if (typ[0:4] == 'Line'):
-		edge = None
-		if (isSamePoint(p1, p2) == False):
-			edge = createLine(p2v(p1), p2v(p2))
-	elif ((typ[0:3] == 'Arc') or (typ[0:6] == 'Circle')):
-		c = e.sketchEntity.Center
-		edge = Part.Circle(c, edge.Axis, edge.Radius)
-		if (isSamePoint(p1, p2) == False):
-			alpha   = edge.parameter(p2v(p1))
-			beta    = edge.parameter(p2v(p2))
-			if (sketchEdge.get('posDir')):
-				edge = Part.ArcOfCircle(edge, alpha, beta)
-			else:
-				edge = Part.ArcOfCircle(edge, beta, alpha)
-	elif (typ[0:7] == 'Ellipse'):
-		c  = edge.Center
-		r1 = edge.MajorRadius
-		r2 = edge.MinorRadius
-		edge = Part.Ellipse(c, r1, r2)
-		if (isSamePoint(p1, p2) == False):
-			alpha   = edge.parameter(p2v(p1))
-			beta    = edge.parameter(p2v(p2))
-			if (sketchEdge.get('posDir')):
-				edge = Part.ArcOfEllipse(edge, alpha, beta)
-			else:
-				edge = Part.ArcOfEllipse(edge, beta, alpha)
-	elif (typ[0: 6] == 'Spline'):
-		points = []
-		for point in e.get('points'):
-			if (point.typeName[0:5] == 'Point'): points.append(p2v(point))
-		edge = Part.BSplineCurve()
-		edge.interpolate(points)
-#	elif (typ[0: 4] == 'Text'):
-#	elif (typ[0:12] == 'OffsetSpline'):
-#	elif (typ[0:12] == 'SplineHandle'):
-#	elif (typ[0: 5] == 'Block'):
-#	elif (typ[0: 5] == 'Image'):
-
-	if (edge):
-		wires.append(edge.toShape())
-	return
+		table.set(u"%s%d" %(col, row), "%s" %(val.encode("utf8")))
 
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
@@ -461,7 +416,9 @@ class FreeCADImporter:
 		self.mapConstraints = None
 		self.pointDataDict  = None
 		self.bodyNodes      = {}
-		_initPreferences()
+		#_initPreferences()
+		# override user selected Constraints!
+		SKIP_CONSTRAINTS = SKIP_CONSTRAINTS_DEFAULT
 
 	def getEntity(self, node):
 		if (node):
@@ -548,9 +505,10 @@ class FreeCADImporter:
 		if (base is not None):
 			name = getFirstBodyName(base)
 			if (name in self.bodyNodes):
-				baseGeo = self.bodyNodes[name].sketchEntity
+				# ensure that the sketch is already created!
+				baseGeo = self.getEntity(self.bodyNodes[name])
 				if (baseGeo is None):
-					logWarning(u"    Base2 (%04X): %s -> (%04X): %s not yet created!", base.index, baseNode.typeName, bodyNode.index, bodyNode.typeName)
+					logWarning(u"    Base2 (%04X): %s -> (%04X): %s can't be created!", base.index, baseNode.typeName, bodyNode.index, bodyNode.typeName)
 				else:
 					logInfo(u"        ... Base2 = '%s'", name)
 			else:
@@ -575,9 +533,10 @@ class FreeCADImporter:
 				for tool in faces:
 					name = getFirstBodyName(tool)
 					if (name in self.bodyNodes):
-						toolGeo = self.bodyNodes[name].sketchEntity
+						# ensure that the sketch is already created!
+						toolGeo = self.getEntity(self.bodyNodes[name])
 						if (toolGeo is None):
-							logWarning(u"        Tool (%04X): %s -> (%04X): %s not yet created", node.index, node.typeName, toolData.index, toolData.typeName)
+							logWarning(u"        Tool (%04X): %s -> (%04X): %s can't be created", node.index, node.typeName, toolData.index, toolData.typeName)
 						else:
 							geometries.append(toolGeo)
 							logInfo(u"        ... Tool = '%s'", name)
@@ -772,6 +731,74 @@ class FreeCADImporter:
 		elif (participant.typeName == 'ProfileSelection'): return self.profile2Section(participant)
 		return None
 
+	def createEdgeFromNode(self, wires, sketchEdge, direct):
+		sketch = sketchEdge.get('refSketch')
+		# ensure that the sketch is already created!
+		self.getEntity(sketch)
+		e      = sketchEdge.get('refCurve')
+		p1     = sketchEdge.get('refPoint1')
+		p2     = sketchEdge.get('refPoint2')
+		if (e is None):
+			e    = sketch.data.associativeIDs.get(sketchEdge.get('entityAI'))
+		if (p1 is None):
+			p1     = sketch.data.associativeIDs.get(sketchEdge.get('point1AI'))
+		if (p2 is None):
+			p2     = sketch.data.associativeIDs.get(sketchEdge.get('point2AI'))
+		if (e is None):
+			raise Exception()
+		edge   = e.sketchEntity
+		if (isinstance(edge, Part.Line)):
+			edge = None
+			if (isSamePoint(p1, p2) == False):
+				edge = createLine(p2v(p1), p2v(p2))
+		elif (isinstance(edge, Part.ArcOfCircle)):
+			c = e.sketchEntity.Center
+			edge = Part.Circle(c, edge.Axis, edge.Radius)
+			if (isSamePoint(p1, p2) == False):
+				alpha   = edge.parameter(p2v(p1))
+				beta    = edge.parameter(p2v(p2))
+				if (sketchEdge.get('posDir')):
+					edge = Part.ArcOfCircle(edge, alpha, beta)
+				else:
+					edge = Part.ArcOfCircle(edge, beta, alpha)
+		elif (isinstance(edge, Part.ArcOfEllipse)):
+			edge = edge.Ellipse
+			if (isSamePoint(p1, p2) == False):
+				alpha   = edge.parameter(p2v(p1))
+				beta    = edge.parameter(p2v(p2))
+				if (sketchEdge.get('posDir')):
+					edge = Part.ArcOfEllipse(edge, alpha, beta)
+				else:
+					edge = Part.ArcOfEllipse(edge, beta, alpha)
+		elif (isinstance(edge, Part.Ellipse)):
+			if (isSamePoint(p1, p2) == False):
+				alpha   = edge.parameter(p2v(p1))
+				beta    = edge.parameter(p2v(p2))
+				if (sketchEdge.get('posDir')):
+					edge = Part.ArcOfEllipse(edge, alpha, beta)
+				else:
+					edge = Part.ArcOfEllipse(edge, beta, alpha)
+		elif (isinstance(edge, Part.BSplineCurve)):
+			#fixme: don't use interpolate for the points!
+			points = []
+			for point in e.get('points'):
+				if (type(point) is list):
+					points.append(VEC(point[0], point[1], point[2]))
+				else:
+					points.append(p2v(point))
+			edge = Part.BSplineCurve()
+			edge.interpolate(points)
+	#	elif (typ[0: 4] == 'Text'):
+	#	elif (typ[0:12] == 'OffsetSpline'):
+	#	elif (typ[0:12] == 'SplineHandle'):
+	#	elif (typ[0: 5] == 'Block'):
+	#	elif (typ[0: 5] == 'Image'):
+
+		if (edge is not None):
+			wires.append(edge.toShape())
+
+		return
+
 	def createBoundary(self, boundaryPatch):
 		boundary = None
 		next = boundaryPatch.node.next
@@ -795,7 +822,7 @@ class FreeCADImporter:
 						if (boundarySketch is None):
 							boundarySketch = sketch
 							boundary = self.getEntity(sketch) # ensure that the sketch is already created!
-						createEdgeFromNode(edges, sketchEdge, sketchEdges.typeName == '1E3A132C')
+						self.createEdgeFromNode(edges, sketchEdge, sketchEdges.typeName == '1E3A132C')
 					shapeEdges += edges
 					if (len(edges) > 0):
 						w = Part.Wire(edges)
@@ -903,7 +930,7 @@ class FreeCADImporter:
 		if (wire is not None):
 			self.doc.recompute()
 			count = len(wire.Shape.Edges)
-			return ['Edge%i' %(i) for i in xrange(1, count + 1)]
+			return ['Edge%i' %(i) for i in range(1, count + 1)]
 
 		return []
 
@@ -1419,7 +1446,7 @@ class FreeCADImporter:
 		if (SKIP_CONSTRAINTS & BIT_GEO_ALIGN_VERTICAL == 0): return
 		return
 	def addSketch_Transformation(self, transformationNode, sketchObj):   return ignoreBranch(transformationNode)
-	def addSketch_String(self, stringNode, sketchObj):                   return ignoreBranch(stringNode)
+	def addSketch_RtfContent(self, stringNode, sketchObj):               return ignoreBranch(stringNode)
 
 	def addSketch_Dimension_Distance_Horizontal2D(self, dimensionNode, sketchObj):
 		'''
@@ -1606,6 +1633,7 @@ class FreeCADImporter:
 	def addSketch_5D8C859D(self, node, sketchObj): return
 	def addSketch_8EC6B314(self, node, sketchObj): return
 	def addSketch_8FEC335F(self, node, sketchObj): return
+	def addSketch_DD80AC37(self, node, sketchObj): return
 	def addSketch_F2568DCF(self, node, sketchObj): return
 
 	def handleAssociativeID(self, node):
@@ -1676,8 +1704,6 @@ class FreeCADImporter:
 		geos = []
 		dims = []
 		self.pointDataDict = {}
-		sketchNode.data.sketchEdges = {}
-		sketchNode.data.associativeIDs = {}
 
 		for child in sketchNode.get('entities'):
 			if (child.typeName.startswith('Geometric_')):
@@ -1827,12 +1853,11 @@ class FreeCADImporter:
 			base    = self.findBase(baseData.next)
 			if (base is not None):
 				if (tool is not None): # no need to raise a warning as it's already done!
-					boolean = self.createBoolean(className, name, base, [tool])
-				else:
-					logWarning(u"        FxExtrude '%s': can't find/create tools object - executing %s!", name, className)
-			else:
-				logWarning(u"        FxExtrude '%s': can't find/create base object - executing %s!", name, className)
-		return boolean
+					return self.createBoolean(className, name, base, [tool])
+				logWarning(u"        FxExtrude '%s': can't find/create tools object - executing %s!", name, className)
+				return base
+			logWarning(u"        FxExtrude '%s': can't find/create base object - executing %s!", name, className)
+		return tool
 
 	def Create_FxRevolve(self, revolveNode):
 		participants = revolveNode.getParticipants()
@@ -2045,7 +2070,8 @@ class FreeCADImporter:
 
 			for baseRef in participants:
 				cutGeo = None
-				baseGeo = baseRef.sketchEntity
+				# ensure that the sketch is already created!
+				baseGeo = self.getEntity(baseRef)
 				logInfo(u"        .... Base = '%s'", baseRef.name)
 				if (baseGeo is None):
 					baseGeo = self.findBase2(baseRef)
@@ -2720,7 +2746,7 @@ class FreeCADImporter:
 
 	def addParameterTableTolerance(self, table, r, tolerance):
 		if (tolerance):
-			table.set('D%d' %(r), tolerance.encode('utf8'))
+			setTableValue(table, 'D', r, tolerance)
 			return u"; D%d='%s'" %(r, tolerance)
 		return u''
 
@@ -2728,7 +2754,7 @@ class FreeCADImporter:
 		if (commentRef):
 			comment = commentRef.name
 			if (comment):
-				table.set('E%d' %(r), comment.encode('utf8'))
+				setTableValue(table, 'E', r, comment)
 				return u"; E%d='%s'" %(r, comment)
 		return u''
 
@@ -2802,35 +2828,32 @@ class FreeCADImporter:
 					#formula = '%s%s' %((nominalValue / nominalFactor)  - nominalOffset, nominalUnit)
 					value   = valueNode.getValue().__str__()
 					formula = valueNode.getFormula(True)
-					table.set('A%d' %(r), key.encode('utf8'))
-					table.set('B%d' %(r), value.encode('utf8'))
-					table.set('C%d' %(r), formula.encode('utf8'))
+					setTableValue(table, 'A', r, key)
+					setTableValue(table, 'B', r, value)
+					setTableValue(table, 'C', r, formula)
 					mdlValue = '; C%s=%s' %(r, formula)
 					tlrValue = self.addParameterTableTolerance(table, r, valueNode.get('tolerance'))
 					remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
 				elif (typeName == 'ParameterText'):
 					value = valueNode.get('value')
-					table.set('A%d' %(r), key.encode('utf8'))
-					table.set('B%d' %(r), "'%s" %(value.encode('utf8')))
+					setTableValue(table, 'A', r, key)
+					setTableValue(table, 'B', r, "'%s" %(value))
 					remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
 				elif (typeName == 'ParameterBoolean'):
 					value = valueNode.get('value')
-					table.set('A%d' %(r), key.encode('utf8'))
-					if (isinstance(value, bool)):
-						table.set('B%d' %(r), str(value))
-					else:
-						table.set('B%d' %(r), value.encode('utf8'))
+					setTableValue(table, 'A', r, key)
+					setTableValue(table, 'B', r, value)
 					remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
 				else: #if (key.find('RDxVar') != 0):
 					value = valueNode
-					table.set('A%d' %(r), '%s' %(key.encode('utf8')))
-					table.set('B%d' %(r), '%s' %(value.encode('utf8')))
+					setTableValue(table, 'A', r, key)
+					setTableValue(table, 'B', r, value)
 					remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
 
 				if (key.find('RDxVar') != 0):
 					try:
 						aliasValue = '%s_' %(key.replace(':', '_'))
-						table.setAlias('B%d' %(r), aliasValue.encode('utf8'))
+						table.setAlias(u"B%d" %(r), aliasValue)
 					except Exception as e:
 						logError(u"    Can't set alias name for B%d - invalid name '%s' - %s!", r, aliasValue, e)
 
@@ -2844,11 +2867,11 @@ class FreeCADImporter:
 		parameterRefs = partNode.get('parameters')
 		table = newObject(self.doc, 'Spreadsheet::Sheet', u'T_Parameters')
 		logInfo(u"    adding parameters table...")
-		table.set('A1', 'Parameter')
-		table.set('B1', 'Value')
-		table.set('C1', 'Fromula')
-		table.set('D1', 'Tolerance')
-		table.set('E1', 'Comment')
+		setTableValue(table, 'A', 1, 'Parameter')
+		setTableValue(table, 'B', 1, 'Value')
+		setTableValue(table, 'C', 1, 'Fromula')
+		setTableValue(table, 'D', 1, 'Tolerance')
+		setTableValue(table, 'E', 1, 'Comment')
 		r = 2
 		keys = parameterRefs.keys()
 		for key in keys:

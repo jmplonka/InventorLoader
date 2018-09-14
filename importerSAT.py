@@ -209,7 +209,7 @@ def readEntityBinary(data, index, end):
 		if (val == 'ASM'): val = 'ACIS'
 		names.append(val)
 
-	entity = AcisEntity("-".join(names))
+	entity = AcisEntity('-'.join(names))
 	entity.index = eIndex
 	if (not entity.name.startswith('End-of-')):
 		while ((tag != 0x11) and (i < end)):

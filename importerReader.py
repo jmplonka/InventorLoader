@@ -167,7 +167,7 @@ def getPropertySetName(properties, path, model):
 		model.iProperties[name] = {}
 
 	keys = properties.keys()
-	keys.sort()
+	keys = sorted(keys)
 
 	return name, keys
 
@@ -191,7 +191,10 @@ def ReadInventorSummaryInformation(doc, properties, path):
 				elif (key == KEY_THUMBNAIL_2):
 					val = writeThumbnail(val)
 				if (type(val) == str):
-					logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val.decode('utf8'))
+					if (sys.version_info.major < 3):
+						logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val.decode('utf8'))
+					else:
+						logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val)
 				else:
 					logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val)
 				model.iProperties[name][key] = (Inventor_Summary_Information.get(key, key), val)
@@ -210,7 +213,10 @@ def ReadInventorDocumentSummaryInformation(doc, properties, path):
 			val = getProperty(properties, key)
 			if (val is not None):
 				if (type(val) == str):
-					logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val.decode('utf8'))
+					if (sys.version_info.major < 3):
+						logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val.decode('utf8'))
+					else:
+						logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val)
 				else:
 					logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val)
 				model.iProperties[name][key] = (Inventor_Document_Summary_Information.get(key, key), val)
@@ -230,7 +236,10 @@ def ReadOtherProperties(properties, path, keynames={}):
 					logInfo(u"\t\t%s = [ICON]", keyName)
 				elif (type(val) == str):
 					try:
-						logInfo(u"\t\t%s = %s", keyName, val.decode('utf8'))
+						if (sys.version_info.major < 3):
+							logInfo(u"\t\t%s = %s", keyName, val.decode('utf8'))
+						else:
+							logInfo(u"\t\t%s = %s", keyName, val)
 					except:
 						logInfo(u"\t\t%s = %r", keyName, val)
 				else:
@@ -1089,7 +1098,7 @@ def ReadRSeEmbeddingsContentsText16(data, offset):
 	end = i + len[3]*2
 	buf = data[i: end]
 	txt = buf.decode('UTF-16LE').encode(ENCODING_FS)
-	return txt, end
+	return txt.decode("utf-8"), end
 
 def dumpRemaining(data, offset):
 	i = offset

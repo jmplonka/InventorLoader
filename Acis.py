@@ -314,6 +314,8 @@ def getIntegerMap(chunks, index, count, size):
 
 def getLong(chunks, index):
 	val, i = getValue(chunks, index)
+	if (sys.version_info.major > 2):
+		return int(val), i
 	return long(val), i
 
 def getFloat(chunks, index):
@@ -785,7 +787,7 @@ def isValid(face):
 def findMostMatches(faces):
 	if (len(faces) > 0):
 		matches = faces.keys()
-		matches.sort()
+		matches = sorted(matches)
 		return faces[matches[-1]]
 	return []
 
@@ -1399,7 +1401,8 @@ class Entity(object):
 	def getAttrib(self): return None if (self._attrib is None) else self._attrib.node
 	def __str__(self):   return "%s" % (self.entity)
 	def __repr__(self): return self.__str__()
-
+	def __lt__(self, other):
+		return self.getIndex() < other.getIndex()
 	def getAttribute(self, clsName):
 		a = self.getAttrib()
 		while (a is not None) and (a.getIndex() >= 0):
@@ -1668,7 +1671,7 @@ class Face(Topology):
 		if (ref is not None):
 			refs.append(ref)
 		refs = list(set(refs))
-		refs.sort()
+		refs = sorted(refs)
 		return refs
 	def getSurfaceDefinitions(self):
 		defs = []
@@ -1684,7 +1687,7 @@ class Face(Topology):
 		entity = getattr(attr, 'ref2', None)
 		if (entity is not None):
 			addCurveSurfaceDefs(entity.node, defs)
-		defs.sort()
+		defs = sorted(defs)
 		return defs
 class Loop(Topology):
 	def __init__(self):
@@ -3620,7 +3623,8 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 		else:
 			self.a.insert(0, 38)
 		name,    i = getText(entity.chunks, i)
-		name = name.decode('utf8')
+		if (sys.version_info.major < 3):
+			name = name.decode('utf8')
 		self.idxCreator, i = getInteger(entity.chunks, i)
 		self.a2, i = getIntegers(entity.chunks, i, len(entity.chunks) - i - 1)
 		color = getColor(name)
@@ -3873,23 +3877,23 @@ class AcisRef():
 	def __repr__(self):
 		return self.__str__()
 
+def __getStr(data, offset, end):
+	txt = data[offset: end].decode('cp1252')
+	if (sys.version_info.major < 3):
+		txt = txt.encode(ENCODING_FS).decode("utf8")
+	return txt, end
+
 def getStr1(data, offset):
 	l, i = getUInt8(data, offset)
-	end = i + l
-	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
-	return txt, end
+	return __getStr(data, i, l + i)
 
 def getStr2(data, offset):
 	l, i = getUInt16(data, offset)
-	end = i + l
-	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
-	return txt, end
+	return __getStr(data, i, l + i)
 
 def getStr4(data, offset):
 	l, i = getUInt32(data, offset)
-	end = i + l
-	txt = data[i: end].decode('cp1252').encode(ENCODING_FS)
-	return txt, end
+	return __getStr(data, i, l + i)
 
 def getEntityRef(data, offset):
 	index, i = getSInt32(data, offset)

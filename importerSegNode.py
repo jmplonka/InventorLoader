@@ -179,6 +179,13 @@ class AbstractNode(AbstractData):
 		self.content += ' %s=(%s)' %(name, FloatArr2Str(x))
 		return i
 
+	def ReadVec3D(self, offset, name, scale = 1.0):
+		p, i = getFloat64A(self.data, offset, 3)
+		v = VEC(p[0], p[1], p[2]) * scale
+		self.set(name, v)
+		self.content += ' %s=%s' %(name, v)
+		return i
+
 	def ReadUUID(self, offset, name):
 		x, i = getUUID(self.data, offset, '%08X[%d]' %(self.typeID.time_low, self.index))
 		self.set(name, x)

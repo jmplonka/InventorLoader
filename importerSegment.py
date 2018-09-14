@@ -434,6 +434,34 @@ class SegmentReader(object):
 #		newFileRaw.close()
 		return
 
+	def ReadRefU32AList(self, node, offset, name, size, type):
+		cnt, i = getUInt32(node.data, offset)
+		j = 0
+		lst = []
+		while (j < cnt):
+			ref, i = self.ReadNodeRef(node, i, j, type)
+			a, i = getUInt32A(node.data, i, size)
+			j += 1
+			lst.append([ref, a])
+		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%s)' %(r[0], IntArr2Str(r[1], 4)) for r in lst]))
+		node.set(name, lst)
+		return i
+
+	def ReadRefU32ARefU32List(self, node, offset, name, size):
+		cnt, i = getUInt32(node.data, offset)
+		j = 0
+		lst = []
+		while (j < cnt):
+			ref1, i = self.ReadNodeRef(node, i, j, NodeRef.TYPE_CROSS)
+			u32, i = getUInt32(node.data, i)
+			ref2, i = self.ReadNodeRef(node, i, j, NodeRef.TYPE_CROSS)
+			a, i = getUInt32A(node.data, i, size)
+			j += 1
+			lst.append([ref1, a, ref2, u32])
+		node.content += ' %s=[%s]' %(name, ','.join(['(%s,[%s],%s,%s)' %(r[0], IntArr2Str(r[1],4), r[2], r[3]) for r in lst]))
+		node.set(name, lst)
+		return i
+
 	def Read_F645595C(self, node):
 		# Spatial's (A)CIS (S)olid (M)odeling
 		# 3 Line Header:
@@ -442,17 +470,17 @@ class SegmentReader(object):
 		# [3]	[UNIT_LENGTH] [FAC_RES_ABS] [FAC_RES_NOR]
 		node.typeName = 'ASM'
 		i = node.Read_Header0()
-		i = node.ReadUInt16A(i, 2, 'u32_0')
+		i = node.ReadUInt16A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'lenFooter')
 		txt, i = getText8(node.data, i, 15)
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
 		vrs, i = getUInt32(node.data, i)
-		data = '\x04\xBC\x02\x00\x00'       # ACIS-Version
-		data += '\x04' + node.data[i:i+4]   # Number of records
-		data += '\x04' + node.data[i+4:i+8] # Number of bodies
-		data += '\x04' + node.data[i+8:]    # Flags + entities
+		data = b'\x04\xBC\x02\x00\x00'       # ACIS-Version
+		data += b'\x04' + node.data[i:i+4]   # Number of records
+		data += b'\x04' + node.data[i+4:i+8] # Number of bodies
+		data += b'\x04' + node.data[i+8:]    # Flags + entities
 		lst = []
 		header = Header()
 		i = header.readBinary(data)
@@ -486,22 +514,39 @@ class SegmentReader(object):
 			if (u8_0  == 1):
 				n, i = getUInt32(buffer, i)
 				txt = []
-				while (n > 0):
-					n -= 1
-					k, i = getLen32Text8(buffer, i)
-					u32_1, i = getUInt32(buffer, i)
-					if (u32_1 == 0x01):   v, i = getUInt8A(buffer, i, 3)
-					elif (u32_1 == 0x03): v, i = getUInt16A(buffer, i, 2)
-					elif (u32_1 == 0x0A): v, i = getUInt16A(buffer, i, 3)
-					else: raise("Unknown property value type 0x%02X!" %(u32_i))
-					txt.append((k,v))
-				i = CheckList(buffer, i, 0x0006)
-				cnt, i = getUInt32(buffer, i)
-				if (cnt > 0):
-					arr32, i = getUInt32A(buffer, i, 2)
-					j = 0
-					while (j < cnt):
-						pass #???
+				if ((n & 0x80000000) > 0):
+					pass # check  X-Ref???
+				else:
+					while (n > 0):
+						n -= 1
+						k, i = getLen32Text8(buffer, i)
+						u32_1, i = getUInt32(buffer, i)
+						if (u32_1   == 0b0001):
+							v, i = getUInt8A(buffer, i, 3)
+						elif (u32_1 == 0b0011):
+							v, i = getUInt16A(buffer, i, 2)
+						elif (u32_1 == 0b0111):
+							v, i = getUInt16A(buffer, i, 2)
+						elif (u32_1 == 0b1000):
+							v, i = getUInt16A(buffer, i, 3)
+						elif (u32_1 == 0b1010):
+							v, i = getUInt16A(buffer, i, 3)
+						elif (u32_1 == 0b1011):
+							v, i = getUInt16A(buffer, i, 5)
+						else:
+							raise ValueError(u"Unknown property value type 0x%02X!" %(u32_1))
+						txt.append((k,v))
+					i = CheckList(buffer, i, 0x0006)
+					cnt, i = getUInt32(buffer, i)
+					if (cnt > 0):
+						arr32, i = getUInt32A(buffer, i, 2)
+						values = []
+						while (cnt > 0):
+							cnt -= 1
+							txt, i = getLen32Text8(buffer, i)
+							a, i = getUInt16A(buffer, i, 2)
+							ref = NodeRef(a[0], a[1], NodeRef.TYPE_CROSS)
+							values.append([txt, ref])
 		return i
 
 	def ReadSegmentData(self, file, buffer, seg):
@@ -520,13 +565,12 @@ class SegmentReader(object):
 			#SECTION = [UUID_IDX_U8][RES_U24 = 0x000001][DATA][DATA_LENGTH_U32][TRAILER]
 			for sec in seg.sec1:
 				if (sec.flags == 1):
-					l = sec.length
 					start = i
-					data = self.ReadBlock(file, buffer, i, l, seg)
+					data = self.ReadBlock(file, buffer, i, sec.length, seg)
 					i += data.size + 4
-					u32_0, i = getUInt32(buffer, i)
+					l, i = getUInt32(buffer, i)
 					i = self.ReadTrailer(buffer, i)
-					if ((u32_0 != 0) and (u32_0 != l)):
+					if ((l != 0) and (sec.length != l)):
 						logError('%s: BLOCK[%04X] - incorrect block size %X != 	%X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, u32_0, start, data.typeName))
 			showTree = True
 

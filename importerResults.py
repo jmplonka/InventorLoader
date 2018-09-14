@@ -233,9 +233,9 @@ class ResultReader(SegmentReader):
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
-		i = node.ReadList2(i, AbstractNode._TYP_2D_UINT16_, 'lst0')
+		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
 		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst1')
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_1')
 		return i
 
 	def Read_F8DD2C9D(self, node):
