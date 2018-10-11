@@ -18,9 +18,9 @@ imported into FreeCAD.
 ## Installation
 Download the repository as a ZIP archive and expand its content directly into the
 FreeCAD module's folder "Mod". There exists two locations where FreeCAD searches for
-addons:
-a) beside FreeCAD's bin folder
-b) in user's application data (%APPDATA% on windows) or home folder (on linux/MAC).
+addons:  
+a) beside FreeCAD's bin folder, or  
+b) in user's application data (%APPDATA% on windows) or home folder (on linux/MAC).  
 A new folder "InvetorLoader-master" will be created.
 
 The next time FreeCAD will offer new import formats for ACIS' SAT (\*.sat) files and Autodesk
@@ -80,6 +80,8 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
+- 0.10.0 Added table for iParts.
+
 - 0.9.5 Added chamfer feature for nativ strategy.
 
 - 0.9.4 InventorLoader is now compatible with python 2 and 3
