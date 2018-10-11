@@ -13,8 +13,8 @@ from importerTransformation import Transformation
 from math                   import pi
 from Acis                   import clearEntities, setVersion
 from importerSAT            import Header, readNextSabChunk, readEntityBinary
-import importerSegNode
-import re
+from xlrd                   import open_workbook
+import importerSegNode, re
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -1262,6 +1262,8 @@ class DCReader(SegmentReader):
 			filename = '%s\\%s_%04X.xls' %(folder, node.typeName, node.index)
 			with open(filename, 'wb') as xls:
 				xls.write(buffer)
+				node.set('filename', filename)
+				node.set('workbook', open_workbook(file_contents=buffer))
 			# logInfo(u"    INFO - found workbook: stored as %s!", filename)
 		i += size
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')

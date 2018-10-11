@@ -398,7 +398,19 @@ def replacePoint(edges, pOld, line, pNew):
 		return replaceEntity(edges, line, createLine(p2v(pNew), l.EndPoint))
 	return replaceEntity(edges, line, createLine(l.StartPoint, p2v(pNew)))
 
-def setTableValue(table, col, row, val):
+def int2col(c):
+	m = c // 26
+	n = c % 26
+	if (m > 0):
+		return chr(ord('A') + (m - 1)) + chr(ord('A') + n)
+	return chr(ord('A') + n)
+
+def setTableValue(table, c, row, val):
+	if (type(c) is int):
+		col = int2col(c)
+	else:
+		col = c
+
 	if (type(val) == str):
 		table.set(u"%s%d" %(col, row), val)
 	else:
@@ -2833,6 +2845,18 @@ class FreeCADImporter:
 	def Create_iPart(self, iPartNode):
 		# create a iPart Table
 		table = newObject(self.doc, 'Spreadsheet::Sheet', iPartNode.name)
+		excel = iPartNode.get('excelWorkbook')
+		wb = excel.get('workbook')
+		if (wb is not None):
+			sheet = wb.sheet_by_index(0)
+			cols = range(0, sheet.ncols)
+			for row in range(0, sheet.ncols):    # Iterate through rows
+				for col in cols:    # Iterate through cols
+					try:
+						cell = sheet.cell(row, col)  # Get cell object by row, col
+						setTableValue(table, col, row + 1, cell.value)
+					except:
+						pass
 		return
 
 
