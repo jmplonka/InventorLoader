@@ -131,13 +131,13 @@ def dumpRemainingDataB(file, data, offset):
 									val, i = getUInt16A(data, i, 2)
 									val = IntArr2Str(val, 4)
 								elif ((cls >= 0x0114) and (cls <=0x011B)):
-									val, i = getFloat32A(data, i, 3)
+									val, i = getFloat32_3D(data, i)
 									val = FloatArr2Str(val)
 								elif (cls == 0x0131):
-									val, i = getFloat32A(data, i, 2)
+									val, i = getFloat32_2D(data, i)
 									val = FloatArr2Str(val)
 								elif (cls == 0x0107):
-									val, i = getFloat64A(data, i, 2)
+									val, i = getFloat64_2D(data, i)
 									a8, i = getUInt8A(data, i, 8)
 									val = '%s,%s' %(FloatArr2Str(val), IntArr2Str(a8, 2))
 								else:
@@ -278,7 +278,7 @@ def buildTree(file, seg):
 						radius._data = data
 						ref.data.set('refRadius', radius)
 			elif (ref.index > -1):
-				logError(u"ERROR> (%04X): %s - Index out of range (%X>%X)!", data.index, data.typeName, ref.index, l)
+				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", seg.name, data.index, data.typeName, ref.index, l)
 
 		ref = data.parentIndex
 		data.parent = None
@@ -329,49 +329,13 @@ class SegmentReader(object):
 			ref = None
 		return ref, i
 
-	def ReadUnknown(self, node, block, file, logError = False, analyseLists = True):
-		l = len(block)
+	def ReadHeaderSU32S(self, node, typeName=None):
+		if (typeName is not None): node.typeName = typeName
+		i = self.skipBlockSize(0)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		return i
 
-		if (l > 0):
-			i = 0
-			if (logError):
-				a, dummy = getUInt8A(block, 0, len(block))
-				logError(u"%s: %s\t%s\t%s", self.__class__.__name__, getInventorFile(), node.typeID, IntArr2Str(a, 2))
-
-			if (analyseLists):
-				iOld = i
-				m3 = _listPattern.search(block, i)
-				while (m3):
-					i = getStart(m3, block, 0)
-					arr, i2 = getUInt16A(block, i, 2)
-					if (isList(arr, 0x0002)):
-						dumpData(file, block, iOld, i)
-						lst, i = node.ReadMetaData_02(block, i2, AbstractNode._TYP_GUESS_)
-						iOld = i
-					elif (isList(arr, 0x0003)):
-						dumpData(file, block, iOld, i)
-						lst, i = node.ReadMetaData_03(block, i2, AbstractNode._TYP_NODE_REF_)
-						iOld = i
-					elif (isList(arr, 0x0004)):
-						dumpData(file, block, iOld, i)
-						lst, i = node.ReadMetaData_04(block, i2, AbstractNode._TYP_NODE_REF_)
-						iOld = i
-					elif (isList(arr, 0x0006)):
-						dumpData(file, block, iOld, i)
-						lst, i = node.ReadMetaData_MAP(block, i2, AbstractNode._TYP_MAP_KEY_REF_)
-						iOld = i
-					elif (isList(arr, 0x0007)):
-						dumpData(file, block, iOld, i)
-						lst, i = node.ReadMetaData_MAP(block, i2, AbstractNode._TYP_MAP_KEY_REF_)
-						iOld = i
-					else:
-						i = i2
-					m3 = _listPattern.search(block, i)
-				dumpData(file, block, i, len(block))
-			else:
-				l = node.ReadUInt8A(block, 0, l, 'a0')
-
-		return l
 
 	def HandleBlock(self, file, node):
 		i = 0
@@ -379,11 +343,10 @@ class SegmentReader(object):
 		try:
 			readType = getattr(self, 'Read_%s' %(node.typeName))
 			i = readType(node)
-		except Exception as e:
-			if (not isinstance(e, AttributeError)):
-				logError(traceback.format_exc())
-			elif (self.__class__.__name__ != "SegmentReader"):
-				logError(u"ERROR> (%04X) - %s: %s", node.index, node.typeName, e)
+		except AttributeError:
+			logError(u"ERROR> %s.Read_%s not defined!", self.__class__.__name__, node.typeName)
+		except:
+			logError(traceback.format_exc())
 
 		try:
 			if (i < len(node.data)): i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
@@ -468,8 +431,7 @@ class SegmentReader(object):
 		# [1]	[VERSION_NUMBER] [ENTIY_RECORDS] 4 [FLAGS]
 		# [2]	[STR_LEN] [STRING:PRODUCT] [STR_LEN] [STRING:PRODUCER] [STR_LEN] [STRING:DATE]
 		# [3]	[UNIT_LENGTH] [FAC_RES_ABS] [FAC_RES_NOR]
-		node.typeName = 'ASM'
-		i = node.Read_Header0()
+		i = node.Read_Header0('ASM')
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'lenFooter')

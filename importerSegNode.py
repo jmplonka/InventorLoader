@@ -104,7 +104,7 @@ class AbstractNode(AbstractData):
 	def ReadUInt8A(self, offset, n, name):
 		x, i = getUInt8A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, IntArr2Str(x, 2))
+		self.content += ' %s=[%s]' %(name, ",".join(["%02X" % h for h in x]))
 		return i
 
 	def ReadUInt16(self, offset, name):
@@ -116,19 +116,19 @@ class AbstractNode(AbstractData):
 	def ReadUInt16A(self, offset, n, name):
 		x, i = getUInt16A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, IntArr2Str(x, 4))
+		self.content += ' %s=[%s]' %(name, ",".join(["%04X" % h for h in x]))
 		return i
 
 	def ReadSInt16(self, offset, name):
 		x, i = getSInt16(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%04X' %(name, x)
+		self.content += ' %s=%d' %(name, x)
 		return i
 
 	def ReadSInt16A(self, offset, n, name):
 		x, i = getSInt16A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, IntArr2Str(x, 4))
+		self.content += ' %s=[%s]' %(name, ",".join(["%d" % d for d in x]))
 		return i
 
 	def ReadUInt32(self, offset, name):
@@ -140,19 +140,19 @@ class AbstractNode(AbstractData):
 	def ReadUInt32A(self, offset, n, name):
 		x, i = getUInt32A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, IntArr2Str(x, 4))
+		self.content += ' %s=[%s]' %(name, ",".join(["%06X" % h for h in x]))
 		return i
 
 	def ReadSInt32(self, offset, name):
 		x, i = getSInt32(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%X' %(name, x)
+		self.content += ' %s=%d' %(name, x)
 		return i
 
 	def ReadSInt32A(self, offset, n, name):
 		x, i = getSInt32A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, IntArr2Str(x, 4))
+		self.content += ' %s=[%s]' %(name, ",".join(["%d" % d for d in x]))
 		return i
 
 	def ReadFloat32(self, offset, name):
@@ -164,7 +164,19 @@ class AbstractNode(AbstractData):
 	def ReadFloat32A(self, offset, n, name):
 		x, i = getFloat32A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=(%s)' %(name, FloatArr2Str(x))
+		self.content += ' %s=(%s)' %(name, ",".join(["%g" % g for g in x]))
+		return i
+
+	def ReadFloat32_2D(self, offset, name):
+		x, i = getFloat32_2D(self.data, offset)
+		self.set(name, x)
+		self.content += ' %s=(%g,%g)' %(name, x[0], x[1])
+		return i
+
+	def ReadFloat32_3D(self, offset, name):
+		x, i = getFloat32_3D(self.data, offset)
+		self.set(name, x)
+		self.content += ' %s=(%g,%g,%g)' %(name, x[0], x[1], x[1])
 		return i
 
 	def ReadFloat64(self, offset, name):
@@ -176,11 +188,23 @@ class AbstractNode(AbstractData):
 	def ReadFloat64A(self, offset, n, name):
 		x, i = getFloat64A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=(%s)' %(name, FloatArr2Str(x))
+		self.content += ' %s=(%s)' %(name, ",".join(["%g" % g for g in x]))
+		return i
+
+	def ReadFloat64_2D(self, offset, name):
+		x, i = getFloat64_2D(self.data, offset)
+		self.set(name, x)
+		self.content += ' %s=(%g,%g)' %(name, x[0], x[1])
+		return i
+
+	def ReadFloat64_3D(self, offset, name):
+		x, i = getFloat64_3D(self.data, offset)
+		self.set(name, x)
+		self.content += ' %s=(%g,%g,%g)' %(name, x[0], x[1], x[1])
 		return i
 
 	def ReadVec3D(self, offset, name, scale = 1.0):
-		p, i = getFloat64A(self.data, offset, 3)
+		p, i = getFloat64_3D(self.data, offset)
 		v = VEC(p[0], p[1], p[2]) * scale
 		self.set(name, v)
 		self.content += ' %s=%s' %(name, v)
@@ -283,8 +307,7 @@ class AbstractNode(AbstractData):
 		return i
 
 	def ReadCrossRef(self, offset, name = 'xref', number = -1, dump = True):
-		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CROSS, number, dump)
-		return i
+		return self.ReadNodeRef(offset, name, NodeRef.TYPE_CROSS, number, dump)
 
 	def ReadParentRef(self, offset):
 		return self.ReadNodeRef(offset, 'parent', NodeRef.TYPE_PARENT, -1, False)
@@ -568,26 +591,24 @@ class AbstractNode(AbstractData):
 					s = '\"%s\"' %(val)
 				elif (t == AbstractNode._TYP_2D_SINT32_):
 					val, i = getSInt32A(self.data, i, 2)
-					s = '[%s]' %(IntArr2Str(val, 8))
+					s = '[%s]' %(",".join(["%d" %(d) for d in val]))
 				elif (t == AbstractNode._TYP_UINT32A_):
 					val, i = getUInt32A(self.data, i, arraySize)
-					if (skipBlockSize):
-						i += 4
+					if (skipBlockSize): i += 4
 					s = '[%s]' %(IntArr2Str(val, 8))
 				elif (t == AbstractNode._TYP_RESULT_ITEM4_):
 					val = ResultItem4()
 					val.a0, i = getUInt16A(self.data, i, 4)
-					val.a1, i = getFloat64A(self.data, i, 3)
-					val.a2, i = getFloat64A(self.data, i, 3)
-					if (skipBlockSize):
-						i += 4
+					val.a1, i = getFloat64_3D(self.data, i)
+					val.a2, i = getFloat64_3D(self.data, i)
+					if (skipBlockSize): i += 4
 					s = '%s' %(val)
 				j += 1
 				lst.append(val)
 				if (len(s) > 0):
 					self.content += '%s%s' %(sep, s)
 					sep = ','
-
+			self.delete('tmp')
 		return lst, i
 
 	def ReadMetaData_ARRAY(self, offset, typ):
@@ -703,13 +724,16 @@ class AbstractNode(AbstractData):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val.ref_1 = self.get('tmp')
 					val.u32_0, i = getUInt32(self.data, i)
+					c = self.content
+					self.content = u""
 					i =  self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'tmp')
+					self.content = c
 					val.lst = self.get('tmp')
 					val.u8_0, i  = getUInt8(self.data, i)
 					if (skipBlockSize): i += 4
 					if (getFileVersion() > 2018): i += 1
-					val.u32_1, i = getUInt32(self.data, i)
-					val.u8_1, i  = getUInt8(self.data, i)
+					val.u32_1, i  = getUInt32(self.data, i)
+					val.u8_1, i   = getUInt8(self.data, i)
 					val.s32_0, i  = getSInt32(self.data, i)
 					if (skipBlockSize): i += 8
 					if (getFileVersion() > 2018): i += 1
@@ -720,7 +744,10 @@ class AbstractNode(AbstractData):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val.ref_1 = self.get('tmp')
 					val.u32_0, i = getUInt32(self.data, i)
+					c = self.content
+					self.content = u""
 					i =  self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'tmp')
+					self.content = c
 					val.lst = self.get('tmp')
 					val.u8_0, i  = getUInt8(self.data, i)
 					val.s32_0, i  = getSInt32(self.data, i)
@@ -787,14 +814,14 @@ class AbstractNode(AbstractData):
 		self.set(name, lst)
 		return i
 
-	def Read_Header0(self):
+	def Read_Header0(self, typeName = None):
 		u32_0, i = getUInt32(self.data, 0)
 		u16_0, i = getUInt16(self.data, i)
 		i = self.reader.skipBlockSize(i)
 
 		hdr = Header0(u32_0, u16_0)
 		self.set('hdr', hdr)
-		#self.content += ' hdr={%s}' %(hdr)
+		if (typeName is not None): self.typeName = typeName
 
 		return i
 

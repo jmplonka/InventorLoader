@@ -76,7 +76,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Align_Horizontal.svg</normaloff>../icons/Constraint_Align_Horizontal.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Align_Horizontal.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Align_Horizontal.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -90,7 +90,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Align_Vertical.svg</normaloff>../icons/Constraint_Align_Vertical.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Align_Vertical.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Align_Vertical.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -104,7 +104,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_PointOnPoint.svg</normaloff>../icons/Constraint_PointOnPoint.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_PointOnPoint.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_PointOnPoint.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -118,7 +118,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_EqualLength.svg</normaloff>../icons/Constraint_EqualLength.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_EqualLength.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_EqualLength.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -135,7 +135,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Fix.svg</normaloff>../icons/Constraint_Fix.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Fix.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Fix.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -146,7 +146,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Horizontal.svg</normaloff>../icons/Constraint_Horizontal.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Horizontal.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Horizontal.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -160,7 +160,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Vertical.svg</normaloff>../icons/Constraint_Vertical.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Vertical.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Vertical.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -177,7 +177,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Offset.svg</normaloff>../icons/Constraint_Offset.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Offset.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Offset.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -188,7 +188,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Parallel.svg</normaloff>../icons/Constraint_Parallel.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Parallel.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Parallel.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -202,7 +202,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Perpendicular.svg</normaloff>../icons/Constraint_Perpendicular.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Perpendicular.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Perpendicular.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -216,7 +216,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Tangent.svg</normaloff>../icons/Constraint_Tangent.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Tangent.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Tangent.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -230,7 +230,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Polygon.svg</normaloff>../icons/Constraint_Polygon.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Polygon.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Polygon.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -244,7 +244,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Radius.svg</normaloff>../icons/Constraint_Radius.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Radius.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Radius.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -261,7 +261,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_SplineFitPoint.svg</normaloff>../icons/Constraint_SplineFitPoint.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_SplineFitPoint.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_SplineFitPoint.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -272,7 +272,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_SymmetricLine.svg</normaloff>../icons/Constraint_SymmetricLine.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_SymmetricLine.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_SymmetricLine.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -286,7 +286,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_SymmetricPoint.svg</normaloff>../icons/Constraint_SymmetricPoint.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_SymmetricPoint.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_SymmetricPoint.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -341,7 +341,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_InternalAngleLine.svg</normaloff>../icons/Constraint_InternalAngleLine.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_InternalAngleLine.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_InternalAngleLine.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -355,7 +355,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_InternalAnglePoint.svg</normaloff>../icons/Constraint_InternalAnglePoint.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_InternalAnglePoint.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_InternalAnglePoint.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>
@@ -369,7 +369,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Radius.svg</normaloff>../icons/Constraint_Radius.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Radius.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Radius.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -383,7 +383,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Diameter.svg</normaloff>../icons/Constraint_Diameter.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Diameter.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Diameter.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -397,7 +397,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Length.svg</normaloff>../icons/Constraint_Length.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Length.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Length.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>true</bool>
@@ -411,7 +411,7 @@
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>../icons/Constraint_Length_Driven.svg</normaloff>../icons/Constraint_Length_Driven.svg</iconset>
+                         <normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Length_Driven.svg</normaloff>../Mod/InventorLoader/Resources/icons/Constraint_Length_Driven.svg</iconset>
                        </property>
                        <property name="checked">
                         <bool>false</bool>

@@ -135,12 +135,16 @@ def notYetImplemented(node):
 	return None
 
 def newObject(doc, className, name):
-	v = name.encode('utf8')
+	v = name
+	if (sys.version_info.major < 3):
+		v = v.encode('utf8')
+		v = v.strip()
 	if (INVALID_NAME.match(name)):
-		v = b'_' + v
-	obj = doc.addObject(className, v.decode())
+		obj = doc.addObject(className, u"_%s" %(v))
+	else:
+		obj = doc.addObject(className, v)
 	if (obj):
-		obj.Label = name
+		obj.Label = v
 	return obj
 
 def createGroup(doc, name):
@@ -314,8 +318,11 @@ def getCountDir(length, count, direction, fitted):
 		midplane = direction.get('refParameter')
 	elif (direction.typeName == 'A5977BAA'):
 		pass
+	elif (direction.typeName == 'D2D440C0'):
+		logWarning(u"    ... don't know how to apply pattern along curve - ignored!")
+		return 1, VEC() # 1: no pattern copy!
 	elif (direction.typeName != 'Direction'):
-		logError(u"Don't know how to get direction from (%04X) %s - ignoring pattern!", direction.index, direction.typeName)
+		logWarning(u"    ... don't know how to get direction from (%04X) %s (pattern along curves are not supported) - ignoring pattern!", direction.index, direction.typeName)
 		return 1, VEC()
 
 	x = getDirection(direction, 'dirX', distance)
@@ -390,13 +397,13 @@ def replacePoint(edges, pOld, line, pNew):
 	return replaceEntity(edges, line, createLine(l.StartPoint, p2v(pNew)))
 
 def setTableValue(table, col, row, val):
-	if (sys.version_info.major > 2):
-		if (type(val) != str):
-			table.set(u"%s%d" %(col, row), str(val))
-		else:
-			table.set(u"%s%d" %(col, row), val)
+	if (type(val) == str):
+		table.set(u"%s%d" %(col, row), val)
 	else:
-		table.set(u"%s%d" %(col, row), "%s" %(val.encode("utf8")))
+		if ((sys.version_info.major <= 2) and (type(val) == unicode)):
+			table.set(u"%s%d" %(col, row), "%s" %(val.encode("utf8")))
+		else:
+			table.set(u"%s%d" %(col, row), str(val))
 
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
@@ -1230,7 +1237,7 @@ class FreeCADImporter:
 	def createLine3D(self, edges, line):
 		p1 = p2v(line)
 		p2 = p2v(line, 'dirX', 'dirY', 'dirZ')
-		if (p1.Length == 0): return False
+		if (p2.Length == 0): return False
 		part = createLine(p1, p1 + p2)
 		addSketch3D(edges, part, isConstructionMode(line), line)
 		return True
@@ -1263,7 +1270,7 @@ class FreeCADImporter:
 
 	def addSketch_Line3D(self, lineNode, edges):
 		if (self.createLine3D(edges, lineNode) == False):
-			logWarning(u"        ... can't add line with length = 0.0!")
+			logWarning(u"        ... Can't add line (%04X) with length = 0.0!", lineNode.index)
 			lineNode.valid = False
 		else:
 			x1 = lineNode.get('x')
@@ -1847,7 +1854,7 @@ class FreeCADImporter:
 		boolean    = None
 
 		if (baseData is None):
-			logError(u"ERROR> (%04X): %s - can't find base info (not yet created)!", padNode.index, name)
+			logWarning(u"    Can't find base info for (%04X): %s - not yet created!", padNode.index, name)
 		else:
 			tool = self.Create_FxExtrude_New(padNode, sectionNode, name + nameExtension)
 			base    = self.findBase(baseData.next)
@@ -1972,10 +1979,6 @@ class FreeCADImporter:
 		if (len(participants) > 0):
 			geos  = []
 			count = getNominalValue(countRef)
-			fxDimensions = fxDimData.get('lst0')
-			if ((fxDimensions is None) or len(fxDimensions) < 1):
-				logError(u"        FxPatternCircular '%s' - (%04X): %s has no attribute lst0!", name, fxDimData.index, fxDimData.typeName)
-				return
 			angle = Angle(getNominalValue(angleRef), pi/180.0, u'\xb0')
 			center = p2v(axisData)
 			axis   = center - p2v(axisData, 'dirX', 'dirY', 'dirZ')
@@ -2194,7 +2197,7 @@ class FreeCADImporter:
 			base = self.findBase(baseData.next)
 
 			if (base is None):
-				logError(u"ERROR> (%04X): %s - can't find base info (not yet created)!", holeNode.index, name)
+				logWarning(u"    Can't find base info for (%04X): %s - not yet created!", holeNode.index, name)
 			else:
 				placement = getPlacement(transformation)
 				holeGeo   = None
@@ -2582,7 +2585,7 @@ class FreeCADImporter:
 	def Create_FxUnfold(self, unfoldNode):                       return notYetImplemented(unfoldNode)
 
 	def Create_FxUnknown(self, unknownNode):
-		logError(u"   Can't process unknown Feature '%s' - probably an unsupported iFeature!", unknownNode.name)
+		logWarning(u"    Can't process unknown Feature '%s' - probably an unsupported iFeature!", unknownNode.name)
 		return
 
 	def Create_Feature(self, featureNode):
@@ -2650,17 +2653,17 @@ class FreeCADImporter:
 		replaceEntity(edges, arc, Part.ArcOfCircle(circle, a, b))
 		return
 
-	def addSketch_Geometric_Custom3D(self, geometricNode, edges):        return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Coincident3D(self, geometricNode, edges):    return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Collinear3D(self, geometricNode, edges):     return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Helical3D(self, geometricNode, edges):       return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Horizontal3D(self, geometricNode, edges):    return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Smooth3D(self, geometricNode, edges):        return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Parallel3D(self, geometricNode, edges):      return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Perpendicular3D(self, geometricNode, edges): return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Radius3D(self, geometricNode, edges):        return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Tangential3D(self, geometricNode, edges):    return notSupportedNode(geometricNode)
-	def addSketch_Geometric_Vertical3D(self, geometricNode, edges):      return notSupportedNode(geometricNode)
+	def addSketch_Geometric_Custom3D(self, geometricNode, edges):        return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Coincident3D(self, geometricNode, edges):    return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Collinear3D(self, geometricNode, edges):     return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Helical3D(self, geometricNode, edges):       return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Horizontal3D(self, geometricNode, edges):    return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Smooth3D(self, geometricNode, edges):        return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Parallel3D(self, geometricNode, edges):      return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Perpendicular3D(self, geometricNode, edges): return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Radius3D(self, geometricNode, edges):        return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Tangential3D(self, geometricNode, edges):    return None # notSupportedNode(geometricNode)
+	def addSketch_Geometric_Vertical3D(self, geometricNode, edges):      return None # notSupportedNode(geometricNode)
 
 	def addSketch_4F240E1C(self, node, edges): return
 
@@ -2701,7 +2704,13 @@ class FreeCADImporter:
 	def Create_ParameterBoolean(self, valueNode):                  return ignoreBranch(valueNode)
 
 	def Create_Blocks(self, blocksNode):                   return
-	def Create_DeselTable(self, deselTableNode):           return
+
+	def Create_iPart(self, iPartNode):
+		# create a iPart Table
+		table = newObject(self.doc, 'Spreadsheet::Sheet', iPartNode.name)
+		return
+
+
 	def Create_Dimension(self, dimensionNode):             return
 	def Create_Direction(self, directionNode):             return
 	def Create_Label(self, labelNode):                     return

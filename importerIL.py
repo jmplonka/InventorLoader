@@ -6,7 +6,7 @@ Collection of 3D Mesh importers
 '''
 
 import os, sys, FreeCAD, importerSAT, Import_IPT
-from importerUtils import canImport, logAlways, logError
+from importerUtils import canImport, logWarning, logError, logAlways
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -17,8 +17,8 @@ def decode(name):
 	decodedName = name
 	try:
 		decodedName = name.encode(sys.getfilesystemencoding()).decode("utf8")
-	except UnicodeEncodeError:
-		FreeCAD.Console.PrintError("Error: Couldn't determine character encoding!\n")
+	except:
+		logWarning("    Couldn't determine character encoding for filename - using unencoded!\n")
 	return decodedName
 
 def insertGroup(doc, filename):
@@ -46,8 +46,8 @@ def read(doc, filename, readProperties):
 	return None
 
 def checkfile(filename):
-	if (not os.path.exists(filename)):
-		logError(u"File doesn't exists!")
+	if (not os.path.exists(os.path.abspath(filename))):
+		logError(u"File doesn't exists (%s)!", os.path.abspath(filename))
 		return False
 	if (not os.path.isfile(filename)):
 		logError(u"Can't import folders!")
@@ -78,7 +78,7 @@ def open(filename, skip = [], only = [], root = None):
 	In addition to insert (import), the iProperties are as well added to the document.
 	'''
 	if (checkfile(filename)):
-		logAlways(u"Reading: %s", filename)
+		logAlways(u"Reading: %s", os.path.abspath(filename))
 		name = os.path.splitext(os.path.basename(filename))[0]
 		doc = FreeCAD.newDocument(decode(name))
 		doc.Label = name

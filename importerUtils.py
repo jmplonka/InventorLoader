@@ -5,7 +5,7 @@ importerUtils.py:
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import os, sys, datetime, FreeCAD, FreeCADGui, numpy, json
+import os, sys, datetime, FreeCADGui, numpy, json
 from PySide.QtCore import *
 from PySide.QtGui  import *
 from uuid          import UUID
@@ -68,8 +68,8 @@ _fileVersion     = None
 _can_import      = True
 _use_sheet_metal = True
 
-__prmPrefOW__ = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/OutputWindow")
-__prmPrefIL__ = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
+__prmPrefOW__ = ParamGet("User parameter:BaseApp/Preferences/OutputWindow")
+__prmPrefIL__ = ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
 
 # The file the be imported
 _inventor_file = None
@@ -111,15 +111,6 @@ def getColor(name):
 
 def setColor(name, r, g, b):
 	global _colorNames
-	oldColorDef = _colorNames.get(name, None)
-	sNew = "#%02X%02X%02X" % (int(r*255.0), int(g*255.0), int(b*255.0))
-	if (oldColorDef is None):
-		logInfo(u"    Found new color '%s': %s - please add to colors.json!" %(name, sNew))
-	else:
-		sOld = "#%02X%02X%02X" % (int(oldColorDef[0]*255.0), int(oldColorDef[1]*255.0), int(oldColorDef[2]*255.0))
-		if (sOld == sNew):
-			return
-		logInfo(u"    Overwriting color '%s': %s with new definition %s!" %(name, sOld, sNew))
 	_colorNames[name] = (r, g, b)
 
 def getStrategy():
@@ -282,15 +273,19 @@ def setThumbnail(ole):
 	if (t is not None):
 		writeThumbnail(t)
 
-UINT8    = Struct('<B').unpack_from
-UINT16   = Struct('<H').unpack_from
-SINT16   = Struct('<h').unpack_from
-UINT32   = Struct('<L').unpack_from
-SINT32   = Struct('<l').unpack_from
-FLOAT32  = Struct('<f').unpack_from
-FLOAT64  = Struct('<d').unpack_from
-RGBA     = Struct('<ffff').unpack_from
-DATETIME = Struct('<Q').unpack_from
+UINT8      = Struct('<B').unpack_from
+UINT16     = Struct('<H').unpack_from
+SINT16     = Struct('<h').unpack_from
+UINT32     = Struct('<L').unpack_from
+SINT32     = Struct('<l').unpack_from
+FLOAT32    = Struct('<f').unpack_from
+FLOAT32_2D = Struct('<ff').unpack_from
+FLOAT32_3D = Struct('<fff').unpack_from
+RGBA       = Struct('<ffff').unpack_from
+FLOAT64    = Struct('<d').unpack_from
+FLOAT64_2D = Struct('<dd').unpack_from
+FLOAT64_3D = Struct('<ddd').unpack_from
+DATETIME   = Struct('<Q').unpack_from
 
 def getUInt8(data, offset):
 	'''
@@ -493,6 +488,16 @@ def getFloat32A(data, offset, size):
 	val = [float(s) for s in singles]
 	return val, int(offset + 4 * size)
 
+def getFloat32_2D(data, index):
+	val = FLOAT32_2D(data, index)
+	val = list(val)
+	return val, int(index + 0x8)
+
+def getFloat32_3D(data, index):
+	val = FLOAT32_3D(data, index)
+	val = list(val)
+	return val, int(index + 0xC)
+
 def getFloat64(data, offset):
 	'''
 	Returns a double precision float value.
@@ -525,6 +530,16 @@ def getFloat64A(data, offset, size):
 	val = unpack_from('<' + 'd'*int(size), data, offset)
 	val = list(val)
 	return val, int(offset + 8 * size)
+
+def getFloat64_2D(data, index):
+	val = FLOAT64_2D(data, index)
+	val = list(val)
+	return val, int(index + 0x10)
+
+def getFloat64_3D(data, index):
+	val = FLOAT64_3D(data, index)
+	val = list(val)
+	return val, int(index + 0x18)
 
 def getColorRGBA(data, offset):
 	r, g, b, a = RGBA(data, offset)
@@ -699,15 +714,15 @@ def setLoggingInfo(val):
 	__prmPrefOW__.SetInt("checkLogging", val)
 def setLoggingWarn(val):
 	__prmPrefOW__.SetInt("checkWarning", val)
-def setLoggingWarn(val):
+def setLoggingError(val):
 	__prmPrefOW__.SetInt("checkError", val)
 
 def logInfo(msg, *args):
-	if (__prmPrefOW__.GetInt("checkLogging", 0) == 1): _log("logInfo", Console.PrintLog, msg, args)
+	if (__prmPrefOW__.GetBool("checkLogging", False)): _log("logInfo",    Console.PrintMessage, msg, args)
 def logWarning(msg, *args):
-	if (__prmPrefOW__.GetInt("checkWarning", 0) == 1): _log("logWarning", Console.PrintWarning, msg, args)
+	if (__prmPrefOW__.GetBool("checkWarning", False)): _log("logWarning", Console.PrintWarning, msg, args)
 def logError(msg, *args):
-	if (__prmPrefOW__.GetInt("checkError", 0)   == 1): _log("logError", Console.PrintError, msg, args)
+	if (__prmPrefOW__.GetBool("checkError", False)):   _log("logError",   Console.PrintError,   msg, args)
 
 def logAlways(msg, *args):
 	_log("logAlways", Console.PrintMessage, msg, args)
@@ -779,7 +794,7 @@ def viewAxonometric():
 	if (GuiUp):
 		FreeCADGui.activeView().viewAxonometric()
 		FreeCADGui.SendMsgToActiveView("ViewFit")
-	logAlways(u"DONE!")
+	logInfo(u"DONE!")
 
 class CDumpStream():
 	def __init__(self):

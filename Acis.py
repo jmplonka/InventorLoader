@@ -3905,8 +3905,6 @@ def getTagB(data, index):         return '0x0B', index
 def getTagOpen(data, index):      return '{', index
 def getTagClose(data, index):     return '}', index
 def getTagTerminate(data, index): return '#', index
-def getTagFloats3D(data, index):  return getFloat64A(data, index, 3)
-def getTagFloats2D(data, index):  return getFloat64A(data, index, 2)
 
 '''
 Mapper for binary tags to corresponding reader
@@ -3931,10 +3929,10 @@ TAG_READER = {
 	TAG_SUBTYPE_CLOSE: getTagClose,     # Closing block tag
 	TAG_TERMINATOR   : getTagTerminate, # '#' character
 	TAG_UTF8_U32_B   : getStr4,         # 32Bit length + UTF8-Char
-	TAG_POSITION     : getTagFloats3D,  # Scaling will be done later because of text file handling!
-	TAG_VECTOR_3D    : getTagFloats3D,  # 3D-Vector normalized
+	TAG_POSITION     : getFloat64_3D,   # Scaling will be done later because of text file handling!
+	TAG_VECTOR_3D    : getFloat64_3D,   # 3D-Vector normalized
 	TAG_ENUM_VALUE   : getUInt32,       # value of an enumeration
-	TAG_VECTOR_2D    : getTagFloats2D,  # U-V-Vector
+	TAG_VECTOR_2D    : getFloat64_2D,   # U-V-Vector
 }
 
 def readNextSabChunk(data, index):

@@ -217,8 +217,7 @@ class BRepReader(SegmentReader):
 		return i
 
 	def Read_CC0F7521(self, node):
-		node.typeName = 'AcisEntityWrapper'
-		i = node.Read_Header0()
+		i = node.Read_Header0('AcisEntityWrapper')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadChildRef(i, 'ref_1')
@@ -243,15 +242,16 @@ class BRepReader(SegmentReader):
 		c = node.content
 		while (j < cnt):
 			u32_0, i = getUInt32(node.data, i)
-			i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
-			lst0 = node.get('lst0')
+			i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'tmp', 2)
+			lst0 = node.get('tmp')
 			u32_1, i = getUInt32(node.data, i)
-			i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2) # this is ref + uint!
-			lst1 = node.get('lst0')
+			i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'tmp', 2) # this is ref + uint!
+			lst1 = node.get('tmp')
 			j += 1
 			c += '%s[%04X,%s,%04X,%s]' %(sep, u32_0, Int2DArr2Str(lst0, 4), u32_1, Int2DArr2Str(lst1, 4))
 			lst.append([u32_0, lst0, u32_1, lst1])
 			sep = ','
+		node.delete('tmp')
 		node.content = c +']'
 		node.set('lst3', lst)
 		return i
