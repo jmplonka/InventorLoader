@@ -7,9 +7,9 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-from importerSegNode import AbstractNode, ResultNode
 from importerClasses import ResultItem4
 from importerUtils   import *
+import importerSegNode
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -20,7 +20,7 @@ class ResultReader(SegmentReader):
 		super(ResultReader, self).__init__(True)
 
 	def createNewNode(self):
-		return ResultNode()
+		return importerSegNode.ResultNode()
 
 	def skipDumpRawData(self):
 		return True
@@ -42,7 +42,7 @@ class ResultReader(SegmentReader):
 	def Read_09780457(self, node):
 		i = self.Read_Header1(node)
 		i = node.ReadSInt32(i, 's32_0')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_0E70AF5C(self, node):
@@ -128,8 +128,8 @@ class ResultReader(SegmentReader):
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
-		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
-		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
 		i = node.ReadChildRef(i, 'ref_1')
 		return i
 

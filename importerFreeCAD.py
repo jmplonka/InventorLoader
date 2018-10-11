@@ -884,7 +884,7 @@ class FreeCADImporter:
 									face = f
 								else:
 									if (sketchEdges.get('operation') & 0x8):
-										face = face.fuse(f)
+										face = face.oldFuse(f) # remove internal wires!
 									else:
 										cnt = 0 # force new shape!
 										face = face.cut(f)

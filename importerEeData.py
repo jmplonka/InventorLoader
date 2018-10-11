@@ -7,8 +7,8 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-from importerSegNode import AbstractNode, EeDataNode
 from importerUtils   import *
+import importerSegNode
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -19,7 +19,7 @@ class EeDataReader(SegmentReader):
 		super(EeDataReader, self).__init__(False)
 
 	def createNewNode(self):
-		return EeDataNode()
+		return importerSegNode.EeDataNode()
 
 	def skipDumpRawData(self):
 		return True

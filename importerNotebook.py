@@ -9,7 +9,7 @@ TODO:
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-from importerSegNode import AbstractNode, NotebookNode
+import importerSegNode
 from importerUtils   import *
 
 __author__      = 'Jens M. Plonka'
@@ -22,14 +22,14 @@ class NotebookReader(SegmentReader):
 		super(NotebookReader, self).__init__(False)
 
 	def createNewNode(self):
-		return NotebookNode()
+		return importerSegNode.NotebookNode()
 
 	def skipDumpRawData(self):
 		return True
 
 	def Read_386E04F0(self, node):
 		i = node.Read_Header0('RtfContent')
-		i = node.ReadList2(i, AbstractNode._TYP_1D_CHAR_, 'rtf')
+		i = node.ReadList2(i, importerSegNode._TYP_CHAR_, 'rtf')
 		# TODO: convert RTF to HTML/TEXT
 		return i
 
@@ -37,7 +37,7 @@ class NotebookReader(SegmentReader):
 		i = node.Read_Header0('Notebook')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -49,10 +49,10 @@ class NotebookReader(SegmentReader):
 		i = node.Read_Header0('Notice')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadLen32Text16(i)
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst1')
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst1')
 		i = node.ReadUInt16A(i, 2, 'a1')
 		return i
 
@@ -60,14 +60,14 @@ class NotebookReader(SegmentReader):
 		i = node.Read_Header0()
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 7, 'a1')
 		return i
 
 	def Read_7ABDF905(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUUID(i, 'uid_0')
 		i = node.ReadChildRef(i)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -78,7 +78,7 @@ class NotebookReader(SegmentReader):
 		i = node.ReadUInt8A(i, 6, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -122,7 +122,7 @@ class NotebookReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
 		return i

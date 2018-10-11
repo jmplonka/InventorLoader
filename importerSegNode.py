@@ -36,68 +36,112 @@ def getIndex(ref):
 	if (ref is None): return u'None'
 	return u'%04X' %ref.index
 
+_TYP_GUESS_                 = 0x0000
+
+_TYP_CHAR_                  = 0x0010
+_TYP_UINT8_                 = 0x0011
+_TYP_SINT8_                 = 0x0012
+_TYP_UINT16_                = 0x0013
+_TYP_SINT16_                = 0x0014
+_TYP_UINT32_                = 0x0015
+_TYP_SINT32_                = 0x0016
+_TYP_FLOAT32_               = 0x0017
+_TYP_FLOAT64_               = 0x0018
+_TYP_NODE_REF_              = 0x0019
+_TYP_NODE_X_REF_            = 0x001A
+_TYP_STRING8_               = 0x001B
+_TYP_STRING16_              = 0x001C
+
+_TYP_UINT8_A_               = 0x0020
+_TYP_SINT8_A_               = 0x0021
+_TYP_UINT16_A_              = 0x0022
+_TYP_SINT16_A_              = 0x0023
+_TYP_UINT32_A_              = 0x0024
+_TYP_SINT32_A_              = 0x0025
+_TYP_FLOAT32_A_             = 0x0026
+_TYP_FLOAT64_A_             = 0x0027
+
+_TYP_FONT_                  = 0x0040
+_TYP_2D_F64_U32_4D_U8_      = 0x0041
+_TYP_LIGHTNING_             = 0x0042
+_TYP_RESULT_ITEM4_          = 0x0043
+_TYP_U32_TXT_TXT_DATA_      = 0x0044
+_TYP_U32_TXT_U32_LST2_      = 0x0045
+_TYP_APP_1_                 = 0x0046
+_TYP_F64_F64_U32_U8_U8_U16_ = 0x0047
+
+_TYP_LIST_GUESS_            = 0x8000
+_TYP_LIST_UINT16_A_         = 0x8001
+_TYP_LIST_SINT16_A_         = 0x8002
+_TYP_LIST_UINT32_A_         = 0x8003
+_TYP_LIST_SINT32_A_         = 0x8004
+_TYP_LIST_FLOAT32_A_        = 0x8005
+_TYP_LIST_FLOAT64_A_        = 0x8006
+_TYP_LIST_FONT_             = 0x8007
+_TYP_LIST_X_REF_            = 0x8008
+
+_TYP_MAP_KEY_KEY_           = 0x7001
+_TYP_MAP_KEY_REF_           = 0x7002
+_TYP_MAP_KEY_X_REF_         = 0x7003
+_TYP_MAP_REF_REF_           = 0x7004
+_TYP_MAP_TEXT8_REF_         = 0x7005
+_TYP_MAP_TEXT8_X_REF_       = 0x7006
+_TYP_MAP_TEXT16_REF_        = 0x7007
+_TYP_MAP_TEXT16_X_REF_      = 0x7008
+_TYP_MAP_X_REF_KEY_         = 0x7009
+_TYP_MAP_X_REF_FLOAT64_     = 0x700A
+_TYP_MAP_X_REF_2D_UINT32_   = 0x700B
+_TYP_MAP_X_REF_X_REF_       = 0x700C
+_TYP_MAP_X_REF_LIST2_XREF_  = 0x700D
+_TYP_MAP_UUID_UINT32_       = 0x700E
+_TYP_MAP_UUID_X_REF         = 0x700F
+_TYP_MAP_U16_U16_           = 0x7010
+
+_TYP_MAP_MDL_TXN_MGR_1_     = 0x6001
+_TYP_MAP_MDL_TXN_MGR_2_     = 0x6002
+
+TYP_2_FUNC = {
+	_TYP_CHAR_:                  'getList2Chars',
+	_TYP_NODE_REF_:              'getList2Childs',
+	_TYP_NODE_X_REF_:            'getList2Xrefs',
+	_TYP_STRING8_:               'getList2String8s',
+	_TYP_STRING16_:              'getList2String16s',
+	_TYP_UINT8_:                 'getList2UInt8s',
+	_TYP_SINT8_:                 'getList2SInt8s',
+	_TYP_UINT16_:                'getList2UInt16s',
+	_TYP_SINT16_:                'getList2SInt16s',
+	_TYP_UINT32_:                'getList2UInt32s',
+	_TYP_SINT32_:                'getList2SInt32s',
+	_TYP_FLOAT32_:               'getList2Float32s',
+	_TYP_FLOAT64_:               'getList2Float64s',
+	_TYP_UINT8_A_:               'getList2UInt8sA',
+	_TYP_SINT8_A_:               'getList2SInt8sA',
+	_TYP_UINT16_A_:              'getList2UInt16sA',
+	_TYP_SINT16_A_:              'getList2SInt16sA',
+	_TYP_UINT32_A_:              'getList2UInt32sA',
+	_TYP_SINT32_A_:              'getList2SInt32sA',
+	_TYP_FLOAT32_A_:             'getList2Float32sA',
+	_TYP_FLOAT64_A_:             'getList2Float64sA',
+	_TYP_FONT_:                  'getList2Fonts',
+	_TYP_LIGHTNING_:             'getList2Lightnings',
+	_TYP_2D_F64_U32_4D_U8_:      'getList2App1',
+	_TYP_U32_TXT_TXT_DATA_:      'getList2App2',
+	_TYP_U32_TXT_U32_LST2_:      'getList2App3',
+	_TYP_APP_1_:                 'getList2App4',
+	_TYP_F64_F64_U32_U8_U8_U16_: 'getList2App5',
+	_TYP_LIST_GUESS_:            'getList2Guess',
+	_TYP_LIST_UINT16_A_:         'getList2ListUInt16sA',
+	_TYP_LIST_SINT16_A_:         'getList2ListSInt16sA',
+	_TYP_LIST_UINT32_A_:         'getList2ListUInt32sA',
+	_TYP_LIST_SINT32_A_:         'getList2ListSInt32sA',
+	_TYP_LIST_FLOAT32_A_:        'getList2ListFloats32sA',
+	_TYP_LIST_FLOAT64_A_:        'getList2ListFloats64sA',
+	_TYP_LIST_FONT_:             'getList2ListFonts',
+	_TYP_LIST_X_REF_:            'getList2ListXRefs',
+	_TYP_MAP_X_REF_KEY_:         'getList2ListXRefKeys'
+}
+
 class AbstractNode(AbstractData):
-	_TYP_GUESS_                = 0x0000
-	_TYP_2D_UINT16_            = 0x0001
-	_TYP_2D_SINT16_            = 0x0002
-	_TYP_2D_SINT32_            = 0x0003
-	_TYP_2D_FLOAT32_           = 0x0004
-	_TYP_2D_FLOAT64_           = 0x0005
-	_TYP_3D_UINT16_            = 0x0006
-	_TYP_3D_SINT16_            = 0x0007
-	_TYP_3D_SINT32_            = 0x0008
-	_TYP_UINT32A_              = 0x0009
-	_TYP_3D_FLOAT32_           = 0x000B
-	_TYP_3D_FLOAT64_           = 0x000C
-	_TYP_1D_UINT32_            = 0x000D
-	_TYP_1D_CHAR_              = 0x000E
-	_TYP_1D_FLOAT32_           = 0x000F
-
-	_TYP_FONT_                 = 0x0011
-	_TYP_2D_F64_U32_4D_U8_     = 0x0012
-	_TYP_NODE_REF_             = 0x0013
-	_TYP_STRING16_             = 0x0014
-	_TYP_STRING8_              = 0x0015
-	_TYP_RESULT_ITEM4_         = 0x0016
-	_TYP_NODE_X_REF_           = 0x0017
-	_TYP_U32_TXT_TXT_DATA      = 0x0018
-	_TYP_APP_1_                = 0x0019
-
-	_TYP_LIST_GUESS_           = 0x8000
-	_TYP_LIST_2D_UINT16_       = 0x8001
-	_TYP_LIST_2D_SINT16_       = 0x8002
-	_TYP_LIST_2D_UINT32_       = 0x8003
-	_TYP_LIST_2D_SINT32_       = 0x8004
-	_TYP_LIST_2D_FLOAT32_      = 0x8005
-	_TYP_LIST_2D_FLOAT64_      = 0x8006
-	_TYP_LIST_3D_UINT16_       = 0x8007
-	_TYP_LIST_3D_SINT16_       = 0x8008
-	_TYP_LIST_3D_UINT32_       = 0x8009
-	_TYP_LIST_3D_SINT32_       = 0x800A
-	_TYP_LIST_3D_FLOAT32_      = 0x800B
-	_TYP_LIST_3D_FLOAT64_      = 0x800C
-	_TYP_LIST_FONT_            = 0x8011
-	_TYP_LIST_X_REF_           = 0x8012
-
-	_TYP_MAP_KEY_KEY_          = 0x7001
-	_TYP_MAP_KEY_REF_          = 0x7002
-	_TYP_MAP_KEY_X_REF_        = 0x7003
-	_TYP_MAP_REF_REF_          = 0x7004
-	_TYP_MAP_TEXT8_REF_        = 0x7005
-	_TYP_MAP_TEXT8_X_REF_      = 0x7006
-	_TYP_MAP_TEXT16_REF_       = 0x7007
-	_TYP_MAP_TEXT16_X_REF_     = 0x7008
-	_TYP_MAP_X_REF_KEY_        = 0x7009
-	_TYP_MAP_X_REF_FLOAT64_    = 0x700A
-	_TYP_MAP_X_REF_2D_UINT32_  = 0x700B
-	_TYP_MAP_X_REF_X_REF_      = 0x700C
-	_TYP_MAP_X_REF_LIST2_XREF_ = 0x700D
-	_TYP_MAP_UUID_UINT32_      = 0x700E
-	_TYP_MAP_UUID_X_REF        = 0x700F
-	_TYP_MAP_U16_U16_          = 0x7010
-
-	_TYP_MAP_MDL_TXN_MGR_1_    = 0x6001
-	_TYP_MAP_MDL_TXN_MGR_2_    = 0x6002
 
 	def __init__(self):
 		AbstractData.__init__(self)
@@ -319,252 +363,493 @@ class AbstractNode(AbstractData):
 	def ReadParentRef(self, offset):
 		return self.ReadNodeRef(offset, 'parent', NodeRef.TYPE_PARENT, -1, False)
 
-	def ReadMetaData_02(self, offset, typ, arraySize = 1):
-		sep = ''
-		skipBlockSize = (getFileVersion() < 2011)
-		cnt, i = getUInt32(self.data, offset)
-		lst = []
+	def getList2Chars(self, offset, cnt, arraysize):
+		try:
+			t, i = getText8(self.data, offset, cnt)
+			return [t], i, u"'%s'" %(t)
+		except:
+			t, i = getUInt8A(self.data, offset, cnt)
+			return t, i+cnt, IntArr2Str(t, 2)
 
+	def getList2Childs(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadChildRef(i, 'tmp', j, False)
+			lst.append(self.get('tmp'))
+			j += 1
+		return lst, i, u"%d" %(cnt)
+
+	def getList2Xrefs(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadCrossRef(i, 'tmp', j, False)
+			lst.append(self.get('tmp'))
+			j += 1
+		return lst, i, u"%d" %(cnt)
+
+	def getList2String8s(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		sep = u""
+		s   = u""
+		while (j < cnt):
+			val, i = getLen32Text8(self.data, i)
+			lst.append(val)
+			j += 1
+			s += u"%s'%s'" %(sep, val)
+			sep = u","
+		return lst, i, s
+
+	def getList2String16s(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		sep = u""
+		s   = u""
+		while (j < cnt):
+			val, i = getLen32Text16(self.data, i)
+			lst.append(val)
+			j += 1
+			s += u"%s'%s'" %(sep, val)
+			sep = u","
+		return lst, i, s
+
+	def getList2UInt8s(self, offset, cnt, arraysize):
+		lst = Struct('<' + 'B'*cnt).unpack_from(self.data, offset)
+		i   = offset + cnt
+		return list(lst), i, u",".join([u"%02X" %(u8) for u8 in lst])
+
+	def getList2SInt16s(self, offset, cnt, arraysize):
+		lst = Struct('<' + 'b'*cnt).unpack_from(self.data, offset)
+		i   = offset + cnt
+		return list(lst), i, u",".join([u"%d" %(s8) for s8 in lst])
+
+	def getList2UInt16s(self, offset, cnt, arraysize):
+		lst = Struct('<' + 'H'*cnt).unpack_from(self.data, offset)
+		i   = offset + 2*cnt
+		return list(lst), i, u",".join([u"%03X" %(u16) for u16 in lst])
+
+	def getList2SInt16s(self, offset, cnt, arraysize):
+		lst = Struct('<' + 'H'*cnt).unpack_from(self.data, offset)
+		i   = offset + 2*cnt
+		return list(lst), i, u",".join([u"%d" %(s16) for s16 in lst])
+
+	def getList2UInt32s(self, offset, cnt, arraysize):
+		lst = Struct('<' + 'L'*cnt).unpack_from(self.data, offset)
+		i   = offset + 4*cnt
+		return list(lst), i, u",".join([u"%06X" %(s32) for s32 in lst])
+
+	def getList2SInt32s(self, offset, cnt, arraysize):
+		lst = Struct('<' + 'l'*cnt).unpack_from(self.data, offset)
+		i   = offset + 4*cnt
+		return list(lst), i, u",".join([u"%d" %(s32) for s32 in lst])
+
+	def getList2Float32s(self, offset, cnt, arraysize):
+		if (getFileVersion() > 2010):
+			val = Struct('<' + 'f'*cnt).unpack_from(self.data, offset)
+			lst = list(val)
+			i   = offset + 4*cnt
+		else:
+			val = Struct('<' + 'fL'*cnt).unpack_from(self.data, offset)
+			lst = list(val)[0::2]
+			i   = offset + 8*cnt # 4Bytes float 4Byte blocklen
+		return lst, i, u",".join([u"%g" %(f32) for f32 in lst])
+
+	def getList2Float64s(self, offset, cnt, arraysize):
+		lst = Struct('<' + 'd'*cnt).unpack_from(self.data, offset)
+		i   = offset + 8*cnt
+		return list(lst), i, u",".join([u"%g" %(f64) for f64 in lst])
+
+	def getList2UInt8sA(self, offset, cnt, arraysize):
+		val = np.reshape(Struct('<' + 'B'*arraysize*cnt).unpack_from(self.data, offset), (-1, arraysize))
+		lst = val.tolist()
+		i   = offset + arraysize*cnt
+		return lst, i, str(lst)
+
+	def getList2SInt8sA(self, offset, cnt, arraysize):
+		val = np.reshape(Struct('<' + 'h'*arraysize*cnt).unpack_from(self.data, offset), (-1, arraysize))
+		i   = offset + arraysize * cnt
+		lst = val.tolist()
+		return lst, i, str(lst)
+
+	def getList2UInt16sA(self, offset, cnt, arraysize):
+		val = np.reshape(Struct('<' + 'H'*arraysize*cnt).unpack_from(self.data, offset), (-1, arraysize))
+		lst = val.tolist()
+		i   = offset + (2*arraysize)*cnt
+		return lst, i, str(lst)
+
+	def getList2SInt16sA(self, offset, cnt, arraysize):
+		if (getFileVersion() > 2010):
+			val = np.reshape(Struct('<' + 'h'*arraysize*cnt).unpack_from(self.data, offset), (-1, arraysize))
+			i   = offset + (arraysize*2) * cnt
+		else:
+			val = Struct('<' + ('h'*arraysize+'L')*cnt).unpack_from(self.data, offset)
+			val = np.reshape([s16 for i, s16 in enumerate(val) if (i % (arraysize + 1)) != arraysize], (-1, arraysize))
+			i   = offset + (2*arraysize + 4) * cnt # 2Bytes for Word + 4Bytes for blocklen
+		lst = val.tolist()
+		return lst, i, str(lst)
+
+	def getList2UInt32sA(self, offset, cnt, arraysize):
+		val = np.reshape(Struct('<' + 'L'*arraysize*cnt).unpack_from(self.data, offset), (-1, arraysize))
+		i   = offset + (4*arraysize)*cnt
+		lst = val.tolist()
+		return lst, i, str(lst)
+
+	def getList2SInt32sA(self, offset, cnt, arraysize):
+		val = np.reshape(Struct('<' + 'l'*arraysize*cnt).unpack_from(self.data, offset), (-1, arraysize))
+		i   = offset + (arraysize*4) * cnt
+		lst = val.tolist()
+		return lst, i, str(lst)
+
+	def getList2Float32sA(self, offset, cnt, arraysize):
+		if (getFileVersion() > 2010):
+			val = np.reshape(Struct('<' + 'f'*arraysize*cnt).unpack_from(self.data, offset), (-1, arraysize))
+			i   = offset + (arraysize*4) * cnt
+		else:
+			val = Struct('<' + ('f'*arraysize+'L')*cnt).unpack_from(self.data, offset)
+			val = np.reshape([f32 for i, f32 in enumerate(val) if (i % (arraysize + 1)) != arraysize], (-1, arraysize))
+			i   = offset + (arraysize*4 + 4) * cnt # 2Bytes for Word + 4Bytes for blocklen
+		lst = val.tolist()
+		return lst, i, str(lst)
+
+	def getList2Float64sA(self, offset, cnt, arraysize):
+		val = np.reshape(Struct('<' + 'd'*arraysize*cnt).unpack_from(self.data, offset), (-1, arraysize))
+		i   = offset + (arraysize*8) * cnt
+		lst = val.tolist()
+		return lst, i, str(lst)
+
+	def getList2Fonts(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		sep = u""
+		s   = u""
+		while (j < cnt):
+			val = GraphicsFont()
+			a   = Struct('<LHHHHBBHH').unpack_from(self.data, i)
+			val.number = a[0]
+			val.ukn1   = a[1:5]
+			val.ukn2   = a[5:7]
+			val.ukn3   = a[7:]
+			i += 18
+			val.name, i   = getLen32Text16(self.data, i)
+			a = Struct('<ffBBB').unpack_from(self.data, i)
+			val.ukn4 = a[0:2]
+			val.ukn5 = a[2:]
+			i += 11
+			lst.append(val)
+			j += 1
+			s += u"%s(%s)" %(sep, val)
+			sep = u","
+		return lst, i, s
+
+	def getList2Lightnings(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		sep = u""
+		s   = u""
+		if (getFileVersion() > 2010):
+			fmt = '<Hffffffffffffddddddfffffff'
+			while (j < cnt):
+				vals = Struct(fmt).unpack_from(self.data, i)
+				i += 126
+				val = Lightning()
+				val.n1 = vals[0]
+				val.c1 = Color(vals[1], vals[2], vals[3], vals[4])
+				val.c2 = Color(vals[5], vals[6], vals[7], vals[8])
+				val.c3 = Color(vals[9], vals[10], vals[11], vals[12])
+				val.a1 = vals[13:19]
+				val.a2 = vals[19:]
+				lst.append(val)
+				j += 1
+				s += u"%s%s" %(sep, val)
+				sep = u","
+		else:
+			fmt = '<HffffLffffLffffLddddddfffffffL'
+			while (j < cnt):
+				vals = Struct(fmt).unpack_from(self.data, i)
+				i += 142
+				val = Lightning()
+				val.n1 = vals[0]
+				val.c1 = Color(vals[1], vals[2], vals[3], vals[4])
+				val.c2 = Color(vals[6], vals[7], vals[8], vals[9])
+				val.c3 = Color(vals[11], vals[12], vals[13], vals[14])
+				val.a1 = vals[16:22]
+				val.a2 = vals[22:-1]
+				lst.append(val)
+				j += 1
+				s += u"%s%s" %(sep, val)
+				sep = u","
+		return lst, i, s
+
+	def getList2App1(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		sep = u""
+		s   = u""
+		skip = (getFileVersion() < 2011)
+		while (j < cnt):
+			if (skip):
+				a = Struct('<ddLLBBBBL').unpack_from(self.data, i)
+				val = a[0:3] + a[4:8]
+				i += 32
+			else:
+				val = Struct('<ddLBBBB').unpack_from(self.data, i)
+				i += 24
+			s += u"%s%g,%g,%06X,%02X,%02X,%02X,%02X" %(sep, val[0], val[1], val[2], val[3], val[4], val[5], val[6])
+			sep = u","
+			lst.append(val)
+			j += 1
+		return lst, i, s
+
+	def getList2App2(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		s   = u""
+		sep = u""
+		skip = (getFileVersion() < 2011)
+		while (j < cnt):
+			n1, i = getUInt32(self.data, i)
+			t1, i = getLen32Text16(self.data, i)
+			t2, i = getLen32Text16(self.data, i)
+			l1 = []
+			while (True):
+				m, i = getSInt16(self.data, i)
+				if (m == -1):
+					break
+				l1.append(m)
+			a1, i = getUInt8A(self.data, i, 3)
+			m, i = getUInt16(self.data, i)
+			l2, i = getFloat64A(self.data, i, m)
+			l3, i = getFloat32_2D(self.data, i)
+			n2, i = getUInt32(self.data, i)
+			if (skip): i += 4
+			c1, i = getColorRGBA(self.data, i)
+			if (skip): i += 4
+			n3, i = getUInt32(self.data, i)
+			n4, i = getUInt8(self.data, i)
+			if (skip): i += 8
+			s += u"\n\t%d,'%s','%s',[%s],[%s],[%s],%04X,%s,%d,%X" %(n1, t1, t2, IntArr2Str(l1, 4), IntArr2Str(a1, 2), FloatArr2Str(l2), n2, c1, n3, n4)
+			lst.append((n1, t1, t2, l1, a1, l2, l3, n2, c1, n3, n4))
+			j += 1
+		return lst, i, s
+
+	def getList2App3(self, offset, cnt, arraysize):
+		lst  = []
+		i    = offset
+		j    = 0
+		sep  = u""
+		s    = u""
+		skip = (getFileVersion() < 2011)
+		while (j < cnt):
+			n1, i = getUInt32(self.data, i)
+			t1, i = getLen32Text16(self.data, i)
+			n2, i = getUInt32(self.data, i)
+			c = self.content
+			self.content = ""
+			i = self.ReadList2(i, _TYP_FLOAT64_, 'tmp')
+			l1 = self.get('tmp')
+			self.content = c
+			n3, i = getUInt8(self.data, i)
+			if (skip): i += 4
+			lst.append((n1, t1, n2, l1, n3))
+			j += 1
+			s += u"%s[%d,'%s',%06X,%s,%02X]" %(sep, n1, t1, n2, FloatArr2Str(l1), n3)
+			sep = u","
+		self.delete('_tmp')
+		return lst, i, s
+
+	def getList2App4(self, offset, cnt, arraysize):
+		lst    = []
+		i      = offset
+		j      = 0
+		sep    = u""
+		s      = u""
+		skip   = (getFileVersion() < 2011)
+		while (j < cnt):
+			n1, n2, n3, f1, f2 = APP_4_A(self.data, i)
+			i += 18
+			t1, i = getLen32Text16(self.data, i)
+			f3, f4, n4, n5 = APP_4_B(self.data, i)
+			i += 11
+			if (skip): i += 8
+			lst.append((n1, n2,  n3,  f1, f2,  t1,  f3, f4, n4, n5))
+			j += 1
+			s += u"%s[%d, %d, %04X, %g, %g, '%s', %g, %g, %03X, %02X]" %(sep, n1, n2, n3, f1, f2, t1,  f3, f4, n4, n5)
+			sep = u","
+		return lst, i, s
+
+	def getList2App5(self, offset, cnt, arraysize):
+		lst    = []
+		i      = offset
+		j      = 0
+		sep    = u""
+		s      = u""
+		skip = (getFileVersion() < 2011)
+		while (j < cnt):
+			f1, f2, n1 = APP_5_A(self.data, i)
+			i += 20
+			if (skip): i += 4
+			n2, n3, n4 = APP_5_B(self.data, i)
+			i += 4
+			if (skip): i += 4
+			lst.append((f1, f2, n1, n2,  n3,  n4))
+			j += 1
+			s += u"%s[%g, %g, %04X, %02X, %02X, %03X]" %(sep, f1, f2, n1, n2, n3, n4)
+			sep = u","
+		return lst, i, s
+
+	def getList2Guess(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadList2(i, _TYP_GUESS_, 'lst_tmp', arraysize)
+			lst.append(self.get('lst_tmp'))
+			j += 1
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListUInt16sA(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadList2(i, _TYP_UINT16_A_, 'lst_tmp', arraysize)
+			lst.append(self.get('lst_tmp'))
+			j += 1
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListSInt16sA(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadList2(i, _TYP_SINT16_A_, 'lst_tmp', arraysize)
+			lst.append(self.get('lst_tmp'))
+			j += 1
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListUInt32sA(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadList2(i, _TYP_UINT32_A_, 'lst_tmp', arraysize)
+			lst.append(self.get('lst_tmp'))
+			j += 1
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListSInt32sA(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadList2(i, _TYP_SINT32_A_, 'lst_tmp', arraysize)
+			lst.append(self.get('lst_tmp'))
+			j += 1
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListFloats32sA(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadList2(i, _TYP_FLOAT32_A_, 'lst_tmp', arraysize)
+			lst.append(self.get('lst_tmp'))
+			j += 1
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListFloats64sA(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadList2(i, _TYP_FLOAT64_A_, 'lst_tmp', arraysize)
+			lst.append(self.get('lst_tmp'))
+			j += 1
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListFonts(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		while (j < cnt):
+			i = self.ReadList2(i, _TYP_FONT_, 'lst_tmp', arraysize)
+			lst.append(self.get('lst_tmp'))
+			j += 1
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListXRefs(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		skip = (getFileVersion() < 2011)
+		while (j < cnt):
+			if (skip): i += 4
+			i = self.ReadList2(i, _TYP_UINT32_, 'lst_tmp')
+			i = self.ReadCrossRef(i, 'tmp')
+			if (skip): i += 4
+			lst.append((self.get('lst_tmp'), self.get('tmp')))
+			j += 1
+		self.delete('tmp')
+		self.delete('lst_tmp')
+		return lst, i, u""
+
+	def getList2ListXRefKeys(self, offset, cnt, arraysize):
+		lst = []
+		i   = offset
+		j   = 0
+		sep = u""
+		s   = u""
+		while (j < cnt):
+			i = self.ReadCrossRef(i, 'tmp', j, False)
+			key = self.get('tmp')
+			val, i = getUInt32(self.data, i)
+			s += u"%s[%s:%X]" %(sep, getIndex(key), val)
+			lst.append((key, val))
+			j += 1
+		self.delete('tmp')
+		return lst, i, s
+
+	def ReadMetaData_02(self, offset, typ, arraySize = 1):
+		cnt, i = getUInt32(self.data, offset)
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
-
-			if (typ == AbstractNode._TYP_GUESS_):
+			if (typ == _TYP_GUESS_):
 				t = arr32[1]
 				if (t == 0x0107):
-					t = AbstractNode._TYP_2D_F64_U32_4D_U8_
+					t = _TYP_2D_F64_U32_4D_U8_
 				elif (t >= 0x0114 and t <= 0x0126):
-					t = AbstractNode._TYP_3D_FLOAT32_
+					t = _TYP_FLOAT32_A_
+					arraySize = 3
 				elif (t >= 0x0129 and t <= 0x013F) or (t == 0x0146):
-					t = AbstractNode._TYP_2D_FLOAT32_
+					t = _TYP_FLOAT32_A_
+					arraySize = 2
 				elif (t == 0x0142):
-					t = AbstractNode._TYP_FONT_
+					t = _TYP_FONT_
 				else:
-					t = AbstractNode._TYP_NODE_REF_
+					t = _TYP_NODE_REF_
 			else:
 				t = typ
-
-			if (t == AbstractNode._TYP_1D_CHAR_):
-				val, i = getText8(self.data, i, cnt)
-				lst.append(val)
-				self.content += val
-			else:
-				j = 0
-				if (t == AbstractNode._TYP_NODE_X_REF_):
-					self.content += '%d' %(cnt)
-				if (t == AbstractNode._TYP_NODE_REF_):
-					self.content += '%d' %(cnt)
-				while (j < cnt):
-					s = ''
-					if (t == AbstractNode._TYP_NODE_REF_):
-						i = self.ReadChildRef(i, 'tmp', j, False)
-						val = self.get('tmp')
-						s = ''
-					elif (t == AbstractNode._TYP_NODE_X_REF_):
-						i = self.ReadCrossRef(i, 'tmp', j, False)
-						val = self.get('tmp')
-						s = ''
-					elif (t == AbstractNode._TYP_STRING16_):
-						val, i = getLen32Text16(self.data, i)
-						s = '\"%s\"' %(val)
-					elif (t == AbstractNode._TYP_STRING8_):
-						val, i = getLen32Text8(self.data, i)
-						s = '\"%s\"' %(val)
-					elif (t == AbstractNode._TYP_1D_UINT32_):
-						val, i = getUInt32(self.data, i)
-						s = '%04X' %(val)
-					elif (t == AbstractNode._TYP_1D_FLOAT32_):
-						if (getFileVersion() < 2011):
-							val, i = getFloat32(self.data, i)
-						else:
-							val = unpack('<f', self.data[i+2:i+4]+self.data[i:i+2])[0]
-							i += 4
-						s = '%g' %(val)
-					elif (t == AbstractNode._TYP_2D_UINT16_):
-						val, i = getUInt16A(self.data, i, 2)
-						s = '(%s)' %(IntArr2Str(val, 4))
-					elif (t == AbstractNode._TYP_2D_SINT16_):
-						val, i = getSInt16A(self.data, i, 2)
-						if (skipBlockSize):
-							i += 4
-						s = '(%s)' %(IntArr2Str(val, 4))
-					elif (t == AbstractNode._TYP_UINT32A_):
-						val, i = getUInt32A(self.data, i, arraySize)
-						s = '(%s)' %(IntArr2Str(val, 8))
-					elif (t == AbstractNode._TYP_2D_SINT32_):
-						val, i = getSInt32A(self.data, i, 2)
-						s = '(%s)' %(IntArr2Str(val, 8))
-					elif (t == AbstractNode._TYP_2D_FLOAT32_):
-						val, i = getFloat32A(self.data, i, 2)
-						if (skipBlockSize):
-							i += 4
-						s = '(%s)' %(FloatArr2Str(val))
-					elif (t == AbstractNode._TYP_2D_FLOAT64_):
-						val, i = getFloat64A(self.data, i, 2)
-						if (skipBlockSize):
-							i += 4
-						s = '(%s)' %(FloatArr2Str(val))
-					elif (t == AbstractNode._TYP_3D_UINT16_):
-						val, i = getUInt16A(self.data, i, 3)
-						if (skipBlockSize):
-							i += 4
-						s = '(%s)' %(IntArr2Str(val, 4))
-					elif (t == AbstractNode._TYP_3D_SINT16_):
-						val, i = getSInt16A(self.data, i, 3)
-						if (skipBlockSize):
-							i += 4
-						s = '(%s)' %(IntArr2Str(val, 4))
-					elif (t == AbstractNode._TYP_3D_SINT32_):
-						val, i = getSInt32A(self.data, i, 3)
-						if (skipBlockSize):
-							i += 4
-						s = '(%s)' %(IntArr2Str(val, 8))
-					elif (t == AbstractNode._TYP_3D_FLOAT32_): # 3D-Float32
-						val, i = getFloat32A(self.data, i, 3)
-						if (skipBlockSize):
-							i += 4
-						s = '(%s)' %(FloatArr2Str(val))
-					elif (t == AbstractNode._TYP_3D_FLOAT64_):
-						val, i = getFloat64A(self.data, i, 3)
-						s = '(%s)' %(FloatArr2Str(val))
-					elif (t == AbstractNode._TYP_FONT_): # Font settings
-						val = GraphicsFont()
-						val.number, i = getUInt32(self.data, i)
-						val.ukn1, i = getUInt16A(self.data, i, 4)
-						val.ukn2, i = getUInt8A(self.data, i, 2)
-						val.ukn3, i = getUInt16A(self.data, i, 2)
-						val.name, i = getLen32Text16(self.data, i)
-						val.f, i = getFloat32A(self.data, i, 2)
-						val.ukn4, i = getUInt8A(self.data, i, 3)
-						s = '%s' %(val)
-					elif (t == AbstractNode._TYP_2D_F64_U32_4D_U8_):
-						val = []
-						f, i = getFloat64A(self.data, i, 2)
-						val.append(f)
-						u, i = getUInt32(self.data, i)
-						val.append(u)
-						if (skipBlockSize):
-							i += 4
-						a, i = getUInt8A(self.data, i, 4)
-						val.append(a)
-						if (skipBlockSize): i += 4
-						s = '(%s) %X [%s]' %(FloatArr2Str(f), u, IntArr2Str(a, 1))
-					elif (t == AbstractNode._TYP_U32_TXT_TXT_DATA):
-						n1, i = getUInt32(self.data, i)
-						t1, i = getLen32Text16(self.data, i)
-						t2, i = getLen32Text16(self.data, i)
-						l1 = []
-						while (True):
-							m, i = getSInt16(self.data, i)
-							if (m == -1):
-								break
-							l1.append(m)
-						a1, i = getUInt8A(self.data, i, 3)
-						m, i = getUInt16(self.data, i)
-						l2, i = getFloat64A(self.data, i, m)
-						n2, i = getUInt32(self.data, i)
-						if (skipBlockSize):
-							i += 4
-						elif (getFileVersion() > 2017):
-							a2, i = getFloat32A(self.data, i, 2)
-						c1, i = getColorRGBA(self.data, i)
-						if (skipBlockSize): i += 4
-						n3, i = getUInt8(self.data, i)
-						n4, i = getUInt32(self.data, i)
-						if (skipBlockSize): i += 8
-						val = [n1, t1, t2, l1, a1, l2, n2, c1, n3, n4]
-						s = '%d, %s, %s, [%s], [%s], [%s], %04X, %s, %d, %X' %(n1, t1, t2, IntArr2Str(l1, 4), IntArr2Str(a1, 2), FloatArr2Str(l2), n2, c1, n3, n4)
-					elif (t == AbstractNode._TYP_APP_1_):
-						n1, i = getUInt32(self.data, i)
-						n2, i = getUInt16(self.data, i)
-						n3, i = getUInt32(self.data, i)
-						a1, i = getFloat32A(self.data, i, 2)
-						t1, i = getLen32Text16(self.data, i)
-						a2, i = getFloat32A(self.data, i, 2)
-						a3, i = getUInt8A(self.data, i, 3)
-						if (skipBlockSize): i += 8
-						val = [n1, n2,  n3,  a1,  t1,  a2,  a3]
-						s += "[%d, %d, %04X, [%s], '%s', [%s], [%s]]" %(n1, n2, n3, FloatArr2Str(a1), t1, FloatArr2Str(a2), IntArr2Str(a3, 2))
-					elif (t == AbstractNode._TYP_LIST_GUESS_):
-						i = self.ReadList2(i, AbstractNode._TYP_GUESS_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_2D_UINT16_):
-						i = self.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_2D_SINT16_):
-						i = self.ReadList2(i, AbstractNode._TYP_2D_SINT16_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_2D_UINT32_ ):
-						i = self.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst_tmp', 2)
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_2D_SINT32_ ):
-						i = self.ReadList2(i, AbstractNode._TYP_2D_SINT32_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_2D_FLOAT32_):
-						i = self.ReadList2(i, AbstractNode._TYP_2D_FLOAT32_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_2D_FLOAT64_):
-						i = self.ReadList2(i, AbstractNode._TYP_2D_FLOAT64_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_UINT16_):
-						i = self.ReadList2(i, AbstractNode._TYP_3D_UINT16_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_SINT16_):
-						i = self.ReadList2(i, AbstractNode._TYP_3D_SINT16_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_UINT32_):
-						i = self.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst_tmp', 3)
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_SINT32_):
-						i = self.ReadList2(i, AbstractNode._TYP_3D_SINT32_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_FLOAT32_):
-						i = self.ReadList2(i, AbstractNode._TYP_3D_FLOAT32_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_3D_FLOAT64_):
-						i = self.ReadList2(i, AbstractNode._TYP_3D_FLOAT64_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_FONT_):
-						i = self.ReadList2(i, AbstractNode._TYP_FONT_, 'lst_tmp')
-						val = self.get('lst_tmp')
-						self.delete('lst_tmp')
-					elif (t == AbstractNode._TYP_LIST_X_REF_):
-						if (skipBlockSize):
-							i += 4
-						i = self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst_tmp')
-						i = self.ReadCrossRef(i, 'tmp')
-						val = [self.get('lst_tmp'), self.get('tmp')]
-						if (skipBlockSize):
-							i += 4
-						self.delete('lst_tmp')
-					elif (typ == AbstractNode._TYP_MAP_X_REF_KEY_):
-						i = self.ReadCrossRef(i, 'tmp', j, False)
-						key = self.get('tmp')
-						val, i = getUInt32(self.data, i)
-						self.content += '%s[%s: (%X)]' %(sep, getIndex(key), val)
-					else:
-						val, i = getUInt16A(self.data, i, 2)
-						s = '[%s]' %(IntArr2Str(val[0], 1))
-					lst.append(val)
-
-					if (len(s) > 0):
-						self.content += '%s%s' %(sep, s)
-					sep = ','
-					j += 1
-			self.delete('tmp')
-		return lst, i
+			func = getattr(self, TYP_2_FUNC[t])
+			return func(i, cnt, arraySize)
+		return [], i, u""
 
 	def ReadMetaData_04(self, offset, typ, arraySize = 0):
 		sep = ''
@@ -575,35 +860,35 @@ class AbstractNode(AbstractData):
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
 			t = typ
-			if (t == AbstractNode._TYP_GUESS_):
+			if (t == _TYP_GUESS_):
 				if ((arr16[0] == 0x0101) and (arr16[0]==0x0000)):
-					t = AbstractNode._TYP_RESULT_ITEM4_
+					t = _TYP_RESULT_ITEM4_
 				else:
-					t = AbstractNode._TYP_NODE_REF_
+					t = _TYP_NODE_REF_
 			j = 0
 			while (j < cnt):
-				if (t == AbstractNode._TYP_NODE_REF_):
+				if (t == _TYP_NODE_REF_):
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					s = ''
-				elif (t == AbstractNode._TYP_NODE_X_REF_):
+				elif (t == _TYP_NODE_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					s = ''
-				elif (t == AbstractNode._TYP_STRING16_):
+				elif (t == _TYP_STRING16_):
 					val, i = getLen32Text16(self.data, i)
 					s = '\"%s\"' %(val)
-				elif (t == AbstractNode._TYP_STRING8_):
+				elif (t == _TYP_STRING8_):
 					val, i = getLen32Text8(self.data, i)
 					s = '\"%s\"' %(val)
-				elif (t == AbstractNode._TYP_2D_SINT32_):
-					val, i = getSInt32A(self.data, i, 2)
+				elif (t == _TYP_SINT32_A_):
+					val, i = getSInt32A(self.data, i, arraySize)
 					s = '[%s]' %(",".join(["%d" %(d) for d in val]))
-				elif (t == AbstractNode._TYP_UINT32A_):
+				elif (t == _TYP_UINT32_A_):
 					val, i = getUInt32A(self.data, i, arraySize)
 					if (skipBlockSize): i += 4
 					s = '[%s]' %(IntArr2Str(val, 8))
-				elif (t == AbstractNode._TYP_RESULT_ITEM4_):
+				elif (t == _TYP_RESULT_ITEM4_):
 					val = ResultItem4()
 					val.a0, i = getUInt16A(self.data, i, 4)
 					val.a1, i = getFloat64_3D(self.data, i)
@@ -626,9 +911,9 @@ class AbstractNode(AbstractData):
 			arr16, i = getUInt16A(self.data, i, 2)
 			j = 0
 			while (j < cnt):
-				if (typ == AbstractNode._TYP_1D_UINT32_):
+				if (typ == _TYP_UINT32_):
 					val, i = getUInt32(self.data, i)
-				elif (typ == AbstractNode._TYP_NODE_X_REF_):
+				elif (typ == _TYP_NODE_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 				else:
@@ -649,83 +934,83 @@ class AbstractNode(AbstractData):
 			arr32, i = getUInt32A(self.data, i, 2)
 			j = 0
 			while (j < cnt):
-				if (typ == AbstractNode._TYP_MAP_KEY_KEY_):
+				if (typ == _TYP_MAP_KEY_KEY_):
 					key, i = getUInt32(self.data, i)
 					val, i = getUInt32(self.data, i)
 					self.content += '%s[%04X:%04X]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_U16_U16_):
+				elif (typ == _TYP_MAP_U16_U16_):
 					key, i = getUInt16(self.data, i)
 					val, i = getUInt16(self.data, i)
 					self.content += '%s[%03X:%03X]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_KEY_REF_):
+				elif (typ == _TYP_MAP_KEY_REF_):
 					key, i = getUInt32(self.data, i)
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%04X: (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_KEY_X_REF_):
+				elif (typ == _TYP_MAP_KEY_X_REF_):
 					key, i = getUInt32(self.data, i)
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%04X: (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_REF_REF_):
+				elif (typ == _TYP_MAP_REF_REF_):
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[(%s): (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_X_REF_KEY_):
+				elif (typ == _TYP_MAP_X_REF_KEY_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getUInt32(self.data, i)
 					self.content += '%s[%s: (%X)]' %(sep, getIndex(key), val)
-				elif (typ == AbstractNode._TYP_MAP_X_REF_2D_UINT32_):
+				elif (typ == _TYP_MAP_X_REF_2D_UINT32_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getUInt32A(self.data, i, 2)
 					self.content += '%s[%s: (%s)]' %(sep, getIndex(key), IntArr2Str(val, 4))
-				elif (typ == AbstractNode._TYP_MAP_X_REF_X_REF_):
+				elif (typ == _TYP_MAP_X_REF_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%s: %s]' %(sep, getIndex(key), getIndex(val))
-				elif (typ == AbstractNode._TYP_MAP_X_REF_LIST2_XREF_):
+				elif (typ == _TYP_MAP_X_REF_LIST2_XREF_):
 					c = self.content
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
-					i = self.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'tmp')
+					i = self.ReadList2(i, _TYP_NODE_X_REF_, 'tmp')
 					val = self.get('tmp')
 					self.content = c + '%s[%s: (%s)]' %(sep, getIndex(key), '),('.join(['%s,' %(getIndex(h)) for h in val]))
-				elif (typ == AbstractNode._TYP_MAP_X_REF_FLOAT64_):
+				elif (typ == _TYP_MAP_X_REF_FLOAT64_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					key = self.get('tmp')
 					val, i = getFloat64(self.data, i)
 					self.content += '%s[%s: %s]' %(sep, getIndex(key), val)
-				elif (typ == AbstractNode._TYP_MAP_UUID_UINT32_):
+				elif (typ == _TYP_MAP_UUID_UINT32_):
 					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
 					val, i = getUInt32(self.data, i)
 					self.content += '%s[%s: %s]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_UUID_X_REF):
+				elif (typ == _TYP_MAP_UUID_X_REF):
 					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%s: %s]' %(sep, key, getIndex(val))
-				elif (typ == AbstractNode._TYP_MAP_TEXT8_REF_):
+				elif (typ == _TYP_MAP_TEXT8_REF_):
 					key, i = getLen32Text8(self.data, i)
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_TEXT8_X_REF_):
+				elif (typ == _TYP_MAP_TEXT8_X_REF_):
 					key, i = getLen32Text8(self.data, i)
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_TEXT16_REF_):
+				elif (typ == _TYP_MAP_TEXT16_REF_):
 					key, i = getLen32Text16(self.data, i)
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_1_):
+				elif (typ == _TYP_MAP_MDL_TXN_MGR_1_):
 					key = len(lst)
 					val = ModelerTxnMgr()
 					i = self.ReadCrossRef(i, 'tmp', j, False)
@@ -733,7 +1018,7 @@ class AbstractNode(AbstractData):
 					val.u32_0, i = getUInt32(self.data, i)
 					c = self.content
 					self.content = u""
-					i =  self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'tmp')
+					i =  self.ReadList2(i, _TYP_UINT16_A_, 'tmp', 2)
 					self.content = c
 					val.lst = self.get('tmp')
 					val.u8_0, i  = getUInt8(self.data, i)
@@ -745,7 +1030,7 @@ class AbstractNode(AbstractData):
 					if (skipBlockSize): i += 8
 					if (getFileVersion() > 2018): i += 1
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_MDL_TXN_MGR_2_):
+				elif (typ == _TYP_MAP_MDL_TXN_MGR_2_):
 					key = len(lst)
 					val = ModelerTxnMgr()
 					i = self.ReadCrossRef(i, 'tmp', j, False)
@@ -753,7 +1038,7 @@ class AbstractNode(AbstractData):
 					val.u32_0, i = getUInt32(self.data, i)
 					c = self.content
 					self.content = u""
-					i =  self.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'tmp')
+					i =  self.ReadList2(i, _TYP_UINT16_A_, 'tmp', 2)
 					self.content = c
 					val.lst = self.get('tmp')
 					val.u8_0, i  = getUInt8(self.data, i)
@@ -761,7 +1046,7 @@ class AbstractNode(AbstractData):
 					if (skipBlockSize): i += 8
 					if (getFileVersion() > 2018): i += 1
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
-				elif (typ == AbstractNode._TYP_MAP_TEXT16_X_REF_):
+				elif (typ == _TYP_MAP_TEXT16_X_REF_):
 					key, i = getLen32Text16(self.data, i)
 					key = translate(key)
 					i = self.ReadCrossRef(i, 'tmp', j, False)

@@ -9,8 +9,8 @@ TODO:
 '''
 
 from importerSegment import SegmentReader
-from importerSegNode import AbstractNode, DesignViewNode
 from importerUtils   import *
+import importerSegNode
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -22,7 +22,7 @@ class DesignViewReader(SegmentReader):
 		super(DesignViewReader, self).__init__(False)
 
 	def createNewNode(self):
-		return DesignViewNode()
+		return importerSegNode.DesignViewNode()
 
 	def skipDumpRawData(self):
 		return True
@@ -36,7 +36,7 @@ class DesignViewReader(SegmentReader):
 
 	def Read_328FC2EA(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadLen32Text16(i)
 		return i
 
@@ -58,7 +58,7 @@ class DesignViewReader(SegmentReader):
 	def Read_9DC2A241(self, node):
 		i = node.Read_Header0()
 		i = node.ReadLen32Text16(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_D9980532(self, node): return 0

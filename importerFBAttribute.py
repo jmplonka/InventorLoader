@@ -9,8 +9,8 @@ TODO:
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-from AbstractNode._TYP import AbstractNode, FBAttributeNode
 from importerUtils   import *
+import importerSegNode
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -22,33 +22,33 @@ class FBAttributeReader(SegmentReader):
 		super(FBAttributeReader, self).__init__(False)
 
 	def createNewNode(self):
-		return FBAttributeNode()
+		return importerSegNode.FBAttributeNode()
 
 	def skipDumpRawData(self):
 		return True
 
 	def Read_080ED92F(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_UINT8_, 'data')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT8_, 'data')
 		i = self.skipBlockSize(i)
 		i = node.ReadUUID(i, 'uid')
 		return i
 
 	def Read_28C25C43(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadList2(i, AbstractNode._TYP_1D_CHAR_, 'data')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT8_, 'data')
 		i = node.ReadUInt8A(i, 2, 'a0')
 		i = node.ReadUInt16A(i, 2, 'a1')
 		return i
 
 	def Read_28C25C44(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
@@ -66,7 +66,7 @@ class FBAttributeReader(SegmentReader):
 		elif (t == 3):
 			i = node.ReadLen32Text16(i, 'data')
 		elif (t == 4):
-			i = node.ReadList2(i, AbstractNode._TYP_1D_CHAR_, 'data')
+			i = node.ReadList2(i, importerSegNode._TYP_UINT8_, 'data')
 		else:
 			logError("    ERROR> Don't know what to do with %d in Read_28C25C45!" %(t))
 		return i

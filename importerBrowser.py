@@ -7,8 +7,8 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-from importerSegNode import AbstractNode, BrowserNode
 from importerUtils   import *
+import importerSegNode
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -20,7 +20,7 @@ class BrowserReader(SegmentReader):
 		super(BrowserReader, self).__init__(True)
 
 	def createNewNode(self):
-		return BrowserNode()
+		return importerSegNode.BrowserNode()
 
 	def skipDumpRawData(self):
 		return True
@@ -65,13 +65,13 @@ class BrowserReader(SegmentReader):
 		if (typeName is not None):
 			node.typeName = typeName
 		i = self.Read_Str53(node)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		i = self.Read_664(i, node)
 		return i
 
 	def ReadHeader0_664(self, node, typeName = None):
 		i = node.Read_Header0(typeName)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.Read_664(i, node)
 		return i
 
@@ -82,8 +82,8 @@ class BrowserReader(SegmentReader):
 
 	def Read_09CB971A(self, node):
 		i = node.ReadUInt32A(0, 2, 'a0')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 		i = node.ReadSInt32A(i, 2, 'a1')
 		return i
 
@@ -97,12 +97,12 @@ class BrowserReader(SegmentReader):
 			node.set('u16_0', 1)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16A(i, 3, 'a1')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
 	def Read_0E7F99A4(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.Read_664(i, node)
 		i = self.Read_Str01(i, node)
 		i = self.skipBlockSize(i)
@@ -112,7 +112,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_0F590179(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.Read_664(i, node)
 		i = self.Read_Str01(i, node)
 		i = self.skipBlockSize(i)
@@ -132,7 +132,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16(i, 'u16_1')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt32A(i, 3, 'a1')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt32A(i, 3, 'a2')
@@ -153,7 +153,7 @@ class BrowserReader(SegmentReader):
 			else:
 				i = node.ReadUInt8A(i, 3, 'a1')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
@@ -171,7 +171,7 @@ class BrowserReader(SegmentReader):
 	def Read_1B16984A(self, node):
 		i = node.ReadUInt16A(0, 3, 'a0')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadList6(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
@@ -247,7 +247,7 @@ class BrowserReader(SegmentReader):
 			node.content += ' u16_0=000'
 			node.set('u16_0', 0)
 		i = node.ReadUInt16A(i, 3, 'a1')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
 	def Read_50C73580(self, node):
@@ -263,7 +263,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_58B90125(self, node):
 		i = node.ReadUInt32A(0, 2, 'a0')
-		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 		i = node.ReadSInt32A(i, 2, 'a1')
 		return i
 
@@ -331,7 +331,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16A(i, 4, 'a0')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
 	def Read_82EBFBD9(self, node):
@@ -438,7 +438,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_B251BFC0(self, node):
 		i = node.Read_Header0('EntryManager')
-		i = node.ReadList7(i, AbstractNode._TYP_MAP_KEY_REF_, 'lst0')
+		i = node.ReadList7(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
@@ -481,7 +481,7 @@ class BrowserReader(SegmentReader):
 		# Only found in Part7-bida-megalh!
 		i = node.Read_Header0()
 		i = node.ReadUInt16(i, 'u16_1')
-		i = node.ReadList2(i,  AbstractNode._TYP_1D_UINT32_, 'lst0')
+		i = node.ReadList2(i,  importerSegNode._TYP_UINT32_, 'lst0')
 		i = node.ReadSInt32A(i, 2, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
@@ -490,7 +490,7 @@ class BrowserReader(SegmentReader):
 		# Only found in Bauteil001 and Bauteil002
 		i = node.Read_Header0()
 		i = node.ReadUInt16(i, 'u16_0')
-		i = node.ReadList2(i,  AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i,  importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
@@ -530,7 +530,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadCrossRef(i)
 		i = node.ReadLen32Text16(i)
-		i = node.ReadList4(i, AbstractNode._TYP_STRING8_, 'lst0')
+		i = node.ReadList4(i, importerSegNode._TYP_STRING8_, 'lst0')
 		i = node.ReadUInt16(i, 'u16')
 		i = node.ReadLen32Text16(i, 'val')
 		return i
@@ -551,10 +551,10 @@ class BrowserReader(SegmentReader):
 		vers = getFileVersion()
 
 		i = node.ReadUInt32(0, 'u32_0')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst1')
 		if (vers > 2015):
-			i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst2')
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst2')
 		else:
 			i = node.ReadChildRef(i)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -566,7 +566,7 @@ class BrowserReader(SegmentReader):
 			i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt16A(i, 3, 'a2')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst3')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst3')
 		i = node.ReadUInt16A(i, 6, 'a3')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt16A(i, 6, 'a4')
@@ -590,7 +590,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_F757BC76(self, node):
 		i = node.Read_Header0()
-#		i = node.ReadList2(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
+#		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 #		i = node.ReadUInt16A(i, 4, 'a0')
 #		i = node.ReadUInt8(i, 'u8_0')
 #		i = node.ReadParentRef(i)
@@ -604,7 +604,7 @@ class BrowserReader(SegmentReader):
 #		i = node.ReadLen32Text16(i, 'str1')
 #		i = node.ReadLen32Text16(i, 'str2')
 #		i = node.ReadUInt32(i, 'u32_0')
-#		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst1')
+#		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst1')
 #		i = node.ReadUInt8A(i, 10, 'a4')
 		return i
 
@@ -620,7 +620,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt16A(i, 5, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		i = self.Read_664(i, node)
 		i = self.skipBlockSize(i)
 		return i
@@ -648,5 +648,4 @@ class BrowserReader(SegmentReader):
 	def Read_FCF044C3(self, node):
 		i = self.ReadHeaderStr664(node)
 		i = self.skipBlockSize(i)
-
 		return i

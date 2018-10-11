@@ -7,7 +7,7 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-from importerSegNode import AbstractNode, EeSceneNode
+import importerSegNode
 from importerUtils   import *
 
 __author__     = 'Jens M. Plonka'
@@ -19,7 +19,7 @@ class EeSceneReader(SegmentReader):
 		super(EeSceneReader, self).__init__(False)
 
 	def createNewNode(self):
-		return EeSceneNode()
+		return importerSegNode.EeSceneNode()
 
 	def skipDumpRawData(self):
 		return True
@@ -29,14 +29,14 @@ class EeSceneReader(SegmentReader):
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_13FC8170(self, node): return 0
 
 	def Read_48EB8607(self, node):
 		i = self.skipBlockSize(0)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_48EB8608(self, node):
@@ -57,7 +57,7 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadFloat64A(i, 6, 'a1')
 		i = node.ReadUInt32A(i, 3, 'a2')
@@ -68,7 +68,7 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadList2(i, AbstractNode._TYP_UINT32_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_2')
 		i = self.skipBlockSize(i)
@@ -83,7 +83,7 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_A79EACCB(self, node):
@@ -92,7 +92,7 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'ref_0')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_3D_FLOAT32_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
 		return i
 
 	def Read_A79EACCF(self, node):
@@ -103,7 +103,7 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadCrossRef(i, 'ref_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
@@ -153,7 +153,7 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadUInt32A(i, 4, 'a2')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32A(i, 5, 'a3')
-		i = node.ReadList2(i, AbstractNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'a4')
 		i = self.skipBlockSize(i, 8)
