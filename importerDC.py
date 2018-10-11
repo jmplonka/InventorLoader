@@ -143,13 +143,6 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		return properties, i
 
-	def ReadHeaderSysOfUnits(self, node, typeName):
-		node.typeName = typeName
-		i = node.Read_Header0()
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'units')
-		i = node.ReadLen32Text16(i)
-		i = self.skipBlockSize(i)
-		return i
 
 	def ReadSketch2DEntityHeader(self, node, typeName = None):
 		i = self.ReadHeadersss2S16s(node, typeName)
@@ -171,6 +164,8 @@ class DCReader(SegmentReader):
 		i = node.ReadSInt16(i, 'type')
 		i = node.ReadUInt16(i, 'value')
 		i = self.skipBlockSize(i)
+		node.set('Enum', enumName)
+		node.set('Values', values)
 		return i
 
 	def ReadHeaderConstraint2D(self, node, typeName):
@@ -705,10 +700,10 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 10, 'a1')
 		a1 = node.get('a1')
-		if (a1[5] != 0):
-			i = node.ReadUInt32(i, 'u32_1')
-		if ((a1[6] & 0xFF) != 0):
-			i = node.ReadUInt32(i, 'u32_2')
+#		if (a1[5] != 0):
+#			i = node.ReadUInt32(i, 'u32_1')
+#		if ((a1[6] & 0xFF) != 0):
+#			i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_065FFFB3(self, node):
@@ -808,7 +803,7 @@ class DCReader(SegmentReader):
 	def Read_0800FE29(self, node):
 		i = self.ReadContentHeader(node)
 		if (getFileVersion() > 2018): i += 4 # ???
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'transformations')
 		return i
 
 	def Read_0811C56E(self, node):
@@ -1062,7 +1057,7 @@ class DCReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadChildRef(i, 'label')
 		i = self.skipBlockSize(i)
-		i = self.ReadU32U32List(node, i, 'a1')
+		i = self.ReadRefU32List(node, i, 'a1')
 		i = node.ReadUInt16A(i, 3, 'a2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -1123,9 +1118,9 @@ class DCReader(SegmentReader):
 	def Read_1345015C(self, node):
 		i = self.ReadContentHeader(node)
 		if (getFileVersion() > 2017): i += 4
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'param')
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadCrossRef(i, 'faces')
 		return i
 
 	def Read_13F4E5A3(self, node):
@@ -1151,7 +1146,7 @@ class DCReader(SegmentReader):
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 2)
 		i = node.ReadCrossRef(i, 'ref_3')
 		i = node.ReadUInt32(i, 'u32_4')
-		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 7)
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst3', 7)
 		return i
 
 	def Read_1488B839(self, node):
@@ -1300,7 +1295,7 @@ class DCReader(SegmentReader):
 	def Read_197F7DBE(self, node):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 4, 'u32_1')
 		return i
@@ -1377,8 +1372,8 @@ class DCReader(SegmentReader):
 			i = node.ReadLen32Text16(i, 'txt1')
 			i = node.ReadUInt8(i, 'u8_0')
 			i = node.ReadCrossRef(i, 'ref_1')
-			i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
 			i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst1')
+			i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst2')
 			i = node.ReadUInt32A(i, 4, 'a0')
 		return i
 
@@ -1398,7 +1393,7 @@ class DCReader(SegmentReader):
 
 	def Read_1B48E9DA(self, node): # FilletFeature {7DE603B3-DAA7-4364-BC8B-77295B53D1DB}
 		i = self.ReadCntHdr3S(node, 'FxFilletConstant')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'radiusEdgeSet')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'radiusEdgeSets')
 		return i
 
 	def Read_1C0E2EA7(self, node): # new in 2019
@@ -1413,7 +1408,7 @@ class DCReader(SegmentReader):
 	def Read_1CC0C585(self, node):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
 		i = self.ReadRefU32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 2, 'a0')
@@ -1578,7 +1573,7 @@ class DCReader(SegmentReader):
 	def Read_2169ED74(self, node):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
 		i = self.ReadRefU32List(node, i, 'lst1')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_1')
@@ -1622,7 +1617,7 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'ref_3')
 		i = node.ReadUInt32(i, 'u32_3')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst2', 5)
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst3', 5)
 		return i
 
 	def Read_222D217D(self, node):
@@ -2271,7 +2266,7 @@ class DCReader(SegmentReader):
 	def Read_31D7A200(self, node):
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst0', 2)
+		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
 		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_2')
@@ -2417,8 +2412,8 @@ class DCReader(SegmentReader):
 		if (len(node.get('indexRefs')) > 0):
 			i = node.ReadSInt32(i, 's32_0')
 		else:
-			node.content +=' s32_0=0'
-			node.set('s32_0', 0)
+			node.content +=' s32_0=-1'
+			node.set('s32_0', -1)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
@@ -2590,6 +2585,8 @@ class DCReader(SegmentReader):
 		if (getFileVersion() > 2011):
 			#i = node.ReadFloat64A(i, 6, 'a1')
 			i += 6*8
+		node.sketchEdges = {}
+		node.associativeIDs = {}
 		return i
 
 	def Read_3B13313C(self, node):
@@ -3080,8 +3077,10 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_4949374A(self, node):
-		i = self.ReadHeadersss2S16s(node)
-		i = node.ReadUInt32(i, 'style')
+		i = self.ReadCntHdr3S(node)
+		i = node.ReadUInt16(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def Read_4AC78A71(self, node):
@@ -3107,13 +3106,13 @@ class DCReader(SegmentReader):
 
 	def Read_4ACA204D(self, node): # UserCoordinateSystem {F0854465-652D-4375-98A4-7C875BFE7A9C}
 		i = self.ReadCntHdr1SRef(node, 'UserCoordinateSystem', 'refTransformation')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadCrossRef(i, 'ref_4')
-		i = node.ReadCrossRef(i, 'ref_5')
-		i = node.ReadCrossRef(i, 'ref_6')
-		i = node.ReadCrossRef(i, 'ref_7')
-		i = node.ReadCrossRef(i, 'ref_8')
+		i = node.ReadCrossRef(i, 'refPlaneXY')
+		i = node.ReadCrossRef(i, 'refPlaneXZ')
+		i = node.ReadCrossRef(i, 'refPlaneYZ')
+		i = node.ReadCrossRef(i, 'refAxisX')
+		i = node.ReadCrossRef(i, 'refAxisY')
+		i = node.ReadCrossRef(i, 'refAxisZ')
+		i = node.ReadCrossRef(i, 'refOrigin')
 		i = node.ReadCrossRef(i, 'ref_9')
 		return i
 
@@ -3579,9 +3578,6 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
-	def Read_5C30CE1D(self, node): # SystemOfMeasureEnum {50131E62-D297-11D3-B7A0-0060B0F159EF}:
-		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsMGS')
-		return i
 
 	def Read_5CB9BB58(self, node):
 		i = self.ReadHeadersS32ss(node)
@@ -5079,16 +5075,16 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'group')
 		if (getFileVersion() > 2012):
-			i = node.ReadList6(i, AbstractNode._TYP_MAP_X_REF_KEY_, 'lst1')
+			i = node.ReadList6(i, AbstractNode._TYP_MAP_X_REF_FLOAT64_, 'lst1')
 			i = node.ReadList6(i, AbstractNode._TYP_MAP_X_REF_KEY_, 'lst2')
 		else:
 			i = self.skipBlockSize(i, 8)
 			addEmptyLists(node, [1, 2])
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadCrossRef(i, 'ref_4')
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'spline')
+		i = node.ReadCrossRef(i, 'line')
 		return i
 
 	def Read_8EDEE6CB(self, node): # new in 2019
@@ -5210,7 +5206,7 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt32(i, 'associativeID') # Number of the entity inside the sketch
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'typEntity')
 		return i
 
 	def Read_90874D16(self, node): # Document
@@ -5391,9 +5387,9 @@ class DCReader(SegmentReader):
 		i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst1')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'refFace')
+		i = node.ReadCrossRef(i, 'refOwner')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'edgeIdx')
 		return i
 
 	def Read_90874D55(self, node):
@@ -5541,8 +5537,8 @@ class DCReader(SegmentReader):
 
 	def Read_90874D74(self, node):
 		i = self.ReadHeadersS32ss(node, 'FaceCollectionProxy')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'edges')
+		i = node.ReadCrossRef(i, 'edgesProxy')
 		return i
 
 	def Read_90874D91(self, node): # Feature
@@ -5640,8 +5636,8 @@ class DCReader(SegmentReader):
 		i = self.ReadContentHeader(node, 'FilletIntermediateRadius')
 		if (getFileVersion() > 2017): i += 4 # skipp 0xFFFFFFFF (-1)
 		i = node.ReadCrossRef(i, 'refPoint')
-		i = node.ReadCrossRef(i, 'refParameter')
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadCrossRef(i, 'refRadius')
+		i = node.ReadCrossRef(i, 'refEdgeProxy')
 		return i
 
 	def Read_92637D29(self, node):
@@ -5655,11 +5651,11 @@ class DCReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadUInt32A(i, 2, 'a1')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt16(i, 'u16_0')
-		i = node.ReadLen32Text16(i)
-		i = node.ReadChildRef(i, 'ref_2')
-		i = node.ReadChildRef(i, 'ref_3')
+		i = node.ReadLen32Text16(i, 'fmt1')
+		i = node.ReadLen32Text16(i, 'fmt2')
+		i = node.ReadChildRef(i, 'param1')
+		i = node.ReadChildRef(i, 'param2')
 		return i
 
 	def Read_936522B1(self, node):
@@ -6316,10 +6312,10 @@ class DCReader(SegmentReader):
 
 	def Read_AAD64116(self, node): # FilletConstantRadiusEdgeSet
 		i = self.ReadCntHdr3S(node, 'FilletConstantRadiusEdgeSet')
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadCrossRef(i, 'refParameter')
-		i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadCrossRef(i, 'refValue')
+		i = node.ReadCrossRef(i, 'edges')
+		i = node.ReadCrossRef(i, 'radius')
+		i = node.ReadCrossRef(i, 'allFillets')
+		i = node.ReadCrossRef(i, 'continuityG2')
 		if (getFileVersion() > 2018): i += 4
 		return i
 
@@ -6770,8 +6766,8 @@ class DCReader(SegmentReader):
 	def Read_B799E9B2(self, node): # FilletVariableRadiusEdgeSet
 		i = self.ReadContentHeader(node, 'FilletVariableRadiusEdgeSet')
 		if (getFileVersion() > 2017): i += 4 # skipp 0xFFFFFFFF (-1)
-		i = node.ReadCrossRef(i, 'refFX')
-		i = node.ReadCrossRef(i, 'refEdges')
+		i = node.ReadCrossRef(i, 'edges')
+		i = node.ReadCrossRef(i, 'radii')
 		i = node.ReadCrossRef(i, 'refValue')
 		return i
 
@@ -6837,7 +6833,7 @@ class DCReader(SegmentReader):
 
 	def Read_BA6E3112(self, node): # FilletVariableRadiusEdges
 		i = self.ReadCntHdr3S(node, 'FilletVariableRadiusEdges')
-		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'edges')
+		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'intermediateRadii')
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
@@ -6885,10 +6881,19 @@ class DCReader(SegmentReader):
 
 	def Read_BE175768(self, node):
 		i = self.ReadContentHeader(node)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadLen32Text16(i)
-		i = node.ReadLen32Text16(i, 'txt0')
-		i = node.ReadLen32Text16(i, 'txt1')
+		if (getFileVersion() > 2018): i += 4 # ???
+		cnt, i = getUInt32(node.data, i)
+		lst = []
+		j = 0
+		node.content += u" txt=["
+		sep = u""
+		while (j < cnt):
+			txt, i = getLen32Text16(node.data, i)
+			node.content += u"%s\'%s\'" %(sep, txt)
+			sep = u","
+			lst.append(txt)
+			j += 1
+		node.content += u"]"
 		return i
 
 	def Read_BE8CEB3C(self, node): # RadiusModelDimension
@@ -7096,9 +7101,7 @@ class DCReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadCrossRef(i, 'ref_3')
 		i = node.ReadUInt32(i, 'u32_3')
-		i = node.ReadUInt32(i, 'u32_4')
-		i = node.ReadCrossRef(i, 'ref_5')
-		i = node.ReadUInt32(i, 'u32_5')
+		i = self.ReadRefU32List(node, i, 'lst2')
 		return i
 
 	def Read_CA70D2C6(self, node):
@@ -7466,9 +7469,9 @@ class DCReader(SegmentReader):
 
 	def Read_D2D440C0(self, node):
 		i = self.ReadHeadersS32ss(node)
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadCrossRef(i, 'refParameter')
+		i = node.ReadCrossRef(i, 'refPoint')
+		i = node.ReadCrossRef(i, 'refDocument')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt16(i, 'u16_0')
 
@@ -7866,6 +7869,12 @@ class DCReader(SegmentReader):
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'a1')
 		return i
+	def Read_DD7D4B84(self, node):
+		i = self.ReadContentHeader(node)
+		if (getFileVersion() > 2017): i += 4
+		i = node.ReadCrossRef(i, 'plane')
+		i = node.ReadCrossRef(i, 'ref_3')
+		return i
 
 	def Read_DD80AC37(self, node): # something to do with text-alignment
 		i = self.ReadContentHeader(node)
@@ -8257,30 +8266,12 @@ class DCReader(SegmentReader):
 		i = self.ReadHeaderEnum(node, 'EBB23D6E_Enum', [])
 		return i
 
-	def Read_EBEE69CA(self, node): # SystemOfMeasureEnum {50131E62-D297-11D3-B7A0-0060B0F159EF}:
-		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsCGS')
-		return i
 
-	def Read_EBEE69CB(self, node): # SystemOfMeasureEnum {50131E62-D297-11D3-B7A0-0060B0F159EF}:
-		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsEnglish')
-		return i
-
-	def Read_EBEE69D0(self, node): # SystemOfMeasureEnum {50131E62-D297-11D3-B7A0-0060B0F159EF}:
-		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsCGS')
-		return i
 
 	def Read_EC2D4C66(self, node):
 		i = self.ReadHeadersS32ss(node, 'MeshFolder')
 		i = node.ReadList2(i, AbstractNode._TYP_NODE_X_REF_, 'lst0')
 		i = node.ReadUInt32(i, 'u32_0')
-		if (node.get('u32_0') != 0):
-			i = node.ReadLen32Text16(i, 'txt0')
-			i = node.ReadLen32Text16(i, 'txt1')
-			i = node.ReadUInt8(i, 'u8_0')
-			i = node.ReadCrossRef(i, 'ref_1')
-			i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst0')
-			i = node.ReadList8(i, AbstractNode._TYP_1D_UINT32_, 'lst1')
-			i = node.ReadUInt32A(i, 4, 'a0')
 		return i
 
 	def Read_EC7B8A2B(self, node):
@@ -8525,13 +8516,14 @@ class DCReader(SegmentReader):
 
 	def Read_F4360D18(self, node):
 		i = self.ReadList2U32(node)
-		i = node.ReadUInt32A(i, 4, 'a1')
-		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt32A(i, 2, 'val_key_1')
+		i = node.ReadUInt32A(i, 2, 'val_key_2')
+		i = node.ReadUInt8(i, 'u8_2')
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst1', 2)
 		i = self.ReadU32U32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, AbstractNode._TYP_UINT32A_, 'lst3', 2)
-		i = node.ReadUInt32A(i, 2, 'a3')
+		i = node.ReadUInt32A(i, 2, 'val_key_3')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a3')
 		return i
@@ -8945,130 +8937,28 @@ class DCReader(SegmentReader):
 		i = node.ReadUUID(i, 'uid')
 		return i
 
-	def Read_5F9D0021(self, node):
 		# unit system setup
-		i = node.Read_Header0()
-		i = node.ReadCrossRef(i, 'refSelected')
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'customUnitSystems')
-		i = node.ReadList3(i, AbstractNode._TYP_NODE_REF_, 'predefinedUnitSystems')
-		return i
 
-	def Read_5F9D0022(self, node): # UnitRef
-		node.typeName = 'UnitRef'
-		i = node.Read_Header0()
-		i = self.skipBlockSize(i)
-		i = node.ReadFloat64(i, 'magnitude')
-		i = node.ReadFloat64(i, 'factor')
-		i = self.skipBlockSize(i)
-		node.set('Unit', '')
-		node.set('UnitOffset', 0.0)
-		node.set('UnitFactor', 1.0)
-		node.set('UnitSupportet', True)
-		return i
 
-	def Read_Unit(self, node, abbreviation, unitName, offset, factor, supported = False):
-		'''
-		Reads the parameter's unit information
-		ToDo: Handle units not supported by FreeCAD
-		List of SI units
-		LENGTH:                    [1,0,0,0,0,0,0] 'm'
-		MASS:                      [0,1,0,0,0,0,0] 'g'
-		TIME:                      [0,0,1,0,0,0,0] 's'
-		ELECTRIC CURRENT:          [0,0,0,1,0,0,0] 'A'
-		THERMODYNAMIC TEMPERATURE: [0,0,0,0,1,0,0] 'K'
-		AMOUNT OF SUBSTANCE:       [0,0,0,0,0,1,0] 'mol'
-		LUMINOUS INTENSITY:        [0,0,0,0,0,0,1] 'cd'
-		'''
-		i = self.Read_5F9D0022(node)
-		i = self.skipBlockSize(i)
-		node.typeName = u'Unit' + unitName
-		node.set('Unit', abbreviation)
-		if (sys.version_info.major < 3) and (not isinstance(abbreviation, unicode)):
-			node.set('Unit', unicode(abbreviation))
-		node.set('UnitOffset', offset)
-		node.set('UnitFactor', factor)
-		node.set('UnitSupportet', supported)
-		return i
 
 	###
 	# The unit's symbol must match with the known unit symbols of FreeCAD!
 	# Length (default 'cm'):
-	def Read_624120BC(self, node): return self.Read_Unit(node, 'mm'       , 'MilliMeter'                , 0.0,      0.1    , True)
-	def Read_F8A779F5(self, node): return self.Read_Unit(node, 'm'        , 'Meter'                     , 0.0,    100.0    , True)
-	def Read_F8A779F6(self, node): return self.Read_Unit(node, 'in'       , 'Inch'                      , 0.0,      2.54   , True)
-	def Read_F8A779F7(self, node): return self.Read_Unit(node, 'ft'       , 'Foot'                      , 0.0,     30.48   , True)
-	def Read_5DFE5E70(self, node): return self.Read_Unit(node, 'mil'      , 'Mile'                      , 0.0,      0.00254, True)
-	def Read_5C30CE17(self, node): return self.Read_Unit(node, 'sm'       , 'SeaMile'                   , 0.0, 185324.5218 , True)
 	# Mass (default 'kg'):
-	def Read_F8A779F1(self, node): return self.Read_Unit(node, 'g'        , 'Gram'                      , 0.0,  0.001      , True)
-	def Read_F8A779F2(self, node): return self.Read_Unit(node, 'slug'     , 'Slug'                      , 0.0, 14.5939     , True)
-	def Read_F8A779F3(self, node): return self.Read_Unit(node, 'lb'       , 'Pound'                     , 0.0,  0.428334865, True)
-	def Read_5C30CE22(self, node): return self.Read_Unit(node, 'oz'       , 'Ounze'                     , 0.0,  0.028349525, True)
 	# Time (default 's'):
-	def Read_5F9D0025(self, node): return self.Read_Unit(node, 's'        , 'Second'                    , 0.0,    1.0      , True)
-	def Read_5F9D0026(self, node): return self.Read_Unit(node, 'min'      , 'Minute'                    , 0.0,   60.0      , True)
-	def Read_5F9D0027(self, node): return self.Read_Unit(node, 'h'        , 'Hour'                      , 0.0, 3600.0      , True)
 	# Temperatur (default 'K'):
-	def Read_5F9D0029(self, node): return self.Read_Unit(node, 'K'        , 'Kelvin'                    ,   0.0 , 1.0      , True)
-	def Read_5F9D002A(self, node): return self.Read_Unit(node, u'\xB0C'   , 'Celsius'                   , 273.15, 1.0      , True)
-	def Read_5F9D002B(self, node): return self.Read_Unit(node, u'\xB0F'   , 'Fahrenheit'                , 459.67, 5.0/9    , True)
 	# Angularity (default ''):
-	def Read_5C30CDF2(self, node): return self.Read_Unit(node, 'rad'      , 'Radian'                    , 0.0, 1.0         , True)
-	def Read_5C30CDF0(self, node): return self.Read_Unit(node, u'\xb0'    , 'Degree'                    , 0.0, pi/180.0    , True)
-	def Read_3D0B9C8D(self, node): return self.Read_Unit(node, 'gon'      , 'Gradiant'                  , 0.0, pi/200.0    , True)
-	def Read_5C30CDF6(self, node): return self.Read_Unit(node, u'\xb0'    , 'Grad'                      , 0.0, pi/180.0    , True)
-	def Read_D7155C2A(self, node): return self.Read_Unit(node, 'sr'       , 'Steradian'                 , 0.0, 1.0)
 	# Velocity (default 'cm/s'):
-	def Read_4D4F962F(self, node): return self.Read_Unit(node, 'm/s'      , 'Meter/Second'              , 0.0, 100.0       , True)
-	def Read_A116EF37(self, node): return self.Read_Unit(node, 'f/s'      , 'Feet/Second'               , 0.0,  30.48      , True)
-	def Read_4D4F9631(self, node): return self.Read_Unit(node, 'mil/h'    , 'Miles/Hour'                , 0.0,  44.72399926, True)
-	def Read_E18489FC(self, node): return self.Read_Unit(node, '1/min'    , 'Revolution/Minute'         , 0.0,  pi/30.0    , True)
 	#Area:
-	def Read_F0F5A577(self, node): return self.Read_Unit(node, 'circ.mil' , 'CircularMile'              , 0.0, 1/1973525004.0)     # not supported
 	# Volume (default 'l'):
-	def Read_40AFEBA9(self, node): return self.Read_Unit(node, 'gal'      , 'Galon'                     , 0.0, 1.0/264.1706)	   # not supported
-	def Read_40AFEBAA(self, node): return self.Read_Unit(node, 'dm^3'     , 'Liter'                     , 0.0, 1.0         , True) # Workaround
 	# Force (default 'N'):
-	def Read_40AFEBA3(self, node): return self.Read_Unit(node, 'N'        , 'Newton'                    , 0.0, 1.0         , True)
-	def Read_40AFEBA2(self, node): return self.Read_Unit(node, 'dyn'      , 'Dyn'                       , 0.0, 1.0)	               # not supported
-	def Read_40AFEBA1(self, node): return self.Read_Unit(node, 'lbf'      , 'PoundForce'                , 0.0, 4.44822301540537, True)
-	def Read_40AFEBA0(self, node): return self.Read_Unit(node, 'ozf'      , 'OunzeForce'                , 0.0, 0.278013851)	       # not supported
 	# Pressure (default 'Pa'):
-	def Read_23663C43(self, node): return self.Read_Unit(node, 'Pa'       , 'Pascal'                    , 0.0,       1.0   , True)
-	def Read_40AFEBA5(self, node): return self.Read_Unit(node, 'psi'      , 'PoundForce/SquareInch'     , 0.0,    6890.0   , True)
-	def Read_40AFEBA4(self, node): return self.Read_Unit(node, 'ksi'      , 'KiloPoundFource/SquareInch', 0.0, 6890000.0   , True)
 	# Power (default 'W'):
-	def Read_40AFEB9F(self, node): return self.Read_Unit(node, 'W'        , 'Watt'                      , 0.0,   1.0       , True)
-	def Read_40AFEB9E(self, node): return self.Read_Unit(node, 'hp'       , 'HorsePower'                , 0.0, 745.7)	           # not supported
 	# Work (default 'J'):
-	def Read_40AFEB9D(self, node): return self.Read_Unit(node, 'J'        , 'Joule'                     , 0.0,    1.0      , True)
-	def Read_40AFEB9C(self, node): return self.Read_Unit(node, 'erg'      , 'Erg'                       , 0.0,    1.0)	           # not supported
-	def Read_40AFEB9B(self, node): return self.Read_Unit(node, 'Cal'      , 'Calories'                  , 0.0,    4.184)	       # not supported
-	def Read_40AFEB9A(self, node): return self.Read_Unit(node, 'BTU'      , 'BritishThermalUnit'        , 0.0, 1054.6)	           # not supported
 	# Electrical (default depends):
-	def Read_CEA6CA2D(self, node): return self.Read_Unit(node, 'A'        , 'Ampere'                    , 0.0, 1.0         , True)
-	def Read_9E5A8E15(self, node): return self.Read_Unit(node, 'V'        , 'Volt'                      , 0.0, 1.0)                # not supported
-	def Read_BD378B6A(self, node): return self.Read_Unit(node, 'ohm'      , 'Ohm'                       , 0.0, 1.0)                # not supported
-	def Read_E7A9656E(self, node): return self.Read_Unit(node, 'C'        , 'Coulomb'                   , 0.0, 1.0)                # not supported
-	def Read_28FEBA33(self, node): return self.Read_Unit(node, 'F'        , 'Farad'                     , 0.0, 1.0)                # not supported
-	def Read_45BD8053(self, node): return self.Read_Unit(node, 'y'        , 'Gamma'                     , 0.0, 1.0e-9)             # not supported
-	def Read_5F9F2379(self, node): return self.Read_Unit(node, 'Gs'       , 'Gauss'                     , 0.0, 0.0001)             # not supported
-	def Read_DA430213(self, node): return self.Read_Unit(node, 'H'        , 'Henry'                     , 0.0, 1.0)                # not supported
-	def Read_11EB21E7(self, node): return self.Read_Unit(node, 'Hz'       , 'Hertz'                     , 0.0, 1.0)                # not supported
-	def Read_26072ECF(self, node): return self.Read_Unit(node, 'maxwell'  , 'Maxwell'                   , 0.0, 1.0e-8)             # not supported
-	def Read_7D8BC1F7(self, node): return self.Read_Unit(node, 'mho'      , 'Mho'                       , 0.0, 1.0)                # not supported
-	def Read_9E064B0C(self, node): return self.Read_Unit(node, 'Oe'       , 'Oersted'                   , 0.0, 79.577472)          # not supported
-	def Read_3D793814(self, node): return self.Read_Unit(node, 'S'        , 'Siemens'                   , 0.0, 1.0)                # not supported
-	def Read_FB4E31FB(self, node): return self.Read_Unit(node, 'T'        , 'Tesla'                     , 0.0, 1.0)                # not supported
-	def Read_660F65B6(self, node): return self.Read_Unit(node, 'Wb'       , 'Weber'                     , 0.0, 1.0)                # not supported
 	# Luminosity (default 'cd'):
-	def Read_B7A5131F(self, node): return self.Read_Unit(node, 'lx'       , 'Lux'                       , 0.0, 1.0)                # not supported
-	def Read_E9D0671D(self, node): return self.Read_Unit(node, 'lm'       , 'Lumen'                     , 0.0, 1.0)                # not supported
-	def Read_F94FEEE2(self, node): return self.Read_Unit(node, 'cd'       , 'Candela'                   , 0.0, 1.0         , True)
 	# Substance (default 'mol'):
-	def Read_2F6A0C3F(self, node): return self.Read_Unit(node, 'mol'      , 'Mol'                       , 0.0, 1.0         , True)
 	# without Unit:
-	def Read_5F9D0023(self, node): return self.Read_Unit(node, ''         , 'Empty'                     , 0.0, 1.0         , True)
 
 	def Read_F8A77A0D(self, node): # ParameterOperationPowerIdent
 		node.name = '^'

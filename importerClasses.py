@@ -432,16 +432,27 @@ class ResultItem4():
 
 class GraphicsFont():
 	def __init__(self):
-		self.f           = 0.0     # Float64
 		self.number      = -1      # UInt32
-		self.ukn1        = []      # UInt16[4]
+		self.ukn1        = 0       # UInt16[4]
 		self.ukn2        = []      # UInt8[2]
 		self.ukn3        = []      # UInt16[2]
 		self.name        = []      # getLen32Text16
-		self.ukn4        = []      # UInt8[3]
+		self.ukn4        = []      # Float32[2]
+		self.ukn5        = []      # UInt8[3]
 
 	def __str__(self):
-		return '(%d) %s (%s) %r %r %r %r' %(self.number, self.name, FloatArr2Str(self.f), self.ukn1, self.ukn2, self.ukn3, self.ukn4)
+		return u"(%d) %s %r %r %r %r %r" %(self.number, self.name, self.ukn1, self.ukn2, self.ukn3, self.ukn4, self.ukn5)
+
+class Lightning():
+	def __init__(self):
+		self.n1 = 0
+		self.c1 = None
+		self.c2 = None
+		self.c3 = None
+		self.a1 = []
+		self.a2 = []
+	def __str__(self):
+		return '%d: %s, %s, %s, [%s], [%s]' %(self.n1, self.c1, self.c2, self.c3, FloatArr2Str(self.a1), FloatArr2Str(self.a2))
 
 class AbstractValue():
 	def __init__(self, x, factor, offset, unit):
@@ -980,7 +991,7 @@ class FeatureNode(DataNode):
 		p4 = self._getPropertyName(4)
 
 		if (p4 == 'Face'):                          return 'Rip'
-		if (p0 == '90874D51'):
+		if (p0 == 'EdgeCollectionProxy'):
 			p4 = self._getPropertyName(4)
 			if (p4 == '7DAA0032'):                  return 'Chamfer'
 			if (p1 == 'Parameter'):                 return 'Bend'
@@ -1017,7 +1028,7 @@ class FeatureNode(DataNode):
 			if (p2 == 'ParameterBoolean'):          return 'SnapFit'
 		elif (p0 == 'FxFilletConstant'):
 			p8 = self._getPropertyName(8)
-			if (p8 == 'ParameterBoolean'):          return 'CornerRound'
+			if (p8 == 'ParameterBoolean'):          return 'Fillet'
 			if (p8 == 'Enum'):                      return 'Fillet'
 		elif (p1 == 'FxFilletVariable'):            return 'Fillet'
 		elif (p0 == 'FaceCollection'):
@@ -1039,7 +1050,7 @@ class FeatureNode(DataNode):
 			p4 = self._getPropertyName(4)
 			if (p4 == 'SurfaceBody'):               return 'BoundaryPatch'
 		elif (p0 == 'Direction'):
-			if (p1 == '90874D51'):                  return 'Lip'
+			if (p1 == 'EdgeCollectionProxy'):       return 'Lip'
 			if (p1 == 'FaceCollection'):            return 'FaceDraft'
 		elif (p0 == 'CA02411F'):                    return 'NonParametricBase'
 		elif (p0 == 'EB9E49B0'):                    return 'Freeform'
@@ -1063,10 +1074,10 @@ class FeatureNode(DataNode):
 			p10 = self._getPropertyName(10)
 			if (p1 == 'Enum'):                      return 'Thicken'
 			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
-			if (p1 == '90874D51'):                  return 'Lip'
+			if (p1 == 'EdgeCollectionProxy'):       return 'Lip'
 			if (p1 == 'FC203F47'):                  return 'ContourRoll'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
-			if (p10 == 'D524C30A'):                 return 'Fillet'
+			if (p10 == 'FilletFullRoundSet'):       return 'Fillet'
 		elif (p0 == 'D70E9DDA'):                    return 'Boss'
 		elif (p0 == 'ParameterBoolean'):            return 'FilletRule'
 
@@ -1132,8 +1143,8 @@ class PointNode(DataNode): # return unicoe
 	def getRefText(self): # return unicode
 		if (self.typeName[-2:] == '2D'):
 			point = self
-			if (point.typeName == 'BlockPoint2D'):
-				point = self.get('refPoint')
+			if (point.typeName != 'Point2D'):
+				return u'(%04X): %s' %(self.index, self.typeName)
 			return u'(%04X): %s - (%g,%g)' %(self.index, self.typeName, point.get('x'), point.get('y'))
 		return u'(%04X): %s - (%g,%g,%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
 
@@ -1286,13 +1297,15 @@ class ModelerTxnMgr():
 		self.ref_1 = None
 		self.ref_2 = None
 		self.lst   = []
-		self.u8_0  = 0
 		self.u32_0 = 0
+		self.u8_0  = 0
+		self.u32_1 = 0
 		self.u8_1  = 0
 		self.s32_0 = 0
 
 	def __str__(self):
-		return 'ref1=%s' %(self.ref_1)
+		s = ",".join(["[%s]" %IntArr2Str(a, 4) for a in self.lst])
+		return 'ref1=%s ref2=%s lst=[%s] [(%04X,%02X),(%04X,%02X)] %d' %(self.ref_1, self.ref_2, s, self.u32_0, self.u8_0, self.u32_1, self.u8_1, self.s32_0)
 
 class AbstractData():
 	def __init__(self):

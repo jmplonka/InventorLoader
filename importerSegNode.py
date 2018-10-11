@@ -6,9 +6,10 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerClasses import AbstractData, Header0, Angle, GraphicsFont, ModelerTxnMgr
+from importerClasses import AbstractData, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr
 from importerUtils   import *
 from math            import log10, pi
+import numpy as np
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -16,6 +17,12 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 def isList(data, code):
 	return ((data[-1] == 0x3000) and (data[-2] == code))
+
+F_2010  = Struct('<fL').unpack_from
+APP_4_A = Struct('<LHLff').unpack_from
+APP_4_B = Struct('<ffHB').unpack_from
+APP_5_A = Struct('<ddL').unpack_from
+APP_5_B = Struct('<BBH').unpack_from
 
 def CheckList(data, offset, type):
 	lst, i = getUInt16A(data, offset, 2)
@@ -769,7 +776,8 @@ class AbstractNode(AbstractData):
 	def ReadList2(self, offset, typ, name, arraySize = 1):
 		i = CheckList(self.data, offset, 0x0002)
 		self.content += ' %s={' %(name)
-		lst, i = self.ReadMetaData_02(i, typ, arraySize)
+		lst, i, s = self.ReadMetaData_02(i, typ, arraySize)
+		self.content += s
 		self.content += '}'
 		self.set(name, lst)
 		return i

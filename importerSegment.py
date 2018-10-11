@@ -7,11 +7,10 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 
 import re, traceback
 from importerClasses   import *
-from importerSegNode   import isList, CheckList, BinaryNode, NodeRef
+from importerSegNode   import isList, CheckList, BinaryNode, NodeRef, _TYP_NODE_REF_
 from importerUtils     import *
 from Acis              import clearEntities
 from importerSAT       import readEntityBinary, Header
-
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -279,6 +278,14 @@ def buildTree(file, seg):
 						ref.data.set('refRadius', radius)
 			elif (ref.index > -1):
 				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", seg.name, data.index, data.typeName, ref.index, l)
+		if (data.typeName in ['F9884C43', '424EB7D7', '603428AE']):
+			refFx = data.get('refFX')
+			refFx.set('refProfile', data)
+		elif (data.typeName in [ 'D61732C1']):
+			refFx = data.get('refPatch1')
+			refFx.set('refProfile', data)
+			refFx = data.get('refPatch2')
+			refFx.set('refProfile', data)
 
 		ref = data.parentIndex
 		data.parent = None
@@ -336,6 +343,175 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		return i
 
+	def Read_5F9D0021(self, node):
+		i = node.Read_Header0('SystemOfUnitsCollection')
+		i = node.ReadCrossRef(i, 'refSelected')
+		i = node.ReadList3(i, _TYP_NODE_REF_, 'customUnitSystems')
+		i = node.ReadList3(i, _TYP_NODE_REF_, 'predefinedUnitSystems')
+		return i
+
+	def ReadHeaderSysOfUnits(self, node, typeName):
+		i = node.Read_Header0(typeName)
+		i = node.ReadList3(i, _TYP_NODE_REF_, 'units')
+		i = node.ReadLen32Text16(i)
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_Unit(self, node, abbreviation, unitName, offset, factor, supported = False):
+		'''
+		Reads the parameter's unit information
+		ToDo: Handle units not supported by FreeCAD
+		List of SI units
+		LENGTH:                    [1,0,0,0,0,0,0] 'm'
+		MASS:                      [0,1,0,0,0,0,0] 'g'
+		TIME:                      [0,0,1,0,0,0,0] 's'
+		ELECTRIC CURRENT:          [0,0,0,1,0,0,0] 'A'
+		THERMODYNAMIC TEMPERATURE: [0,0,0,0,1,0,0] 'K'
+		AMOUNT OF SUBSTANCE:       [0,0,0,0,0,1,0] 'mol'
+		LUMINOUS INTENSITY:        [0,0,0,0,0,0,1] 'cd'
+		'''
+		i = self.Read_5F9D0022(node)
+		i = self.skipBlockSize(i)
+		node.typeName = u'Unit' + unitName
+		node.set('Unit', abbreviation)
+		if (sys.version_info.major < 3) and (not isinstance(abbreviation, unicode)):
+			node.set('Unit', unicode(abbreviation))
+		node.set('UnitOffset', offset)
+		node.set('UnitFactor', factor)
+		node.set('UnitSupportet', supported)
+		return i
+
+	def Read_5C30CE1D(self, node): # SystemOfMeasureEnum {50131E62-D297-11D3-B7A0-0060B0F159EF}:
+		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsMGS')
+		return i
+
+	def Read_EBEE69CA(self, node): # SystemOfMeasureEnum {50131E62-D297-11D3-B7A0-0060B0F159EF}:
+		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsCGS')
+		return i
+
+	def Read_EBEE69CB(self, node): # SystemOfMeasureEnum {50131E62-D297-11D3-B7A0-0060B0F159EF}:
+		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsEnglish')
+		return i
+
+	def Read_EBEE69D0(self, node): # SystemOfMeasureEnum {50131E62-D297-11D3-B7A0-0060B0F159EF}:
+		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsCGS')
+		return i
+
+	def Read_5F9D0022(self, node): # UnitRef
+		i = node.Read_Header0('UnitRef')
+		i = self.skipBlockSize(i)
+		i = node.ReadFloat64(i, 'magnitude')
+		i = node.ReadFloat64(i, 'factor')
+		i = self.skipBlockSize(i)
+		node.set('Unit', '')
+		node.set('UnitOffset', 0.0)
+		node.set('UnitFactor', 1.0)
+		node.set('UnitSupportet', True)
+		return i
+
+	def Read_Unit(self, node, abbreviation, unitName, offset, factor, supported = False):
+		'''
+		Reads the parameter's unit information
+		ToDo: Handle units not supported by FreeCAD
+		List of SI units
+		LENGTH:                    [1,0,0,0,0,0,0] 'm'
+		MASS:                      [0,1,0,0,0,0,0] 'g'
+		TIME:                      [0,0,1,0,0,0,0] 's'
+		ELECTRIC CURRENT:          [0,0,0,1,0,0,0] 'A'
+		THERMODYNAMIC TEMPERATURE: [0,0,0,0,1,0,0] 'K'
+		AMOUNT OF SUBSTANCE:       [0,0,0,0,0,1,0] 'mol'
+		LUMINOUS INTENSITY:        [0,0,0,0,0,0,1] 'cd'
+		'''
+		i = self.Read_5F9D0022(node)
+		i = self.skipBlockSize(i)
+		node.typeName = u'Unit' + unitName
+		node.set('Unit', abbreviation)
+		if (sys.version_info.major < 3) and (not isinstance(abbreviation, unicode)):
+			node.set('Unit', unicode(abbreviation))
+		node.set('UnitOffset', offset)
+		node.set('UnitFactor', factor)
+		node.set('UnitSupportet', supported)
+		return i
+
+	###
+	# The unit's symbol must match with the known unit symbols of FreeCAD!
+	# Length (default 'cm'):
+	def Read_624120BC(self, node): return self.Read_Unit(node, 'mm'       , 'MilliMeter'                , 0.0,      0.1    , True)
+	def Read_F8A779F5(self, node): return self.Read_Unit(node, 'm'        , 'Meter'                     , 0.0,    100.0    , True)
+	def Read_F8A779F6(self, node): return self.Read_Unit(node, 'in'       , 'Inch'                      , 0.0,      2.54   , True)
+	def Read_F8A779F7(self, node): return self.Read_Unit(node, 'ft'       , 'Foot'                      , 0.0,     30.48   , True)
+	def Read_5DFE5E70(self, node): return self.Read_Unit(node, 'mil'      , 'Mile'                      , 0.0,      0.00254, True)
+	def Read_5C30CE17(self, node): return self.Read_Unit(node, 'sm'       , 'SeaMile'                   , 0.0, 185324.5218 , True)
+	# Mass (default 'kg'):
+	def Read_F8A779F1(self, node): return self.Read_Unit(node, 'g'        , 'Gram'                      , 0.0,  0.001      , True)
+	def Read_F8A779F2(self, node): return self.Read_Unit(node, 'slug'     , 'Slug'                      , 0.0, 14.5939     , True)
+	def Read_F8A779F3(self, node): return self.Read_Unit(node, 'lb'       , 'Pound'                     , 0.0,  0.428334865, True)
+	def Read_5C30CE22(self, node): return self.Read_Unit(node, 'oz'       , 'Ounze'                     , 0.0,  0.028349525, True)
+	# Time (default 's'):
+	def Read_5F9D0025(self, node): return self.Read_Unit(node, 's'        , 'Second'                    , 0.0,    1.0      , True)
+	def Read_5F9D0026(self, node): return self.Read_Unit(node, 'min'      , 'Minute'                    , 0.0,   60.0      , True)
+	def Read_5F9D0027(self, node): return self.Read_Unit(node, 'h'        , 'Hour'                      , 0.0, 3600.0      , True)
+	# Temperatur (default 'K'):
+	def Read_5F9D0029(self, node): return self.Read_Unit(node, 'K'        , 'Kelvin'                    ,   0.0 , 1.0      , True)
+	def Read_5F9D002A(self, node): return self.Read_Unit(node, u'\xB0C'   , 'Celsius'                   , 273.15, 1.0      , True)
+	def Read_5F9D002B(self, node): return self.Read_Unit(node, u'\xB0F'   , 'Fahrenheit'                , 459.67, 5.0/9    , True)
+	# Angularity (default ''):
+	def Read_5C30CDF2(self, node): return self.Read_Unit(node, 'rad'      , 'Radian'                    , 0.0, 1.0         , True)
+	def Read_5C30CDF0(self, node): return self.Read_Unit(node, u'\xb0'    , 'Degree'                    , 0.0, pi/180.0    , True)
+	def Read_3D0B9C8D(self, node): return self.Read_Unit(node, 'gon'      , 'Gradiant'                  , 0.0, pi/200.0    , True)
+	def Read_5C30CDF6(self, node): return self.Read_Unit(node, u'\xb0'    , 'Grad'                      , 0.0, pi/180.0    , True)
+	def Read_D7155C2A(self, node): return self.Read_Unit(node, 'sr'       , 'Steradian'                 , 0.0, 1.0)
+	# Velocity (default 'cm/s'):
+	def Read_4D4F962F(self, node): return self.Read_Unit(node, 'm/s'      , 'Meter/Second'              , 0.0, 100.0       , True)
+	def Read_A116EF37(self, node): return self.Read_Unit(node, 'f/s'      , 'Feet/Second'               , 0.0,  30.48      , True)
+	def Read_4D4F9631(self, node): return self.Read_Unit(node, 'mil/h'    , 'Miles/Hour'                , 0.0,  44.72399926, True)
+	def Read_E18489FC(self, node): return self.Read_Unit(node, '1/min'    , 'Revolution/Minute'         , 0.0,  pi/30.0    , True)
+	#Area:
+	def Read_F0F5A577(self, node): return self.Read_Unit(node, 'circ.mil' , 'CircularMile'              , 0.0, 1/1973525004.0)     # not supported
+	# Volume (default 'l'):
+	def Read_40AFEBA9(self, node): return self.Read_Unit(node, 'gal'      , 'Galon'                     , 0.0, 1.0/264.1706)	   # not supported
+	def Read_40AFEBAA(self, node): return self.Read_Unit(node, 'dm^3'     , 'Liter'                     , 0.0, 1.0         , True) # Workaround
+	# Force (default 'N'):
+	def Read_40AFEBA3(self, node): return self.Read_Unit(node, 'N'        , 'Newton'                    , 0.0, 1.0         , True)
+	def Read_40AFEBA2(self, node): return self.Read_Unit(node, 'dyn'      , 'Dyn'                       , 0.0, 1.0)	               # not supported
+	def Read_40AFEBA1(self, node): return self.Read_Unit(node, 'lbf'      , 'PoundForce'                , 0.0, 4.44822301540537, True)
+	def Read_40AFEBA0(self, node): return self.Read_Unit(node, 'ozf'      , 'OunzeForce'                , 0.0, 0.278013851)	       # not supported
+	# Pressure (default 'Pa'):
+	def Read_23663C43(self, node): return self.Read_Unit(node, 'Pa'       , 'Pascal'                    , 0.0,       1.0   , True)
+	def Read_40AFEBA5(self, node): return self.Read_Unit(node, 'psi'      , 'PoundForce/SquareInch'     , 0.0,    6890.0   , True)
+	def Read_40AFEBA4(self, node): return self.Read_Unit(node, 'ksi'      , 'KiloPoundFource/SquareInch', 0.0, 6890000.0   , True)
+	# Power (default 'W'):
+	def Read_40AFEB9F(self, node): return self.Read_Unit(node, 'W'        , 'Watt'                      , 0.0,   1.0       , True)
+	def Read_40AFEB9E(self, node): return self.Read_Unit(node, 'hp'       , 'HorsePower'                , 0.0, 745.7)	           # not supported
+	# Work (default 'J'):
+	def Read_40AFEB9D(self, node): return self.Read_Unit(node, 'J'        , 'Joule'                     , 0.0,    1.0      , True)
+	def Read_40AFEB9C(self, node): return self.Read_Unit(node, 'erg'      , 'Erg'                       , 0.0,    1.0)	           # not supported
+	def Read_40AFEB9B(self, node): return self.Read_Unit(node, 'Cal'      , 'Calories'                  , 0.0,    4.184)	       # not supported
+	def Read_40AFEB9A(self, node): return self.Read_Unit(node, 'BTU'      , 'BritishThermalUnit'        , 0.0, 1054.6)	           # not supported
+	# Electrical (default depends):
+	def Read_CEA6CA2D(self, node): return self.Read_Unit(node, 'A'        , 'Ampere'                    , 0.0, 1.0         , True)
+	def Read_9E5A8E15(self, node): return self.Read_Unit(node, 'V'        , 'Volt'                      , 0.0, 1.0)                # not supported
+	def Read_BD378B6A(self, node): return self.Read_Unit(node, 'ohm'      , 'Ohm'                       , 0.0, 1.0)                # not supported
+	def Read_E7A9656E(self, node): return self.Read_Unit(node, 'C'        , 'Coulomb'                   , 0.0, 1.0)                # not supported
+	def Read_28FEBA33(self, node): return self.Read_Unit(node, 'F'        , 'Farad'                     , 0.0, 1.0)                # not supported
+	def Read_45BD8053(self, node): return self.Read_Unit(node, 'y'        , 'Gamma'                     , 0.0, 1.0e-9)             # not supported
+	def Read_5F9F2379(self, node): return self.Read_Unit(node, 'Gs'       , 'Gauss'                     , 0.0, 0.0001)             # not supported
+	def Read_DA430213(self, node): return self.Read_Unit(node, 'H'        , 'Henry'                     , 0.0, 1.0)                # not supported
+	def Read_11EB21E7(self, node): return self.Read_Unit(node, 'Hz'       , 'Hertz'                     , 0.0, 1.0)                # not supported
+	def Read_26072ECF(self, node): return self.Read_Unit(node, 'maxwell'  , 'Maxwell'                   , 0.0, 1.0e-8)             # not supported
+	def Read_7D8BC1F7(self, node): return self.Read_Unit(node, 'mho'      , 'Mho'                       , 0.0, 1.0)                # not supported
+	def Read_9E064B0C(self, node): return self.Read_Unit(node, 'Oe'       , 'Oersted'                   , 0.0, 79.577472)          # not supported
+	def Read_3D793814(self, node): return self.Read_Unit(node, 'S'        , 'Siemens'                   , 0.0, 1.0)                # not supported
+	def Read_FB4E31FB(self, node): return self.Read_Unit(node, 'T'        , 'Tesla'                     , 0.0, 1.0)                # not supported
+	def Read_660F65B6(self, node): return self.Read_Unit(node, 'Wb'       , 'Weber'                     , 0.0, 1.0)                # not supported
+	# Luminosity (default 'cd'):
+	def Read_B7A5131F(self, node): return self.Read_Unit(node, 'lx'       , 'Lux'                       , 0.0, 1.0)                # not supported
+	def Read_E9D0671D(self, node): return self.Read_Unit(node, 'lm'       , 'Lumen'                     , 0.0, 1.0)                # not supported
+	def Read_F94FEEE2(self, node): return self.Read_Unit(node, 'cd'       , 'Candela'                   , 0.0, 1.0         , True)
+	# Substance (default 'mol'):
+	def Read_2F6A0C3F(self, node): return self.Read_Unit(node, 'mol'      , 'Mol'                       , 0.0, 1.0         , True)
+	# without Unit:
+	def Read_5F9D0023(self, node): return self.Read_Unit(node, ''         , 'Empty'                     , 0.0, 1.0         , True)
 
 	def HandleBlock(self, file, node):
 		i = 0
