@@ -549,7 +549,6 @@ class BrowserReader(SegmentReader):
 
 	def Read_E82BC461(self, node):
 		vers = getFileVersion()
-
 		i = node.ReadUInt32(0, 'u32_0')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst1')

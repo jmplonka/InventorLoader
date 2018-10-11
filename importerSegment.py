@@ -278,10 +278,10 @@ def buildTree(file, seg):
 						ref.data.set('refRadius', radius)
 			elif (ref.index > -1):
 				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", seg.name, data.index, data.typeName, ref.index, l)
-		if (data.typeName in ['F9884C43', '424EB7D7', '603428AE']):
+		if (data.typeName in ['424EB7D7', '603428AE', 'F9884C43']):
 			refFx = data.get('refFX')
 			refFx.set('refProfile', data)
-		elif (data.typeName in [ 'D61732C1']):
+		elif (data.typeName in ['D61732C1']):
 			refFx = data.get('refPatch1')
 			refFx.set('refProfile', data)
 			refFx = data.get('refPatch2')

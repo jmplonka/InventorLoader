@@ -723,7 +723,6 @@ class GraphicsReader(SegmentReader):
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadList7(i, importerSegNode._TYP_MAP_KEY_KEY_, 'lst1')
 #		i = node.ReadUInt16A(i, 4, 'a3')
-#
 #		a4, dummy = getUInt16A(node.data, i, 2)
 #		if (a4[0] == 0x02 and a4[1] == 0x3000):
 #			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst2')

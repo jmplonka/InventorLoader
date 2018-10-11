@@ -837,77 +837,76 @@ class FreeCADImporter:
 		else:
 			logWarning(u"    ... Don't know how to create edge from %s.%s" %(edge.__class__.__module__, edge.__class__.__name__))
 		if (edge is not None):
-			wires.append(edge.toShape())
+			wire = edge.toShape()
+			wire.Placement = sketch.sketchEntity.Placement.copy()
+			wires.append(wire)
 
 		return
 
-	def createBoundary(self, boundaryPatch):
-		boundary = None
-		profile = boundaryPatch.get('refProfile')
+	def createBoundaryPart(self, part, solid):
+		if (part.typeName in ['1E3A132C', 'A3277869']):
+			partEdges = []
+			for sketchEdge in part.get('edges'): # should be SketchEntityRef
+				sketch = sketchEdge.get('refSketch')
+				if (sketch is not None):
+					self.getEntity(sketch) # ensure that the sketch is already created!
+				self.createEdgeFromNode(partEdges, sketchEdge, part.typeName == '1E3A132C')
 
-		if (profile is None):
-			logError("    Error:  boundaryPatch (%04X): %s has no 'refProfile' property!", boundaryPatch.index, boundaryPatch.typeName)
-			return None
-
-		shapeEdges = []
-		boundarySketch = None
-		cnt = 0
-
-		if (profile.typeName in ['F9884C43', '424EB7D7', '603428AE', 'D61732C1']):
-			useFace = True
-			face = None
-			wire = None
-			boundarySketch = profile.get('refSketch')
-			if ((boundarySketch is not None) and (boundarySketch.typeName[0:-2] == 'Sketch')):
-				boundary = self.getEntity(boundarySketch) # ensure that the sketch is already created!
-			for sketchEdges in profile.get('lst0'):
-				if (sketchEdges.typeName in ['A3277869', '1E3A132C', 'D61732C1']):
-					cnt += len(sketchEdges.get('lst0'))
-					edges = []
-					for sketchEdge in sketchEdges.get('lst0'): # should be SketchEntityRef
-						sketch = sketchEdge.get('refSketch')
-						if (boundarySketch is None):
-							boundarySketch = sketch
-							boundary = self.getEntity(sketch) # ensure that the sketch is already created!
-						self.createEdgeFromNode(edges, sketchEdge, sketchEdges.typeName == '1E3A132C')
-					shapeEdges += edges
-					if (len(edges) > 0):
-						try:
-							w = Part.Wire(edges)
-							if (wire is None):
-								wire = w
-							else:
-								wire.fuse(w)
-							if (w.isClosed()):
-								f = Part.Face([w])
-								if (face is None):
-									face = f
-								else:
-									if (sketchEdges.get('operation') & 0x8):
-										face = face.oldFuse(f) # remove internal wires!
-									else:
-										cnt = 0 # force new shape!
-										face = face.cut(f)
-							else:
-								useFace = False
-						except:
-							s = u",".join([u"%s([%g,%g,%g] - [%g,%g,%g])" %(e.Curve.__class__.__name__, e.Vertexes[0].Point.x, e.Vertexes[0].Point.y, e.Vertexes[0].Point.z,e.Vertexes[-1].Point.x, e.Vertexes[-1].Point.y, e.Vertexes[-1].Point.z) for e in edges])
-							logError(u"Can't create wire from edges: [%s]", s)
-							w = edges[0].multiFuse(edges[1:])
-							Part.show(w)
-							w = None
-			if (len(shapeEdges) > 0):
-				if (useFace and (face is not None)):
-					face = face.removeSplitter()
-					if (len(face.Wires) > 1):
-						wire = face.Wires[0].multiFuse(face.Wires[1:])
-				boundary = newObject(self.doc, 'Part::Feature', '%s_bp' %sketch.name)
-				boundary.Shape = wire
-				boundary.Placement = sketch.sketchEntity.Placement.copy()
-				self.hide([boundarySketch.sketchEntity])
+			if (len(partEdges) > 0):
+				try:
+					w = Part.Wire(partEdges)
+					if (solid):
+						if (w.isClosed()):
+							return Part.Face(w)
+						else:
+							logError(u"    BoundaryPart (%04X): %s is not closed!", part.index, part.typeName)
+					return w
+				except:
+					s = u",".join([u"%s([%g,%g,%g] - [%g,%g,%g])" %(e.Curve.__class__.__name__, e.Vertexes[0].Point.x, e.Vertexes[0].Point.y, e.Vertexes[0].Point.z,e.Vertexes[-1].Point.x, e.Vertexes[-1].Point.y, e.Vertexes[-1].Point.z) for e in partEdges])
+					logError(u"Can't create wire from edges: [%s]", s)
+					w = partEdges[0].multiFuse(partEdges[1:])
+					Part.show(w)
 		else:
-			logError(u"        ... can't create boundary from (%04X): %s - expected next node type (%s) unknown!", boundaryPatch.index, boundaryPatch.typeName, profile.typeName)
-		return boundary
+			logError(u"    Error:  unknown boundaryPart (%04X): %s!", part.index, part.typeName)
+		return None
+
+	def createBoundary(self, boundaryPatch, solid):
+		''' Returns a Part.Wire if solid is False, otherwise a Part.Face '''
+
+		profile  = boundaryPatch.get('refProfile')
+		if (profile is not None):
+			if (profile.typeName in ['424EB7D7', '603428AE', 'D61732C1', 'F9884C43']):
+				shape = None
+				# create all parts of the profile
+				for part in profile.get('parts'):
+					partBoundary = self.createBoundaryPart(part, solid)
+					if (shape is None):
+						shape = partBoundary
+					else:
+						operation = part.get('operation')
+						if (operation is None):
+							logError(u"    BoundaryPart (%04X): %s has not operation attribute!", part.index, part.typeName)
+						if (operation in [0x00, 0x10]):
+							shape = shape.cut(partBoundary)
+						elif (operation in [0x08, 0x18]):
+							shape = shape.fuse(partBoundary)
+							shape = shape.removeSplitter()
+						else:
+							logError(u"    BoundaryPart (%04X): %s has an unknown operation %X!", part.index, part.typeName, operation)
+				if (shape is not None):
+					fx = profile.get('refSketch')
+					if (fx is None):
+						fx = profile.get('refFX')
+					else:
+						self.hide([fx.sketchEntity])
+					boundary = newObject(self.doc, 'Part::Feature', '%s_bp' %fx.name)
+					boundary.Shape = shape
+					return boundary
+			else:
+				logError(u"        ... can't create boundary from (%04X): %s - expected next node type (%s) unknown!", boundaryPatch.index, boundaryPatch.typeName, profile.typeName)
+		else:
+			logError(u"    Error:  boundaryPatch (%04X): %s has no 'refProfile' property!", boundaryPatch.index, boundaryPatch.typeName)
+		return None
 
 	def collectSections(self, fxNode, action): #
 		participants = fxNode.getParticipants()
@@ -1709,7 +1708,9 @@ class FreeCADImporter:
 	def handleAssociativeID(self, node):
 		label  = node.get('label')
 		if (label is None): return
-		if (label.typeName == 'BFD09C43'): label = label.get('ref_2')
+		if (label.typeName == 'BFD09C43'):
+			label = label.get('label')
+			if (label is None): return
 		if (label.typeName == '90874D15'):
 			id = label.get('associativeID')
 			sketch = node.get('refSketch')
@@ -1877,7 +1878,7 @@ class FreeCADImporter:
 					len1 = self.getLength(surface, dirX, dirY, dirZ)
 		if (len1 > 0):
 			baseName = sectionNode.name
-			base     = self.createBoundary(boundary)
+			base     = self.createBoundary(boundary, solid is not None)
 			if (midplane): len1 = len1 / 2.0
 
 			pad = newObject(self.doc, 'Part::Extrusion', name)
@@ -1955,7 +1956,7 @@ class FreeCADImporter:
 			angle2     = getProperty(properties, 0x12) # Parameter
 			extend2    = getProperty(properties, 0x13) # ExtentType
 
-			boundary   = self.createBoundary(profile1)
+			boundary   = self.createBoundary(profile1, not isSurface.get('value'))
 
 			base       = p2v(lineAxis)
 			axis       = p2v(lineAxis, 'dirX', 'dirY', 'dirZ')
@@ -2390,8 +2391,8 @@ class FreeCADImporter:
 		#= getProperty(properties, 0x0D) # A96B5992
 		#= getProperty(properties, 0x0E) # 90B64134
 		edgeProxies    = getProperty(properties, 0x0F) # EdgeCollectionProxy
-		boundary1 = self.createBoundary(profile1)
-		boundary2 = self.createBoundary(profile2)
+		boundary1 = self.createBoundary(profile1, solid is not None)
+		boundary2 = self.createBoundary(profile2, solid is not None)
 		sections         = [boundary1, boundary2]
 		loftGeo          = self.createEntity(flangeNode, 'Part::Loft')
 		loftGeo.Sections = sections
@@ -2422,14 +2423,14 @@ class FreeCADImporter:
 		#= getProperty(properties, 0x0D): ???
 		skip   = []
 
-		path = self.createBoundary(profile1)
+		path = self.createBoundary(profile1, solid is not None)
 		if (path is None):
 			profile = sweepNode.getParticipants()[1]
 			path = self.getEntity(profile)
 
 		edges = self.getEdges(path)
 		if (len(edges) > 0):
-			sections          = [self.createBoundary(boundary)]
+			sections          = [self.createBoundary(boundary, solid is not None)]
 			sweepGeo          = self.createEntity(sweepNode, 'Part::Sweep')
 			sweepGeo.Sections = sections
 			sweepGeo.Spine    = (path, edges)
@@ -2534,7 +2535,7 @@ class FreeCADImporter:
 		# = getProperty(properties, 0x12) # FeatureDimensions
 		solid       = getProperty(properties, 0x13) # SolidBody 'Solid1'
 
-		boundary = self.createBoundary(profile)
+		boundary = self.createBoundary(profile, solid is not None)
 		base    = p2v(axis)
 		dir     = p2v(axis, 'dirX', 'dirY', 'dirZ').normalize()
 		if (isTrue(negative)): dir = dir.negative()
