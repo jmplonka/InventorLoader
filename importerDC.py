@@ -1363,9 +1363,9 @@ class DCReader(SegmentReader):
 
 	def Read_1A21362E(self, node):
 		i = self.ReadHeaderFeature(node, 'Mesh')
-		if (getFileVersion() > 2018):
-			i += 4 # U32
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		if (getFileVersion() > 2016):
+			i = node.ReadUInt32(i, 'u32_0')
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst3')
 		else:
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 			i = node.ReadUInt32(i, 'u32_0')
@@ -1375,7 +1375,8 @@ class DCReader(SegmentReader):
 			i = node.ReadCrossRef(i, 'ref_1')
 			i = node.ReadList8(i, importerSegNode._TYP_UINT32_, 'lst1')
 			i = node.ReadList8(i, importerSegNode._TYP_UINT32_, 'lst2')
-			i = node.ReadUInt32A(i, 4, 'a0')
+			i = node.ReadUInt32A(i, 3, 'a0')
+			i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_1A26FF54(self, node):
@@ -4940,7 +4941,7 @@ class DCReader(SegmentReader):
 
 	def Read_8946E9E8(self, node):
 		i = self.ReadHeadersS32ss(node)
-		i = node.ReadUInt32(i, 'u32_3')
+		if (getFileVersion() > 2018):i += 4 # 0x000003
 		return i
 
 	def Read_896A9790(self, node):
