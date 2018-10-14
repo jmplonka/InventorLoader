@@ -53,9 +53,6 @@ class DCReader(SegmentReader):
 
 	#overrides
 	def skipDumpRawData(self):
-		'''
-		Called by importerSegment.py -> SegmentReader.ReadSegmentData
-		'''
 		return True
 
 ########################################
@@ -373,18 +370,6 @@ class DCReader(SegmentReader):
 		node.set(name, lst)
 		return i
 
-	def ReadFloat64A(self, node, i, cnt, name, size):
-		j = 0
-		lst = []
-		while (j < cnt):
-			a, i = getFloat64A(node.data, i, size)
-			lst.append(a)
-			j += 1
-		node.content += '%s=[%s]' %(name, ','.join(['(%s)' %(FloatArr2Str(a)) for a in lst]))
-		node.set(name, lst)
-		return i
-
-
 	def readTypedList(self, node, index, key, count, size, tolerance):
 		meta, i = getUInt32A(node.data, index, count)
 		j = 0
@@ -496,24 +481,7 @@ class DCReader(SegmentReader):
 			node.content += ' lst0={1}'
 			node.set('lst0', [ref])
 		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst1', 3)
-		cnt, i = getUInt32(node.data, i)
-		j = 0
-		lst = []
-		while (j < cnt):
-			typ, i = getUInt32(node.data, i)
-			if (typ == 0x0B):
-				a, i = getFloat64A(node.data, i, 12)
-			elif (typ == 0x11):
-				a, i = getFloat64A(node.data, i, 13)
-			elif (typ == 0x17):
-				a, i = getFloat64A(node.data, i, 6)
-			else:
-				logError(u"    ERROR in Read_%s: Unknown block type %X (cnt=%d)!", node.typeName, typ, cnt)
-				return i
-			lst.append([typ, a])
-			j += 1
-		node.content += ' a1=[%s]' %(','.join(['(%04X,%s)' %(r[0], FloatArr2Str(r[1])) for r in lst]))
-		node.set('a1', lst)
+		i = self.ReadTypedFloatsList(node, i, 'a1')
 		return i
 
 	def Read_0229768D(self, node): # ParameterComment
@@ -1888,6 +1856,21 @@ class DCReader(SegmentReader):
 		i = self.ReadContentHeader(node)
 		return i
 
+	def Read_28CB7150(self, node):
+		i = self.ReadHeadersss2S16s(node)
+		i = node.ReadUInt8A(i, 2, 'a0')
+		i = node.ReadCrossRef(i, 'ref_0')
+		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadFloat32A(i, 4, 'a2')
+		i = node.ReadUInt32A(i, 2, 'a3')
+		i = node.ReadFloat32A(i, 4, 'a4')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_, 'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst2')
+		i = node.ReadFloat64A(i, 4, 'a5')
+		i = node.ReadCrossRef(i, 'reference')
+		return i
+
 	def Read_299B2DCE(self, node):
 		i = self.ReadCntHdr3S(node)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
@@ -2016,7 +1999,7 @@ class DCReader(SegmentReader):
 							for j in range(11, 26):
 								ref, i = self.ReadNodeRef(node, i, len(properties), importerSegNode.NodeRef.TYPE_CROSS)
 								properties.append(ref)
-							node.childIndexes.append(boolRef)
+							node.references.append(boolRef)
 							properties.append(boolRef)
 							node.set('properties', properties)
 					elif( t == 0x30000008):
@@ -4940,8 +4923,9 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_8946E9E8(self, node):
-		i = self.ReadHeadersS32ss(node)
-		if (getFileVersion() > 2018):i += 4 # 0x000003
+		i = self.ReadContentHeader(node)
+		if (getFileVersion() > 2018):i += 4 # 0xFFFFFF
+		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_896A9790(self, node):
@@ -8849,18 +8833,6 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a1')
 		return i
 
-	def ReadTypedFloats(self, node, offset, name):
-		t, i = getUInt32(node.data, offset)
-		if (t == 0x0B):
-			i = node.ReadFloat64A(i, 12, name)
-		elif (t == 0x11):
-			i = node.ReadFloat64A(i, 13, name)
-		elif (t == 0x17):
-			i = node.ReadFloat64A(i, 6, name)
-		else:
-			raise AssertionError("Unknown FC86960C type %02X" %(t))
-		return i
-
 	def Read_FC86960C(self, node):
 		n, i = getUInt32(node.data, 0)
 		for k in range(0, n):
@@ -8894,12 +8866,12 @@ class DCReader(SegmentReader):
 		return i
 
 	def Read_FD590AA5(self, node):
-		i = node.Read_Header0()
+		i = node.Read_Header0('MeshFeature')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'refBody')
 		i = node.ReadParentRef(i)
-		i = node.ReadChildRef(i, 'ref_3')
+		i = node.ReadChildRef(i, 'label')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_4')
 

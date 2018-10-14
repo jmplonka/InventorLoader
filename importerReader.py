@@ -16,7 +16,7 @@ from importerApp         import AppReader
 #from importerEeData      import EeDataReader
 #from importerEeScene     import EeSceneReader
 #from importerFBAttribute import FBAttributeReader
-#from importerGraphics    import GraphicsReader
+from importerGraphics    import GraphicsReader
 #from importerNotebook    import NotebookReader
 #from importerResults     import ResultReader
 from importerUtils       import *
@@ -968,7 +968,7 @@ def getReader(seg):
 #		reader = BrowserReader()
 #	elif (RSeMetaData.isDefault(seg)):
 #		reader = DefaultReader()
-#	elif (RSeMetaData.isGraphics(seg)):
+#	elif (RSeMetaData.isGraphics(seg)): # required for Meshes
 #		reader = GraphicsReader()
 #	elif (RSeMetaData.isResult(seg)):
 #		reader = ResultReader()

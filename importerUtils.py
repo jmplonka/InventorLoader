@@ -275,6 +275,7 @@ def setThumbnail(ole):
 
 UINT8      = Struct('<B').unpack_from
 UINT16     = Struct('<H').unpack_from
+UINT16_2D  = Struct('<HH').unpack_from
 SINT16     = Struct('<h').unpack_from
 UINT32     = Struct('<L').unpack_from
 SINT32     = Struct('<l').unpack_from
@@ -336,6 +337,21 @@ def getUInt16(data, offset):
 	'''
 	val, = UINT16(data, offset)
 	return val, offset + 2
+
+def getUInt16_2D(data, offset):
+	'''
+	Returns a two single unsingned 16-Bit values.
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the two unsigned 16-Bit values.
+	Returns:
+		Two unsigned 16-Bit values at offset.
+		The new position in the 'stream'.
+	'''
+	n1, n2 = UINT16_2D(data, offset)
+	return n1, n2, offset + 4
 
 def getUInt16A(data, offset, size):
 	'''

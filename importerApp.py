@@ -28,8 +28,10 @@ class AppReader(SegmentReader):
 	def readHeaderStyle(self, node, typeName = None):
 		i = node.Read_Header0(typeName)
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = node.ReadParentRef(i)
+		i = node.ReadUInt16A(i, 3, 'a0')
+		i = node.ReadCrossRef(i)
+		i = node.ReadUInt32(i, 'u32')
+		i = node.ReadCrossRef(i)
 		i = node.ReadLen32Text16(i)
 		return i
 
@@ -113,6 +115,7 @@ class AppReader(SegmentReader):
 		i = node.ReadLen32Text16(i, 'txt_0')
 		i = node.ReadLen32Text16(i, 'txt_1')
 		i = node.ReadLen32Text16(i, 'txt_2')
+		i = node.ReadParentRef(i)
 		return i
 
 	def Read_3214005D(self, node):
@@ -146,7 +149,7 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadLen32Text16(i, 'txt_1')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_0')
+		i = node.ReadChildRef(i, 'ref_0')
 		i = self.skipBlockSize(i)
 
 		return i
@@ -375,11 +378,7 @@ class AppReader(SegmentReader):
 	def Read_6B4C0C42(self, node):
 		i = node.Read_Header0()
 		i = node.ReadLen32Text16(i)
-		# i = node.ReadUInt16A(i, 2, 'a0')
-		i = node.ReadCrossRef(i, 'ref_1')
-		# i = node.ReadUInt16A(i, 3, 'a0')
-		# i = self.skipBlockSize(i)
-		# i = node.ReadLen32Text16(i, 'txt_0')
+		i = node.ReadParentRef(i)
 		return i
 
 	def Read_6D8A4AC7(self, node):
@@ -537,7 +536,7 @@ class AppReader(SegmentReader):
 	def Read_BA93BB36(self, node):
 		i = node.Read_Header0()
 		i = node.ReadLen32Text16(i)
-		i = node.ReadCrossRef(i, 'cld_0')
+		i = node.ReadParentRef(i)
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadLen32Text16(i, 'txt_0')
 		i = node.ReadUInt8(i, 'u8_0')

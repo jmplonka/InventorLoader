@@ -118,11 +118,6 @@ class NotebookReader(SegmentReader):
 		return i
 
 	def Read_E23E5AE6(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt32A(i, 2, 'a0')
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		i = self.skipBlockSize(i)
+		i = self.ReadHeaderU32RefU8List3(node)
 		i = node.ReadParentRef(i)
 		return i

@@ -35,12 +35,13 @@ class EeSceneReader(SegmentReader):
 	def Read_13FC8170(self, node): return 0
 
 	def Read_48EB8607(self, node):
+		node.typeName = "ObjctStyles"
 		i = self.skipBlockSize(0)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'styles')
 		return i
 
 	def Read_48EB8608(self, node):
-		i = self.ReadHeaderSU32S(node, '2dLineColor')
+		i = self.ReadHeaderSU32S(node, 'StyleLine2dColor')
 		i = node.ReadColorRGBA(i, 'c0')
 		i = node.ReadColorRGBA(i, 'c1')
 		i = node.ReadColorRGBA(i, 'c2')

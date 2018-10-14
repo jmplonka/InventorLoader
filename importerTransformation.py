@@ -21,13 +21,18 @@ class Transformation:
 		self.a1 = []
 
 	def read(self, data, offset):
+		n, k = getUInt32(data, offset)
+		if (n == 0x00000203):
+			i = k
+		else:
+			i = offset
 		#             +---- Value for the 4. row to be used for the transformation matrix
 		#             |+--- Value for the 3. row to be used for the transformation matrix
 		#             ||+-- Value for the 2. row to be used for the transformation matrix
 		#             |||+- Value for the 1. row to be used for the transformation matrix
 		#             ||||
 		#             vvvv
-		d1, i = getUInt16(data, offset)
+		d1, i = getUInt16(data, i)
 		#             +-------- Mask for the 4. row of the transformation matrix
 		#             |+------- Mask for the 3. row of the transformation matrix
 		#             ||+------ Mask for the 2. row of the transformation matrix

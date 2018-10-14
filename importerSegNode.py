@@ -326,8 +326,7 @@ class AbstractNode(AbstractData):
 		return i
 
 	def ReadNodeRef(self, offset, name, type, number = -1, dump = False):
-		u16_0, i = getUInt16(self.data, offset)
-		u16_1, i = getUInt16(self.data, i)
+		u16_0, u16_1, i = getUInt16_2D(self.data, offset)
 		ref = NodeRef(u16_0, u16_1, type)
 
 		self.set(name, None)
@@ -337,10 +336,7 @@ class AbstractNode(AbstractData):
 			if (ref.index == self.index):
 				logError(u"ERROR> Found self-ref '%s' for (%04X): %s", name, self.index, self.typeName)
 			else:
-				if (type == NodeRef.TYPE_PARENT):
-					self.parentIndex = ref
-				else:
-					self.childIndexes.append(ref)
+				self.references.append(ref)
 		else:
 			ref = None
 		self.set(name, ref)
@@ -349,19 +345,13 @@ class AbstractNode(AbstractData):
 		return i
 
 	def ReadChildRef(self, offset, name = 'ref', number = -1, dump = True):
-		i = self.ReadNodeRef(offset, name, NodeRef.TYPE_CHILD, number, dump)
-		ref = self.get(name)
-		if (ref):
-			if (self.index > ref.index):
-				#logError(u"ERROR> child '%s' (%04X) is smaller (%04X) - %s!", name, ref.index, self.index, self.typeName)
-				ref.type = NodeRef.TYPE_CROSS
-		return i
+		return self.ReadNodeRef(offset, name , NodeRef.TYPE_CHILD, number, dump)
 
-	def ReadCrossRef(self, offset, name = 'xref', number = -1, dump = True):
+	def ReadCrossRef(self, offset, name = 'ref', number = -1, dump = True):
 		return self.ReadNodeRef(offset, name, NodeRef.TYPE_CROSS, number, dump)
 
 	def ReadParentRef(self, offset):
-		return self.ReadNodeRef(offset, 'parent', NodeRef.TYPE_PARENT, -1, False)
+		return self.ReadNodeRef(offset, 'parent', NodeRef.TYPE_CROSS, -1, False)
 
 	def getList2Chars(self, offset, cnt, arraysize):
 		try:
@@ -1311,6 +1301,7 @@ class NodeRef():
 		self.type   = refType
 		self.number = 0
 		self._data  = None
+		self.analysed = False
 
 	@property
 	def data(self):

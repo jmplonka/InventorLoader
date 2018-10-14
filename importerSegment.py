@@ -221,83 +221,94 @@ def getBranchNode(data, isRef):
 	if (data.typeName == 'A244457B'):                        return DirectionNode(data, isRef)
 	return DataNode(data, isRef)
 
-def buildBranchRef(parent, file, nodes, ref, level):
+def buildBranchRef(parent, file, ref, level):
 	branch = getBranchNode(ref.data, True)
 	parent.append(branch)
 
-	num = ''
 	if (ref.number >= 0):
-		num = '[%02X] ' %(ref.number)
-	reftext = branch.getRefText()
-	file.write('%s-> %s%s\n' %(level * '\t', num, reftext))
+		file.write('%s-> [%02X] %s\n' %(level * '\t', ref.number, branch.getRefText()))
+	else:
+		file.write('%s-> %s\n' %(level * '\t', branch.getRefText()))
 
 	return
 
-def buildBranch(parent, file, nodes, data, level, ref):
+def buildBranch(parent, file, data, level, ref):
 	branch = getBranchNode(data, False)
 	parent.append(branch)
 
-	num = ''
 	if ((ref is not None) and (ref.number >= 0)):
-		num = '[%02X] ' %(ref.number)
-	s = branch.__str__()
-	file.write('%s%s%s\n' %(level * '\t', num, s))
+		file.write('%s[%02X] %s\n' %(level * '\t', ref.number, branch))
+	else:
+		file.write('%s%s\n' %(level * '\t', branch))
 
-	for childRef in data.childIndexes:
-		if (childRef.index in nodes):
-			childRef.data = nodes[childRef.index]
-		if (childRef.data is not None):
-			child = childRef.data
-			if (childRef.type == NodeRef.TYPE_CHILD):
-				buildBranch(branch, file, nodes, childRef.data, level + 1, childRef)
-			elif (childRef.type == NodeRef.TYPE_CROSS):
-				buildBranchRef(branch, file, nodes, childRef, level + 1)
-
+	for childRef in data.references:
+		if (not childRef.analysed):
+			childRef.analysed = True
+			child = childRef._data
+			if (child is not None):
+				if (childRef.type == NodeRef.TYPE_CHILD):
+					buildBranch(branch, file, child, level + 1, childRef)
+				elif (childRef.type == NodeRef.TYPE_CROSS):
+					buildBranchRef(branch, file, childRef, level + 1)
 	return
 
 def buildTree(file, seg):
 	nodes = seg.elementNodes
-	l = len(nodes)
-	tree = DataNode(None, False)
+	l     = len(nodes)
 
-	for idx1 in nodes:
-		data = nodes[idx1]
-		data.handled = False
-		data.sketchIndex = None
-		isRadius2D = (data.typeName == 'Dimension_Radius2D')
-		for ref in data.childIndexes:
+	# link the reference with the corresponding node
+	for node in nodes.values():
+		node.handled = False
+		node.sketchIndex = None
+		node.parent = None
+		for ref in node.references:
+			ref.analysed = False
+			# ref.type = NodeRef.TYPE_CROSS
 			if (ref.index in nodes):
-				child = nodes[ref.index]
-				ref._data = child
-				if (ref.type == NodeRef.TYPE_CHILD):
-					ref.data.hasParent = True
-				elif (ref.type == NodeRef.TYPE_CROSS):
-					if (isRadius2D and ((ref.typeName == 'Circle2D') or (ref.typeName == 'Ellipse2D') or (ref.typeName == '160915E2'))):
-						radius = NodeRef(idx1, 0x8000, NodeRef.TYPE_CROSS)
-						radius._data = data
-						ref.data.set('refRadius', radius)
+				ref._data = nodes[ref.index]
 			elif (ref.index > -1):
 				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", seg.name, data.index, data.typeName, ref.index, l)
-		if (data.typeName in ['424EB7D7', '603428AE', 'F9884C43']):
-			refFx = data.get('refFX')
-			refFx.set('refProfile', data)
-		elif (data.typeName in ['D61732C1']):
-			refFx = data.get('refPatch1')
-			refFx.set('refProfile', data)
-			refFx = data.get('refPatch2')
-			refFx.set('refProfile', data)
+		if (node.typeName in ['424EB7D7', '603428AE', 'F9884C43']):
+			refFx = node.get('refFX')
+			refFx.set('refProfile', node)
+		elif (node.typeName in ['D61732C1']):
+			refFx = node.get('refPatch1')
+			refFx.set('refProfile', node)
+			refFx = node.get('refPatch2')
+			refFx.set('refProfile', node)
 
-		ref = data.parentIndex
-		data.parent = None
-		if (ref):
-			if (ref.index in nodes):
-				data.parent = nodes[ref.index]
+	# set the parent property for each node
+	for parent in nodes.values():
+		for ref in parent.references:
+			if (ref.index > parent.index):
+				node = ref._data
+				if (node is not None):	
+					for leaf in node.references:
+						if (parent.index == leaf.index):
+							leaf.type = NodeRef.TYPE_PARENT
+							node.parent = parent
+							ref.type = NodeRef.TYPE_CHILD
+					isRadius2D = (parent.typeName == 'Dimension_Radius2D')
+					if (isRadius2D and ((ref.typeName == 'Circle2D') or (ref.typeName == 'Ellipse2D') or (ref.typeName == '160915E2'))):
+						radius = NodeRef(ref.index, 0x8000, NodeRef.TYPE_CROSS)
+						radius._data = parent
+						ref.data.set('refRadius', radius)
 
-	for idx1 in nodes:
-		data = nodes[idx1]
-		if (data.hasParent == False):
-			buildBranch(tree, file, nodes, data, 0, None)
-	return tree
+	# set the parent property for each node
+	for parent in nodes.values():
+		for ref in parent.references:
+			if (ref.index > parent.index):
+				node = ref._data
+				if (node is not None):	
+					if ((ref.type == NodeRef.TYPE_CHILD) and (node.parent is None)):
+						node.parent = parent 
+	# now the tree can be build
+	roots = DataNode(None, False)
+	for node in nodes.values():
+		if (node.parent is None):
+			buildBranch(roots, file, node, 0, None)
+
+	return roots
 
 def convert2Version7(entity):
 	if ((getFileVersion() > 2012) and (entity.name == 'coedge')):
@@ -331,7 +342,7 @@ class SegmentReader(object):
 		ref = NodeRef(n, m, type)
 		if (ref.index > 0):
 			ref.number = number
-			node.childIndexes.append(ref)
+			node.references.append(ref)
 		else:
 			ref = None
 		return ref, i
@@ -341,6 +352,55 @@ class SegmentReader(object):
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
+		return i
+
+	def ReadHeaderU32RefU8List3(self, node, typeName = None):
+		i = node.Read_Header0(typeName)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList3(i, _TYP_NODE_REF_, 'lst0')
+		i = self.skipBlockSize(i)
+		return i
+	
+	def ReadFloat64A(self, node, i, cnt, name, size):
+		j = 0
+		lst = []
+		while (j < cnt):
+			a, i = getFloat64A(node.data, i, size)
+			lst.append(a)
+			j += 1
+		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(FloatArr2Str(a)) for a in lst]))
+		node.set(name, lst)
+		return i
+
+	def ReadTypedFloats(self, node, offset, name):
+		t, i = getUInt32(node.data, offset)
+		if (t == 0x0203): t, i = getUInt32(node.data, i)
+		if (t == 0x0B):
+			a, i = getFloat64A(node.data, i, 12)
+		elif (t == 0x11):
+			a, i = getFloat64A(node.data, i, 13)
+		elif (t == 0x17):
+			a, i = getFloat64A(node.data, i, 6)
+		else:
+			raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
+		node.set(name, (t, a))
+		return i
+
+	def ReadTypedFloatsList(self, node, offset, name):
+		cnt, i = getUInt32(node.data, offset)
+		j      = 0
+		lst    = []
+		while (j < cnt):
+			i = self.ReadTypedFloats(node, i , 'tmp')
+			f = node.get('tmp')
+			lst.append(f)
+			j += 1
+		node.content += ' %s=[%s]' %(name, ','.join(['(%02X:[%s])' %(r[0], FloatArr2Str(r[1])) for r in lst]))
+		node.set(name, lst)
+		node.delete('tmp')
 		return i
 
 	def Read_5F9D0021(self, node):
@@ -513,14 +573,15 @@ class SegmentReader(object):
 	# without Unit:
 	def Read_5F9D0023(self, node): return self.Read_Unit(node, ''         , 'Empty'                     , 0.0, 1.0         , True)
 
-	def HandleBlock(self, file, node):
+	def HandleBlock(self, node):
 		i = 0
 
 		try:
 			readType = getattr(self, 'Read_%s' %(node.typeName))
 			i = readType(node)
 		except AttributeError:
-			logError(u"ERROR> %s.Read_%s not defined!", self.__class__.__name__, node.typeName)
+			if (self.__class__.__name__ != 'SegmentReader'):
+				logError(u"ERROR> %s.Read_%s not defined!", self.__class__.__name__, node.typeName)
 		except:
 			logError(traceback.format_exc())
 
@@ -553,9 +614,9 @@ class SegmentReader(object):
 
 		return node
 
-	def ReadBlock(self, file, data, offset, size, seg):
+	def ReadBlock(self, data, offset, size, seg):
 		node = self.newNode(size, offset, data, seg)
-		self.HandleBlock(file, node)
+		self.HandleBlock(node)
 		return node
 
 	def skipDumpRawData(self):
@@ -704,7 +765,7 @@ class SegmentReader(object):
 			for sec in seg.sec1:
 				if (sec.flags == 1):
 					start = i
-					data = self.ReadBlock(file, buffer, i, sec.length, seg)
+					data = self.ReadBlock(buffer, i, sec.length, seg)
 					i += data.size + 4
 					l, i = getUInt32(buffer, i)
 					i = self.ReadTrailer(buffer, i)

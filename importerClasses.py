@@ -187,7 +187,7 @@ class RSeStorageSection6():
 
 class RSeStorageSection7():
 	def __init__(self, parent):
-		self.parent = parent
+		self.parent      = parent
 		self.segRef      = None
 		self.segName     = None
 		self.revisionRef = None
@@ -228,8 +228,8 @@ class RSeStorageSection9():
 
 class RSeStorageSectionA():
 	def __init__(self, parent):
-		self.uid         = None
 		self.parent      = parent
+		self.uid         = None
 		self.arr         = []      # UInt16[4]
 
 	def __str__(self):
@@ -1312,10 +1312,8 @@ class AbstractData():
 		self.typeID       = None
 		self.name         = None
 		self.index        = -1
-		self.parentIndex  = None
-		self.hasParent    = False
 		self.content      = ''
-		self.childIndexes = []
+		self.references   = []
 		self.properties   = {}
 		self.size         = 0
 		self.visible      = False
@@ -1363,6 +1361,11 @@ class AbstractData():
 		if (self.name is None):
 			return u"(%04X): %s%s" %(self.index, self.typeID, self.content.encode(sys.getdefaultencoding()))
 		return u"(%04X): %s '%s'%s" %(self.index, self.typeID, self.name, self.content.encode(sys.getdefaultencoding()))
+
+	def __repr__(self):
+		if (self.name is None):
+			return u"(%04X): %s" %(self.index, self.typeID)
+		return u"(%04X): %s '%s'" %(self.index, self.typeID, self.name)
 
 class Enum(tuple): __getattr__ = tuple.index
 
