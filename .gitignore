@@ -1,2 +1,6 @@
 *.pyc
 /libs
+*.log
+
+_.png
+0???.sat
