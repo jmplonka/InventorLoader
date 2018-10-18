@@ -35,7 +35,7 @@ class ResultReader(SegmentReader):
 
 	def Read_09780457(self, node):
 		i = self.Read_Header1(node)
-		i = node.ReadSInt32(i, 's32_0')
+		i = node.ReadSInt32(i, 'key')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
@@ -122,8 +122,8 @@ class ResultReader(SegmentReader):
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
-		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'keys')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'mapping')
 		i = node.ReadChildRef(i, 'ref_1')
 		return i
 

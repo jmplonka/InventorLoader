@@ -353,21 +353,6 @@ def getUInt16(data, offset):
 	val, = UINT16(data, offset)
 	return val, offset + 2
 
-def getUInt16_2D(data, offset):
-	'''
-	Returns a two single unsingned 16-Bit values.
-	Args:
-		data
-			A binary string.
-		offset
-			The zero based offset of the two unsigned 16-Bit values.
-	Returns:
-		Two unsigned 16-Bit values at offset.
-		The new position in the 'stream'.
-	'''
-	n1, n2 = UINT16_2D(data, offset)
-	return n1, n2, offset + 4
-
 def getUInt16A(data, offset, size):
 	'''
 	Returns an array of unsingned 16-Bit values.

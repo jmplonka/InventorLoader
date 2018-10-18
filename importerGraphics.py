@@ -145,8 +145,8 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
-	def Read_022AC1B5(self, node):
-		i = self.ReadHeaderSU32S(node, 'PDrwAttr')
+	def Read_022AC1B5(self, node): # PartDrawAttr
+		i = self.ReadHeaderSU32S(node, 'PartDrawAttr')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
@@ -253,7 +253,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
-	def Read_14533D82(self, node):
+	def Read_14533D82(self, node): # WrkPlane
 		i = self.ReadHeaderU32RefU8List3(node, 'WrkPlane')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = self.skipBlockSize(i)
@@ -288,7 +288,7 @@ class GraphicsReader(SegmentReader):
 
 	def Read_27F6DF59(self, node): return node.Read_Header0()
 
-	def Read_2C7020F6(self, node):
+	def Read_2C7020F6(self, node): # WrkAxis
 		i = self.ReadHeaderU32RefU8List3(node, 'WrkAxis')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = self.skipBlockSize(i)
@@ -300,7 +300,7 @@ class GraphicsReader(SegmentReader):
 		self.dcIndexes[node.get('dcIndex')] = node
 		return i
 
-	def Read_2C7020F8(self, node):
+	def Read_2C7020F8(self, node): # WrkPoint
 		i = self.ReadHeaderU32RefU8List3(node, 'WrkPoint')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = self.skipBlockSize(i)
@@ -380,7 +380,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'styles')
 		return i
 
-	def Read_48EB8608(self, node):
+	def Read_48EB8608(self, node): # StyleLine2dColor
 		i = self.ReadHeaderSU32S(node, 'StyleLine2dColor')
 		i = node.ReadColorRGBA(i, 'c0')
 		i = node.ReadColorRGBA(i, 'c1')
@@ -392,19 +392,19 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
-	def Read_4AD05620(self, node):
+	def Read_4AD05620(self, node): # KeyRef
 		i = self.Read_HeaderParent(node, 'KeyRef')
 		i = node.ReadUInt32(i, 'key')
 		return i
 
-	def Read_4B26ED59(self, node):
+	def Read_4B26ED59(self, node): # Mesh
 		i = self.ReadHeaderU32RefU8List3(node, 'Mesh')
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32A(i, 2, 'a1')
 		if (getFileVersion() > 2017): i += 4 # FF,FF,FF,FF
 		return i
 
-	def Read_4B57DC55(self, node):
+	def Read_4B57DC55(self, node): # 2dCircle
 		i = self.Read_32RRR2(node, '2dCircle')
 		i = node.ReadFloat64A(i, 3, 'm')
 		i = node.ReadFloat64(i, 'f64_0')
@@ -415,7 +415,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadAngle(i, 'beta')
 		return i
 
-	def Read_4B57DC56(self, node):
+	def Read_4B57DC56(self, node): # 2dEllipse
 		i = self.Read_32RRR2(node, '2dEllipse')
 		i = node.ReadFloat64A(i, 2, 'c')
 		i = node.ReadFloat64(i, 'b')      # length for point B
@@ -439,7 +439,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadLen32Text16(i)
 		return i
 
-	def Read_50E809CD(self, node):
+	def Read_50E809CD(self, node): # 2dPoint
 		i = self.Read_32RRR2(node, '2dPoint')
 		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -485,7 +485,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt16A(i, 6, 'a1')
 		return i
 
-	def Read_60FD1845(self, node):
+	def Read_60FD1845(self, node): # Sketch2D
 		i = self.ReadHeaderU32RefU8List3(node, 'Sketch2D')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = self.skipBlockSize(i)
@@ -501,7 +501,11 @@ class GraphicsReader(SegmentReader):
 		return i
 
 	def Read_6266D8CD(self, node):
-		i = self.Read_32RRR2(node)
+		i = node.Read_Header0()
+		i = node.ReadUInt32A(i, 3, 'a0')
+		i = node.ReadParentRef(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8A(i, 13, 'a2')
@@ -510,7 +514,7 @@ class GraphicsReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_651117CE(self, node):
+	def Read_651117CE(self, node): # MeshTriangleNormals
 		i = node.Read_Header0('MeshTriangleNormals')
 		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'normals', 3)
 		i = node.ReadUInt32(i, 'u32_1')
@@ -660,7 +664,7 @@ class GraphicsReader(SegmentReader):
 
 	def Read_9A5F40BC(self, node): return node.Read_Header0()
 
-	def Read_9A676A50(self, node):
+	def Read_9A676A50(self, node): # Body
 		i = node.Read_Header0('Body')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadChildRef(i, 'ref_0')
@@ -712,7 +716,7 @@ class GraphicsReader(SegmentReader):
 
 	def Read_A6DD2FCC(self, node): return 0
 
-	def Read_A79EACC7(self, node):
+	def Read_A79EACC7(self, node): # 2dLine
 		i = self.Read_32RRR2(node, '2dLine')
 		i = node.ReadFloat64A(i, 3, 'p1')
 		i = node.ReadFloat64A(i, 3, 'p2')
@@ -753,7 +757,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadFloat32_2D(i, 'a1')
 		return i
 
-	def Read_A79EACD3(self, node):
+	def Read_A79EACD3(self, node): # LinePoint
 		i = self.Read_32RRR2(node, 'LinePoint')
 		i = node.ReadFloat64A(i, 3, 'vec')
 		i = node.ReadFloat32(i, 'f32_0')
@@ -761,7 +765,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
-	def Read_A79EACD5(self, node):
+	def Read_A79EACD5(self, node): # 2dText
 		i = self.Read_32RRR2(node, '2dText')
 		i = node.ReadLen32Text16(i )
 		i = node.ReadFloat64A(i , 3, 'vec')
@@ -862,7 +866,7 @@ class GraphicsReader(SegmentReader):
 
 	def Read_AC007F7A(self, node): return node.Read_Header0()
 
-	def Read_AF48560F(self, node):
+	def Read_AF48560F(self, node): #PrmColorAttr
 		i = self.ReadHeaderSU32S(node, 'PrmColorAttr')
 		i = node.ReadUInt16A(i, 7, 'a0')
 		i = self.Read_ColorAttr(i, node)
@@ -1084,7 +1088,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadFloat64A(i, 3, 'a0')
 		return i
 
-	def Read_C2A055C9(self, node):
+	def Read_C2A055C9(self, node): # MeshFolder
 		i = self.ReadHeaderU32RefU8List3(node, 'MeshFolder')
 		i = node.ReadUInt32(i, 'index')
 		i = node.ReadUInt32(i, 'dcIndex')
@@ -1138,7 +1142,7 @@ class GraphicsReader(SegmentReader):
 
 	def Read_D28CA9B4(self, node): return 0
 
-	def Read_D3A55701(self, node):
+	def Read_D3A55701(self, node): # 2dSpline
 		i = self.Read_32RRR2(node, '2dSpline')
 		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadUInt8A(i, 8, 'a1')
@@ -1187,7 +1191,7 @@ class GraphicsReader(SegmentReader):
 		i = len(node.data)
 		return i
 
-	def Read_DA58AA0E(self, node):
+	def Read_DA58AA0E(self, node): # Sketch3D
 		i = self.ReadHeaderU32RefU8List3(node, 'Sketch3D')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = self.skipBlockSize(i)
@@ -1210,7 +1214,7 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt32A(i, 14, 'a2')
 		return i
 
-	def Read_DEF9AD02(self, node):
+	def Read_DEF9AD02(self, node): # MeshTrianglePoints
 		i = node.Read_Header0('MeshTrianglePoints')
 		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'points', 3)
 		i = node.ReadUInt32(i, 'u32_1')
@@ -1220,7 +1224,7 @@ class GraphicsReader(SegmentReader):
 			node.set('lst1', [])
 		return i
 
-	def Read_DEF9AD03(self, node):
+	def Read_DEF9AD03(self, node): # MeshTriangleIndices
 		i = node.Read_Header0('MeshTriangleIndices')
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'indices')
 		i = node.ReadUInt32(i, 'u32_1')
@@ -1230,7 +1234,7 @@ class GraphicsReader(SegmentReader):
 			node.set('lst1', [])
 		return i
 
-	def Read_E1EB685C(self, node):
+	def Read_E1EB685C(self, node): # MeshFacets
 		i = self.Read_32RRR2(node, 'MeshFacets')
 		i = node.ReadChildRef(i, 'points')
 		i = node.ReadChildRef(i, 'pointIndices')
@@ -1289,7 +1293,7 @@ class GraphicsReader(SegmentReader):
 
 	def HandleBlock(self, node):
 		i = 0
-		ntid = node.typeID.time_low
+		ntid = node.uid.time_low
 		if (ntid == 0x6e176bb6):
 			node.updateTypeId('B32BF6A7-11D2-09F4-6000-F99AC5361AB0')
 			ntid = 0xB32BF6A7

@@ -109,10 +109,10 @@ class RSeStorageBlockSize():
 	# parent = The segments the
 	'''
 
-	def __init__(self, parent):
-		self.parent      = parent
-		self.length      = 0       # UInt31
-		self.flags       = 0       # UInt1
+	def __init__(self, parent, value):
+		self.parent = parent
+		self.length = (value & 0x7FFFFFFF)
+		self.flags  = ((value & 0x80000000) > 0)
 
 	def __str__(self):
 		return 'f=%X, l=%X' %(self.flags, self.length)
@@ -158,12 +158,12 @@ class RSeStorageSection4Data():
 
 class RSeStorageBlockType():
 	def __init__(self, parent):
-		self.parent      = parent
-		self.typeID      = None
-		self.arr         = []      # RSeStorageSection4Data[2]
+		self.parent = parent
+		self.uid    = None
+		self.arr    = []      # RSeStorageSection4Data[2]
 
 	def __str__(self):
-		return '%s: [%s,%s]' %(self.typeID, self.arr[0], self.arr[1])
+		return '%s: [%s,%s]' %(self.uid, self.arr[0], self.arr[1])
 
 class RSeStorageSection4Data1():
 	def __init__(self, uid, val):
@@ -286,7 +286,7 @@ class RSeMetaData():
 		self.sec1        = []
 		self.sec2        = []
 		self.sec3        = []
-		self.sec4        = {}
+		self.secBlkTyps  = {}
 		self.sec5        = []
 		self.sec6        = []
 		self.sec7        = []
@@ -300,53 +300,41 @@ class RSeMetaData():
 		self.indexNodes  = {}
 		self.tree        = DataNode(None, False)
 
-	@staticmethod
-	def isApp(seg): # Application settings/options
-		return (seg) and (seg.name in [RSeMetaData.SEG_APP_PART, RSeMetaData.SEG_APP_ASSEMBLY, RSeMetaData.SEG_APP_DL])
+	def isApp(self): # Application settings/options
+		return (self.name in [RSeMetaData.SEG_APP_PART, RSeMetaData.SEG_APP_ASSEMBLY, RSeMetaData.SEG_APP_DL])
 
-	@staticmethod
-	def isBRep(seg): # ACIS representation
-		return (seg) and (seg.name in [RSeMetaData.SEG_B_REP_PART, RSeMetaData.SEG_B_REP_ASSEMBLY, RSeMetaData.SEG_B_REP_MB])
+	def isBRep(self): # ACIS representation
+		return (self.name in [RSeMetaData.SEG_B_REP_PART, RSeMetaData.SEG_B_REP_ASSEMBLY, RSeMetaData.SEG_B_REP_MB])
 
-	@staticmethod
-	def isBrowser(seg): # Model broweser settings
-		return (seg) and (seg.name in [RSeMetaData.SEG_BROWSER_PART, RSeMetaData.SEG_BROWSER_ASSEMBLY, RSeMetaData.SEG_BROWSER_DL])
+	def isBrowser(self): # Model broweser settings
+		return (self.name in [RSeMetaData.SEG_BROWSER_PART, RSeMetaData.SEG_BROWSER_ASSEMBLY, RSeMetaData.SEG_BROWSER_DL])
 
-	@staticmethod
-	def isDefault(seg):
-		return (seg) and (seg.name == RSeMetaData.SEG_DEFAULT)
+	def isDefault(self):
+		return (self.name == RSeMetaData.SEG_DEFAULT)
 
-	@staticmethod
-	def isDC(seg): # Model definition
-		return (seg) and (seg.name in [RSeMetaData.SEG_D_C_PART, RSeMetaData.SEG_D_C_ASSEMBLY, RSeMetaData.SEG_SHT14_DC_DL])
+	def isDC(self): # Model definition
+		return (self.name in [RSeMetaData.SEG_D_C_PART, RSeMetaData.SEG_D_C_ASSEMBLY, RSeMetaData.SEG_SHT14_DC_DL])
 
-	@staticmethod
-	def isGraphics(seg): # Model graphics definition
-		return (seg) and (seg.name in [RSeMetaData.SEG_GRAPHICS_PART, RSeMetaData.SEG_GRAPHICS_ASSEMBLY, RSeMetaData.SEG_GRAPHICS_MB])
+	def isGraphics(self): # Model graphics definition
+		return (self.name in [RSeMetaData.SEG_GRAPHICS_PART, RSeMetaData.SEG_GRAPHICS_ASSEMBLY, RSeMetaData.SEG_GRAPHICS_MB])
 
-	@staticmethod
-	def isResult(seg):
-		return (seg) and (seg.name in [RSeMetaData.SEG_RESULT_PART, RSeMetaData.SEG_RESULT_ASSEMBLY])
+	def isResult(self):
+		return (self.name in [RSeMetaData.SEG_RESULT_PART, RSeMetaData.SEG_RESULT_ASSEMBLY])
 
-	@staticmethod
-	def isDesignView(seg):
-		return (seg) and (seg.name == RSeMetaData.SEG_DESIGN_VIEW)
+	def isDesignView(self):
+		return (self.name == RSeMetaData.SEG_DESIGN_VIEW)
 
-	@staticmethod
-	def isEeData(seg):
-		return (seg) and (seg.name == RSeMetaData.SEG_DATA_EE)
+	def isEeData(self):
+		return (self.name == RSeMetaData.SEG_DATA_EE)
 
-	@staticmethod
-	def isEeScene(seg):
-		return (seg) and (seg.name == RSeMetaData.SEG_SCENE_EE)
+	def isEeScene(self):
+		return (self.name == RSeMetaData.SEG_SCENE_EE)
 
-	@staticmethod
-	def isFBAttribute(seg):
-		return (seg and (seg.name == RSeMetaData.SEG_ATTR_FB))
+	def isFBAttribute(self):
+		return (self.name == RSeMetaData.SEG_ATTR_FB)
 
-	@staticmethod
-	def isNBNotebook(seg):
-		return (seg and (seg.name == RSeMetaData.SEG_NOTEBOOK_NB))
+	def isNBNotebook(self):
+		return (self.name == RSeMetaData.SEG_NOTEBOOK_NB)
 
 class Inventor():
 	def __init__(self):
@@ -358,6 +346,24 @@ class Inventor():
 		self.DatabaseInterfaces    = None
 		self.iProperties           = {}
 		self.RSeStorageData        = {}
+
+	def getDC(self):
+		'''
+		storage The map of defined RSeStorageDatas
+		Returns the segment that contains the 3D-objects.
+		'''
+		for seg in self.RSeStorageData.values():
+			if (seg.isDC()): return seg
+		return None
+
+	def getBRep(self):
+		'''
+		storage The map of defined RSeStorageDatas
+		Returns the segment that contains the boundary representation.
+		'''
+		for name in self.RSeStorageData.values():
+			if (seg.isBRep()): return seg
+		return None
 
 class DbInterface():
 	TYPE_MAPPING = {
@@ -399,28 +405,6 @@ class RSeDbRevisionInfo():
 			return '%s,%s,[%s]' % (self.ID, v, IntArr2Str(self.data, 8))
 		else:
 			return '%s,%s)' % (self.ID, v)
-
-class BrowserNodeHandler():
-	def __init__(self):
-		self.map         = []
-		self.nodes       = []
-		self.refs        = []
-
-	def getByRef(self, ref):
-		idx = 0
-		if (self.map is not None):
-			while (idx < len(self.map)):
-				arr16 = self.map[idx]
-				if (ref == self.map[0]):
-					return self.nodes[idx]
-		return None
-
-class BrowserRef():
-	def __init__(self):
-		self.data1       = None
-		self.data2       = None
-		self.data3       = None
-		self.data4       = None
 
 class ResultItem4():
 	a0 = None
@@ -1309,7 +1293,7 @@ class ModelerTxnMgr():
 
 class AbstractData():
 	def __init__(self):
-		self.typeID       = None
+		self.uid          = None
 		self.name         = None
 		self.index        = -1
 		self.content      = ''
@@ -1359,13 +1343,13 @@ class AbstractData():
 
 	def __str__(self): # return unicode
 		if (self.name is None):
-			return u"(%04X): %s%s" %(self.index, self.typeID, self.content.encode(sys.getdefaultencoding()))
-		return u"(%04X): %s '%s'%s" %(self.index, self.typeID, self.name, self.content.encode(sys.getdefaultencoding()))
+			return u"(%04X): %s%s" %(self.index, self.uid, self.content.encode(sys.getdefaultencoding()))
+		return u"(%04X): %s '%s'%s" %(self.index, self.uid, self.name, self.content.encode(sys.getdefaultencoding()))
 
 	def __repr__(self):
 		if (self.name is None):
-			return u"(%04X): %s" %(self.index, self.typeID)
-		return u"(%04X): %s '%s'" %(self.index, self.typeID, self.name)
+			return u"(%04X): %s" %(self.index, self.uid)
+		return u"(%04X): %s '%s'" %(self.index, self.uid, self.name)
 
 class Enum(tuple): __getattr__ = tuple.index
 

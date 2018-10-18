@@ -394,7 +394,7 @@ def ReadRSeSegmentType1D(data, offset, seg):
 	return i
 
 def ReadRSeSegmentType1F(data, offset, seg):
-	i = offset
+	i    = offset
 	cnt2 = 0
 
 	cnt = seg.count1
@@ -679,15 +679,12 @@ def ReadRSeDbRevisionInfo(data):
 		else:
 			info.type = 0
 		if (info.type == 0xFFFF):
-			b, i = getUInt8(data, i)
+			b, i = getBoolean(data, i)
 			f, i = getFloat32(data, i)
-			if (b == 0):
-				info.data, i = getUInt32A(data, i, 4)
-			elif (b == 1):
-				info.data, i = getUInt32A(data, i, 2)
+			if (b):
+				info.data, i = getUInt16A(data, i, 4)
 			else:
-				n = []
-				logError(u"ERROR> Don't know how to handle DbRevisionInfo.type=%02X!", b)
+				info.data, i = getUInt32A(data, i, 4)
 			info.data = (f, n)
 		else:
 			info.data = (0.0, 0)
@@ -713,20 +710,13 @@ def getRevisionInfoByIndex(revIdx):
 
 	return revIdx
 
-def ReadRSeMetaDataSectionSizeArray(data, offset):
-	size, i = getUInt32(data, offset)
-	return i
-
 def ReadRSeMetaDataBlocksSize(value, data, offset):
 	cnt, i = getUInt32(data, offset)
 	j = 0
 	while (j < cnt):
 		j += 1
-		sec = RSeStorageBlockSize(value)
 		u32, i = getUInt32(data, i)
-		sec.length = (u32 & 0x7FFFFFFF)
-		sec.flags = ((u32 & 0x80000000) > 0)
-
+		sec = RSeStorageBlockSize(value, u32)
 		value.sec1.append(sec)
 
 	size, i = getUInt32(data, i)
@@ -770,7 +760,7 @@ def ReadRSeMetaDataSection3(value, data, offset):
 		sec.uid, i = getUUID(data, i)
 		sec.arr, i = getUInt16A(data, i, 6)
 		value.sec3.append(sec)
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSection4Data(data, offset):
@@ -784,13 +774,12 @@ def ReadRSeMetaDataBlocksType(value, data, offset):
 	j = 0
 	while (j < cnt):
 		sec = RSeStorageBlockType(value)
-		uid, i = getUUID(data, i)
-		sec.typeID = uid
+		sec.uid, i = getUUID(data, i)
 		val, i = ReadRSeMetaDataSection4Data(data, i)
 		sec.arr.append(val)
 		val, i = ReadRSeMetaDataSection4Data(data, i)
 		sec.arr.append(val)
-		value.sec4[j] = sec
+		value.secBlkTyps[j] = sec
 		j += 1
 	size, i = getUInt32(data, i)
 
@@ -800,7 +789,7 @@ def ReadRSeMetaDataSection5(value, data, offset, size):
 	#index section 4
 	sec = RSeStorageSection5(value)
 	sec.indexSec4, i = getUInt16A(data, offset, size / 2)
-	size, i = getUInt32(data, i)
+	secSize, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSection6(value, data, offset, size, cnt):

@@ -6,7 +6,8 @@ Collection of 3D Mesh importers
 '''
 
 import os, sys, FreeCAD, importerSAT, Import_IPT
-from importerUtils import canImport, logWarning, logError, logAlways
+from importerUtils import canImport, logWarning, logError, logAlways, viewAxonometric
+from olefile       import isOleFile
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -38,27 +39,31 @@ def read(doc, filename, readProperties):
 	elif (ext == '.sat'):
 		if (importerSAT.readText(doc, filename)):
 			return importerSAT
-	elif (ext == '.iam'):
-		logError(u"Sorry, AUTODESK assembly files not yet supported!")
 	elif (ext == '.sab'):
 		if (importerSAT.readBinary(doc, filename)):
 			return importerSAT
+	elif (ext == '.iam'):
+		logError(u"Sorry, AUTODESK assembly files not yet supported!")
 	return None
 
-def checkfile(filename):
+def isFileValid(filename):
 	if (not os.path.exists(os.path.abspath(filename))):
 		logError(u"File doesn't exists (%s)!", os.path.abspath(filename))
 		return False
 	if (not os.path.isfile(filename)):
 		logError(u"Can't import folders!")
 		return False
+	if (filename.split(".")[-1].lower() in ("ipt", "iam")):
+		if (not isOleFile(filename)):
+			logError(u"ERROR> '%s' is not a valid Autodesk Inventor file!", filename)
+			return False
 	return canImport()
 
 def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
 	'''
-	if (checkfile(filename)):
+	if (isFileValid(filename)):
 		try:
 			doc = FreeCAD.getDocument(docname)
 			logAlways(u"Importing: %s", filename)
@@ -68,6 +73,7 @@ def insert(filename, docname, skip = [], only = [], root = None):
 				name = decode(name)
 				group = insertGroup(doc, name)
 				reader.create3dModel(group, doc)
+				viewAxonometric()
 		except:
 			open(filename, skip, only, root)
 	return
@@ -77,7 +83,7 @@ def open(filename, skip = [], only = [], root = None):
 	opens an Autodesk Inventor file in a new document
 	In addition to insert (import), the iProperties are as well added to the document.
 	'''
-	if (checkfile(filename)):
+	if (isFileValid(filename)):
 		logAlways(u"Reading: %s", os.path.abspath(filename))
 		name = os.path.splitext(os.path.basename(filename))[0]
 		doc = FreeCAD.newDocument(decode(name))
@@ -86,4 +92,5 @@ def open(filename, skip = [], only = [], root = None):
 		if (reader is not None):
 			# Create 3D-Model in root (None) of document
 			reader.create3dModel(None , doc)
+			viewAxonometric()
 	return

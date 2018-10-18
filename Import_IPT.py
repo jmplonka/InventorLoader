@@ -31,8 +31,6 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 	path = PrintableName(fname)
 	stream = ole.openstream(fname).read()
 
-	folder = getInventorFile()[0:-4]
-
 	if (len(stream)>0):
 		if (len(fname) == 1):
 			logInfo(u"%2d: %s", counter, path)
@@ -158,12 +156,12 @@ def create3dModel(root, doc):
 		storage = model.RSeStorageData
 		strategy = getStrategy()
 		if (strategy == STRATEGY_NATIVE):
-			dc = FreeCADImporter.findDC(storage)
+			dc = model.getDC()
 			if (dc is not None):
 				creator = FreeCADImporter()
 				creator.importModel(root, doc, dc)
 		else:
-			brep = FreeCADImporter.findBRep(storage)
+			brep = model.getBRep()
 			importerSAT._fileName = getInventorFile()
 			if (brep is not None):
 				for asm in brep.AcisList:
@@ -172,7 +170,5 @@ def create3dModel(root, doc):
 						importModel(root, doc)
 					elif (strategy == STRATEGY_STEP):
 						convertModel(root, doc)
-
-	viewAxonometric()
 
 	return

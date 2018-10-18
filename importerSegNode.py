@@ -141,7 +141,7 @@ TYP_2_FUNC = {
 	_TYP_MAP_X_REF_KEY_:         'getList2ListXRefKeys'
 }
 
-class AbstractNode(AbstractData):
+class SecNode(AbstractData):
 
 	def __init__(self):
 		AbstractData.__init__(self)
@@ -325,8 +325,8 @@ class AbstractNode(AbstractData):
 		return i
 
 	def ReadNodeRef(self, offset, name, type, number = -1, dump = False):
-		u16_0, u16_1, i = getUInt16_2D(self.data, offset)
-		ref = NodeRef(u16_0, u16_1, type)
+		u32, i = getUInt32(self.data, offset)
+		ref = SecNodeRef(u32, type)
 
 		self.set(name, None)
 
@@ -344,13 +344,13 @@ class AbstractNode(AbstractData):
 		return i
 
 	def ReadChildRef(self, offset, name = 'ref', number = -1, dump = True):
-		return self.ReadNodeRef(offset, name , NodeRef.TYPE_CHILD, number, dump)
+		return self.ReadNodeRef(offset, name , SecNodeRef.TYPE_CHILD, number, dump)
 
 	def ReadCrossRef(self, offset, name = 'ref', number = -1, dump = True):
-		return self.ReadNodeRef(offset, name, NodeRef.TYPE_CROSS, number, dump)
+		return self.ReadNodeRef(offset, name, SecNodeRef.TYPE_CROSS, number, dump)
 
 	def ReadParentRef(self, offset):
-		return self.ReadNodeRef(offset, 'parent', NodeRef.TYPE_CROSS, -1, False)
+		return self.ReadNodeRef(offset, 'parent', SecNodeRef.TYPE_CROSS, -1, False)
 
 	def getList2Chars(self, offset, cnt, arraysize):
 		try:
@@ -1108,8 +1108,8 @@ class AbstractNode(AbstractData):
 		return i
 
 	def updateTypeId(self, uid):
-		self.typeID = UUID(uid)
-		self.typeName = '%08X' %(self.typeID.time_low)
+		self.uid = UUID(uid)
+		self.typeName = '%08X' %(self.uid.time_low)
 
 	def getUnitOffset(self):
 		unitRef = self.get('refUnit')
@@ -1239,17 +1239,17 @@ class AbstractNode(AbstractData):
 				return unitName
 		return None
 
-class NodeRef():
+class SecNodeRef():
 	TYPE_PARENT = 1
 	TYPE_CHILD  = 2
 	TYPE_CROSS  = 3
 
-	def __init__(self, n, m, refType):
-		self.index = n + ((m & 0x7FFF) << 16)
-		self.mask   = (m & 0x8000) >> 15
-		self.type   = refType
-		self.number = 0
-		self._data  = None
+	def __init__(self, m, refType):
+		self.index    = (m & 0x7FFFFFFF)
+		self.mask     = (m & 0x80000000) >> 31
+		self.type     = refType
+		self.number   = 0
+		self._data    = None
 		self.analysed = False
 
 	@property
@@ -1258,7 +1258,7 @@ class NodeRef():
 
 	@data.setter
 	def data(self, data):
-		if (data): assert isinstance(data, AbstractNode), 'Data reference is not a AbstractNode (%s)!' %(data.__class__.__name__)
+		if (data): assert isinstance(data, SecNode), 'Data reference is not a AbstractNode (%s)!' %(data.__class__.__name__)
 		self._data = data
 
 	@property

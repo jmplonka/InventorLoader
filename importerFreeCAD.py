@@ -6,7 +6,7 @@ importerFreeCAD.py
 import sys, Draft, Part, Sketcher, traceback, re
 from importerUtils   import *
 from importerClasses import *
-from importerSegNode import AbstractNode, NodeRef
+from importerSegNode import SecNode, SecNodeRef
 from math            import sqrt, fabs, tan, degrees, pi
 from FreeCAD         import Vector as VEC, Rotation as ROT, Placement as PLC, Version, ParamGet
 
@@ -630,7 +630,7 @@ class FreeCADImporter:
 		if (move is not None):
 			if (move[1] is not None):
 				typ1 = 'Point'
-				if (isinstance(fix[0], NodeRef)): typ1 = fix[0].typeName[0:-2]
+				if (isinstance(fix[0], SecNodeRef)): typ1 = fix[0].typeName[0:-2]
 				if (move[2] is None):
 					logInfo(u"        ... added point on object constraint between %s %s/%s and %s %s", typ1, fix[1], fix[2], move[0].typeName[0:-2], move[1])
 					constraint = Sketcher.Constraint('PointOnObject', fix[1], fix[2], move[1])
@@ -2876,32 +2876,6 @@ class FreeCADImporter:
 	def Create_FBC6C635(self, node): return
 	def Create_F3DBA9D8(self, node): return
 
-	@staticmethod
-	def findDC(storage):
-		'''
-		storage The map of defined RSeStorageDatas
-		Returns the segment that contains the 3D-objects.
-		'''
-		if (storage):
-			for name in storage.keys():
-				seg = storage[name]
-				if (RSeMetaData.isDC(seg)):
-					return seg
-		return None
-
-	@staticmethod
-	def findBRep(storage):
-		'''
-		storage The map of defined RSeStorageDatas
-		Returns the segment that contains the boundary representation.
-		'''
-		if (storage):
-			for name in storage.keys():
-				seg = storage[name]
-				if (RSeMetaData.isBRep(seg)):
-					return seg
-		return None
-
 	def addParameterTableTolerance(self, table, r, tolerance):
 		if (tolerance):
 			setTableValue(table, 'D', r, tolerance)
@@ -3036,14 +3010,18 @@ class FreeCADImporter:
 			r = self.addParameterToTable(table, r, parameterRefs, key)
 		return
 
-	def importModel(self, root, doc, dc):
+	def importModel(self, root, fcDoc, dc):
 		if (dc is not None):
 			self.root           = root
-			self.doc            = doc
+			self.doc            = fcDoc
 			self.mapConstraints = {}
-			root = dc.tree.getFirstChild('Document')
-			label = root.get('label')
-			self.createParameterTable(root.get('refElements').node)
+
+			doc = dc.tree.getFirstChild('Document')
+
+			parameters = doc.get('refElements')
+			self.createParameterTable(parameters.node)
+
+			label = doc.get('label')
 			lst = label.get('lst0') or []
 			for ref in lst:
 				self.getEntity(ref)

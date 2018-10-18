@@ -210,7 +210,7 @@ class BRepReader(SegmentReader):
 			i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
-	def Read_CC0F7521(self, node):
+	def Read_CC0F7521(self, node): # AcisEntityWrapper
 		i = node.Read_Header0('AcisEntityWrapper')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt8(i, 'u8_0')
@@ -224,7 +224,7 @@ class BRepReader(SegmentReader):
 		i = node.ReadSInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i, 'ref_1')
-		i = self.ReadRefU32AList(node, i, 'lst0', 2, importerSegNode.NodeRef.TYPE_CHILD)
+		i = self.ReadRefU32AList(node, i, 'lst0', 2, importerSegNode.SecNodeRef.TYPE_CHILD)
 		i = self.ReadRefU32ARefU32List(node, i, 'lst1', 2)
 		i = self.ReadRefU32ARefU32List(node, i, 'lst2', 1)
 		cnt, i = getUInt32(node.data, i)
@@ -265,7 +265,7 @@ class BRepReader(SegmentReader):
 			j = 0
 			while j < cnt:
 				u, i = getUInt32(node.data, i)
-				r, i = self.ReadNodeRef(node, i, u, importerSegNode.NodeRef.TYPE_CHILD)
+				r, i = self.ReadNodeRef(node, i, u, importerSegNode.SecNodeRef.TYPE_CHILD)
 				lst[u] = r
 				j += 1
 		return i

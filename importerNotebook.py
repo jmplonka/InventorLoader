@@ -21,14 +21,13 @@ class NotebookReader(SegmentReader):
 	def __init__(self):
 		super(NotebookReader, self).__init__()
 
-
-	def Read_386E04F0(self, node):
+	def Read_386E04F0(self, node): # RtfContent
 		i = node.Read_Header0('RtfContent')
 		i = node.ReadList2(i, importerSegNode._TYP_CHAR_, 'rtf')
 		# TODO: convert RTF to HTML/TEXT
 		return i
 
-	def Read_3C95B7CE(self, node):
+	def Read_3C95B7CE(self, node): # Notebook
 		i = node.Read_Header0('Notebook')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
@@ -40,7 +39,7 @@ class NotebookReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
-	def Read_4C415964(self, node):
+	def Read_4C415964(self, node): # Notice
 		i = node.Read_Header0('Notice')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
@@ -87,7 +86,7 @@ class NotebookReader(SegmentReader):
 		i = node.ReadUInt32A(i, 5, 'a1')
 		return i
 
-	def Read_CC253BB7(self, node):
+	def Read_CC253BB7(self, node): # Comment
 		i = node.Read_Header0('Comment')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
@@ -99,7 +98,7 @@ class NotebookReader(SegmentReader):
 		i = node.ReadLen32Text16(i, 'author')
 		return i
 
-	def Read_D8705BC7(self, node):
+	def Read_D8705BC7(self, node): # View
 		i = node.Read_Header0('View')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)

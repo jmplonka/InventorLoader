@@ -35,7 +35,7 @@ class AppReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_FLOAT64_, 'lst0')
 		return i
 
-	def Read_10D6C06B(self, node):
+	def Read_10D6C06B(self, node): # SheetMetalRule
 		i = self.readHeaderStyle(node, 'SheetMetalRule')
 		i = node.ReadLen32Text16(i, 'comment')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -73,7 +73,7 @@ class AppReader(SegmentReader):
 
 		return i
 
-	def Read_1C4CFF13(self, node):
+	def Read_1C4CFF13(self, node): # TextStyleCollection
 		i = self.readHeaderStyle(node, 'TextStyleCollection')
 		i = node.ReadLen32Text16(i, 'comment')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -86,7 +86,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		return i
 
-	def Read_1E5CBB86(self, node):
+	def Read_1E5CBB86(self, node): # Lighting
 		i = self.readHeaderStyle(node, 'Lighting')
 		i = node.ReadUInt16A(i, 3, 'a1')
 		i = node.ReadLen32Text16(i, 'txt_0')
@@ -205,7 +205,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		return i
 
-	def Read_55231213(self, node):
+	def Read_55231213(self, node): # iMate
 		i = node.Read_Header0('iMate')
 		i = node.ReadUUID(i, 'uid_0')
 		i = self.skipBlockSize(i)
@@ -232,7 +232,7 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
-	def Read_6759D86E(self, node):
+	def Read_6759D86E(self, node): # Material
 		i = self.readHeaderStyle(node, 'Material')
 		vers = getFileVersion()
 		i = node.ReadLen32Text16(i, 'comment')
@@ -258,7 +258,7 @@ class AppReader(SegmentReader):
 
 		return i
 
-	def Read_6759D86F(self, node):
+	def Read_6759D86F(self, node): # RenderingStyle
 		i = self.readHeaderStyle(node, 'RenderingStyle')
 		vers = getFileVersion()
 		if (vers < 2013):
@@ -318,7 +318,7 @@ class AppReader(SegmentReader):
 		setColor(node.name, color.red, color.green, color.blue)
 		return i
 
-	def Read_6759D870(self, node):
+	def Read_6759D870(self, node): # Settings
 		vers = getFileVersion()
 		i = node.Read_Header0('Settings')
 		node.name = 'GreyRoom'
@@ -448,7 +448,7 @@ class AppReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_7F644248(self, node):
+	def Read_7F644248(self, node): # Text
 		i = self.readHeaderStyle(node, 'Text')
 		i = node.ReadUInt16A(i, 3, 'a1')
 		i = node.ReadLen32Text16(i, 'txt_0')
@@ -483,7 +483,7 @@ class AppReader(SegmentReader):
 		i = node.ReadUUID(i, 'uid_0')
 		return i
 
-	def Read_9F81E4C8(self, node):
+	def Read_9F81E4C8(self, node): # FeatureControlFrame
 		i = self.readHeaderStyle(node, 'FeatureControlFrame')
 		i = node.ReadLen32Text16(i, 'comment')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -589,7 +589,7 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
-	def Read_D72E4F21(self, node):
+	def Read_D72E4F21(self, node): # Leader
 		i = self.readHeaderStyle(node, 'Leader')
 		i = node.ReadLen32Text16(i, 'comment')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -622,7 +622,7 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
-	def Read_DA6B0B3E(self, node):
+	def Read_DA6B0B3E(self, node): # SheetMetalUnfold
 		i = self.readHeaderStyle(node, 'SheetMetalUnfold')
 		i = node.ReadLen32Text16(i, 'comment')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -758,7 +758,7 @@ class AppReader(SegmentReader):
 		i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
-	def Read_FDA6D020(self, node):
+	def Read_FDA6D020(self, node): # LeaderCollection
 		i = node.Read_Header0('LeaderCollection')
 		i = node.ReadLen32Text8(i)
 		i = node.ReadCrossRef(i, 'refDefault')

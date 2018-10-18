@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime, ImportGui
-from importerUtils import logInfo, logWarning, logError, viewAxonometric, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
+from importerUtils import logInfo, logWarning, logError, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
 from Acis          import AcisRef, AcisEntity, readNextSabChunk
 from Acis2Step     import export
 from math          import fabs
@@ -466,7 +466,6 @@ def create3dModel(group, doc):
 		importModel(group, doc)
 	else:
 		convertModel(group, doc)
-	viewAxonometric()
 	setEntities(None)
 	setHeader(None)
 	return
