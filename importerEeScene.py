@@ -78,11 +78,7 @@ class EeSceneReader(SegmentReader):
 		return i
 
 	def Read_A529D1E2(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt32A(i, 2, 'a0')
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		i = self.ReadHeaderU32RefU8List3(node)
 		return i
 
 	def Read_A79EACCB(self, node):
@@ -137,22 +133,16 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
-	def Read_B32BF6A3(self, node):
-		i = 0
+	def Read_B32BF6A2(self, node):
+		i = self.skipBlockSize(0)
+		i = node.ReadUInt16(i, 'u16_0')
+		i = self.Read_ColorAttr(i, node)
+		i = self.skipBlockSize(i)
 		return i
 
-	def Read_B32BF6A2(self, node):
-		i = self.ReadHeaderSU32S(node)
-		i = node.ReadFloat32A(i, 4, 'a0')
-		i = self.skipBlockSize(i)
-		i = node.ReadFloat32A(i, 4, 'a1')
-		i = self.skipBlockSize(i)
-		i = node.ReadFloat32A(i, 4, 'a2')
-		i = self.skipBlockSize(i)
-		i = node.ReadFloat32A(i, 4, 'a3')
-		i = self.skipBlockSize(i)
-		i = node.ReadFloat32(i, 'f0')
-		i = self.skipBlockSize(i)
+	def Read_B32BF6A3(self, node): # Object style
+		i = self.ReadHeaderSU32S(node, 'Visibility')
+		i = node.ReadUInt8(i, 'visible')
 		return i
 
 	def Read_B32BF6A6(self, node):

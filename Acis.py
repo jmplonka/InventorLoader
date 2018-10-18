@@ -304,12 +304,10 @@ def getIntegers(chunks, index, count):
 
 def getIntegerMap(chunks, index, count, size):
 	i = index
-	n = count
 	m = []
-	while (n > 0):
+	for n in range(count):
 		a, i = getIntegers(chunks, i, size)
 		m.append(a)
-		n -= 1
 	return m, i
 
 def getLong(chunks, index):
@@ -562,14 +560,11 @@ def readKnotsMults(count, chunks, index):
 	knots = []
 	mults = []
 	i     = index
-	j     = 0
-
-	while (j < count):
+	for j in range(count):
 		knot, i = getFloat(chunks, i)
 		mult, i = getInteger(chunks, i)
 		knots.append(knot)
 		mults.append(mult)
-		j += 1
 	return knots, mults, i
 
 def adjustMultsKnots(knots, mults, periodic, degree):

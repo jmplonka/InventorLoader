@@ -257,12 +257,10 @@ class SegmentReader(object):
 		return i
 
 	def ReadFloat64A(self, node, i, cnt, name, size):
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			a, i = getFloat64A(node.data, i, size)
 			lst.append(a)
-			j += 1
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(FloatArr2Str(a)) for a in lst]))
 		node.set(name, lst)
 		return i
@@ -283,13 +281,11 @@ class SegmentReader(object):
 
 	def ReadTypedFloatsList(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
-		j      = 0
 		lst    = []
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadTypedFloats(node, i , 'tmp')
 			f = node.get('tmp')
 			lst.append(f)
-			j += 1
 		node.content += ' %s=[%s]' %(name, ','.join(['(%02X:[%s])' %(r[0], FloatArr2Str(r[1])) for r in lst]))
 		node.set(name, lst)
 		node.delete('tmp')
@@ -518,12 +514,10 @@ class SegmentReader(object):
 
 	def ReadRefU32AList(self, node, offset, name, size, type):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref, i = self.ReadNodeRef(node, i, j, type)
 			a, i = getUInt32A(node.data, i, size)
-			j += 1
 			lst.append([ref, a])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%s)' %(r[0], IntArr2Str(r[1], 4)) for r in lst]))
 		node.set(name, lst)
@@ -531,14 +525,12 @@ class SegmentReader(object):
 
 	def ReadRefU32ARefU32List(self, node, offset, name, size):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref1, i = self.ReadNodeRef(node, i, j, SecNodeRef.TYPE_CROSS)
 			u32, i = getUInt32(node.data, i)
 			ref2, i = self.ReadNodeRef(node, i, j, SecNodeRef.TYPE_CROSS)
 			a, i = getUInt32A(node.data, i, size)
-			j += 1
 			lst.append([ref1, a, ref2, u32])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s,[%s],%s,%s)' %(r[0], IntArr2Str(r[1],4), r[2], r[3]) for r in lst]))
 		node.set(name, lst)
@@ -598,8 +590,7 @@ class SegmentReader(object):
 				if ((n & 0x80000000) > 0):
 					pass # check  X-Ref???
 				else:
-					while (n > 0):
-						n -= 1
+					for j in range(n):
 						k, i = getLen32Text8(buffer, i)
 						u32_1, i = getUInt32(buffer, i)
 						if (u32_1   == 0b0001):
@@ -622,8 +613,7 @@ class SegmentReader(object):
 					if (cnt > 0):
 						arr32, i = getUInt32A(buffer, i, 2)
 						values = []
-						while (cnt > 0):
-							cnt -= 1
+						for j in range(cnt):
 							txt, i = getLen32Text8(buffer, i)
 							m, i = getUInt32(buffer, i)
 							ref = SecNodeRef(m, SecNodeRef.TYPE_CROSS)

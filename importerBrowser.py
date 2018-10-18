@@ -599,12 +599,10 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			i = node.ReadChildRef(i, 'tmp', j, False)
 			lst.append(node.get('tmp'))
-			j += 1
 		node.delete('tmp')
 		node.set('lst0', lst)
 		node.content += u" lst0={%d}" %(len(lst))

@@ -228,20 +228,18 @@ class BRepReader(SegmentReader):
 		i = self.ReadRefU32ARefU32List(node, i, 'lst1', 2)
 		i = self.ReadRefU32ARefU32List(node, i, 'lst2', 1)
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		sep = ''
 		node.content += ' lst3=['
 		lst = []
 		# remember node content as it will be overwritten by ReadList2!
 		c = node.content
-		while (j < cnt):
+		for j in range(cnt):
 			u32_0, i = getUInt32(node.data, i)
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'tmp', 2)
 			lst0 = node.get('tmp')
 			u32_1, i = getUInt32(node.data, i)
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'tmp', 2) # this is ref + uint!
 			lst1 = node.get('tmp')
-			j += 1
 			c += '%s[%04X,%s,%04X,%s]' %(sep, u32_0, Int2DArr2Str(lst0, 4), u32_1, Int2DArr2Str(lst1, 4))
 			lst.append([u32_0, lst0, u32_1, lst1])
 			sep = ','
@@ -262,12 +260,10 @@ class BRepReader(SegmentReader):
 		else:
 			cnt, i = getUInt32(node.data, i)
 			lst = {}
-			j = 0
-			while j < cnt:
+			for j in range(cnt):
 				u, i = getUInt32(node.data, i)
 				r, i = self.ReadNodeRef(node, i, u, importerSegNode.SecNodeRef.TYPE_CHILD)
 				lst[u] = r
-				j += 1
 		return i
 
 	def Read_D797B7B9(self, node):

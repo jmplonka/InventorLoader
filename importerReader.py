@@ -307,10 +307,8 @@ def ReadRSeSegment(data, offset, idx, count):
 	return seg, i
 
 def ReadRSeSegmentObject(data, offset, seg, idx):
-	i = offset
-
 	obj = RSeSegmentObject()
-	obj.revisionRef, i = getUUID(data, i)
+	obj.revisionRef, i = getUUID(data, offset)
 	obj.values, i = getUInt8A(data, i, 9)
 	obj.segRef, i = getUUID(data, i)
 	obj.value1, i = getUInt32(data, i)
@@ -320,10 +318,8 @@ def ReadRSeSegmentObject(data, offset, seg, idx):
 	return obj, i
 
 def ReadRSeSegmentNode(data, offset, seg, count, idx):
-	i = offset
-
 	node = RSeSegmentValue2()
-	node.index, i = getUInt32(data, i)
+	node.index, i = getUInt32(data, offset)
 	node.indexSegList1, i = getSInt16(data, i)
 	node.indexSegList2, i = getSInt16(data, i)
 	node.values, i = getUInt16A(data, i, count)
@@ -334,80 +330,45 @@ def ReadRSeSegmentNode(data, offset, seg, count, idx):
 
 def ReadRSeSegmentType10(data, offset, seg):
 	i = offset
-
-	cnt = seg.count1
-	idx = 0
-	while (idx < cnt):
+	for idx in range(seg.count1):
 		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
-		idx += 1
 	return i
 
 def ReadRSeSegmentType15(data, offset, seg):
 	i = offset
-
-	cnt = seg.count1
-	idx = 0
-	while (idx < cnt):
+	for idx in range(seg.count1):
 		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
-		idx += 1
-
 	cnt, i = getUInt32(data, i)
-	idx = 1
-	while (idx < cnt):
+	for idx in range(1, cnt):
 		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
-		idx += 1
-
 	return i
 
 def ReadRSeSegmentType1A(data, offset, seg):
 	i = offset
-
-	cnt = seg.count1
-	idx = 0
-	while (idx < cnt):
+	for idx in range(seg.count1):
 		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
-		idx += 1
-
 	cnt, i = getUInt32(data, i)
-	idx = 1
-	while (idx < cnt):
+	for idx in range(1, cnt):
 		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
-		idx += 1
-
 	return i
 
 def ReadRSeSegmentType1D(data, offset, seg):
 	i = offset
-
-	cnt = seg.count1
-	idx = 0
-	while (idx < cnt):
+	for idx in range(seg.count1):
 		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
-		idx += 1
-
 	cnt, i = getUInt32(data, i)
-	idx = 1
-	while (idx < cnt):
+	for idx in range(1, cnt):
 		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
-		idx += 1
-
 	return i
 
 def ReadRSeSegmentType1F(data, offset, seg):
 	i    = offset
 	cnt2 = 0
-
-	cnt = seg.count1
-	idx = 0
-	while (idx < cnt):
+	for idx in range(seg.count1):
 		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
-		idx += 1
 		cnt2 = obj.value2
-
-	idx = 1
-	while (idx < cnt2):
+	for idx in range(1, cnt2):
 		node, i = ReadRSeSegmentNode(data, i, seg, 6, idx)
-		idx += 1
 	return i
 
 def ReadRSeSegInfo10(data, offset):
@@ -416,13 +377,10 @@ def ReadRSeSegInfo10(data, offset):
 	model.RSeSegInfo = RSeSegInformation()
 
 	cnt, i = getSInt32(data, offset)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 6)
 		i = ReadRSeSegmentType10(data, i, seg)
 		model.RSeSegInfo.segments[seg.name] = seg
-		idx += 1
-
 	return	 i
 
 def ReadRSeSegInfo15(data, offset):
@@ -430,28 +388,19 @@ def ReadRSeSegInfo15(data, offset):
 
 	model.RSeSegInfo = RSeSegInformation()
 	cnt, i = getSInt32(data, offset)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 6)
 		i = ReadRSeSegmentType15(data, i, seg)
 		model.RSeSegInfo.segments[seg.name] = seg
-		idx += 1
-
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
 		model.RSeSegInfo.uidList1.append(txt)
-		idx += 1
-
 	cnt, i = getUInt32(data, i)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
 		model.RSeSegInfo.uidList2.append(txt)
-		idx += 1
-
 	return	 i
 
 def ReadRSeSegInfo1A(data, offset):
@@ -459,28 +408,19 @@ def ReadRSeSegInfo1A(data, offset):
 
 	model.RSeSegInfo = RSeSegInformation()
 	cnt, i = getSInt32(data, offset)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 8)
 		i = ReadRSeSegmentType1A(data, i, seg)
 		model.RSeSegInfo.segments[seg.name] = seg
-		idx += 1
-
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
 		model.RSeSegInfo.uidList1.append(txt)
-		idx += 1
-
 	cnt, i = getUInt32(data, i)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
 		model.RSeSegInfo.uidList2.append(txt)
-		idx += 1
-
 	return i
 
 def ReadRSeSegInfo1D(data):
@@ -488,28 +428,19 @@ def ReadRSeSegInfo1D(data):
 
 	model.RSeSegInfo = RSeSegInformation()
 	cnt, i = getSInt32(data, 0)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 8)
 		i = ReadRSeSegmentType1D(data, i, seg)
 		model.RSeSegInfo.segments[seg.name] = seg
-		idx += 1
-
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
 		model.RSeSegInfo.uidList1.append(txt)
-		idx += 1
-
 	cnt, i = getUInt32(data, i)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
 		model.RSeSegInfo.uidList2.append(txt)
-		idx += 1
-
 	return i
 
 def ReadRSeSegInfo1F(data):
@@ -517,37 +448,27 @@ def ReadRSeSegInfo1F(data):
 
 	model.RSeSegInfo = RSeSegInformation()
 	cnt, i = getSInt32(data, 0)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 10)
 		i = ReadRSeSegmentType1F(data, i, seg)
 		model.RSeSegInfo.segments[seg.name] = seg
-		idx += 1
-
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		uid, i = getUUID(data, i)
 		txt = getUidText(uid)
 		model.RSeSegInfo.uidList1.append(txt)
-		idx += 1
-
 	cnt, i = getUInt32(data, i)
-	idx = 0
-	while (idx < cnt):
+	for idx in range(cnt):
 		uid, i = getUUID(data, i)
 		txt = getUidText(uid)
 		model.RSeSegInfo.uidList2.append(txt)
-		idx += 1
-
 	return i
 
 def ReadRSeDb10(data, offset):
 	global model
 
-	i = offset
-	model.RSeDb.arr3, i = getUInt16A(data, i, 8)
+	model.RSeDb.arr3, i = getUInt16A(data, offset, 8)
 	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.uid2, i = getUUID(data, i)
@@ -567,9 +488,7 @@ def ReadRSeDb10(data, offset):
 def ReadRSeDb15(data, offset):
 	global model
 
-	i = offset
-
-	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
+	model.RSeDb.arr2, i = getUInt16A(data, offset, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.arr3, i = getUInt16A(data, i, 14)
 	model.RSeDb.dat3, i = getDateTime(data, i)
@@ -593,9 +512,7 @@ def ReadRSeDb15(data, offset):
 def ReadRSeDb1A(data, offset):
 	global model
 
-	i = offset
-
-	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
+	model.RSeDb.arr2, i = getUInt16A(data, offset, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.txt2, i  = getLen32Text16(data, i)
 	model.RSeDb.arr3, i = getUInt16A(data, i, 12)
@@ -625,9 +542,7 @@ def ReadRSeDb1A(data, offset):
 def ReadRSeDb1D(data, offset):
 	global model
 
-	i = offset
-
-	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
+	model.RSeDb.arr2, i = getUInt16A(data, offset, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
 
@@ -637,8 +552,7 @@ def ReadRSeDb(data):
 	global model
 
 	model.RSeDb = RSeDatabase()
-	i = 0
-	model.RSeDb.uid, i = getUUID(data, i)
+	model.RSeDb.uid, i = getUUID(data, 0)
 	model.RSeDb.version, i = getUInt32(data, i)
 	model.RSeDb.arr1, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat1, i = getDateTime(data, i)
@@ -664,9 +578,8 @@ def ReadRSeDbRevisionInfo(data):
 	version, i = getSInt32(data, 0)
 	model.RSeDbRevisionInfoMap = {}
 	model.RSeDbRevisionInfoList = []
-	n = 0
 	cnt, i = getSInt32(data, i)
-	while (n < cnt):
+	for n in range(cnt):
 		info = RSeDbRevisionInfo()
 		info.ID, i = getUUID(data, i)
 		info.value1, i = getUInt16(data, i)
@@ -690,8 +603,6 @@ def ReadRSeDbRevisionInfo(data):
 			info.data = (0.0, 0)
 		model.RSeDbRevisionInfoMap[info.ID] = info
 		model.RSeDbRevisionInfoList.append(info)
-
-		n += 1
 	return i
 
 def getRevisionInfoByUID(revUID):
@@ -712,9 +623,7 @@ def getRevisionInfoByIndex(revIdx):
 
 def ReadRSeMetaDataBlocksSize(value, data, offset):
 	cnt, i = getUInt32(data, offset)
-	j = 0
-	while (j < cnt):
-		j += 1
+	for n in range(cnt):
 		u32, i = getUInt32(data, i)
 		sec = RSeStorageBlockSize(value, u32)
 		value.sec1.append(sec)
@@ -725,9 +634,7 @@ def ReadRSeMetaDataBlocksSize(value, data, offset):
 
 def ReadRSeMetaDataSection2(value, data, offset):
 	cnt, i = getUInt32(data, offset)
-	j = 0
-	while (j < cnt):
-		j += 1
+	for j in range(cnt):
 		sec = RSeStorageSection2(value)
 		if (value.ver == 3):
 			uid, i = getUUID(data, i)
@@ -753,9 +660,7 @@ def ReadRSeMetaDataSection2(value, data, offset):
 
 def ReadRSeMetaDataSection3(value, data, offset):
 	cnt, i = getUInt32(data, offset)
-	j = 0
-	while (j < cnt):
-		j += 1
+	for j in range(cnt):
 		sec = RSeStorageSection3(value)
 		sec.uid, i = getUUID(data, i)
 		sec.arr, i = getUInt16A(data, i, 6)
@@ -771,8 +676,7 @@ def ReadRSeMetaDataSection4Data(data, offset):
 
 def ReadRSeMetaDataBlocksType(value, data, offset):
 	cnt, i = getUInt32(data, offset)
-	j = 0
-	while (j < cnt):
+	for j in range(cnt):
 		sec = RSeStorageBlockType(value)
 		sec.uid, i = getUUID(data, i)
 		val, i = ReadRSeMetaDataSection4Data(data, i)
@@ -780,7 +684,6 @@ def ReadRSeMetaDataBlocksType(value, data, offset):
 		val, i = ReadRSeMetaDataSection4Data(data, i)
 		sec.arr.append(val)
 		value.secBlkTyps[j] = sec
-		j += 1
 	size, i = getUInt32(data, i)
 
 	return i
@@ -800,14 +703,13 @@ def ReadRSeMetaDataSection6(value, data, offset, size, cnt):
 	# arr32, i = getUInt32A(data, i, 2)
 	# n16, i = getUInt16(data, i)
 	# arrU = []
-	# while (n16>0)
+	# for n in range(n16)
 	# 	uid, i = getUUID(data, i)
 	# 	arr2, i = getUInt16A(data, i, 2)
 	#   arrU.append(sec7(uid, arr2))
-	#   n16 -= 1
 	# n16, i = getUInt16(data, i)
 	# arrV = []
-	# while (n16>0)
+	# for n in range(n16)
 	# 	arr1, i = getUInt16A(data, i, 3)
 	#	arr.append(arr1)
 	j = i + size - 8
@@ -839,9 +741,7 @@ def ReadRSeMetaDataSection6(value, data, offset, size, cnt):
 
 def ReadRSeMetaDataSection7(value, data, offset, size, cnt):
 	i = offset
-	j = 0
-	while (j<cnt):
-		j += 1
+	for j in range(cnt):
 		sec = RSeStorageSection7(value)
 		if (size/cnt >= 0x4C):
 			sec.segRef, i = getUUID(data, i)
@@ -866,9 +766,7 @@ def ReadRSeMetaDataSection7(value, data, offset, size, cnt):
 
 def ReadRSeMetaDataSection8(value, data, offset, size, cnt):
 	i = offset
-	j = 0
-	while (j < cnt):
-		j += 1
+	for j in range(cnt):
 		sec = RSeStorageSection8(value)
 		sec.dbRevisionInfoRef, i = getUUID(data, i)
 		sec.arr, i = getUInt16A(data, i, 2)
@@ -878,9 +776,7 @@ def ReadRSeMetaDataSection8(value, data, offset, size, cnt):
 
 def ReadRSeMetaDataSection9(value, data, offset, size, cnt):
 	i = offset
-	j = 0
-	while (j<cnt):
-		j += 1
+	for j in range(cnt):
 		sec = RSeStorageSection9(value)
 		sec.uid, i = getUUID(data, i)
 		sec.arr, i = getUInt8A(data, i, 3)
@@ -893,9 +789,7 @@ def ReadRSeMetaDataSectionA(value, data, offset, size, cnt):
 	Same values as in RSeSegmentType
 	'''
 	i = offset
-	j = 0
-	while (j<cnt):
-		j += 1
+	for j in range(cnt):
 		sec = RSeStorageSectionA(value)
 		sec.arr, i = getUInt16A(data, i, 4)
 		value.secA.append(sec)
@@ -904,9 +798,7 @@ def ReadRSeMetaDataSectionA(value, data, offset, size, cnt):
 
 def ReadRSeMetaDataSectionB(value, data, offset, size, cnt):
 	i = offset
-	j = 0
-	while (j<cnt):
-		j += 1
+	for j in range(cnt):
 		sec = RSeStorageSectionB(value)
 		sec.arr, i = getUInt16A(data, i, 2)
 		value.secB.append(sec)
@@ -921,31 +813,31 @@ def getReader(seg):
 	logInfo(u"%2d: '%s' ('%s')", seg.index, seg.file, seg.name)
 	reader = None
 	seg.AcisList = []
-	if (RSeMetaData.isBRep(seg)): # BoundaryRepresentation for SAT/STEP based import
+	if (seg.isBRep()): # BoundaryRepresentation for SAT/STEP based import
 		if (isStrategySat() or isStrategyStep()):
 			reader = BRepReader()
-	elif (RSeMetaData.isDC(seg)):
+	elif (seg.isDC()):
 		if (isStrategyNative()):   # DocumentComponent for featured base import
 			reader = DCReader()
-	elif (RSeMetaData.isApp(seg)): # ApplicationSettings for colors
+	elif (seg.isApp()): # ApplicationSettings for colors
 		reader = AppReader()
-#	elif (RSeMetaData.isBrowser(seg)):
+#	elif (seg.isBrowser():
 #		reader = BrowserReader()
-#	elif (RSeMetaData.isDefault(seg)):
+#	elif (seg.isDefault()):
 #		reader = DefaultReader()
-#	elif (RSeMetaData.isGraphics(seg)): # required for Meshes
+#	elif (seg.isGraphics()): # required for Meshes
 #		reader = GraphicsReader()
-#	elif (RSeMetaData.isResult(seg)):
+#	elif (seg.isResult()):
 #		reader = ResultReader()
-#	elif (RSeMetaData.isDesignView(seg)):
+#	elif (seg.isDesignView()):
 #		reader = DesignViewReader()
-#	elif (RSeMetaData.isEeData(seg)):
+#	elif (seg.isEeData()):
 #		reader = EeDataReader()
-#	elif (RSeMetaData.isEeScene(seg)):
+#	elif (seg.isEeScene()):
 #		reader = EeSceneReader()
-#	elif (RSeMetaData.isFBAttribute(seg)):
+#	elif (seg.isFBAttribute()):
 #		reader = FBAttributeReader()
-#	elif (RSeMetaData.isNBNotebook(seg)):
+#	elif (seg.isNBNotebook()):
 #		reader = NotebookReader()
 	if (reader is None):
 		logInfo(u"    IGNORED!")
@@ -983,18 +875,17 @@ def ReadRSeMetaDataM(dataM, name):
 	value.txt1, i = getLen32Text8(dataM, i)
 	value.ver, i = getUInt16(dataM, i)
 	value.arr1, i = getUInt16A(dataM, i, 8)
-	if (value.arr1[0] + value.arr1[1] + value.arr1[2] + value.arr1[3] + value.arr1[4] > 0):
-		value.name, i = getLen32Text16(dataM, i)
-		value.segRef, i = getUUID(dataM, i)
-		value.arr2, i = getUInt32A(dataM, i, 0x3)
-		seg = findSegment(value.segRef)
-		if (seg is not None):
-			seg.metaData = value
-	else:
+	if (value.arr1[0] + value.arr1[1] + value.arr1[2] + value.arr1[3] + value.arr1[4] == 0):
 		value.name = name
 		value.segRef = None
 		value.arr2 = []
 		return value
+	value.name, i = getLen32Text16(dataM, i)
+	value.segRef, i = getUUID(dataM, i)
+	value.arr2, i = getUInt32A(dataM, i, 0x3)
+	seg = findSegment(value.segRef)
+	if (seg is not None):
+		seg.metaData = value
 
 	if (value.ver < 0x07):
 		value.val1, i = getUInt32(dataM, i)

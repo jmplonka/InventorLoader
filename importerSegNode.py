@@ -363,33 +363,27 @@ class SecNode(AbstractData):
 	def getList2Childs(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadChildRef(i, 'tmp', j, False)
 			lst.append(self.get('tmp'))
-			j += 1
 		return lst, i, u"%d" %(cnt)
 
 	def getList2Xrefs(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadCrossRef(i, 'tmp', j, False)
 			lst.append(self.get('tmp'))
-			j += 1
 		return lst, i, u"%d" %(cnt)
 
 	def getList2String8s(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
 		sep = u""
 		s   = u""
-		while (j < cnt):
+		for j in range(cnt):
 			val, i = getLen32Text8(self.data, i)
 			lst.append(val)
-			j += 1
 			s += u"%s'%s'" %(sep, val)
 			sep = u","
 		return lst, i, s
@@ -397,13 +391,11 @@ class SecNode(AbstractData):
 	def getList2String16s(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
 		sep = u""
 		s   = u""
-		while (j < cnt):
+		for j in range(cnt):
 			val, i = getLen32Text16(self.data, i)
 			lst.append(val)
-			j += 1
 			s += u"%s'%s'" %(sep, val)
 			sep = u","
 		return lst, i, s
@@ -515,10 +507,9 @@ class SecNode(AbstractData):
 	def getList2Fonts(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
 		sep = u""
 		s   = u""
-		while (j < cnt):
+		for j in range(cnt):
 			val = GraphicsFont()
 			a   = Struct('<LHHHHBBHH').unpack_from(self.data, i)
 			val.number = a[0]
@@ -532,7 +523,6 @@ class SecNode(AbstractData):
 			val.ukn5 = a[2:]
 			i += 11
 			lst.append(val)
-			j += 1
 			s += u"%s(%s)" %(sep, val)
 			sep = u","
 		return lst, i, s
@@ -540,12 +530,11 @@ class SecNode(AbstractData):
 	def getList2Lightnings(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
 		sep = u""
 		s   = u""
 		if (getFileVersion() > 2010):
 			fmt = '<Hffffffffffffddddddfffffff'
-			while (j < cnt):
+			for j in range(cnt):
 				vals = Struct(fmt).unpack_from(self.data, i)
 				i += 126
 				val = Lightning()
@@ -556,12 +545,11 @@ class SecNode(AbstractData):
 				val.a1 = vals[13:19]
 				val.a2 = vals[19:]
 				lst.append(val)
-				j += 1
 				s += u"%s%s" %(sep, val)
 				sep = u","
 		else:
 			fmt = '<HffffLffffLffffLddddddfffffffL'
-			while (j < cnt):
+			for j in range(cnt):
 				vals = Struct(fmt).unpack_from(self.data, i)
 				i += 142
 				val = Lightning()
@@ -572,7 +560,6 @@ class SecNode(AbstractData):
 				val.a1 = vals[16:22]
 				val.a2 = vals[22:-1]
 				lst.append(val)
-				j += 1
 				s += u"%s%s" %(sep, val)
 				sep = u","
 		return lst, i, s
@@ -580,11 +567,10 @@ class SecNode(AbstractData):
 	def getList2App1(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
 		sep = u""
 		s   = u""
 		skip = (getFileVersion() < 2011)
-		while (j < cnt):
+		for j in range(cnt):
 			if (skip):
 				a = Struct('<ddLLBBBBL').unpack_from(self.data, i)
 				val = a[0:3] + a[4:8]
@@ -595,17 +581,15 @@ class SecNode(AbstractData):
 			s += u"%s%g,%g,%06X,%02X,%02X,%02X,%02X" %(sep, val[0], val[1], val[2], val[3], val[4], val[5], val[6])
 			sep = u","
 			lst.append(val)
-			j += 1
 		return lst, i, s
 
 	def getList2App2(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
 		s   = u""
 		sep = u""
 		skip = (getFileVersion() < 2011)
-		while (j < cnt):
+		for j in range(cnt):
 			n1, i = getUInt32(self.data, i)
 			t1, i = getLen32Text16(self.data, i)
 			t2, i = getLen32Text16(self.data, i)
@@ -628,17 +612,15 @@ class SecNode(AbstractData):
 			if (skip): i += 8
 			s += u"\n\t%d,'%s','%s',[%s],[%s],[%s],%04X,%s,%d,%X" %(n1, t1, t2, IntArr2Str(l1, 4), IntArr2Str(a1, 2), FloatArr2Str(l2), n2, c1, n3, n4)
 			lst.append((n1, t1, t2, l1, a1, l2, l3, n2, c1, n3, n4))
-			j += 1
 		return lst, i, s
 
 	def getList2App3(self, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		j    = 0
 		sep  = u""
 		s    = u""
 		skip = (getFileVersion() < 2011)
-		while (j < cnt):
+		for j in range(cnt):
 			n1, i = getUInt32(self.data, i)
 			t1, i = getLen32Text16(self.data, i)
 			n2, i = getUInt32(self.data, i)
@@ -650,7 +632,6 @@ class SecNode(AbstractData):
 			n3, i = getUInt8(self.data, i)
 			if (skip): i += 4
 			lst.append((n1, t1, n2, l1, n3))
-			j += 1
 			s += u"%s[%d,'%s',%06X,%s,%02X]" %(sep, n1, t1, n2, FloatArr2Str(l1), n3)
 			sep = u","
 		self.delete('_tmp')
@@ -659,11 +640,10 @@ class SecNode(AbstractData):
 	def getList2App4(self, offset, cnt, arraysize):
 		lst    = []
 		i      = offset
-		j      = 0
 		sep    = u""
 		s      = u""
 		skip   = (getFileVersion() < 2011)
-		while (j < cnt):
+		for j in range(cnt):
 			n1, n2, n3, f1, f2 = APP_4_A(self.data, i)
 			i += 18
 			t1, i = getLen32Text16(self.data, i)
@@ -671,7 +651,6 @@ class SecNode(AbstractData):
 			i += 11
 			if (skip): i += 8
 			lst.append((n1, n2,  n3,  f1, f2,  t1,  f3, f4, n4, n5))
-			j += 1
 			s += u"%s[%d, %d, %04X, %g, %g, '%s', %g, %g, %03X, %02X]" %(sep, n1, n2, n3, f1, f2, t1,  f3, f4, n4, n5)
 			sep = u","
 		return lst, i, s
@@ -679,11 +658,10 @@ class SecNode(AbstractData):
 	def getList2App5(self, offset, cnt, arraysize):
 		lst    = []
 		i      = offset
-		j      = 0
 		sep    = u""
 		s      = u""
 		skip = (getFileVersion() < 2011)
-		while (j < cnt):
+		for j in range(cnt):
 			f1, f2, n1 = APP_5_A(self.data, i)
 			i += 20
 			if (skip): i += 4
@@ -691,7 +669,6 @@ class SecNode(AbstractData):
 			i += 4
 			if (skip): i += 4
 			lst.append((f1, f2, n1, n2,  n3,  n4))
-			j += 1
 			s += u"%s[%g, %g, %04X, %02X, %02X, %03X]" %(sep, f1, f2, n1, n2, n3, n4)
 			sep = u","
 		return lst, i, s
@@ -699,103 +676,85 @@ class SecNode(AbstractData):
 	def getList2Guess(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_GUESS_, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
-			j += 1
 		self.delete('lst_tmp')
 		return lst, i, u""
 
 	def getList2ListUInt16sA(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_UINT16_A_, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
-			j += 1
 		self.delete('lst_tmp')
 		return lst, i, u""
 
 	def getList2ListSInt16sA(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_SINT16_A_, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
-			j += 1
 		self.delete('lst_tmp')
 		return lst, i, u""
 
 	def getList2ListUInt32sA(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_UINT32_A_, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
-			j += 1
 		self.delete('lst_tmp')
 		return lst, i, u""
 
 	def getList2ListSInt32sA(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_SINT32_A_, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
-			j += 1
 		self.delete('lst_tmp')
 		return lst, i, u""
 
 	def getList2ListFloats32sA(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_FLOAT32_A_, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
-			j += 1
 		self.delete('lst_tmp')
 		return lst, i, u""
 
 	def getList2ListFloats64sA(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_FLOAT64_A_, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
-			j += 1
 		self.delete('lst_tmp')
 		return lst, i, u""
 
 	def getList2ListFonts(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_FONT_, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
-			j += 1
 		self.delete('lst_tmp')
 		return lst, i, u""
 
 	def getList2ListXRefs(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
 		skip = (getFileVersion() < 2011)
-		while (j < cnt):
+		for j in range(cnt):
 			if (skip): i += 4
 			i = self.ReadList2(i, _TYP_UINT32_, 'lst_tmp')
 			i = self.ReadCrossRef(i, 'tmp')
 			if (skip): i += 4
 			lst.append((self.get('lst_tmp'), self.get('tmp')))
-			j += 1
 		self.delete('tmp')
 		self.delete('lst_tmp')
 		return lst, i, u""
@@ -803,16 +762,14 @@ class SecNode(AbstractData):
 	def getList2ListXRefKeys(self, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		j   = 0
 		sep = u""
 		s   = u""
-		while (j < cnt):
+		for j in range(cnt):
 			i = self.ReadCrossRef(i, 'tmp', j, False)
 			key = self.get('tmp')
 			val, i = getUInt32(self.data, i)
 			s += u"%s[%s:%X]" %(sep, getIndex(key), val)
 			lst.append((key, val))
-			j += 1
 		self.delete('tmp')
 		return lst, i, s
 
@@ -854,8 +811,7 @@ class SecNode(AbstractData):
 					t = _TYP_RESULT_ITEM4_
 				else:
 					t = _TYP_NODE_REF_
-			j = 0
-			while (j < cnt):
+			for j in range(cnt):
 				if (t == _TYP_NODE_REF_):
 					i = self.ReadChildRef(i, 'tmp', j, False)
 					val = self.get('tmp')
@@ -884,7 +840,6 @@ class SecNode(AbstractData):
 					val.a2, i = getFloat64_3D(self.data, i)
 					if (skipBlockSize): i += 4
 					s = '%s' %(val)
-				j += 1
 				lst.append(val)
 				if (len(s) > 0):
 					self.content += '%s%s' %(sep, s)
@@ -898,18 +853,14 @@ class SecNode(AbstractData):
 		cnt, i = getUInt32(self.data, offset)
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
-			j = 0
-			while (j < cnt):
+			for j in range(cnt):
 				if (typ == _TYP_UINT32_):
-					val, i = getUInt32(self.data, i)
+					i = self.ReadUInt32(i, 'tmp')
 				elif (typ == _TYP_NODE_X_REF_):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
-					val = self.get('tmp')
 				else:
 					i = self.ReadChildRef(i, 'tmp', j, False)
-				j += 1
-				tmp = self.get('tmp')
-				lst.append(tmp)
+				lst.append(self.get('tmp'))
 			self.delete('tmp')
 		return lst, i
 
@@ -921,8 +872,7 @@ class SecNode(AbstractData):
 		cnt, i = getUInt32(self.data, offset)
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
-			j = 0
-			while (j < cnt):
+			for j in range(cnt):
 				if (typ == _TYP_MAP_KEY_KEY_):
 					key, i = getUInt32(self.data, i)
 					val, i = getUInt32(self.data, i)
@@ -1041,7 +991,6 @@ class SecNode(AbstractData):
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[\'%s\': (%s)]' %(sep, key, val)
-				j += 1
 				lst[key] = val
 				sep = ','
 			self.delete('tmp')
@@ -1123,23 +1072,13 @@ class SecNode(AbstractData):
 
 	def getUnitFactors(self, units):
 		factor = 1.0
-		j      = 0
-		n      = len(units)
-
-		while (j < n):
+		for j in range(len(units)):
 			unit = units[j]
-
-			#unitSupported    = unit.get('UnitSupportet')
-			#if (not unitSupported):
-			#	return 1.0
-
 			magniture  = unit.get('magnitude')
 			unitFactor = unit.get('UnitFactor')
 			if (unitFactor is None):
 				logError(u"ERROR> (%04X) - %s has no UnitFactor defined!", unit.index, unit.typeName)
 			factor *= magniture * unitFactor
-			j += 1
-
 		return factor
 
 	def getUnitFactor(self):
@@ -1160,15 +1099,12 @@ class SecNode(AbstractData):
 	def getUnitFormula(self, units): # return unicode
 		formula = u''
 		sep     = ''
-		j       = 0
-		n       = len(units)
 
 		lastUnit     = 'XXXXX' # choos any unit that is not defined!
 		unitExponent = 1       # by default (e.g.): m^1 => m
 
-		while (j < n):
+		for j in range(len(units)):
 			unit = units[j]
-			j += 1
 			subformula = unit.get('Unit')
 
 			if (len(subformula) > 0):
@@ -1202,7 +1138,7 @@ class SecNode(AbstractData):
 							formula = u'%s%s%s' %(formula, sep, lastUnit)
 						sep =' '
 					lastUnit = subformula
-		if (j > 0):
+		if (len(units) > 0):
 			if (unitExponent > 1):
 				formula = u'%s%s%s^%d' %(formula, sep, subformula, unitExponent)
 			else:

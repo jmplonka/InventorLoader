@@ -96,10 +96,8 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'Float32Arr_' + name)
 
 		lst = []
-		l2 = []
-		j = 0
-		while (j < cnt0):
-			j += 1
+		l2  = []
+		for j in range(cnt0):
 			a1, i = getFloat32_2D(node.data, i)
 			lst.append(a1)
 			vec = FloatArr2Str(a1)
@@ -116,9 +114,7 @@ class GraphicsReader(SegmentReader):
 
 		lst = []
 		l2 = []
-		j = 0
-		while (j < cnt0):
-			j += 1
+		for j in range(cnt0):
 			a1, i = getFloat64A(node.data, i, size)
 			lst.append(a1)
 			vec = FloatArr2Str(a1)
@@ -986,10 +982,8 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16(i, 'u16_1')
 		cnt, i = getUInt16(node.data, i)
-		j = 0
 		a1 = []
-		while (j < cnt):
-			j += 1
+		for j in range(cnt):
 			u32_0, i = getUInt32(node.data, i)
 			f32_0, i = getFloat32(node.data, i)
 			x = B32BF6AC(u32_0, f32_0)

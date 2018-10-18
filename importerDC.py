@@ -227,11 +227,9 @@ class DCReader(SegmentReader):
 
 	def ReadRefList(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CROSS)
-			j += 1
 			lst.append(ref)
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(r) for r in lst]))
 		node.set(name, lst)
@@ -239,12 +237,10 @@ class DCReader(SegmentReader):
 
 	def Read2RefList(self, node, offset, name, refType):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref1, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CHILD)
 			ref2, i = self.ReadNodeRef(node, i, j, refType)
-			j += 1
 			lst.append([ref1, ref2])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%s)' %(r[0], r[1]) for r in lst]))
 		node.set(name, lst)
@@ -252,12 +248,10 @@ class DCReader(SegmentReader):
 
 	def ReadU32U32List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref, i = getUInt32(node.data, i)
 			u32, i = getUInt32(node.data, i)
-			j += 1
 			lst.append([ref, u32])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%04X,%04X)' %(r[0], r[1]) for r in lst]))
 		node.set(name, lst)
@@ -265,12 +259,10 @@ class DCReader(SegmentReader):
 
 	def ReadRefU32List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CROSS)
 			u32, i = getUInt32(node.data, i)
-			j += 1
 			lst.append([ref, u32])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%04X)' %(r[0], r[1]) for r in lst]))
 		node.set(name, lst)
@@ -278,55 +270,47 @@ class DCReader(SegmentReader):
 
 	def ReadU32U32U8List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref, i = getUInt32(node.data, i)
 			val, i = getUInt32(node.data, i)
 			u8, i  = getUInt8(node.data, i)
 			lst.append([ref, val, u8])
-			j += 1
 		node.content += ' %s=[%s]' %(name, ','.join(['(%04X,%04X,%02X)' %(r[0], r[1], r[2]) for r in lst]))
 		node.set(name, lst)
 		return i
 
 	def ReadRefU32U8List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CROSS)
 			val, i = getUInt32(node.data, i)
 			u8, i  = getUInt8(node.data, i)
 			lst.append([ref, val, u8])
-			j += 1
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%04X,%02X)' %(r[0], r[1], r[2]) for r in lst]))
 		node.set(name, lst)
 		return i
 
 	def ReadU32U32D64List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref, i = getUInt32(node.data, i)
 			val, i = getUInt32(node.data, i)
 			f64, i = getFloat64(node.data, i)
 			lst.append([ref, val, f64])
-			j += 1
 		node.content += ' %s=[%s]' %(name, ','.join(['(%04X,%04X,%g)' %(r[0], r[1], r[2]) for r in lst]))
 		node.set(name, lst)
 		return i
 
 	def ReadU32XRefList(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			val, i = getUInt32(node.data, i)
 			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CROSS)
 			lst.append([val, ref])
-			j += 1
 		node.content += ' %s=[%s]' %(name, ','.join(['(%04X,%s)' %(r[0], r[1]) for r in lst]))
 		node.set(name, lst)
 		return i
@@ -341,10 +325,9 @@ class DCReader(SegmentReader):
 		return i
 
 	def ReadUInt32A(self, node, i, cnt, name, size):
-		j = 0
 		lst = []
 		c = []
-		while (j < cnt):
+		for j in range(cnt):
 			if (size > 1):
 				a, i = getUInt32A(node.data, i, size)
 				c.append('(%s)' %(IntArr2Str(a, 4)))
@@ -352,18 +335,16 @@ class DCReader(SegmentReader):
 				a, i = getUInt32(node.data, i)
 				c.append('(%04X)' %(a))
 			lst.append(a)
-			j += 1
 		node.content += ' %s=[%s]' % (name, ','.join(c))
 		node.set(name, lst)
 		return i
 
 	def readTypedList(self, node, index, key, count, size, tolerance):
 		meta, i = getUInt32A(node.data, index, count)
-		j = 0
 		lst = []
 		s = ''
 		sep = ''
-		while (j < meta[0]):
+		for j in range(meta[0]):
 			if (size == 1):
 				f, i = getFloat64(node.data, i)
 				s += "%s%g" %(sep, f)
@@ -372,7 +353,6 @@ class DCReader(SegmentReader):
 				s += "%s[%s]" %(sep, FloatArr2Str(f))
 			sep = ','
 			lst.append(f)
-			j += 1
 		if (tolerance):
 			tol, i = getFloat64(node.data, i)
 			node.content += " %s=(%s,[%s],%g)" %(key, IntArr2Str(meta[1:], 2), s, tol)
@@ -393,11 +373,10 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_2')
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		lst = []
 		sep = ''
 		node.content += ' lst2=['
-		while (j < cnt):
+		for j in range(cnt):
 			#u32,u32,u16,u8,f64,u16,u16,u16,u8,f64,u16,u16
 			u32_0, i = getUInt32(node.data, i)
 			u32_1, i = getUInt32(node.data, i)
@@ -412,7 +391,6 @@ class DCReader(SegmentReader):
 			u16_2, i = getUInt16(node.data, i)
 			u16_3, i = getUInt16(node.data, i)
 			lst.append([u32_0, u32_1, u16_0, u8_0, f64_0, u16_1, u16_2, u16_3, u8_1, f64_1, u16_2, u16_3])
-			j += 1
 			node.content += '%s(%04X,%04X,%03X,%02X,%g,%03X,%03X,%03X,%02X,%g,%03X,%03X)' %(sep, u32_0, u32_1, u16_0, u8_0, f64_0, u16_1, u16_2, u16_3, u8_1, f64_1, u16_2, u16_3)
 			sep = ','
 		node.content += ']'
@@ -503,13 +481,11 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		lst0={}
-		while (j < cnt):
+		for j in range(cnt):
 			key, i = getLen32Text16(node.data, i)
 			val, i = getLen32Text16(node.data, i)
 			lst0[key] = val
-			j += 1
 		node.content += ' lst0={%s}' %(','.join(["('%s': '%s')" %(k, v) for k, v in lst0.items()]))
 		node.set('lst0', lst0)
 		i = node.ReadUInt16(i, 'u16_1')
@@ -605,13 +581,11 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt32A(i, 3, 'a1')
 		cnt, i = getUInt16(node.data, i)
-		j = 0
 		lst0 = []
-		while (j < cnt):
+		for j in range(cnt):
 			f, i = getFloat64(node.data, i)
 			a, i = getUInt16A(node.data, i, 2)
 			lst0.append([f, a[0], a[1]])
-			j += 1
 		node.content += ' lst0=[%s]' %(','.join(['(%g,%03X,%03X)' %(r[0], r[1], r[2]) for r in lst0]))
 		node.set('lst0', lst0)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
@@ -1275,10 +1249,9 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'cnt')
 		cnt = node.get('cnt')
 		lst = []
-		j = 0
 		sep = ''
 		node.content += ' lst0=['
-		while (j < cnt):
+		for j in range(cnt):
 			typ, i = getUInt32(node.data, i)
 			if (typ == 0x17):
 				a, i = getFloat64A(node.data, i, 6)
@@ -1303,7 +1276,6 @@ class DCReader(SegmentReader):
 			else:
 				logError(u"    ERROR in Read_%s: Unknown block type %X!", node.typeName, typ)
 				return i
-			j += 1
 			sep = ','
 		node.content += ']'
 
@@ -1767,13 +1739,11 @@ class DCReader(SegmentReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_REF_REF_, 'lst2')
 			i = node.ReadUInt16(i, 'cnt')
 			cnt = node.get('cnt')
-			j = 0
 			lst = []
-			while (j < cnt):
+			for j in range(cnt):
 				ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CROSS)
 				txt, i = getLen32Text16(node.data, i)
 				u8, i  = getUInt8(node.data, i)
-				j += 1
 				lst.append([ref, txt, u8])
 			node.content += ' lst3=[%s]' %(','.join(["[%s,'%s',%02X]" %(r[0], r[1], r[2]) for r in lst]))
 			node.set('lst3', lst)
@@ -2671,14 +2641,12 @@ class DCReader(SegmentReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_KEY_, 'lst3')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_KEY_, 'lst4')
 			cnt, i = getUInt32(node.data, i)
-			j = 0
 			lst5 = []
-			while (j < cnt):
+			for j in range(cnt):
 				id1, i = getUUID(node.data, i)
 				id2, i = getUUID(node.data, i)
 				u32, i = getUInt32(node.data, i)
 				lst5.append([id1, id2, u32])
-				j += 1
 			node.content += ' lst5=[%s]' %(','.join(['(%s,%s,%04X)' %(r[0], r[1], r[2]) for r in lst5]))
 			i = node.ReadCrossRef(i, 'ref_5')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_KEY_, 'lst6')
@@ -4081,10 +4049,8 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		cnt, i = getUInt32(node.data, i)
-		j = 0
-		while (j < cnt):
+		for j in range(cnt):
 			i = node.ReadLen32Text16(i, 'txt%i' %(j+1))
-			j += 1
 		return i
 
 	def Read_6DFCBEE5(self, node):
@@ -4219,17 +4185,13 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		rows, i = getUInt32(node.data, i)
 		cols, i = getUInt32(node.data, i)
-		r = 0
 		lst = []
-		while (r < rows):
+		for r in range(rows):
 			tmp = []
-			c = 0
-			while (c < cols):
+			for c in range(cols):
 				ref, i = self.ReadNodeRef(node, i, r, importerSegNode.SecNodeRef.TYPE_CROSS)
 				tmp.append(ref)
-				c += 1
 			lst.append(tmp)
-			r += 1
 		node.set('lst2', lst)
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadCrossRef(i, 'ref_3')
@@ -4441,12 +4403,10 @@ class DCReader(SegmentReader):
 			i += 4
 		i = node.ReadUInt32(i, 'u32_0')
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		lst0 = []
-		while (j < cnt):
+		for j in range(cnt):
 			r1, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CHILD)
 			r2, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CROSS)
-			j += 1
 			lst0.append([r1, r2])
 		node.content += ' lst0=[%s]' %(','.join(['[%s,%s]' %(r[0], r[1]) for r in lst0]))
 		return i
@@ -4732,12 +4692,10 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		cnt, i = getUInt32(node.data, i)
 		lst = []
-		j = 0
-		while (j < cnt):
+		for j in range(cnt):
 			u32, i = getUInt32(node.data, i)
 			f64, i = getFloat64(node.data, i)
 			lst.append([u32, f64])
-			j += 1
 		node.content += ' lst1=[%s]' %(','.join(['(%04X,%g)'%(r[0], r[1]) for r in lst]))
 		node.set('lst1', lst)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -5646,13 +5604,11 @@ class DCReader(SegmentReader):
 		i = node.ReadChildRef(i, 'ref_2')
 		i = self.skipBlockSize(i)
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		lst0 = {}
-		while (j < cnt):
+		for j in range(cnt):
 			key, i = getLen32Text16(node.data, i)
 			val, i = getLen32Text16(node.data, i)
 			lst0[key] = val
-			j += 1
 		node.content += ' lst0={%s}' %(','.join(['%s:%s' %(k, v) for k, v in lst0.items()]))
 		node.set('lst0', lst0)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
@@ -6101,10 +6057,9 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'cnt1')
 		cnt = node.get('cnt1')
 		lst = []
-		j = 0
 		sep = ''
 		node.content += ' lst0=['
-		while (j < cnt):
+		for j in range(cnt):
 			u16, i  = getUInt16(node.data, i)
 			typ, i = getUInt32(node.data, i)
 			if (typ == 0x17):
@@ -6130,7 +6085,6 @@ class DCReader(SegmentReader):
 			else:
 				logError(u"    ERROR in Read_%s: Unknown block type %X!", node.typeName, typ)
 				return i
-			j += 1
 			sep = ','
 		node.content += ']'
 		node.set('lst0', lst)
@@ -6682,17 +6636,15 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		cnt, i = getUInt32(node.data, i)
 		lst = []
-		j = 0
 		sep = ''
 		node.content += ' lst0=['
-		while (j < cnt):
+		for j in range(cnt):
 			u32, i = getUInt32(node.data, i)
 			u8, i  = getUInt8(node.data, i)
 			node.content += '%s[%04X,%02X,' %(sep, u32, u8)
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'tmp')
 			lst.append([u32, u8, node.get('tmp')])
 			sep = ','
-			j += 1
 			node.content += ']'
 		node.delete('tmp')
 		node.content += ']'
@@ -6857,15 +6809,13 @@ class DCReader(SegmentReader):
 		if (getFileVersion() > 2018): i += 4 # ???
 		cnt, i = getUInt32(node.data, i)
 		lst = []
-		j = 0
 		node.content += u" txt=["
 		sep = u""
-		while (j < cnt):
+		for j in range(cnt):
 			txt, i = getLen32Text16(node.data, i)
 			node.content += u"%s\'%s\'" %(sep, txt)
 			sep = u","
 			lst.append(txt)
-			j += 1
 		node.content += u"]"
 		return i
 
@@ -7190,20 +7140,18 @@ class DCReader(SegmentReader):
 		i = self.ReadRefU32ARefU32List(node, i, 'lst1', 2)
 		i = self.ReadRefU32ARefU32List(node, i, 'lst2', 1)
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		sep = ''
 		node.content += ' lst3=['
 		lst = []
 		# remember node content as it will be overwritten by ReadList2!
 		c = node.content
-		while (j < cnt):
+		for j in range(cnt):
 			u32_0, i = getUInt32(node.data, i)
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'tmp', 2)
 			lst0 = node.get('tmp')
 			u32_1, i = getUInt32(node.data, i)
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'tmp', 2) # this is ref + uint!
 			lst1 = node.get('tmp')
-			j += 1
 			c += '%s[%04X,%s,%04X,%s]' %(sep, u32_0, Int2DArr2Str(lst0, 4), u32_1, Int2DArr2Str(lst1, 4))
 			lst.append([u32_0, lst0, u32_1, lst1])
 			sep = ','
@@ -7244,13 +7192,10 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'cnt2')
 		cnt = node.get('cnt2')
 		lst0 = {}
-		j = 0
-		while (j<cnt):
+		for j in range(cnt):
 			key, i = getUInt32(node.data, i)
 			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD)
-			j += 1
 			lst0[key] = val
-
 		node.content += ' lst0={%s}' %(','.join(['%02X:%s' %(k, v) for k, v in lst0.items()]))
 		node.set('lst0', lst0)
 		return i
@@ -7289,14 +7234,12 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 3, 'a1')
 		#cnt*{u8 f64 u16 u16}
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			u1 , i = getUInt8(node.data, i)
 			f64, i = getFloat64(node.data, i)
 			u2 , i = getUInt16(node.data, i)
 			u3 , i = getUInt16(node.data, i)
-			j += 1
 			lst.append([u1, f64, u2, u3])
 		node.content += ' lst1=[%s]' %(','.join(['(%02X,%g,%03X,%03X)' %(r[0], r[1], r[2], r[3]) for r in lst]))
 		node.set('lst1', lst)
@@ -7811,12 +7754,10 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32(i, 'numEntities')
 		i = node.ReadCrossRef(i, 'refSketch')
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		lst = []
-		while (j < cnt):
+		for j in range(cnt):
 			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CHILD)
 			a, i = getUInt32A(node.data, i, 3)
-			j += 1
 			lst.append([ref, a])
 		node.content += ' lst0={%s}' %(','.join(['[%s,%s]' %(r[0], IntArr2Str(r[1],4)) for r in lst]))
 		node.set('lst0', lst)
@@ -7930,12 +7871,10 @@ class DCReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a1')
 		i = node.ReadCrossRef(i, 'ref_4')
 		cnt, i = getUInt32(node.data, i)
-		j = 0
 		lst0 = []
-		while (j < cnt):
+		for j in range(cnt):
 			r1, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CHILD)
 			r2, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CROSS)
-			j += 1
 			lst0.append([r1, r2])
 		return i
 		node.content += ' lst0=[%s]' %(','.join(['[%s,%s]' %(r[0], r[1]) for r in lst0]))

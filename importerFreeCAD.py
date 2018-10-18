@@ -1285,13 +1285,11 @@ class FreeCADImporter:
 		vec2D = (getX(point), getY(point))
 		if (vec2D in self.pointDataDict):
 			constraints = self.pointDataDict[vec2D]
-			j = 0
-			while (j < len(constraints)):
+			for j in range(len(constraints)):
 				entity, index, pos = constraints[j]
 				if (entity.index == index):
 					del constraints[j]
 					return # there can only exists one element in the list!
-				j += 1
 		return
 
 	def invalidateLine2D(self, lineNode):
