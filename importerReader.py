@@ -668,21 +668,14 @@ def ReadRSeMetaDataSection3(value, data, offset):
 	size, i = getUInt32(data, i)
 	return i
 
-def ReadRSeMetaDataSection4Data(data, offset):
-	val = RSeStorageSection4Data()
-	val.num, i = getUInt16(data, offset)
-	val.val, i = getUInt32(data, i)
-	return val, i
-
 def ReadRSeMetaDataBlocksType(value, data, offset):
 	cnt, i = getUInt32(data, offset)
+	ARR = Struct('<HLHL').unpack_from
 	for j in range(cnt):
 		sec = RSeStorageBlockType(value)
 		sec.uid, i = getUUID(data, i)
-		val, i = ReadRSeMetaDataSection4Data(data, i)
-		sec.arr.append(val)
-		val, i = ReadRSeMetaDataSection4Data(data, i)
-		sec.arr.append(val)
+		sec.arr = ARR(data, i)
+		i += 12
 		value.secBlkTyps[j] = sec
 	size, i = getUInt32(data, i)
 

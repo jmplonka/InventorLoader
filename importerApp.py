@@ -689,23 +689,11 @@ class AppReader(SegmentReader):
 		i = node.ReadLen32Text16(i)
 		return i
 
-	def Read_F8A779F8(self, node):
-		i = node.Read_Header0()
-		return i
-
 	def Read_F8A779F9(self, node):
 		i = node.Read_Header0()
 		i = node.ReadChildRef(i, 'ref1')
 		i = node.ReadChildRef(i, 'ref2')
 		return i
-
-	def Read_F8A779FD(self, node):
-		i = node.Read_Header0()
-		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_F8D07626(self, node):

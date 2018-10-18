@@ -7,6 +7,7 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 from importerSegment import SegmentReader, checkReadAll
+from importerClasses import _32RRR2
 from importerUtils   import *
 import importerSegNode
 
@@ -17,6 +18,31 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 class EeSceneReader(SegmentReader):
 	def __init__(self):
 		super(EeSceneReader, self).__init__()
+
+	def Read_32RRR2(self, node, typeName = None):
+		i = node.Read_Header0(typeName)
+		u16_0, i = getUInt16(node.data, i)
+		u16_1, i = getUInt16(node.data, i)
+		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadChildRef(i, 'ref_1')
+		i = node.ReadParentRef(i)
+		u32_0, i = getUInt32(node.data, i)
+		i = self.skipBlockSize(i)
+
+		val = _32RRR2(u16_0, u16_1, u32_0)
+		node.set('32RA', val)
+		node.content += ' 32RA={%s}' %(val)
+		return i
+
+	def Read_ColorAttr(self, offset, node):
+		i = self.skipBlockSize(offset)
+		i = node.ReadUInt8A(i, 2, 'ColorAttr.a0')
+		i = node.ReadColorRGBA(i, 'ColorAttr.c0')
+		i = node.ReadColorRGBA(i, 'ColorAttr.c1')
+		i = node.ReadColorRGBA(i, 'ColorAttr.c2')
+		i = node.ReadColorRGBA(i, 'ColorAttr.c3')
+		i = node.ReadUInt16A(i, 2, 'ColorAttr.a5')
+		return i
 
 	def Read_120284EF(self, node):
 		i = self.ReadHeaderSU32S(node)

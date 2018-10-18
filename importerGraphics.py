@@ -7,8 +7,9 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 import traceback, importerSegNode
-from importerSegment        import SegmentReader, checkReadAll
-from importerClasses        import B32BF6AC, _32RRR2, _32RA
+from importerSegment        import checkReadAll
+from importerEeScene        import EeSceneReader
+from importerClasses        import B32BF6AC, _32RA
 from importerTransformation import Transformation
 from importerUtils          import *
 from math import fabs
@@ -17,68 +18,17 @@ __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-class GraphicsReader(SegmentReader):
+class GraphicsReader(EeSceneReader):
 
 	def __init__(self):
 		super(GraphicsReader, self).__init__()
 		self.dcIndexes = {}
-
-	def Read_32RRR2(self, node, typeName = None):
-		i = node.Read_Header0(typeName)
-		u16_0, i = getUInt16(node.data, i)
-		u16_1, i = getUInt16(node.data, i)
-		i = node.ReadChildRef(i, 'ref_0')
-		i = node.ReadChildRef(i, 'ref_1')
-		i = node.ReadParentRef(i)
-		u32_0, i = getUInt32(node.data, i)
-		i = self.skipBlockSize(i)
-
-		val = _32RRR2(u16_0, u16_1, u32_0)
-		node.set('32RA', val)
-		node.content += ' 32RA={%s}' %(val)
-		return i
-
-	def Read_ColorAttr(self, offset, node):
-		i = self.skipBlockSize(offset)
-		i = node.ReadUInt8A(i, 2, 'ColorAttr.a0')
-		i = node.ReadColorRGBA(i, 'ColorAttr.c0')
-		i = node.ReadColorRGBA(i, 'ColorAttr.c1')
-		i = node.ReadColorRGBA(i, 'ColorAttr.c2')
-		i = node.ReadColorRGBA(i, 'ColorAttr.c3')
-		i = node.ReadUInt16A(i, 2, 'ColorAttr.a5')
-		return i
 
 	def Read_HeaderParent(self, node, typeName = None):
 		if (typeName is not None): node.typeName = typeName
 		i = self.skipBlockSize(0, 8)
 		i = node.ReadParentRef(i)
 		i = self.skipBlockSize(i)
-		return i
-
-	def Read_TypedFloat(self, offset, node):
-		cnt, i = getUInt32(node.data, offset)
-		lst0 = []
-		j = 0
-		node.content += ' {'
-		while (j < cnt):
-			j += 1
-			t, i = getUInt32(node.data, i)
-			if (t == 0x0B):
-				a0, i = getFloat64A(node.data, i, 0x0C)
-				lst0.append(a0)
-				node.content += ' %d: (%s)' %(j, FloatArr2Str(a0))
-			elif (t == 0x11):
-				a0, i = getFloat64A(node.data, i, 0x0D)
-				lst0.append(a0)
-				node.content += ' %d: (%s)' %(j, FloatArr2Str(a0))
-			elif (t == 0x17):
-				a0, i = getFloat64A(node.data, i, 0x06) # X, Y, Z, n, m, k
-				lst0.append(a0)
-				node.content += ' %d: (%s)' %(j, FloatArr2Str(a0))
-			else:
-				logError(u"ERROR> Don't know how to handle %X in Read_%s!", t, node.typeName)
-		node.content += '}'
-		node.set('TypedFloat.lst0', lst0)
 		return i
 
 	def ReadTransformation(self, node, offset):
@@ -221,13 +171,6 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
-	def Read_120284EF(self, node):
-		i = self.ReadHeaderSU32S(node)
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		return i
-
 	def Read_12A31E33(self, node):
 		i = self.ReadHeaderSU32S(node)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -240,13 +183,6 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt16A(i, 8, 'a1')
 		i = self.skipBlockSize(i, 8)
-		return i
-
-	def Read_13FC8170(self, node):
-		i = self.ReadHeaderSU32S(node)
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
 	def Read_14533D82(self, node): # WrkPlane
@@ -370,24 +306,6 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
-	def Read_48EB8607(self, node):
-		node.typeName = "ObjctStyles"
-		i = self.skipBlockSize(0)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'styles')
-		return i
-
-	def Read_48EB8608(self, node): # StyleLine2dColor
-		i = self.ReadHeaderSU32S(node, 'StyleLine2dColor')
-		i = node.ReadColorRGBA(i, 'c0')
-		i = node.ReadColorRGBA(i, 'c1')
-		i = node.ReadColorRGBA(i, 'c2')
-		i = node.ReadColorRGBA(i, 'c3')
-		i = node.ReadColorRGBA(i, 'c4')
-		i = node.ReadUInt32(i, 'u32_1')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt8(i, 'u8_0')
-		return i
-
 	def Read_4AD05620(self, node): # KeyRef
 		i = self.Read_HeaderParent(node, 'KeyRef')
 		i = node.ReadUInt32(i, 'key')
@@ -450,18 +368,6 @@ class GraphicsReader(SegmentReader):
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadFloat64A(i, 3, 'a0')
 		i = node.ReadFloat64A(i, 3, 'a1')
-		return i
-
-	def Read_5194E9A3(self, node):
-		i = self.Read_32RRR2(node)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-#		i = node.ReadUInt8(i, 'u8_0')
-#		i = self.skipBlockSize(i, 8)
-#		i = node.ReadFloat64A(i, 3, 'a2')
-#		i = node.ReadFloat64A(i, 3, 'a3')
-#		i = self.skipBlockSize(i)
-#		i = node.ReadUInt32A(i, 3, 'a4')
-		i = len(node.data)
 		return i
 
 	def Read_56235A51(self, node): return 0
@@ -531,16 +437,6 @@ class GraphicsReader(SegmentReader):
 #		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst0', 3)
 #		i = node.ReadFloat64A(i, 6, 'a0')
 		i = len(node.data)
-		return i
-
-	def Read_6C6322EB(self, node):
-		i = self.ReadHeaderSU32S(node)
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
-		i  = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		i = self.skipBlockSize(i, 8)
-		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
 	def Read_6C8A5C53(self, node):
@@ -706,22 +602,12 @@ class GraphicsReader(SegmentReader):
 
 	def Read_A3EBE198(self, node): return 0
 
-	def Read_A529D1E2(self, node):
-		i = self.ReadHeaderU32RefU8List3(node)
-		return i
-
 	def Read_A6DD2FCC(self, node): return 0
 
 	def Read_A79EACC7(self, node): # 2dLine
 		i = self.Read_32RRR2(node, '2dLine')
 		i = node.ReadFloat64A(i, 3, 'p1')
 		i = node.ReadFloat64A(i, 3, 'p2')
-		return i
-
-	def Read_A79EACCB(self, node):
-		i = self.Read_32RRR2(node)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
-		i = node.ReadUInt8(i, 'u8')
 		return i
 
 	def Read_A79EACCC(self, node):
@@ -732,26 +618,18 @@ class GraphicsReader(SegmentReader):
 
 	def Read_A79EACCD(self, node): return node.Read_Header0()
 
-	def Read_A79EACCF(self, node):
-		i = self.Read_32RRR2(node, '3dObject')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadUInt8(i, 'u8_0')
-		if (node.get('u8_0') == 1):
-			i = self.ReadTransformation(node, i)
-		return i
-
 	def Read_A79EACD1(self, node): return node.Read_Header0()
 
-	def Read_A79EACD2(self, node):
-		i = self.Read_32RRR2(node)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_,  'lst1', 2)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst2', 3)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst3', 2)
-		i = node.ReadUInt16A(i, 2, 'a0')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst4')
-		i = node.ReadFloat32_2D(i, 'a1')
-		return i
+#	def Read_A79EACD2(self, node):
+#		i = 0
+#		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
+#		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_,  'lst1', 2)
+#		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst2', 3)
+#		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst3', 2)
+#		i = node.ReadUInt16A(i, 2, 'a0')
+#		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst4')
+#		i = node.ReadFloat32_2D(i, 'a1')
+# 		return i
 
 	def Read_A79EACD3(self, node): # LinePoint
 		i = self.Read_32RRR2(node, 'LinePoint')
@@ -862,17 +740,6 @@ class GraphicsReader(SegmentReader):
 
 	def Read_AC007F7A(self, node): return node.Read_Header0()
 
-	def Read_AF48560F(self, node): #PrmColorAttr
-		i = self.ReadHeaderSU32S(node, 'PrmColorAttr')
-		i = node.ReadUInt16A(i, 7, 'a0')
-		i = self.Read_ColorAttr(i, node)
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 2, 'a1')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt8(i, 'u8_1')
-		return i
-
 	def Read_AFD5CEEB(self, node): return 0
 
 	def Read_B01025BF(self, node):
@@ -929,26 +796,9 @@ class GraphicsReader(SegmentReader):
 		i = node.ReadFloat64A(i, 3, 'a0')
 		return i
 
-	def Read_B32BF6A2(self, node):
-		i = self.skipBlockSize(0)
-		i = node.ReadUInt16(i, 'u16_0')
-		i = self.Read_ColorAttr(i, node)
-		i = self.skipBlockSize(i)
-		return i
-
-	def Read_B32BF6A3(self, node):
-		i = self.ReadHeaderSU32S(node, 'Visibility')
-		i = node.ReadUInt8(i, 'u8_0')
-		return i
-
 	def Read_B32BF6A5(self, node):
 		i = self.ReadHeaderSU32S(node)
 		i = node.ReadUInt16(i, 'u16_0')
-		return i
-
-	def Read_B32BF6A6(self, node):
-		i = self.ReadHeaderSU32S(node)
-		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_B32BF6A7(self, node):
@@ -962,11 +812,6 @@ class GraphicsReader(SegmentReader):
 	def Read_B32BF6A8(self, node):
 		i = self.ReadHeaderSU32S(node)
 		i = node.ReadUInt32(i, 'u32_1')
-		return i
-
-	def Read_B32BF6A9(self, node):
-		i = self.ReadHeaderSU32S(node)
-		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
 	def Read_B32BF6AB(self, node):

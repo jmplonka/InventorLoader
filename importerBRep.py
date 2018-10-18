@@ -122,8 +122,6 @@ class BRepReader(SegmentReader):
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
 		return i
 
-	def Read_6F891B34(self, node): return 0
-
 	def Read_6F891B34(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUInt32(i, 'u32_0')

@@ -315,30 +315,6 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_Unit(self, node, abbreviation, unitName, offset, factor, supported = False):
-		'''
-		Reads the parameter's unit information
-		ToDo: Handle units not supported by FreeCAD
-		List of SI units
-		LENGTH:                    [1,0,0,0,0,0,0] 'm'
-		MASS:                      [0,1,0,0,0,0,0] 'g'
-		TIME:                      [0,0,1,0,0,0,0] 's'
-		ELECTRIC CURRENT:          [0,0,0,1,0,0,0] 'A'
-		THERMODYNAMIC TEMPERATURE: [0,0,0,0,1,0,0] 'K'
-		AMOUNT OF SUBSTANCE:       [0,0,0,0,0,1,0] 'mol'
-		LUMINOUS INTENSITY:        [0,0,0,0,0,0,1] 'cd'
-		'''
-		i = self.Read_5F9D0022(node)
-		i = self.skipBlockSize(i)
-		node.typeName = u'Unit' + unitName
-		node.set('Unit', abbreviation)
-		if (sys.version_info.major < 3) and (not isinstance(abbreviation, unicode)):
-			node.set('Unit', unicode(abbreviation))
-		node.set('UnitOffset', offset)
-		node.set('UnitFactor', factor)
-		node.set('UnitSupportet', supported)
-		return i
-
 	def Read_5C30CE1D(self, node): # SystemOfUnitsMGS
 		i = self.ReadHeaderSysOfUnits(node, 'SystemOfUnitsMGS')
 		return i
@@ -578,6 +554,30 @@ class SegmentReader(object):
 		node.set('SAT', [header, lst])
 		node.segment.AcisList.append(node)
 		dumpSat(node)
+		return i
+
+	def Read_F8A779F8(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt16A(i, 2, 'a1')
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt16A(i, 9, 'a2')
+		i = node.ReadUInt8(i, 'u8_2')
+		if (getFileVersion() > 2017):
+			i = node.ReadUInt16A(i, 3, 'a3')
+		else:
+			node.content += u" a3=[0000,0000,0000]"
+			node.set('a3', [0,0,0])
+		return i
+
+	def Read_F8A779FD(self, node): # Unit
+		i = node.Read_Header0('Unit')
+		i = self.skipBlockSize(i)
+		i = node.ReadList3(i, _TYP_NODE_REF_, 'numerators')
+		i = node.ReadList3(i, _TYP_NODE_REF_, 'denominators')
+		i = node.ReadBoolean(i, 'visible')
+		i = node.ReadChildRef(i, 'refDerived')
 		return i
 
 	def ReadTrailer(self, buffer, offset):

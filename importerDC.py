@@ -6,10 +6,10 @@ Importer for the Document's components
 Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) browser view data.
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
-from importerSegment        import SegmentReader, convert2Version7, resolveEntityReferences, dumpSat
+from importerSegment        import convert2Version7, resolveEntityReferences, dumpSat
+from importerEeData         import EeDataReader
 from importerUtils          import *
 from importerClasses        import Tolerances, Functions
-from importerTransformation import Transformation
 from math                   import pi
 from Acis                   import clearEntities, setVersion
 from importerSAT            import Header, readNextSabChunk, readEntityBinary
@@ -33,7 +33,7 @@ def addEmptyLists(node, indexes):
 def addEmptyMaps(node, indexes):
 	_addEmpty(node, indexes, {})
 
-class DCReader(SegmentReader):
+class DCReader(EeDataReader):
 	DOC_ASSEMBLY     = 1
 	DOC_DRAWING      = 2
 	DOC_PART         = 3
@@ -213,16 +213,6 @@ class DCReader(SegmentReader):
 		i = node.ReadCrossRef(i, ref1Name)
 		i = node.ReadParentRef(i)
 		i = node.ReadChildRef(i, ref2Name)
-		return i
-
-	def ReadTransformation(self, node, offset):
-		'''
-		Read the transformation matrix
-		'''
-		val = Transformation()
-		node.set('transformation', val)
-		i = val.read(node.data, offset)
-		node.content += '%s' %(val)
 		return i
 
 	def ReadRefList(self, node, offset, name):
@@ -7068,25 +7058,6 @@ class DCReader(SegmentReader):
 			i += 8*8
 		return i
 
-	def Read_CB0ADCAF(self, node):
-		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'ref_1')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32A(i, 5, 'a0')
-		cnt, i = getUInt16(node.data, i)
-		j = 0
-		lst = []
-		while (j < cnt):
-			u1, i = getUInt16(node.data, i)
-			u2, i = getUInt32(node.data, i)
-			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CHILD)
-			u3, i = getUInt16(node.data, i)
-			lst.append([u1, u2, ref, u3])
-			j += 1
-		node.content += ' lst0=[%s]' % (','.join(['(%02X,%03X,%s,%04X)' %(r[0], r[1], r[2], r[3]) for r in lst]))
-		node.set('lst0', lst)
-		return i
-
 	def Read_CB370222(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUInt32(i, 'u32_0')
@@ -8538,26 +8509,10 @@ class DCReader(SegmentReader):
 		i = self.ReadCntHdr2SRef(node)
 		return i
 
-	def Read_F8A779F8(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt16A(i, 14, 'a0')
-		i = node.ReadUInt8(i, 'u8_0')
-		if (getFileVersion() > 2017): i += 6
-		return i
-
 	def Read_F8A779F9(self, node):
 		i = node.Read_Header0()
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadChildRef(i, 'ref_2')
-		return i
-
-	def Read_F8A779FD(self, node): # Unit
-		i = node.Read_Header0('Unit')
-		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'numerators')
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'denominators')
-		i = node.ReadBoolean(i, 'visible')
-		i = node.ReadChildRef(i, 'refDerived')
 		return i
 
 	def Read_F8A77A03(self, node): # ParameterFunction
