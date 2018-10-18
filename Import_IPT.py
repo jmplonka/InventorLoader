@@ -10,7 +10,7 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 import os, FreeCAD, FreeCADGui, importerBRep, importerSAT
-from olefile           import isOleFile, OleFileIO
+from olefile           import OleFileIO
 from importerUtils     import *
 from importerReader    import *
 from importerFreeCAD   import FreeCADImporter, createGroup
@@ -69,19 +69,7 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 				else:
 					skip(stream)
 			else:
-				if (name == 'RSeDb'):
-					ReadRSeDb(stream)
-				elif (name == 'RSeSegInfo'):
-					if ((model) and (model.RSeDb) and (model.RSeDb.version == 0x1D)):
-						ReadRSeSegInfo1D(stream)
-					else:
-						ReadRSeSegInfo1F(stream)
-				elif (name == 'RSeDbRevisionInfo'):
-					ReadRSeDbRevisionInfo(stream)
-				elif (name.startswith('B')):
-					# Skip! will be handled in 'M'
-					skip(stream)
-				elif (name.startswith('M')):
+				if (name.startswith('M')):
 					fnameB = []
 					for n in (fname):
 						fnameB.append(n)
@@ -106,49 +94,48 @@ def ListElement(ole, fname, counter):
 	logAlways(u"%2d: %s size=%s", counter, path, len(stream))
 
 def read(doc, filename, readProperties):
-	first = 0
-	list = {}
-	counters = {}
+	global model
 
-	if (isOleFile(filename)):
-		setInventorFile(filename)
-		ole = OleFileIO(filename)
-		setFileVersion(ole)
-		setThumbnail(ole)
-		strategy = chooseImportStrategy()
+	ole = OleFileIO(filename)
+	setInventorFile(filename)
+	setFileVersion(ole)
+	setThumbnail(ole)
+	chooseImportStrategy()
 
-		elements = ole.listdir(streams=True, storages=False)
+	elements = ole.listdir(streams=True, storages=False)
 
-		counter = 1
-		list = []
-		for fname in elements:
-			if (len(fname) == 1):
-				list.append(fname)
+	counter = 1
+	list = []
+	for fname in elements:
+		#ensure RSeDb is the very first "file" to be parsed
+		if (fname[-1] == 'RSeDb'):
+			stream = ole.openstream(fname).read()
+			ReadRSeDb(stream)
+		elif (fname[-1] == 'RSeSegInfo'):
+			stream = ole.openstream(fname).read()
+			if ((model.RSeDb is None) or (model.RSeDb.version != 0x1D)):
+				ReadRSeSegInfo1F(stream)
 			else:
-				#Ensure that RSe* files will be parsed first
-				if (fname[-1].startswith('RSe')):
-					#ensure RSeDb is the very first "file" to be parsed
-					list.insert(first, fname)
-					if (fname[-1] == 'RSeDb'):
-						first += 1
-				elif (not fname[-1].startswith('B')):
-					list.append(fname)
+				ReadRSeSegInfo1D(stream)
+		elif (fname[-1] == 'RSeDbRevisionInfo'):
+			stream = ole.openstream(fname).read()
+			ReadRSeDbRevisionInfo(stream)
+		elif (not fname[-1].startswith('B')):
+			list.append(fname)
 
-		for fname in list:
-			ReadElement(ole, fname, doc, counter, readProperties)
-			counter += 1
-		ole.close()
+	for fname in list:
+		ReadElement(ole, fname, doc, counter, readProperties)
+		counter += 1
+	ole.close()
 
-		now = datetime.datetime.now()
-		if (len(doc.Comment) > 0):
-			doc.Comment += '\n'
-		doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), filename)
+	now = datetime.datetime.now()
+	if (len(doc.Comment) > 0):
+		doc.Comment += '\n'
+	doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), filename)
 
-		logInfo(u"Dumped data to folder: '%s'", filename[0:-4])
+	logInfo(u"Dumped data to folder: '%s'", filename[0:-4])
 
-		return True
-	logError(u"ERROR> '%s' is not a valid Autodesk Inventor file!", filename)
-	return False
+	return True
 
 def create3dModel(root, doc):
 	global model

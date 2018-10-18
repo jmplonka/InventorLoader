@@ -7,18 +7,18 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 
 import sys, os, uuid, datetime, re, zlib, operator, glob, struct, codecs, xlrd, FreeCAD, Import_IPT
 from importerClasses     import *
-#from importerSegment     import SegmentReader
+from importerSegment     import SegmentReader
 from importerBRep        import BRepReader
 from importerDC          import DCReader
 from importerApp         import AppReader
-#from importerBrowser     import BrowserReader
-#from importerDesignView  import DesignViewReader
-#from importerEeData      import EeDataReader
-#from importerEeScene     import EeSceneReader
-#from importerFBAttribute import FBAttributeReader
+from importerBrowser     import BrowserReader
+from importerDesignView  import DesignViewReader
+from importerEeData      import EeDataReader
+from importerEeScene     import EeSceneReader
+from importerFBAttribute import FBAttributeReader
 from importerGraphics    import GraphicsReader
-#from importerNotebook    import NotebookReader
-#from importerResults     import ResultReader
+from importerNotebook    import NotebookReader
+from importerResults     import ResultReader
 from importerUtils       import *
 from xlutils.copy        import copy
 
@@ -465,110 +465,94 @@ def ReadRSeSegInfo1F(data):
 		model.RSeSegInfo.uidList2.append(txt)
 	return i
 
-def ReadRSeDb10(data, offset):
-	global model
+def ReadRSeDb10(db, data, offset):
+	db.arr3, i = getUInt16A(data, offset, 8)
+	db.arr2, i = getUInt16A(data, i, 4)
+	db.dat2, i = getDateTime(data, i)
+	db.uid2, i = getUUID(data, i)
+	db.arr4, i = getUInt32A(data, i, 2)
+	db.txt, i  = getLen32Text16(data, i)
+	db.arr5, i = getUInt32A(data, i, 6)
 
-	model.RSeDb.arr3, i = getUInt16A(data, offset, 8)
-	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
-	model.RSeDb.dat2, i = getDateTime(data, i)
-	model.RSeDb.uid2, i = getUUID(data, i)
-	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
-	model.RSeDb.txt, i = getLen32Text16(data, i)
-	model.RSeDb.arr5, i = getUInt32A(data, i, 6)
-
-	logInfo(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.comment)
-	logInfo(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
-
-	i = ReadRSeSegInfo10(data, i)
+	logInfo(u"\t%r: %s", db.txt, db.comment)
+	logInfo(u"\t%s [%X]", db.uid, db.version)
+	logInfo(u"\t[%s]", IntArr2Str(db.arr1, 4))
+	logInfo(u"\t[%s]", IntArr2Str(db.arr2, 4))
 
 	return i
 
-def ReadRSeDb15(data, offset):
-	global model
+def ReadRSeDb15(db, data, offset):
+	db.arr2, i = getUInt16A(data, offset, 4)
+	db.dat2, i = getDateTime(data, i)
+	db.arr3, i = getUInt16A(data, i, 14)
+	db.dat3, i = getDateTime(data, i)
+	db.uid2, i = getUUID(data, i)
+	db.arr4, i = getUInt32A(data, i, 2)
+	db.txt, i = getLen32Text16(data, i)
+	db.arr5, i = getUInt32A(data, i, 6)
 
-	model.RSeDb.arr2, i = getUInt16A(data, offset, 4)
-	model.RSeDb.dat2, i = getDateTime(data, i)
-	model.RSeDb.arr3, i = getUInt16A(data, i, 14)
-	model.RSeDb.dat3, i = getDateTime(data, i)
-	model.RSeDb.uid2, i = getUUID(data, i)
-	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
-	model.RSeDb.txt, i = getLen32Text16(data, i)
-	model.RSeDb.arr5, i = getUInt32A(data, i, 6)
-
-	logInfo(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.comment)
-	logInfo(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
-	logInfo(u"\t[%s]: %s", IntArr2Str(model.RSeDb.arr3, 4), model.RSeDb.uid2)
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr4, 4))
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr5, 4))
-
-	i = ReadRSeSegInfo15(data, i)
+	logInfo(u"\t%r: %s", db.txt, db.comment)
+	logInfo(u"\t%s [%X]", db.uid, db.version)
+	logInfo(u"\t[%s]", IntArr2Str(db.arr1, 4))
+	logInfo(u"\t[%s]", IntArr2Str(db.arr2, 4))
+	logInfo(u"\t[%s]: %s", IntArr2Str(db.arr3, 4), db.uid2)
+	logInfo(u"\t[%s]", IntArr2Str(db.arr4, 4))
+	logInfo(u"\t[%s]", IntArr2Str(db.arr5, 4))
 
 	return i
 
-def ReadRSeDb1A(data, offset):
-	global model
+def ReadRSeDb1A(db, data, offset):
+	db.arr2, i = getUInt16A(data, offset, 4)
+	db.dat2, i = getDateTime(data, i)
+	db.txt2, i = getLen32Text16(data, i)
+	db.arr3, i = getUInt16A(data, i, 12)
+	db.dat3, i = getDateTime(data, i)
+	db.uid2, i = getUUID(data, i)
+	db.u16, i  = getUInt16(data, i)
+	db.arr4, i = getUInt32A(data, i, 2)
+	db.txt, i  = getLen32Text16(data, i)
+	db.arr5, i = getUInt32A(data, i, 2)
+	db.txt3, i = getLen32Text16(data, i)
+	db.arr6, i = getUInt32A(data, i, 4)
 
-	model.RSeDb.arr2, i = getUInt16A(data, offset, 4)
-	model.RSeDb.dat2, i = getDateTime(data, i)
-	model.RSeDb.txt2, i  = getLen32Text16(data, i)
-	model.RSeDb.arr3, i = getUInt16A(data, i, 12)
-	model.RSeDb.dat3, i = getDateTime(data, i)
-	model.RSeDb.uid2, i = getUUID(data, i)
-	model.RSeDb.u16, i  = getUInt16(data, i)
-	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
-	model.RSeDb.txt, i = getLen32Text16(data, i)
-	model.RSeDb.arr5, i = getUInt32A(data, i, 2)
-	model.RSeDb.txt3, i = getLen32Text16(data, i)
-	model.RSeDb.arr6, i = getUInt32A(data, i, 4)
-
-	logInfo(u"\t%r: %s", model.RSeDb.txt, model.RSeDb.txt2)
-	logInfo(u"\t%s [%X]", model.RSeDb.uid, model.RSeDb.version)
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr1, 4))
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr2, 4))
-	logInfo(u"\t[%s]: %s", IntArr2Str(model.RSeDb.arr3, 4), model.RSeDb.uid2)
-	logInfo(u"\t%d: [%s]", model.RSeDb.u16, IntArr2Str(model.RSeDb.arr4, 4))
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr5, 4))
-	logInfo(u"\t%r", model.RSeDb.txt3)
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeDb.arr6, 4))
-
-	i = ReadRSeSegInfo1A(data, i)
-
-	return i
-
-def ReadRSeDb1D(data, offset):
-	global model
-
-	model.RSeDb.arr2, i = getUInt16A(data, offset, 4)
-	model.RSeDb.dat2, i = getDateTime(data, i)
-	model.RSeDb.txt, i = getLen32Text16(data, i)
+	logInfo(u"\t%r: %s", db.txt, db.txt2)
+	logInfo(u"\t%s [%X]", db.uid, db.version)
+	logInfo(u"\t[%s]", IntArr2Str(db.arr1, 4))
+	logInfo(u"\t[%s]", IntArr2Str(db.arr2, 4))
+	logInfo(u"\t[%s]: %s", IntArr2Str(db.arr3, 4), db.uid2)
+	logInfo(u"\t%d: [%s]", db.u16, IntArr2Str(db.arr4, 4))
+	logInfo(u"\t[%s]", IntArr2Str(db.arr5, 4))
+	logInfo(u"\t%r", db.txt3)
+	logInfo(u"\t[%s]", IntArr2Str(db.arr6, 4))
 
 	return i
 
 def ReadRSeDb(data):
 	global model
 
-	model.RSeDb = RSeDatabase()
-	model.RSeDb.uid, i = getUUID(data, 0)
-	model.RSeDb.version, i = getUInt32(data, i)
-	model.RSeDb.arr1, i = getUInt16A(data, i, 4)
-	model.RSeDb.dat1, i = getDateTime(data, i)
+	db = RSeDatabase()
+	db.uid, i     = getUUID(data, 0)
+	db.version, i = getUInt32(data, i)
+	db.arr1, i    = getUInt16A(data, i, 4)
+	db.dat1, i    = getDateTime(data, i)
 
-	if (model.RSeDb.version == 0x10):
-		i = ReadRSeDb10(data, i)
-	elif (model.RSeDb.version == 0x15):
-		i = ReadRSeDb15(data, i)
-	elif (model.RSeDb.version == 0x1A):
-		i = ReadRSeDb1A(data, i)
-	elif (model.RSeDb.version == 0x1D):
-		i = ReadRSeDb1D(data, i)
-	elif (model.RSeDb.version == 0x1F):
-		i = ReadRSeDb1D(data, i)
+	if (db.version in [0x1D, 0x1F]):
+		db.arr2, i = getUInt16A(data, i, 4)
+		db.dat2, i = getDateTime(data, i)
+		db.txt, i  = getLen32Text16(data, i)
+	elif (db.version == 0x10):
+		i = ReadRSeDb10(db, data, i)
+		i = ReadRSeSegInfo10(data, i)
+	elif (db.version == 0x15):
+		i = ReadRSeDb15(db, data, i)
+		i = ReadRSeSegInfo15(data, i)
+	elif (db.version == 0x1A):
+		i = ReadRSeDb1A(db, data, i)
+		i = ReadRSeSegInfo1A(data, i)
 	else:
 		logError(u"ERROR> Reading RSeDB version %X - unknown format!", model.RSeDb.version)
+
+	model.RSeDb = db
 
 	return i
 
