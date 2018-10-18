@@ -17,13 +17,7 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class ResultReader(SegmentReader):
 	def __init__(self):
-		super(ResultReader, self).__init__(True)
-
-	def createNewNode(self):
-		return importerSegNode.ResultNode()
-
-	def skipDumpRawData(self):
-		return True
+		super(ResultReader, self).__init__()
 
 	def Read_Header1(self, node):
 		i = self.skipBlockSize(0)

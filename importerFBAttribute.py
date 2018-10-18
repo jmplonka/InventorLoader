@@ -19,13 +19,7 @@ __status__      = 'In-Development'
 
 class FBAttributeReader(SegmentReader):
 	def __init__(self):
-		super(FBAttributeReader, self).__init__(False)
-
-	def createNewNode(self):
-		return importerSegNode.FBAttributeNode()
-
-	def skipDumpRawData(self):
-		return True
+		super(FBAttributeReader, self).__init__()
 
 	def Read_080ED92F(self, node):
 		i = node.Read_Header0()

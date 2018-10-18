@@ -17,13 +17,7 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 class BrowserReader(SegmentReader):
 
 	def __init__(self):
-		super(BrowserReader, self).__init__(True)
-
-	def createNewNode(self):
-		return importerSegNode.BrowserNode()
-
-	def skipDumpRawData(self):
-		return True
+		super(BrowserReader, self).__init__()
 
 	def Read_Str53(self, node):
 		i = node.ReadLen32Text16(0)

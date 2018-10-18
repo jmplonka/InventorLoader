@@ -16,13 +16,7 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class EeDataReader(SegmentReader):
 	def __init__(self):
-		super(EeDataReader, self).__init__(False)
-
-	def createNewNode(self):
-		return importerSegNode.EeDataNode()
-
-	def skipDumpRawData(self):
-		return True
+		super(EeDataReader, self).__init__()
 
 	def Read_4E75F025(self, node):
 		i = node.Read_Header0()

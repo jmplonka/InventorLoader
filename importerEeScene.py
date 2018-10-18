@@ -7,8 +7,8 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-import importerSegNode
 from importerUtils   import *
+import importerSegNode
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -16,13 +16,7 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class EeSceneReader(SegmentReader):
 	def __init__(self):
-		super(EeSceneReader, self).__init__(False)
-
-	def createNewNode(self):
-		return importerSegNode.EeSceneNode()
-
-	def skipDumpRawData(self):
-		return True
+		super(EeSceneReader, self).__init__()
 
 	def Read_120284EF(self, node):
 		i = node.ReadUInt32(0, 'u32_0')
@@ -34,13 +28,13 @@ class EeSceneReader(SegmentReader):
 
 	def Read_13FC8170(self, node): return 0
 
-	def Read_48EB8607(self, node):
+	def Read_48EB8607(self, node): # ObjctStyles
 		node.typeName = "ObjctStyles"
 		i = self.skipBlockSize(0)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'styles')
 		return i
 
-	def Read_48EB8608(self, node):
+	def Read_48EB8608(self, node): # StyleLine2dColor
 		i = self.ReadHeaderSU32S(node, 'StyleLine2dColor')
 		i = node.ReadColorRGBA(i, 'c0')
 		i = node.ReadColorRGBA(i, 'c1')

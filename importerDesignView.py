@@ -19,13 +19,7 @@ __status__      = 'In-Development'
 
 class DesignViewReader(SegmentReader):
 	def __init__(self):
-		super(DesignViewReader, self).__init__(False)
-
-	def createNewNode(self):
-		return importerSegNode.DesignViewNode()
-
-	def skipDumpRawData(self):
-		return True
+		super(DesignViewReader, self).__init__()
 
 	def Read_08823621(self, node):
 		i = node.Read_Header0()

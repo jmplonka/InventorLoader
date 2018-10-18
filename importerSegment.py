@@ -7,7 +7,7 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 
 import re, traceback
 from importerClasses   import *
-from importerSegNode   import isList, CheckList, BinaryNode, NodeRef, _TYP_NODE_REF_
+from importerSegNode   import isList, CheckList, AbstractNode, NodeRef, _TYP_NODE_REF_
 from importerUtils     import *
 from Acis              import clearEntities
 from importerSAT       import readEntityBinary, Header
@@ -91,108 +91,6 @@ def getStart(m, data, offset):
 	if (m):
 		return m.start() - offset
 	return len(data)
-
-def dumpRemainingDataB(file, data, offset):
-	p1 = re.compile('\x00\x00[ 0-z]\x00[ 0-z]\x00')
-	p2 = re.compile('\x00\x00\x00[ 0-z][ 0-z]')
-	p3 = re.compile('[^\x00]\x00\x00\x30')
-
-	i = offset
-
-	m1 = p1.search(data, i)
-	m2 = p2.search(data, i)
-	m3 = p3.search(data, i)
-
-	iOld = offset
-
-	while (m1 or m2 or m3):
-		i1 = getStart(m1, data, 2)
-		i2 = getStart(m2, data, 1)
-		i3 = getStart(m3, data, 0)
-
-		if ((i3 < i1) and (i3 < i2)):
-			typ, i = getUInt16(data, i3)
-			cod, i = getUInt16(data, i)
-			cnt, i = getUInt32(data, i)
-			if (cnt > 0):
-				file.write(HexAsciiDump(data[iOld:i3], iOld, False))
-				if (typ == 0x02):
-					if (cnt < 0x100):
-						arr, i = getUInt32A(data, i, 2)
-						cls = arr[1]
-						file.write('\t[%04X,%04X] %X - [%s]\n' %(typ, cod, cnt, IntArr2Str(arr, 4)))
-						j = 0;
-						try:
-							while (j < cnt):
-								if (cls == 0x1000):
-									val, i = getUInt32(data, i)
-								elif (cls == 0x0000):
-									val, i = getUInt16A(data, i, 2)
-									val = IntArr2Str(val, 4)
-								elif ((cls >= 0x0114) and (cls <=0x011B)):
-									val, i = getFloat32_3D(data, i)
-									val = FloatArr2Str(val)
-								elif (cls == 0x0131):
-									val, i = getFloat32_2D(data, i)
-									val = FloatArr2Str(val)
-								elif (cls == 0x0107):
-									val, i = getFloat64_2D(data, i)
-									a8, i = getUInt8A(data, i, 8)
-									val = '%s,%s' %(FloatArr2Str(val), IntArr2Str(a8, 2))
-								else:
-									val = ''
-								file.write('\t\t%d: %s\n' %(j, val))
-								j += 1
-						except:
-							i = i3 + 1
-					else:
-						file.write('\t[%04X,%04X] %X\n' %(typ, cod, cnt))
-				elif (typ == 0x06):
-					arr, i = getUInt32A(data, i, 2)
-					file.write('\t[%04X,%04X] %X - [%s]\n' %(typ, cod, cnt, IntArr2Str(arr, 4)))
-					j = 0
-					if (cnt * 8 + i < len(data)):
-						while (j < cnt):
-							val, i = getUInt32(data, i)
-							arr, i = getUInt16A(data, i, 2)
-							file.write('\t\t%d: %4X - [%s]\n' %(j, val, IntArr2Str(arr, 4)))
-							j += 1
-				elif (typ == 0x07):
-					arr, i = getUInt32A(data, i, 2)
-					file.write('\t[%04X,%04X] %X - [%s]\n' %(typ, cod, cnt, IntArr2Str(arr, 4)))
-				else:
-					file.write('\t[%04X,%04X] %X\n' %(typ, cod, cnt))
-				iOld = i
-			else:
-				i += 4
-			m3 = p3.search(data, i)
-		elif ((i1 < i2) and (i1 < i3)):
-			try:
-				txt, i = getLen32Text16(data, i1)
-				if (len(txt) > 0):
-					file.write(HexAsciiDump(data[iOld:i1], iOld, False))
-					file.write("%04X: '%s'\n" %(i1, txt))
-					iOld = i
-				else:
-					i = i1+4
-			except:
-				i += 10
-			m1 = p1.search(data, i)
-		else:
-			try:
-				txt, i = getLen32Text8(data, i2)
-				if (len(txt) > 0):
-					file.write(HexAsciiDump(data[iOld:i2], iOld, False))
-					file.write("%04X: '%s'\n" %(i2, txt))
-					iOld = i
-				else:
-					i = i2+4
-			except:
-				i += 5
-			m2 = p2.search(data, i)
-
-	file.write(HexAsciiDump(data[iOld:], iOld, False))
-	return
 
 def getBranchNode(data, isRef):
 	if (data.typeName == 'Parameter'):                       return ParameterNode(data, isRef)
@@ -282,7 +180,7 @@ def buildTree(file, seg):
 		for ref in parent.references:
 			if (ref.index > parent.index):
 				node = ref._data
-				if (node is not None):	
+				if (node is not None):
 					for leaf in node.references:
 						if (parent.index == leaf.index):
 							leaf.type = NodeRef.TYPE_PARENT
@@ -299,9 +197,9 @@ def buildTree(file, seg):
 		for ref in parent.references:
 			if (ref.index > parent.index):
 				node = ref._data
-				if (node is not None):	
+				if (node is not None):
 					if ((ref.type == NodeRef.TYPE_CHILD) and (node.parent is None)):
-						node.parent = parent 
+						node.parent = parent
 	# now the tree can be build
 	roots = DataNode(None, False)
 	for node in nodes.values():
@@ -310,6 +208,7 @@ def buildTree(file, seg):
 
 	return roots
 
+# Some of the ASM entities have extra chunks that needs to be deleted to ACIS conform
 def convert2Version7(entity):
 	if ((getFileVersion() > 2012) and (entity.name == 'coedge')):
 		del entity.chunks[len(entity.chunks) - 3]
@@ -325,16 +224,12 @@ def convert2Version7(entity):
 
 class SegmentReader(object):
 
-	def __init__(self, analyseLists = True):
+	def __init__(self):
 		self.nodeCounter = 0
-		self.analyseLists = analyseLists
 		self.fmt_old = (getFileVersion() < 2011)
 
 	def postRead(self, seg):
 		return
-
-	def createNewNode(self):
-		return BinaryNode()
 
 	def ReadNodeRef(self, node, offset, number, type):
 		n, i = getUInt16(node.data, offset)
@@ -363,7 +258,7 @@ class SegmentReader(object):
 		i = node.ReadList3(i, _TYP_NODE_REF_, 'lst0')
 		i = self.skipBlockSize(i)
 		return i
-	
+
 	def ReadFloat64A(self, node, i, cnt, name, size):
 		j = 0
 		lst = []
@@ -593,17 +488,17 @@ class SegmentReader(object):
 		return
 
 	def setNodeData(self, node, data):
-		nodeTypeID, i = getUInt8(data, node.offset)
-		node.typeID = getNodeType(nodeTypeID, node.segment)
+		n, i = getUInt32(data, node.offset)
+		node.typeID = getNodeType((n & 0xFF), node.segment)
 		if (isinstance(node.typeID, UUID)):
 			node.typeName = '%08X' % (node.typeID.time_low)
 		else:
 			node.typeName = '%08X' % (node.typeID)
-		node.data = data[i + 3:i + 3 + node.size]
+		node.data = data[i:i + node.size]
 
-	def newNode(self, size, offset, data, seg):
+	def ReadBlock(self, data, offset, size, seg):
 		self.nodeCounter += 1
-		node = self.createNewNode()
+		node = AbstractNode()
 		node.index = self.nodeCounter
 		node.size  = size
 		node.offset = offset
@@ -611,28 +506,13 @@ class SegmentReader(object):
 		seg.elementNodes[node.index] = node
 		node.segment = seg
 		self.setNodeData(node, data)
-
-		return node
-
-	def ReadBlock(self, data, offset, size, seg):
-		node = self.newNode(size, offset, data, seg)
 		self.HandleBlock(node)
 		return node
-
-	def skipDumpRawData(self):
-		return False
 
 	def skipBlockSize(self, offset, l = 4):
 		if (self.fmt_old):
 			return offset + l
 		return offset
-
-	def dumpRawData(self, seg, data):
-#		filename = '%s\\%sB.bin' %(getInventorFile()[0:-4], seg.name)
-#		newFileRaw = open (filename, 'wb')
-#		newFileRaw.write(data)
-#		newFileRaw.close()
-		return
 
 	def ReadRefU32AList(self, node, offset, name, size, type):
 		cnt, i = getUInt32(node.data, offset)
@@ -750,9 +630,6 @@ class SegmentReader(object):
 
 	def ReadSegmentData(self, file, buffer, seg):
 		showTree = False
-
-		if (not self.skipDumpRawData()):
-			self.dumpRawData(seg, buffer)
 
 		self.nodeCounter = 0
 

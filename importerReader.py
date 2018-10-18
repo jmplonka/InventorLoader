@@ -291,8 +291,8 @@ def ReadRSeSegment(data, offset, idx, count):
 
 	seg = RSeSegment()
 	seg.name, i = getLen32Text16(data, offset)
-	seg.ID, i = getUUID(data, i, 'RSeSegment[%d].ID'  %(idx))
-	seg.revisionRef, i = getUUID(data, i, 'RSeSegment.revisionRef')
+	seg.ID, i = getUUID(data, i)
+	seg.revisionRef, i = getUUID(data, i)
 	seg.value1, i = getUInt32(data, i)
 	seg.count1, i = getUInt32(data, i)
 	seg.arr1, i = getUInt32A(data, i, 5) # ???, ???, ???, numSec1, ???
@@ -310,9 +310,9 @@ def ReadRSeSegmentObject(data, offset, seg, idx):
 	i = offset
 
 	obj = RSeSegmentObject()
-	obj.revisionRef, i = getUUID(data, i, 'RSeSegmentType.revisionRef')
+	obj.revisionRef, i = getUUID(data, i)
 	obj.values, i = getUInt8A(data, i, 9)
-	obj.segRef, i = getUUID(data, i, 'RSeSegmentType.segRef')
+	obj.segRef, i = getUUID(data, i)
 	obj.value1, i = getUInt32(data, i)
 	obj.value2, i = getUInt32(data, i)
 	seg.objects.append(obj)
@@ -419,11 +419,8 @@ def ReadRSeSegInfo10(data, offset):
 	idx = 0
 	while (idx < cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 6)
-
 		i = ReadRSeSegmentType10(data, i, seg)
-
 		model.RSeSegInfo.segments[seg.name] = seg
-
 		idx += 1
 
 	return	 i
@@ -432,35 +429,26 @@ def ReadRSeSegInfo15(data, offset):
 	global model
 
 	model.RSeSegInfo = RSeSegInformation()
-
 	cnt, i = getSInt32(data, offset)
 	idx = 0
 	while (idx < cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 6)
-
 		i = ReadRSeSegmentType15(data, i, seg)
-
 		model.RSeSegInfo.segments[seg.name] = seg
-
 		idx += 1
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeSegInfo.val, 4))
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logInfo(u"\tList 1")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList1.append(txt)
 		idx += 1
 
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logInfo(u"\tList 2")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList2.append(txt)
 		idx += 1
 
@@ -474,30 +462,22 @@ def ReadRSeSegInfo1A(data, offset):
 	idx = 0
 	while (idx < cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 8)
-
 		i = ReadRSeSegmentType1A(data, i, seg)
-
 		model.RSeSegInfo.segments[seg.name] = seg
-
 		idx += 1
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
-	logInfo(u"\t[%s]", IntArr2Str(model.RSeSegInfo.val, 4))
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logInfo(u"\tList 1")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList1.append(txt)
 		idx += 1
 
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logInfo(u"\tList 2")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList2.append(txt)
 		idx += 1
 
@@ -511,30 +491,22 @@ def ReadRSeSegInfo1D(data):
 	idx = 0
 	while (idx < cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 8)
-
 		i = ReadRSeSegmentType1D(data, i, seg)
-
 		model.RSeSegInfo.segments[seg.name] = seg
-
 		idx += 1
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
-	logInfo(u"\t[%s]" , IntArr2Str(model.RSeSegInfo.val, 4))
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logInfo(u"\tList 1")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList1.append(txt)
 		idx += 1
 
 	cnt, i = getUInt32(data, i)
 	idx = 0
-	logInfo(u"\tList 2")
 	while (idx < cnt):
 		txt, i = getLen32Text16(data, i)
-		logInfo(u"\t\t%02X: %r", idx, txt)
 		model.RSeSegInfo.uidList2.append(txt)
 		idx += 1
 
@@ -548,19 +520,15 @@ def ReadRSeSegInfo1F(data):
 	idx = 0
 	while (idx < cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 10)
-
 		i = ReadRSeSegmentType1F(data, i, seg)
-
 		model.RSeSegInfo.segments[seg.name] = seg
-
 		idx += 1
 
 	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
-
 	cnt, i = getUInt32(data, i)
 	idx = 0
 	while (idx < cnt):
-		uid, i = getUUID(data, i,'RSeSegInfo.List1[%X].uid' % idx)
+		uid, i = getUUID(data, i)
 		txt = getUidText(uid)
 		model.RSeSegInfo.uidList1.append(txt)
 		idx += 1
@@ -568,7 +536,7 @@ def ReadRSeSegInfo1F(data):
 	cnt, i = getUInt32(data, i)
 	idx = 0
 	while (idx < cnt):
-		uid, i = getUUID(data, i, 'RSeSegInfo.List2[%X].uid' % idx)
+		uid, i = getUUID(data, i)
 		txt = getUidText(uid)
 		model.RSeSegInfo.uidList2.append(txt)
 		idx += 1
@@ -582,7 +550,7 @@ def ReadRSeDb10(data, offset):
 	model.RSeDb.arr3, i = getUInt16A(data, i, 8)
 	model.RSeDb.arr2, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat2, i = getDateTime(data, i)
-	model.RSeDb.uid2, i = getUUID(data, i, 'RSeDb[1].uid')
+	model.RSeDb.uid2, i = getUUID(data, i)
 	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
 	model.RSeDb.arr5, i = getUInt32A(data, i, 6)
@@ -605,7 +573,7 @@ def ReadRSeDb15(data, offset):
 	model.RSeDb.dat2, i = getDateTime(data, i)
 	model.RSeDb.arr3, i = getUInt16A(data, i, 14)
 	model.RSeDb.dat3, i = getDateTime(data, i)
-	model.RSeDb.uid2, i = getUUID(data, i, 'RSeDb[1].uid')
+	model.RSeDb.uid2, i = getUUID(data, i)
 	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
 	model.RSeDb.arr5, i = getUInt32A(data, i, 6)
@@ -632,7 +600,7 @@ def ReadRSeDb1A(data, offset):
 	model.RSeDb.txt2, i  = getLen32Text16(data, i)
 	model.RSeDb.arr3, i = getUInt16A(data, i, 12)
 	model.RSeDb.dat3, i = getDateTime(data, i)
-	model.RSeDb.uid2, i = getUUID(data, i, 'RSeDb[1].uid')
+	model.RSeDb.uid2, i = getUUID(data, i)
 	model.RSeDb.u16, i  = getUInt16(data, i)
 	model.RSeDb.arr4, i = getUInt32A(data, i, 2)
 	model.RSeDb.txt, i = getLen32Text16(data, i)
@@ -670,7 +638,7 @@ def ReadRSeDb(data):
 
 	model.RSeDb = RSeDatabase()
 	i = 0
-	model.RSeDb.uid, i = getUUID(data, i, 'RSeDb.uid')
+	model.RSeDb.uid, i = getUUID(data, i)
 	model.RSeDb.version, i = getUInt32(data, i)
 	model.RSeDb.arr1, i = getUInt16A(data, i, 4)
 	model.RSeDb.dat1, i = getDateTime(data, i)
@@ -693,15 +661,14 @@ def ReadRSeDb(data):
 def ReadRSeDbRevisionInfo(data):
 	global model
 
-	i = 0
-	version, i = getSInt32(data, i)
+	version, i = getSInt32(data, 0)
 	model.RSeDbRevisionInfoMap = {}
 	model.RSeDbRevisionInfoList = []
-	cnt, i = getSInt32(data, i)
 	n = 0
+	cnt, i = getSInt32(data, i)
 	while (n < cnt):
 		info = RSeDbRevisionInfo()
-		info.ID, i = getUUID(data, i, 'RSeDbRevisionInfo.ID')
+		info.ID, i = getUUID(data, i)
 		info.value1, i = getUInt16(data, i)
 		info.value2, i = getUInt16(data, i)
 		if (version == 3):
@@ -713,29 +680,38 @@ def ReadRSeDbRevisionInfo(data):
 			info.type = 0
 		if (info.type == 0xFFFF):
 			b, i = getUInt8(data, i)
+			f, i = getFloat32(data, i)
 			if (b == 0):
 				info.data, i = getUInt32A(data, i, 4)
 			elif (b == 1):
 				info.data, i = getUInt32A(data, i, 2)
 			else:
+				n = []
 				logError(u"ERROR> Don't know how to handle DbRevisionInfo.type=%02X!", b)
+			info.data = (f, n)
 		else:
-			info.data = []
+			info.data = (0.0, 0)
 		model.RSeDbRevisionInfoMap[info.ID] = info
 		model.RSeDbRevisionInfoList.append(info)
 
 		n += 1
 	return i
 
-def getRevisionRef(revIdx):
+def getRevisionInfoByUID(revUID):
 	global model
 
-	revRef = revIdx
+	if ((model.RSeDbRevisionInfoMap is not None) and (revUID in model.RSeDbRevisionInfoMap)):
+		return model.RSeDbRevisionInfoMap[revUID]
+
+	return revUID
+
+def getRevisionInfoByIndex(revIdx):
+	global model
 
 	if ((model.RSeDbRevisionInfoList is not None) and (len(model.RSeDbRevisionInfoList) > revIdx)):
-		revRef = model.RSeDbRevisionInfoList[revIdx]
+		return model.RSeDbRevisionInfoList[revIdx]
 
-	return revRef
+	return revIdx
 
 def ReadRSeMetaDataSectionSizeArray(data, offset):
 	size, i = getUInt32(data, offset)
@@ -753,7 +729,7 @@ def ReadRSeMetaDataBlocksSize(value, data, offset):
 
 		value.sec1.append(sec)
 
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 
 	return i
 
@@ -764,23 +740,25 @@ def ReadRSeMetaDataSection2(value, data, offset):
 		j += 1
 		sec = RSeStorageSection2(value)
 		if (value.ver == 3):
-			sec.revisionRef, i = getUUID(data, i, '%s.Sec2[%X].uidRef' % (value.name, j))
+			uid, i = getUUID(data, i)
+			sec.revision = getRevisionInfoByUID(uid)
 			sec.flag, i = getUInt32(data, i)
 			sec.val, i = getUInt16(data, i)
 			sec.arr, i = getUInt16A(data, i, 5)
 		elif (value.ver == 4):
 			idx, i = getUInt32(data, i)
-			sec.revisionRef = getRevisionRef(idx)
+			sec.revision = getRevisionInfoByIndex(idx)
 			sec.flag, i = getUInt32(data, i)
 			sec.val, i = getUInt16(data, i)
 			sec.arr, i = getUInt16A(data, i, 5)
 		else:
 			idx, i = getUInt32(data, i)
-			sec.revisionRef = getRevisionRef(idx)
+			sec.revision = getRevisionInfoByIndex(idx)
 			sec.flag, i = getUInt32(data, i)
 			sec.val, i = getUInt16(data, i)
+			sec.arr = []
 		value.sec2.append(sec)
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSection3(value, data, offset):
@@ -789,7 +767,7 @@ def ReadRSeMetaDataSection3(value, data, offset):
 	while (j < cnt):
 		j += 1
 		sec = RSeStorageSection3(value)
-		sec.uid, i = getUUID(data, i, '%s.Sec3[%X].uidRef' % (value.name, j))
+		sec.uid, i = getUUID(data, i)
 		sec.arr, i = getUInt16A(data, i, 6)
 		value.sec3.append(sec)
 	i = ReadRSeMetaDataSectionSizeArray(data, i)
@@ -806,7 +784,7 @@ def ReadRSeMetaDataBlocksType(value, data, offset):
 	j = 0
 	while (j < cnt):
 		sec = RSeStorageBlockType(value)
-		uid, i = getUUID(data, i, '%s.Sec4[%X].uidRef' % (value.name, j))
+		uid, i = getUUID(data, i)
 		sec.typeID = uid
 		val, i = ReadRSeMetaDataSection4Data(data, i)
 		sec.arr.append(val)
@@ -814,7 +792,7 @@ def ReadRSeMetaDataBlocksType(value, data, offset):
 		sec.arr.append(val)
 		value.sec4[j] = sec
 		j += 1
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 
 	return i
 
@@ -822,7 +800,7 @@ def ReadRSeMetaDataSection5(value, data, offset, size):
 	#index section 4
 	sec = RSeStorageSection5(value)
 	sec.indexSec4, i = getUInt16A(data, offset, size / 2)
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSection6(value, data, offset, size, cnt):
@@ -834,7 +812,7 @@ def ReadRSeMetaDataSection6(value, data, offset, size, cnt):
 	# n16, i = getUInt16(data, i)
 	# arrU = []
 	# while (n16>0)
-	# 	uid, i = getUUID(data, i, '%s.Sec6[%X].uidRef' % (value.name, n))
+	# 	uid, i = getUUID(data, i)
 	# 	arr2, i = getUInt16A(data, i, 2)
 	#   arrU.append(sec7(uid, arr2))
 	#   n16 -= 1
@@ -857,19 +835,17 @@ def ReadRSeMetaDataSection6(value, data, offset, size, cnt):
 	#
 	#j -= 0x16
 	#n16, dummy = getUInt16(data, j)
-	#uid, dummy = getUUID(data, j + 0x02, '%s.Sec6[%X].uidRef' % (value.name, len(sec.arr1)))
+	#uid, dummy = getUUID(data, j + 0x02)
 	#u32, dummy = getUInt32(data, j + 0x12)
 	#sec.arr1.append(RSeStorageSection4Data1(uid, u32))
 	#while (n16 != len(sec.arr1)):
 	#	j -= 0x14
 	#	n16, dummy = getUInt16(data, j)
-	#	uid, dummy = getUUID(data, j + 0x02, '%s.Sec6[%X].uidRef' % (value.name, len(sec.arr1)))
+	#	uid, dummy = getUUID(data, j + 0x02)
 	#	u32, dummy = getUInt32(data, j + 0x12)
 	#	sec.arr1.insert(0, RSeStorageSection4Data1(uid, u32))
 	#
-	#setDumpLineLength(0x20)
-
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	#size, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSection7(value, data, offset, size, cnt):
@@ -879,9 +855,9 @@ def ReadRSeMetaDataSection7(value, data, offset, size, cnt):
 		j += 1
 		sec = RSeStorageSection7(value)
 		if (size/cnt >= 0x4C):
-			sec.segRef, i = getUUID(data, i, '%s.Sec7[%X].segRef' % (value.name, j))
-			sec.revisionRef, i    = getUUID(data, i, '%s.Sec7[%X].revisionRef' % (value.name, j))
-			sec.dbRef, i  = getUUID(data, i, '%s.Sec7[%X].dbRef' % (value.name, j))
+			sec.segRef, i = getUUID(data, i)
+			sec.revisionRef, i    = getUUID(data, i)
+			sec.dbRef, i  = getUUID(data, i)
 			sec.txt1, i   = getLen32Text16(data, i)
 			sec.arr1, i   = getUInt16A(data, i, 4)
 			sec.txt2, i   = getLen32Text16(data, i)
@@ -889,14 +865,14 @@ def ReadRSeMetaDataSection7(value, data, offset, size, cnt):
 			sec.txt3, i   = getLen32Text16(data, i)
 			sec.arr3, i   = getUInt16A(data, i, 2)
 		else:
-			sec.segRef, i = getUUID(data, i, '%s.Sec7[%X].segRef' % (value.name, j))
-			sec.revisionRef, i    = getUUID(data, i, '%s.Sec7[%X].revisionRef' % (value.name, j))
+			sec.segRef, i = getUUID(data, i)
+			sec.revisionRef, i    = getUUID(data, i)
 		seg = findSegment(sec.segRef)
 		if (seg is not None):
 			sec.segName = seg.name
 
 		value.sec7.append(sec)
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSection8(value, data, offset, size, cnt):
@@ -905,10 +881,10 @@ def ReadRSeMetaDataSection8(value, data, offset, size, cnt):
 	while (j < cnt):
 		j += 1
 		sec = RSeStorageSection8(value)
-		sec.dbRevisionInfoRef, i = getUUID(data, i, '%s.Sec8[%X].dbRevisionInfoRef' % (value.name, j))
+		sec.dbRevisionInfoRef, i = getUUID(data, i)
 		sec.arr, i = getUInt16A(data, i, 2)
 		value.sec8.append(sec)
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSection9(value, data, offset, size, cnt):
@@ -917,10 +893,10 @@ def ReadRSeMetaDataSection9(value, data, offset, size, cnt):
 	while (j<cnt):
 		j += 1
 		sec = RSeStorageSection9(value)
-		sec.uid, i = getUUID(data, i, '%s.Sec9[%X].uidRef' % (value.name, j))
+		sec.uid, i = getUUID(data, i)
 		sec.arr, i = getUInt8A(data, i, 3)
 		value.sec9.append(sec)
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSectionA(value, data, offset, size, cnt):
@@ -934,7 +910,7 @@ def ReadRSeMetaDataSectionA(value, data, offset, size, cnt):
 		sec = RSeStorageSectionA(value)
 		sec.arr, i = getUInt16A(data, i, 4)
 		value.secA.append(sec)
-	i = ReadRSeMetaDataSectionSizeArray(data, i)
+	size, i = getUInt32(data, i)
 	return i
 
 def ReadRSeMetaDataSectionB(value, data, offset, size, cnt):
@@ -997,7 +973,7 @@ def ReadRSeMetaDataB(dataB, seg):
 
 		newFile.write('[%s]\n' %(getFileVersion()))
 		i = 0
-		uid, i = getUUID(dataB, i, '%sB.uid' %(seg.name))
+		uid, i = getUUID(dataB, i)
 		n, i = getUInt16(dataB, i)
 		z = zlib.decompressobj()
 		data = z.decompress(dataB[i:])
@@ -1020,7 +996,7 @@ def ReadRSeMetaDataM(dataM, name):
 	value.arr1, i = getUInt16A(dataM, i, 8)
 	if (value.arr1[0] + value.arr1[1] + value.arr1[2] + value.arr1[3] + value.arr1[4] > 0):
 		value.name, i = getLen32Text16(dataM, i)
-		value.segRef, i = getUUID(dataM, i, '%s.segRef' %(value.name))
+		value.segRef, i = getUUID(dataM, i)
 		value.arr2, i = getUInt32A(dataM, i, 0x3)
 		seg = findSegment(value.segRef)
 		if (seg is not None):
@@ -1047,8 +1023,6 @@ def ReadRSeMetaDataM(dataM, name):
 
 	z = zlib.decompressobj()
 	data = z.decompress(dataM[i:])
-	bak = getDumpLineLength()
-	setDumpLineLength(0x30)
 
 	i = 0
 	value.arr3, i = getUInt16A(data, i, 7)
@@ -1067,7 +1041,6 @@ def ReadRSeMetaDataM(dataM, name):
 		if (c > 0):
 			if (c < 0xFFFF):
 				n = 0
-				setDumpLineLength(l / c)
 				if (k==6):
 					ReadRSeMetaDataSection6(value, data, j, l, c)
 				elif (k==7):
@@ -1086,48 +1059,6 @@ def ReadRSeMetaDataM(dataM, name):
 		i -= (s + 4)
 		k -= 1
 
-	value.uid2, i = getUUID(data, len(data)-0x10, '%s.uid2' % (value.name))
-	#if (value.uid2.bytes != uuid.UUID('9744e6a4-11d1-8dd8-0008-2998bedddc09').bytes:
-	# logError(u"ERROR> STREAM CORRUPTED")
-	setDumpLineLength(bak)
+	value.uid2, i = getUUID(data, len(data)-0x10)
 	model.RSeStorageData[value.name] = value
 	return value
-
-def ReadRSeEmbeddingsContentsText16(data, offset):
-	len, i = getUInt8A(data, offset, 4)
-	end = i + len[3]*2
-	buf = data[i: end]
-	txt = buf.decode('UTF-16LE').encode(ENCODING_FS)
-	return txt.decode("utf-8"), end
-
-def dumpRemaining(data, offset):
-	i = offset
-
-	p1 = re.compile('\x00\x00[^\x00]\x00[^\x00]\x00[^\x00]\x00[^\x00]\x00')
-	p2 = re.compile('\x00\x00\x00[ 0-z][ 0-z][ 0-z][ 0-z]')
-
-	m1 = p1.search(data, i)
-	m2 = p2.search(data, i)
-	while (m1 or m2):
-		iOld = i
-		if (m1):
-			i1 = m1.start() - 2
-		else:
-			i1 = len(data)
-		if (m2):
-			i2 = m2.start() - 1
-		else:
-			i2 = len(data)
-
-		if (i1 <= i2):
-			logInfo(HexAsciiDump(data[iOld:i1], iOld, False))
-			txt, i = getLen32Text16(data, i1)
-			m1 = p1.search(data, i)
-		else:
-			logInfo(HexAsciiDump(data[iOld:i2], iOld, False))
-			txt, i = getLen32Text8(data, i2)
-			m2 = p2.search(data, i)
-
-		logInfo(u"\t%r", txt)
-
-	logInfo(HexAsciiDump(data[i:len(data)], i, False))

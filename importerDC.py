@@ -6,7 +6,7 @@ Importer for the Document's components
 Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) browser view data.
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
-from importerSegment        import SegmentReader, getNodeType, convert2Version7, resolveEntityReferences, dumpSat
+from importerSegment        import SegmentReader, convert2Version7, resolveEntityReferences, dumpSat
 from importerUtils          import *
 from importerClasses        import Tolerances, Functions
 from importerTransformation import Transformation
@@ -39,21 +39,7 @@ class DCReader(SegmentReader):
 	DOC_PRESENTATION = 4
 
 	def __init__(self):
-		super(DCReader, self).__init__(False)
-
-########################################
-# interface function
-
-	#overrides
-	def createNewNode(self):
-		'''
-		Called by importerSegment.py -> SegmentReader.newNode
-		'''
-		return importerSegNode.DCNode()
-
-	#overrides
-	def skipDumpRawData(self):
-		return True
+		super(DCReader, self).__init__()
 
 ########################################
 # usability functions
@@ -2687,8 +2673,8 @@ class DCReader(SegmentReader):
 			j = 0
 			lst5 = []
 			while (j < cnt):
-				id1, i = getUUID(node.data, i, '%08X[%d]' %(node.typeID.time_low, node.index))
-				id2, i = getUUID(node.data, i, '%08X[%d]' %(node.typeID.time_low, node.index))
+				id1, i = getUUID(node.data, i)
+				id2, i = getUUID(node.data, i)
 				u32, i = getUInt32(node.data, i)
 				lst5.append([id1, id2, u32])
 				j += 1
@@ -8674,6 +8660,15 @@ class DCReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
+	def Read_F8A77A0D(self, node): # ParameterOperationPowerIdent
+		node.name = '^'
+		i = node.Read_Header0('ParameterOperationPowerIdent')
+		i = node.ReadChildRef(i, 'refUnit')
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i, 'refOperand1')
+		i = self.skipBlockSize(i)
+		return i
+
 	def Read_F90DC646(self, node):
 		i = node.Read_Header0()
 		i = node.ReadParentRef(i)
@@ -8908,15 +8903,6 @@ class DCReader(SegmentReader):
 	def Read_FFD270B8(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadUUID(i, 'uid')
-		return i
-
-	def Read_F8A77A0D(self, node): # ParameterOperationPowerIdent
-		node.name = '^'
-		i = node.Read_Header0('ParameterOperationPowerIdent')
-		i = node.ReadChildRef(i, 'refUnit')
-		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'refOperand1')
-		i = self.skipBlockSize(i)
 		return i
 
 	def Read_Operation(self, node, operation, name):

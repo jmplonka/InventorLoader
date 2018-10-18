@@ -262,7 +262,7 @@ class AbstractNode(AbstractData):
 		return i
 
 	def ReadUUID(self, offset, name):
-		x, i = getUUID(self.data, offset, '%08X[%d]' %(self.typeID.time_low, self.index))
+		x, i = getUUID(self.data, offset)
 		self.set(name, x)
 		self.content += ' %s=%r' %(name, x)
 		return i
@@ -275,8 +275,7 @@ class AbstractNode(AbstractData):
 		return i
 
 	def ReadBoolean(self, offset, name):
-		x, i = getUInt8(self.data, offset)
-		x = (x != 0)
+		x, i = getBoolean(self.data, offset)
 		self.set(name, x)
 		self.content += ' %s=%s' %(name, x)
 		return i
@@ -977,11 +976,11 @@ class AbstractNode(AbstractData):
 					val, i = getFloat64(self.data, i)
 					self.content += '%s[%s: %s]' %(sep, getIndex(key), val)
 				elif (typ == _TYP_MAP_UUID_UINT32_):
-					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
+					key, i = getUUID(self.data, i)
 					val, i = getUInt32(self.data, i)
 					self.content += '%s[%s: %s]' %(sep, key, val)
 				elif (typ == _TYP_MAP_UUID_X_REF):
-					key, i = getUUID(self.data, i, '%08X[%d]' %(self.typeID.time_low, self.index))
+					key, i = getUUID(self.data, i)
 					i = self.ReadCrossRef(i, 'tmp', j, False)
 					val = self.get('tmp')
 					self.content += '%s[%s: %s]' %(sep, key, getIndex(val))
@@ -1239,56 +1238,6 @@ class AbstractNode(AbstractData):
 
 				return unitName
 		return None
-
-class AppNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class BinaryNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class BRepNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class BrowserNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class DCNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class DesignViewNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class EeDataNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class EeSceneNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class FBAttributeNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class GraphicsNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-		self.key    = 0
-		self.keyRef = 0
-
-class NotebookNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
-
-class ResultNode(AbstractNode):
-	def __init__(self):
-		AbstractNode.__init__(self)
 
 class NodeRef():
 	TYPE_PARENT = 1

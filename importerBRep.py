@@ -16,13 +16,7 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class BRepReader(SegmentReader):
 	def __init__(self):
-		super(BRepReader, self).__init__(False)
-
-	def createNewNode(self):
-		return importerSegNode.BRepNode()
-
-	def skipDumpRawData(self):
-		return False
+		super(BRepReader, self).__init__()
 
 	def Read_009A1CC4(self, node): return 0
 

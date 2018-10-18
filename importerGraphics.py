@@ -20,14 +20,8 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 class GraphicsReader(SegmentReader):
 
 	def __init__(self):
-		super(GraphicsReader, self).__init__(True)
+		super(GraphicsReader, self).__init__()
 		self.dcIndexes = {}
-
-	def createNewNode(self):
-		return importerSegNode.GraphicsNode()
-
-	def skipDumpRawData(self):
-		return True
 
 	def Read_32RRR2(self, node, typeName = None):
 		i = node.Read_Header0(typeName)

@@ -19,13 +19,8 @@ __status__      = 'In-Development'
 
 class NotebookReader(SegmentReader):
 	def __init__(self):
-		super(NotebookReader, self).__init__(False)
+		super(NotebookReader, self).__init__()
 
-	def createNewNode(self):
-		return importerSegNode.NotebookNode()
-
-	def skipDumpRawData(self):
-		return True
 
 	def Read_386E04F0(self, node):
 		i = node.Read_Header0('RtfContent')

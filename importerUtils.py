@@ -63,7 +63,6 @@ UUID_NAMES = {
 }
 ENCODING_FS      = 'utf8'
 
-_dumpLineLength  = 0x20
 _fileVersion     = None
 _can_import      = True
 _use_sheet_metal = True
@@ -73,9 +72,6 @@ __prmPrefIL__ = ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader"
 
 # The file the be imported
 _inventor_file = None
-
-# The dictionary of all found UUIDs and their origin
-foundUids = {}
 
 STRATEGY_SAT    = 0
 STRATEGY_NATIVE = 1
@@ -191,7 +187,9 @@ def chooseImportStrategy():
 	btnMapping = {STRATEGY_SAT: btnSat, STRATEGY_NATIVE: btnNativ, STRATEGY_STEP: btnCnvrt}
 	msgBox.setDefaultButton(btnMapping[getStrategy()])
 
+	QApplication.setOverrideCursor(Qt.ArrowCursor)
 	result = msgBox.exec_()
+	QApplication.setOverrideCursor(Qt.WaitCursor)
 
 	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE}
 	strategy = resultMapping[result]
@@ -302,6 +300,23 @@ def getUInt8(data, offset):
 	'''
 	val, = UINT8(data, offset)
 	return val, offset + 1
+
+def getBoolean(data, offset):
+	'''
+	Returns a single boolean value.
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the boolean value.
+	Returns:
+		True if the byte at the offset is '1', False if it is '0'
+		Otherwise an exception will be thrown.
+	'''
+	val, = UINT8(data, offset)
+	if (val == 1): return True, offset + 1
+	if (val == 0): return False, offset + 1
+	raise ValueError(u"Expected either 0 or 1 but found %02X" %(val))
 
 def getUInt8A(data, offset, size):
 	'''
@@ -562,7 +577,7 @@ def getColorRGBA(data, offset):
 	c = Color(r, g, b, a)
 	return c, offset + 0x10
 
-def getUUID(data, offset, source):
+def getUUID(data, offset):
 	'''
 	Returns a UUID.
 	Args:
@@ -574,20 +589,8 @@ def getUUID(data, offset, source):
 		The UUID at offset.
 		The new position in the 'stream'.
 	'''
-	global foundUids
-
 	end = offset + 16
 	val = UUID(bytes_le=data[offset:end])
-
-	if (val not in foundUids):
-		list = []
-		foundUids[val] = list
-	else:
-		list = foundUids[val]
-
-	if (source not in list):
-		list.append(source)
-
 	return val, end
 
 def getDateTime(data, offset):
@@ -663,34 +666,6 @@ def Int2DArr2Str(arr, width):
 def PrintableName(fname):
 	return repr('/'.join(fname))
 
-def CombineHexAscii(hexDump, asciiDump):
-	if hexDump == '':
-		return ''
-	return hexDump + '  ' + (' ' * (3 * (getDumpLineLength() - len(asciiDump)))) + asciiDump
-
-def HexAsciiDump(data, offset = 0, doAscii = True):
-	oDumpStream = CDumpStream()
-	hexDump = ''
-	asciiDump = ''
-	dumplinelength = getDumpLineLength()
-
-	for i, b in enumerate(data):
-		if i % dumplinelength == 0:
-			if hexDump != '':
-				if (doAscii == True):
-					oDumpStream.Addline(CombineHexAscii(hexDump, asciiDump))
-				else:
-					oDumpStream.Addline(hexDump)
-			hexDump = '%04X:' % (i+offset)
-			asciiDump = ''
-		hexDump+= ' %02X' % ord(b)
-		asciiDump += b if (ord(b) >= 32 and ord(b)) else '.'
-	if (doAscii == True):
-		oDumpStream.Addline(CombineHexAscii(hexDump, asciiDump))
-	else:
-		oDumpStream.Addline(hexDump)
-	return oDumpStream.Content()
-
 def decode(filename, utf=False):
 	if (isinstance(filename, unicode)):
 		# workaround since ifcopenshell currently can't handle unicode filenames
@@ -742,14 +717,6 @@ def logError(msg, *args):
 
 def logAlways(msg, *args):
 	_log("logAlways", Console.PrintMessage, msg, args)
-
-def getDumpLineLength():
-	global _dumpLineLength
-	return _dumpLineLength
-
-def setDumpLineLength(length):
-	global _dumpLineLength
-	_dumpLineLength = length
 
 def getFileVersion():
 	global _fileVersion
@@ -811,17 +778,6 @@ def viewAxonometric():
 		FreeCADGui.activeView().viewAxonometric()
 		FreeCADGui.SendMsgToActiveView("ViewFit")
 	logInfo(u"DONE!")
-
-class CDumpStream():
-	def __init__(self):
-		self.text = ''
-
-	def Addline(self, line):
-		if line != '':
-			self.text += line + '\n'
-
-	def Content(self):
-		return self.text
 
 class Color():
 	def __init__(self, red, green, blue, alpha):
