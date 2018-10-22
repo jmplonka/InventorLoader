@@ -361,7 +361,7 @@ class Inventor():
 		storage The map of defined RSeStorageDatas
 		Returns the segment that contains the boundary representation.
 		'''
-		for name in self.RSeStorageData.values():
+		for seg in self.RSeStorageData.values():
 			if (seg.isBRep()): return seg
 		return None
 
