@@ -4,6 +4,7 @@
 importerFreeCAD.py
 '''
 import sys, Draft, Part, Sketcher, traceback, re
+from importerReader  import model
 from importerUtils   import *
 from importerClasses import *
 from importerSegNode import SecNode, SecNodeRef
@@ -294,7 +295,7 @@ def getFirstBodyName(ref):
 		bodies = ref.get('bodies')
 		return bodies[0].name
 	except:
-		return ''
+		return ref.name
 
 def getNominalValue(node):
 	if (node):
@@ -548,7 +549,7 @@ class FreeCADImporter:
 				else:
 					logInfo(u"        ... Base2 = '%s'", name)
 			else:
-				logWarning(u"    Base2 (%04X): %s -> '%s' nod found!", base.index, base.typeName, name)
+				logWarning(u"    Base2 (%04X): %s '%s' nod created!", base.index, base.getSubTypeName(), base.name)
 		else:
 			logWarning(u"    Base2: ref is None!")
 
@@ -2491,13 +2492,8 @@ class FreeCADImporter:
 						sourceOffsets[source.Label] = getMM(faceOffset.get('refOffset'))
 		for key in sourceGeos.keys():
 			source = sourceGeos[key]
-			clsName = 'Part::Offset'
-			# if ((hasattr(source, 'Solid')) and (source.Solid)): clsName = 'Part::Thickness'
-			thickenGeo = self.createEntity(thickenNode, clsName)
-			if (clsName == 'Part::Offset'):
-				thickenGeo.Source = source
-			else:
-				thickenGeo.Faces = source
+			thickenGeo = self.createEntity(thickenNode, 'Part::Offset')
+			thickenGeo.Source = source
 			if (isTrue(negativeDir)):
 				thickenGeo.Value = - getCoord(distance, 'valueNominal')
 			else:
@@ -2579,10 +2575,10 @@ class FreeCADImporter:
 
 		coilGeo.Placement  = p1.multiply(p2)
 
-		#TODO:
-		if (isTrue(startIsFlat)): # add flat start to coil wire
+		#TODO: add flat start / end to coil wire
+		if (isTrue(startIsFlat)):
 			pass
-		if (isTrue(endIsFlat)):   # add flat end to coil wire
+		if (isTrue(endIsFlat)):
 			pass
 
 		sweepGeo.Sections  = [boundary]
@@ -3008,7 +3004,10 @@ class FreeCADImporter:
 			r = self.addParameterToTable(table, r, parameterRefs, key)
 		return
 
-	def importModel(self, root, fcDoc, dc):
+	def importModel(self, root, fcDoc):
+		global model
+
+		dc = model.getDC()
 		if (dc is not None):
 			self.root           = root
 			self.doc            = fcDoc
@@ -3016,8 +3015,8 @@ class FreeCADImporter:
 
 			doc = dc.tree.getFirstChild('Document')
 
-			parameters = doc.get('refElements')
-			self.createParameterTable(parameters.node)
+			elements = doc.get('refElements')
+			self.createParameterTable(elements.node)
 
 			label = doc.get('label')
 			lst = label.get('lst0') or []

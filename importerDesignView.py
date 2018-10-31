@@ -22,8 +22,14 @@ class DesignViewReader(SegmentReader):
 		super(DesignViewReader, self).__init__()
 
 	def Read_08823621(self, node):
-		i = node.Read_Header0()
-		i = node.ReadFloat64A(i, 14, 'a0')
+		i = node.Read_Header0('Camera')
+		i = node.ReadFloat64_3D(i, 'target')
+		i = node.ReadFloat64_3D(i, 'eye')
+		i = node.ReadFloat64A(i, 3, 'a0')
+		i = node.ReadFloat64(i, 'angle')
+		i = node.ReadFloat64(i, 'f64_0')
+		i = node.ReadFloat64A(i, 3, 'up')
+		#aX=[00]
 		return i
 
 	def Read_328FC2EA(self, node): # ViewDirectionCollection
@@ -33,8 +39,8 @@ class DesignViewReader(SegmentReader):
 		return i
 
 	def Read_551FB1BF(self, node):
-		i = node.Read_Header0()
-		i = node.ReadFloat64(i, 'f_0')
+		i = node.Read_Header0('ViewScale')
+		i = node.ReadFloat64(i, 'scale')
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
@@ -55,7 +61,7 @@ class DesignViewReader(SegmentReader):
 		return 0
 
 	def Read_8902B593(self, node): # member of ViewDirection.lst0
-		 return 0
+		return 0
 
 	def Read_D9980532(self, node): # member of ViewDirection.lst0
 		return 0

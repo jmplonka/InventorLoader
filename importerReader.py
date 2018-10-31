@@ -147,6 +147,10 @@ Private_Model_Information = {
 }
 Inventor_User_Defined_Properties = {
 }
+Inventor_Piping_Style_Properties = {
+	3: u"Name"
+}
+
 def getProperty(properties, key):
 	value = properties.get(key, '')
 	if (type(value) is str):

@@ -299,6 +299,8 @@ class RSeMetaData():
 		self.elementNodes = {}
 		self.indexNodes  = {}
 		self.tree        = DataNode(None, False)
+	def __repr__(self):
+		return self.name
 
 	def isApp(self): # Application settings/options
 		return (self.name in [RSeMetaData.SEG_APP_PART, RSeMetaData.SEG_APP_ASSEMBLY, RSeMetaData.SEG_APP_DL])
@@ -363,6 +365,15 @@ class Inventor():
 		'''
 		for seg in self.RSeStorageData.values():
 			if (seg.isBRep()): return seg
+		return None
+
+	def getGraphics(self):
+		'''
+		storage The map of defined RSeStorageDatas
+		Returns the segment that contains the graphic objects.
+		'''
+		for seg in self.RSeStorageData.values():
+			if (seg.isGraphics()): return seg
 		return None
 
 class DbInterface():
@@ -676,6 +687,11 @@ class DataNode():
 				return u'(%04X): %s \'%s\'%s' %(node.index, node.typeName, name, content)
 			return u'(%04X): %s%s' %(node.index, node.typeName, content)
 		return "<NONE>"
+	def getSubTypeName(self):
+		node = self.data
+		if (node is not None):
+			return node.typeName
+		return None
 
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):

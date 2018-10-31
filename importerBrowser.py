@@ -89,9 +89,10 @@ class BrowserReader(SegmentReader):
 		i = node.ReadSInt32A(i, 2, 'a1')
 		return i
 
-	def Read_0C775998(self, node):
+	def Read_0C775998(self, node): # AnnotationsFolder
+		node.typeName = 'FolderAnnotations'
 		i = node.ReadLen32Text16(0)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'masks')
 		if (getFileVersion() > 2018):
 			i = node.ReadUInt16(i, 'u16_0')
 		else:
@@ -241,16 +242,8 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_4D0B0CC5(self, node):
-		i = node.ReadLen32Text16(0)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt8(i, 'u8_0')
-		if (node.get('u8_0') == 1):
-			i = node.ReadUInt16(i, 'u16_0')
-		else:
-			node.content += ' u16_0=000'
-			node.set('u16_0', 0)
-		i = node.ReadUInt16A(i, 3, 'a1')
+	def Read_4D0B0CC5(self, node): # Text annotation
+		i = self.Read_Str53(node, 'AnnotationText')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
@@ -289,8 +282,8 @@ class BrowserReader(SegmentReader):
 		i = self.Read_Str23(i, node)
 		return i
 
-	def Read_6CDD3AB0(self, node):
-		i = self.ReadHeaderStr664(node, 'BrowserFolder')
+	def Read_6CDD3AB0(self, node): # Browser folder
+		i = self.ReadHeaderStr664(node, 'FolderBrowser')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -628,7 +621,7 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_F7676AB1(self, node):
-		i = node.ReadUInt32(0, 'u32_0')
+		i = node.ReadUInt32(0, 'mask')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt8(i, 'u8_1')

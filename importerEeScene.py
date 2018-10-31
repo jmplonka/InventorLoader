@@ -76,8 +76,8 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
-	def Read_5194E9A3(self, node):
-		i = self.Read_32RRR2(node)
+	def Read_5194E9A3(self, node): # Surface
+		i = self.Read_32RRR2(node, 'Surface')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i, 8)
@@ -123,8 +123,8 @@ class EeSceneReader(SegmentReader):
 		i = node.Read_Header0('3dObject')
 		i = node.ReadUInt32(i, 'flags')
 		i = node.ReadChildRef(i, 'ref0')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadParentRef(i)
+		i = node.ReadChildRef(i, 'ref1')
+		i = node.ReadCrossRef(i, 'ref2')
 		i = node.ReadCrossRef(i, 'styles')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')

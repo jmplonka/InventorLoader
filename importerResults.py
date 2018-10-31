@@ -79,10 +79,7 @@ class ResultReader(SegmentReader):
 		return i
 
 	def Read_9147489A(self, node):
-		i = self.Read_Header1(node)
-		i = node.ReadUInt16A(i, 4, 'a0')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 5, 'a1')
+		i = self.Read_Header2(node)
 		return i
 
 	def Read_A4645884(self, node):

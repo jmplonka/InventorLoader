@@ -1241,7 +1241,7 @@ class BS3_Surface(BS3_Curve):
 
 		return i
 class Helix():
-	def __init(self):
+	def __init__(self):
 		self.radAngles = Intervall(Range('I', 1.0), Range('I', 1.0))
 		self.posCenter = CENTER
 		self.dirMajor  = DIR_X

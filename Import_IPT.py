@@ -50,11 +50,10 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 						ReadOtherProperties(props, fname, Private_Model_Information)
 					elif (name == '\x05Ynltsm4aEtpcuzs1Lwgf30tmXf'):
 						ReadOtherProperties(props, fname, Inventor_User_Defined_Properties)
+					elif (name == '\x05C3vnhh4uFrpeuhcsBpg4yptkTb'):
+						ReadOtherProperties(props, fname, Inventor_Piping_Style_Properties)
 					else:
 						ReadOtherProperties(props, fname)
-			elif (name == 'UFRxDoc'):
-#				ReadUFRxDoc(stream)
-				ReadIgnorable(fname, stream)
 			elif (name == 'Protein'):
 #				ReadProtein(stream)
 				ReadIgnorable(fname, stream)
@@ -138,15 +137,12 @@ def read(doc, filename, readProperties):
 	return True
 
 def create3dModel(root, doc):
-	global model
 	if (model):
 		storage = model.RSeStorageData
 		strategy = getStrategy()
 		if (strategy == STRATEGY_NATIVE):
-			dc = model.getDC()
-			if (dc is not None):
-				creator = FreeCADImporter()
-				creator.importModel(root, doc, dc)
+			creator = FreeCADImporter()
+			creator.importModel(root, doc)
 		else:
 			brep = model.getBRep()
 			importerSAT._fileName = getInventorFile()

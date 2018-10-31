@@ -38,6 +38,7 @@ class FBAttributeReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_UINT8_, 'data')
 		i = node.ReadUInt8A(i, 2, 'a0')
 		i = node.ReadUInt16A(i, 2, 'a1')
+		i = node.ReadUUID(i, 'uid')
 		return i
 
 	def Read_28C25C44(self, node):

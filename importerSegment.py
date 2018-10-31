@@ -249,7 +249,7 @@ class SegmentReader(object):
 	def ReadHeaderU32RefU8List3(self, node, typeName = None):
 		i = node.Read_Header0(typeName)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadChildRef(i, 'ref0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList3(i, _TYP_NODE_REF_, 'lst0')
@@ -346,7 +346,7 @@ class SegmentReader(object):
 	def Read_Unit(self, node, abbreviation, unitName, offset, factor, supported = False):
 		'''
 		Reads the parameter's unit information
-		ToDo: Handle units not supported by FreeCAD
+		TODO: Handle units not supported by FreeCAD
 		List of SI units
 		LENGTH:                    [1,0,0,0,0,0,0] 'm'
 		MASS:                      [0,1,0,0,0,0,0] 'g'
@@ -356,9 +356,12 @@ class SegmentReader(object):
 		AMOUNT OF SUBSTANCE:       [0,0,0,0,0,1,0] 'mol'
 		LUMINOUS INTENSITY:        [0,0,0,0,0,0,1] 'cd'
 		'''
-		i = self.Read_5F9D0022(node)
+		i = node.Read_Header0(u'Unit' + unitName)
 		i = self.skipBlockSize(i)
-		node.typeName = u'Unit' + unitName
+		i = node.ReadFloat64(i, 'magnitude')
+		i = node.ReadFloat64(i, 'factor')
+		i = self.skipBlockSize(i)
+		i = self.skipBlockSize(i)
 		node.set('Unit', abbreviation)
 		if (sys.version_info.major < 3) and (not isinstance(abbreviation, unicode)):
 			node.set('Unit', unicode(abbreviation))

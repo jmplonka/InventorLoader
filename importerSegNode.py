@@ -264,7 +264,7 @@ class SecNode(AbstractData):
 	def ReadUUID(self, offset, name):
 		x, i = getUUID(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%r' %(name, x)
+		self.content += ' %s={%s}' %(name, x)
 		return i
 
 	def ReadColorRGBA(self, offset, name):
@@ -829,6 +829,9 @@ class SecNode(AbstractData):
 				elif (t == _TYP_SINT32_A_):
 					val, i = getSInt32A(self.data, i, arraySize)
 					s = '[%s]' %(",".join(["%d" %(d) for d in val]))
+				elif (t == _TYP_UINT32_):
+					val, i = getUInt32(self.data, i)
+					s = '%06X' %(val)
 				elif (t == _TYP_UINT32_A_):
 					val, i = getUInt32A(self.data, i, arraySize)
 					if (skipBlockSize): i += 4
