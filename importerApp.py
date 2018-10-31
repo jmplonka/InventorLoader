@@ -481,6 +481,18 @@ class AppReader(SegmentReader):
 	def Read_9E11F9F6(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadUInt32A(i, 6, 'a0')
+		i = node.ReadUUID(i, 'uid_1')
+		i = node.ReadUUID(i, 'uid_2')
+		i = node.ReadParentRef(i)
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_)
+		if (getFileVersion() < 2012):
+			node.content += u" u32_0=000005"
+			node.set('u32_0', 5)
+		else:
+			i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = self.skipBlockSize(i)
 		return i
 
 	def Read_9F81E4C8(self, node): # FeatureControlFrame

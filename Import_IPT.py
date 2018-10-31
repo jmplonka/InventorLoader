@@ -107,7 +107,9 @@ def read(doc, filename, readProperties):
 	list = []
 	for fname in elements:
 		#ensure RSeDb is the very first "file" to be parsed
-		if (fname[-1] == 'RSeDb'):
+		if (fname[-1] == 'UFRxDoc'):
+			pass
+		elif (fname[-1] == 'RSeDb'):
 			stream = ole.openstream(fname).read()
 			ReadRSeDb(stream)
 		elif (fname[-1] == 'RSeSegInfo'):

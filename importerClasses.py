@@ -14,30 +14,6 @@ __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-class UFRxDocument():
-	def __init__(self):
-		self.arr1        = []   # UInt16[]
-		self.arr2        = []   # UInt16[4]
-		self.dat1        = None # DateTime
-		self.arr3        = []   # UInt16[4]
-		self.dat2        = None # DateTime
-		self.comment     = ''
-		self.arr4        = []   # UInt16[8]
-		self.arr5        = []   # UInt16[4]
-		self.dat3        = None # DateTime
-		self.revisionRef = None # reference to RSeDbRevisionInfo
-		self.ui1         = 0
-		self.dbRef       = None # reference to RSeDb
-		self.filename    = ''
-		self.arr6        = []   # UInt16[3]
-		self.prps        = {}
-		self.ui2         = 0
-		self.txt3        = ''
-		self.ui3         = 0
-		self.arr7        = []   # UInt16[9]
-		self.minVec3D    = []   # float32[3] <=> Point3D_min ???
-		self.maxVec3D    = []   # float32[3] <=> Point3D_max ???
-
 class RSeDatabase():
 	def __init__(self):
 		self.uid         = None # Internal-Name of the object

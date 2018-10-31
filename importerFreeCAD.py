@@ -339,17 +339,23 @@ def getCountDir(length, count, direction, fitted):
 
 	return cnt, VEC(x, y, z)
 
-def setDefaultViewObject(geo):
+def setDefaultViewObjectValues(geo):
 	if (geo  is None): return
-	geo.ViewObject.DisplayMode  = 'Shaded' # Flat Lines, Shaded, Wireframe or Points
-	geo.ViewObject.DrawStyle    = 'Solid'
-	geo.ViewObject.Lighting     = 'Two side'
-	geo.ViewObject.LineColor    = (1.0, 1.0, 1.0)
-	geo.ViewObject.LineWidth    = 1.00
-	geo.ViewObject.PointColor   = (1.0, 1.0, 1.0)
-	geo.ViewObject.PointSize    = 2.00
-	geo.ViewObject.ShapeColor   = (0.80, 0.80, 0.80)
-	geo.ViewObject.Transparency = 50 # percent
+	geo.ViewObject.AngularDeflection = 28.5                    # double
+	geo.ViewObject.BoundingBox       = False                   # bool
+	geo.ViewObject.Deviation         = 0.5                     # double
+	geo.ViewObject.DisplayMode       = 0                       # enum {0: u"Flat Lines", 1: u"Shaded", 2: u"Wireframe", 3: u"Points"}
+	geo.ViewObject.DrawStyle         = 0                       # enum {0: u"Solid", 1: u"Dahed", 2: u"Dotted", 3: u"Dashdot"}
+	geo.ViewObject.Lighting          = 1                       # enum {0: u"One side", 1: u"Two side"}
+	geo.ViewObject.LineColor         = (0.1, 0.1, 0.1, 0.0)    # double[4]
+	geo.ViewObject.LineWidth         = 1.0                     # double
+	geo.ViewObject.PointColor        = (0.1, 0.1, 0.1, 0.0)    # double[4]
+	geo.ViewObject.PointSize         = 2.0                     # double
+	geo.ViewObject.Selectable        = True                    # bool
+	geo.ViewObject.SelectionStyle    = 0                       # enum {0: u"Shape", 1: u"BoundBox"}
+	geo.ViewObject.ShapeColor        = (0.75, 0.75, 0.75, 0.0) # double[4]
+	geo.ViewObject.Transparency      = 0                       # int 0..100
+	geo.ViewObject.Visibility        = True                    # bool
 
 def adjustViewObject(newGeo, baseGeo):
 	if (newGeo  is None): return
@@ -434,6 +440,34 @@ def getAssociatedSketchEntity(sketchNode, ai, entityType):
 		return None
 	return idMap.get(entityType)
 
+def getBodyColor(bodyNode):
+	styles = bodyNode.get('ref0')
+	for style in styles.get('lst0'):
+		if (style.typeName == 'PartDrawAttr'):
+			return style.get('ColorAttr.c0')
+	return None
+
+def adjustColor(entity, color):
+	if (color is not None):
+		if (type(entity) is list):
+			for child in entity:
+				adjustColor(child, color)
+		else:
+			entity.ViewObject.ShapeColor = color.getRGB()
+	return
+
+def adjustFxColor(entity, nodColor):
+	if (entity is not None):
+		if nodColor is not None:
+			color = getColor(nodColor.name)
+			if (color is not None):
+				if (type(entity) is list):
+					for child in entity:
+						child.ViewObject.ShapeColor = color
+				else:
+					entity.ViewObject.ShapeColor = color
+	return
+
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
 	FX_EXTRUDE_CUT          = 0x0002
@@ -485,21 +519,20 @@ class FreeCADImporter:
 	def addSolidBody(self, fxNode, obj3D, solid):
 		fxNode.setSketchEntity(-1, obj3D)
 
-		if (solid):
-			try:
-				bodies = solid.get('bodies')
-				body = bodies[0]
-				# overwrite previously added solids with the same name!
-				self.bodyNodes[body.name] = fxNode
-				self.lastActiveBody = fxNode
-			except:
-				pass
+		if (solid is not None):
+			bodies = solid.get('bodies')
+			body = bodies[0]
+			body.setSketchEntity(-1, obj3D)
+			# overwrite previously added solids with the same name!
+			self.bodyNodes[body.name] = fxNode
+			self.lastActiveBody = fxNode
 		return
 
 	def addSurfaceBody(self, fxNode, obj3D, surface):
 		fxNode.setSketchEntity(-1, obj3D)
-		# overwrite previously added sourfaces with the same name!
-		self.bodyNodes[surface.name] = fxNode
+		if (surface is not None):
+			# overwrite previously added sourfaces with the same name!
+			self.bodyNodes[surface.name] = fxNode
 		return
 
 	def getBodyNode(self, ref):
@@ -520,12 +553,11 @@ class FreeCADImporter:
 	def addBody(self, fxNode, body, solidIdx, surfaceIdx):
 		properties = fxNode.get('properties')
 		solid = getProperty(properties, solidIdx)
-		if (solid):
+		if (solid is not None):
 			self.addSolidBody(fxNode, body, solid)
 		else:
 			sourface = getProperty(properties, surfaceIdx)
-			if(sourface):
-				self.addSurfaceBody(fxNode, body, sourface)
+			self.addSurfaceBody(fxNode, body, sourface)
 		return
 
 	def findBase(self, baseNode):
@@ -1323,7 +1355,7 @@ class FreeCADImporter:
 		revolution.Base = base
 		revolution.Solid = solid
 		revolution.Placement = PLC(VEC(), ROT(axis, -beta), base)
-		setDefaultViewObject(revolution)
+		setDefaultViewObjectValues(revolution)
 		source.ViewObject.Visibility = False
 		return revolution
 
@@ -1897,7 +1929,7 @@ class FreeCADImporter:
 			pad.Solid = solid is not None # FIXME!!
 			pad.TaperAngle = -getGRAD(dimAngle) # Taper angle is in FreeCAD inverted!
 
-			setDefaultViewObject(pad)
+			setDefaultViewObjectValues(pad)
 
 			if (midplane):
 				len2 = len1
@@ -1930,15 +1962,15 @@ class FreeCADImporter:
 
 		if (baseData is None):
 			logWarning(u"    Can't find base info for (%04X): %s - not yet created!", padNode.index, name)
-		else:
-			tool = self.Create_FxExtrude_New(padNode, sectionNode, name + nameExtension)
-			base    = self.findBase(baseData.next)
-			if (base is not None):
-				if (tool is not None): # no need to raise a warning as it's already done!
-					return self.createBoolean(className, name, base, [tool])
-				logWarning(u"        FxExtrude '%s': can't find/create tools object - executing %s!", name, className)
-				return base
-			logWarning(u"        FxExtrude '%s': can't find/create base object - executing %s!", name, className)
+			return None
+		tool = self.Create_FxExtrude_New(padNode, sectionNode, name + nameExtension)
+		base    = self.findBase(baseData.next)
+		if (base is not None):
+			if (tool is not None): # no need to raise a warning as it's already done!
+				return self.createBoolean(className, name, base, [tool])
+			logWarning(u"        FxExtrude '%s': can't find/create tools object - executing %s!", name, className)
+			return base
+		logWarning(u"        FxExtrude '%s': can't find/create base object - executing %s!", name, className)
 		return tool
 
 	def Create_FxRevolve(self, revolveNode):
@@ -2017,7 +2049,7 @@ class FreeCADImporter:
 				elif (operation == FreeCADImporter.FX_EXTRUDE_CUT):
 					padGeo = self.createFxExtrude_Operation(extrudeNode, sectionNode, name, '_Cut', 'Cut')
 				elif (operation == FreeCADImporter.FX_EXTRUDE_JOIN):
-					padGeo = self.createFxExtrude_Operation(extrudeNode, sectionNode, name, '_Join', 'MultiFuse')
+					padGeo = self.Create_FxExtrude_New(extrudeNode, sectionNode, name)
 				elif (operation == FreeCADImporter.FX_EXTRUDE_INTERSECTION):
 					padGeo = self.createFxExtrude_Operation(extrudeNode, sectionNode, name, '_Intersection', 'MultiCommon')
 				elif (operation == FreeCADImporter.FX_EXTRUDE_SURFACE):
@@ -2076,7 +2108,7 @@ class FreeCADImporter:
 
 					patternGeo.Axis = axis
 
-					setDefaultViewObject(patternGeo)
+					setDefaultViewObjectValues(patternGeo)
 					geos.append(patternGeo)
 				namePart = '%s_%d' % (name, len(geos))
 			if (len(geos) > 1):
@@ -2162,7 +2194,7 @@ class FreeCADImporter:
 					if (isTrue(midplane1Ref)): self.adjustMidplane(patternGeo, dir1Ref, distance1Ref, fitted1Ref, count1Ref)
 					if (isTrue(midplane2Ref)): self.adjustMidplane(patternGeo, dir2Ref, distance2Ref, fitted2Ref, count2Ref)
 
-					setDefaultViewObject(patternGeo)
+					setDefaultViewObjectValues(patternGeo)
 					geos.append(patternGeo)
 				namePart = '%s_%d' % (name, len(geos))
 			if (len(geos) > 1):
@@ -2378,7 +2410,7 @@ class FreeCADImporter:
 				loftGeo.Closed   = isTrue(closed)
 			loftGeo.Solid    = surface is None
 			self.hide(sections)
-			setDefaultViewObject(loftGeo)
+			setDefaultViewObjectValues(loftGeo)
 			self.addBody(loftNode, loftGeo, 0x0D, 0x06)
 		return
 
@@ -2411,7 +2443,7 @@ class FreeCADImporter:
 		loftGeo.Closed   = False #isTrue(closed)
 		loftGeo.Solid    = False #
 		self.hide(sections)
-		setDefaultViewObject(loftGeo)
+		setDefaultViewObjectValues(loftGeo)
 		self.addSolidBody(flangeNode, loftGeo, solid)
 		return
 
@@ -2449,7 +2481,7 @@ class FreeCADImporter:
 			#sweepGeo.Frenet   = (frenet.getValueText() == 'ParallelToOriginalProfile')
 			self.hide(sections)
 			self.hide([path])
-			setDefaultViewObject(sweepGeo)
+			setDefaultViewObjectValues(sweepGeo)
 			self.addBody(sweepNode, sweepGeo, 0x0F, 0x06)
 		return
 
@@ -2585,7 +2617,7 @@ class FreeCADImporter:
 		sweepGeo.Spine     = (coilGeo, [])
 		sweepGeo.Solid     = surface is None
 		sweepGeo.Frenet    = True
-		setDefaultViewObject(sweepGeo)
+		setDefaultViewObjectValues(sweepGeo)
 
 		self.addBody(coilNode, sweepGeo, 0x13, 0x11)
 		self.hide([coilGeo])
@@ -2620,7 +2652,7 @@ class FreeCADImporter:
 			chamferGeo = self.createEntity(chamferNode, 'Part::Chamfer')
 			chamferGeo.Base = bases[0]
 			chamferGeo.Edges = [(edgeIdx, mmDim1, mmDim2) for edgeIdx in edges]
-			setDefaultViewObject(chamferGeo)
+			setDefaultViewObjectValues(chamferGeo)
 			geos.append(chamferGeo)
 
 		if (len(geos) > 1):
@@ -2725,6 +2757,9 @@ class FreeCADImporter:
 		logInfo(u"    adding Fx%s '%s' ...", name, featureNode.name)
 		createFxObj = getattr(self, 'Create_Fx%s' %(name))
 		createFxObj(featureNode)
+
+		adjustFxColor(featureNode.sketchEntity, featureNode.get('fxColor'))
+
 		self.doc.recompute()
 		return
 
@@ -3024,5 +3059,16 @@ class FreeCADImporter:
 				self.getEntity(ref)
 			if (self.doc):
 				self.doc.recompute()
+
+			# apply colors stored in graphics segment
+			gr = model.getGraphics()
+			if (gr is not None):
+				for indexDC in gr.indexNodes:
+					dcNode = dc.indexNodes[indexDC]
+					entity = dcNode.sketchEntity
+					if (entity is not None):
+						grNode = gr.indexNodes[indexDC]
+						color  = getBodyColor(grNode)
+						adjustColor(entity, color)
 		else:
 			logWarning(u">>>No content to be displayed for DC<<<")

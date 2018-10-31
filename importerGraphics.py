@@ -336,8 +336,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadAngle(i, 'beta')
 		return i
 
-	def Read_4B57DC56(self, node): # 2dEllipse
-		i = self.Read_32RRR2(node, '2dEllipse')
+	def Read_4B57DC56(self, node): # Ellipse3D
+		i = self.Read_32RRR2(node, 'Ellipse3D')
 		i = node.ReadFloat64A(i, 2, 'c')
 		i = node.ReadFloat64(i, 'b')      # length for point B
 		i = node.ReadFloat64(i, 'a')      # length for point A
@@ -360,9 +360,9 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadLen32Text16(i)
 		return i
 
-	def Read_50E809CD(self, node): # 2dPoint
-		i = self.Read_32RRR2(node, '2dPoint')
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
+	def Read_50E809CD(self, node): # Points
+		i = self.Read_32RRR2(node, 'Points')
+		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'points', 3)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_, 'lst1', 2)
@@ -438,14 +438,7 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_6A05AA75(self, node): return node.Read_Header0()
 
-	def Read_6A6931DC(self, node):
-#		i = self.skipBlockSize(0)
-#		i = node.ReadUInt32(i, 'u32_0')
-#		i = self.Read_TypedFloat(i, node)
-#		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst0', 3)
-#		i = node.ReadFloat64A(i, 6, 'a0')
-		i = len(node.data)
-		return i
+	def Read_6A6931DC(self, node): return 0
 
 	def Read_6C8A5C53(self, node):
 		i = self.ReadHeaderU32RefU8List3(node)
@@ -502,8 +495,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt16A(i, 4, 'a2')
 		return i
 
-	def Read_8F0B160B(self, node):
-		i = self.ReadHeaderSU32S(node)
+	def Read_8F0B160B(self, node): # Object style ...
+		i = self.ReadHeaderSU32S(node, 'Style_8F0B160B')
 		i = node.ReadColorRGBA(i, 'c0')
 		i = node.ReadColorRGBA(i, 'c1')
 		i = node.ReadColorRGBA(i, 'c2')
@@ -516,8 +509,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt16A(i, 10, 'a11')
 		return i
 
-	def Read_8F0B160C(self, node):
-		i = self.ReadHeaderSU32S(node)
+	def Read_8F0B160C(self, node): # Object style ...
+		i = self.ReadHeaderSU32S(node, 'Style_8F0B160C')
 		i = node.ReadUInt16A(i, 10, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16A(i, 3, 'a1')
@@ -612,16 +605,27 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_A6DD2FCC(self, node): return 0
 
-	def Read_A79EACC7(self, node): # 2dLine
-		i = self.Read_32RRR2(node, '2dLine')
-		i = node.ReadFloat64A(i, 3, 'p1')
-		i = node.ReadFloat64A(i, 3, 'p2')
+	def Read_A79EACC7(self, node): # Line3D
+		i = self.Read_32RRR2(node, 'Line3D')
+		i = node.ReadFloat64(i, 'x')
+		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64(i, 'dirX')
+		i = node.ReadFloat64(i, 'dirY')
+		i = node.ReadFloat64(i, 'dirZ')
 		return i
 
-	def Read_A79EACCC(self, node):
-		i = self.Read_32RRR2(node)
-		i = node.ReadFloat64A(i, 12, 'a2')
-		i = node.ReadUInt8(i, 'u8_0')
+	def Read_A79EACCC(self, node): # Circle3D
+		i = self.Read_32RRR2(node, 'Circle3D')
+		i = node.ReadFloat64(i, 'x')
+		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'normal')
+		i = node.ReadFloat64A(i, 3, 'm')
+		i = node.ReadFloat64(i, 'r')
+		i = node.ReadFloat64(i, 'startAngle')
+		i = node.ReadFloat64(i, 'sweepAngle')
+		node.set('points', [])
 		return i
 
 	def Read_A79EACCD(self, node): return node.Read_Header0()
@@ -639,9 +643,11 @@ class GraphicsReader(EeSceneReader):
 #		i = node.ReadFloat32_2D(i, 'a1')
 # 		return i
 
-	def Read_A79EACD3(self, node): # LinePoint
-		i = self.Read_32RRR2(node, 'LinePoint')
-		i = node.ReadFloat64A(i, 3, 'p1')
+	def Read_A79EACD3(self, node): # Point3D
+		i = self.Read_32RRR2(node, 'Point3D')
+		i = node.ReadFloat64(i, 'x')
+		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64(i, 'z')
 		i = node.ReadFloat32(i, 'f32_0')
 		i = node.ReadSInt32(i, 's32_0')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -823,13 +829,13 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
-	def Read_B32BF6AB(self, node):
-		i = self.ReadHeaderSU32S(node)
+	def Read_B32BF6AB(self, node): # Object style ...
+		i = self.ReadHeaderSU32S(node, 'Style_B32BF6AB')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
-	def Read_B32BF6AC(self, node):
-		i = self.ReadHeaderSU32S(node, 'LineStyle')
+	def Read_B32BF6AC(self, node): # line style
+		i = self.ReadHeaderSU32S(node, 'StyleLine')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadFloat32(i, 'width')
 		i = node.ReadUInt16A(i, 2, 'a0')
@@ -1002,8 +1008,8 @@ class GraphicsReader(EeSceneReader):
 		i = self.Read_Float64Arr(i, node, 2, 'lst3')
 		return i
 
-	def Read_D3A55702(self, node):
-		i = self.Read_32RRR2(node)
+	def Read_D3A55702(self, node): # Spline3D_Curve
+		i = self.Read_32RRR2(node, 'Spline3D_Curve')
 		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadUInt8A(i, 8, 'a1')
 		i = self.Read_Float32Arr(i, node, 'lst0')
@@ -1016,25 +1022,18 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_D4824069(self, node):
 		i = self.ReadHeaderU32RefU8List3(node)
+		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt32(i, 'index')
 		i = self.ReadIndexDC(node, i)
 		return i
 
 	def Read_D79AD3F3(self, node):
-		i = self.Read_32RRR2(node)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_,  'lst1', 2)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst2', 3)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst3', 2)
-		i = node.ReadUInt16A(i, 2, 'a0')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst4')
-#		i = node.ReadFloat32_2(i, 'a1')
-#		i = self.skipBlockSize(i)
-#		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_, 'lst5', 2)
-# 		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_, 'lst6', 2)
-# 		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_, 'lst7', 2)
-		i = len(node.data)
+		i = self.Read_A79EACD2(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst5')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst6')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst7')
 		return i
 
 	def Read_DA58AA0E(self, node): # Sketch3D
@@ -1103,7 +1102,7 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_F6ADCC69(self, node):
 		i = self.Read_HeaderParent(node)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'index')
 		return i
 
 	def Read_F96556CB(self, node):
@@ -1155,5 +1154,10 @@ class GraphicsReader(EeSceneReader):
 			logError(traceback.format_exc())
 
 		if (i < len(node.data)):
-			i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
+			if (sys.version_info.major < 3):
+				s = " ".join(["%02X" % ord(c) for c in node.data[i:]])
+			else:
+				s = " ".join(["%02X" % c for c in node.data[i:]])
+			node.content += u"\taX=[%s]" %(s)
+			s = len(node.data)
 		return

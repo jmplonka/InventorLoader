@@ -23,7 +23,7 @@ class EeSceneReader(SegmentReader):
 		i = node.Read_Header0(typeName)
 		u16_0, i = getUInt16(node.data, i)
 		u16_1, i = getUInt16(node.data, i)
-		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadChildRef(i, 'styles')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadParentRef(i)
 		u32_0, i = getUInt32(node.data, i)
@@ -135,7 +135,7 @@ class EeSceneReader(SegmentReader):
 		i = node.Read_Header0()
 		i = node.ReadUInt32(i, 'flags')
 		i = node.ReadChildRef(i, 'ref0')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'ref1')
 		i = node.ReadParentRef(i)
 		i = node.ReadCrossRef(i, 'styles')
 		i = self.skipBlockSize(i)
@@ -166,9 +166,9 @@ class EeSceneReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_B32BF6A3(self, node): # Object style
-		i = self.ReadHeaderSU32S(node, 'Visibility')
-		i = node.ReadUInt8(i, 'visible')
+	def Read_B32BF6A3(self, node): # visibility style
+		i = self.ReadHeaderSU32S(node, 'StyleVisibility')
+		i = node.ReadBoolean(i, 'visible')
 		return i
 
 	def Read_B32BF6A6(self, node):

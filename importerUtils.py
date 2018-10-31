@@ -771,6 +771,12 @@ class Color():
 		self.blue  = blue
 		self.alpha = alpha
 
+	def getRGB(self):
+		return (self.red, self.green, self.blue)
+
+	def getRGBA(self):
+		return (self.red, self.green, self.blue, self.alpha)
+
 	def __str__(self): # return unicode
 		r = int(self.red   * 0xFF)
 		g = int(self.green * 0xFF)

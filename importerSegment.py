@@ -151,21 +151,23 @@ def buildBranch(parent, file, data, level, ref):
 					buildBranchRef(branch, file, childRef, level + 1)
 	return
 
-def buildTree(file, seg):
-	nodes = seg.elementNodes
-	l     = len(nodes)
-	# link the reference with the corresponding node
+def resolveReferencNodes(nodes):
 	for node in nodes.values():
 		node.handled = False
 		node.sketchIndex = None
 		node.parent = None
+		isRadius2D = (node.typeName == 'Dimension_Radius2D')
 		for ref in node.references:
 			ref.analysed = False
-			# ref.type = SecNodeRef.TYPE_CROSS
 			if (ref.index in nodes):
 				ref._data = nodes[ref.index]
 			elif (ref.index > -1):
-				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", seg.name, data.index, data.typeName, ref.index, l)
+				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", node.segment.name, node.index, node.typeName, ref.index, max(nodes))
+			if (isRadius2D and ((ref.typeName == 'Circle2D') or (ref.typeName == 'Ellipse2D') or (ref.typeName == '160915E2'))):
+				radius = SecNodeRef(ref.index or 0x80000000, SecNodeRef.TYPE_CROSS)
+				radius._data = node
+				ref._data.set('refRadius', radius)
+
 		if (node.typeName in ['424EB7D7', '603428AE', 'F9884C43']):
 			refFx = node.get('refFX')
 			refFx.set('refProfile', node)
@@ -174,30 +176,39 @@ def buildTree(file, seg):
 			refFx.set('refProfile', node)
 			refFx = node.get('refPatch2')
 			refFx.set('refProfile', node)
-	# set the parent property for each node
+		elif (node.typeName == 'NMx_FFColor_Entity'):
+			refFx = node.get('refFX')
+			refFx.set('fxColor', node)
+	return
+
+def resolveParentNodes(nodes):
 	for parent in nodes.values():
 		for ref in parent.references:
 			if (ref.index > parent.index):
-				node = ref._data
-				if (node is not None):
-					for leaf in node.references:
-						if (parent.index == leaf.index):
-							leaf.type = SecNodeRef.TYPE_PARENT
-							node.parent = parent
-							ref.type = SecNodeRef.TYPE_CHILD
-					isRadius2D = (parent.typeName == 'Dimension_Radius2D')
-					if (isRadius2D and ((ref.typeName == 'Circle2D') or (ref.typeName == 'Ellipse2D') or (ref.typeName == '160915E2'))):
-						radius = SecNodeRef(ref.index or 0x80000000, SecNodeRef.TYPE_CROSS)
-						radius._data = parent
-						ref.data.set('refRadius', radius)
+				if (ref.type == SecNodeRef.TYPE_CHILD):
+					child = ref._data
+					if (child is not None):
+						if (child.parent is None):
+							child.parent = parent
+						else:
+							ref.type = SecNodeRef.TYPE_CROSS
+			else:
+				if (parent.parent is not None) and (parent.parent.index == ref.index):
+					ref.type = SecNodeRef.TYPE_PARENT
+				else:
+					if (ref.type == SecNodeRef.TYPE_PARENT):
+						ref.type = SecNodeRef.TYPE_CROSS
+	return
+
+def buildTree(file, seg):
+	nodes = seg.elementNodes
+
+	# link the node's references with the corresponding nodes
+	resolveReferencNodes(nodes)
+
 	# set the parent property for each node
-	for parent in nodes.values():
-		for ref in parent.references:
-			if (ref.index > parent.index):
-				node = ref._data
-				if (node is not None):
-					if ((ref.type == SecNodeRef.TYPE_CHILD) and (node.parent is None)):
-						node.parent = parent
+	resolveParentNodes(nodes)
+
 	# now the tree can be build
 	roots = DataNode(None, False)
 	for node in nodes.values():
@@ -463,7 +474,13 @@ class SegmentReader(object):
 			logError(traceback.format_exc())
 
 		try:
-			if (i < len(node.data)): i = node.ReadUInt8A(i, len(node.data) - i, '\taX')
+			if (i < len(node.data)):
+				if (sys.version_info.major < 3):
+					s = " ".join(["%02X" % ord(c) for c in node.data[i:]])
+				else:
+					s = " ".join(["%02X" % c for c in node.data[i:]])
+				node.content += u"\taX=[%s]" %(s)
+				s = len(node.data)
 		except:
 			logError(u"ERROR in %s.Read_%s: %s", self.__class__.__name__, node.typeName, traceback.format_exc())
 

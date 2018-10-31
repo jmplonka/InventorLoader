@@ -806,8 +806,8 @@ def getReader(seg):
 #		reader = BrowserReader()
 #	elif (seg.isDefault()):
 #		reader = DefaultReader()
-#	elif (seg.isGraphics()): # required for Meshes
-#		reader = GraphicsReader()
+	elif (seg.isGraphics()): # required for Meshes and Colors
+		reader = GraphicsReader()
 #	elif (seg.isResult()):
 #		reader = ResultReader()
 #	elif (seg.isDesignView()):

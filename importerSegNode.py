@@ -578,7 +578,7 @@ class SecNode(AbstractData):
 			else:
 				val = Struct('<ddLBBBB').unpack_from(self.data, i)
 				i += 24
-			s += u"%s%g,%g,%06X,%02X,%02X,%02X,%02X" %(sep, val[0], val[1], val[2], val[3], val[4], val[5], val[6])
+			s += u"%s(%g,%g,%06X,%02X,%02X,%02X,%02X)" %(sep, val[0], val[1], val[2], val[3], val[4], val[5], val[6])
 			sep = u","
 			lst.append(val)
 		return lst, i, s
@@ -632,7 +632,7 @@ class SecNode(AbstractData):
 			n3, i = getUInt8(self.data, i)
 			if (skip): i += 4
 			lst.append((n1, t1, n2, l1, n3))
-			s += u"%s[%d,'%s',%06X,%s,%02X]" %(sep, n1, t1, n2, FloatArr2Str(l1), n3)
+			s += u"%s(%d,'%s',%06X,%s,%02X)" %(sep, n1, t1, n2, FloatArr2Str(l1), n3)
 			sep = u","
 		self.delete('_tmp')
 		return lst, i, s
@@ -651,7 +651,7 @@ class SecNode(AbstractData):
 			i += 11
 			if (skip): i += 8
 			lst.append((n1, n2,  n3,  f1, f2,  t1,  f3, f4, n4, n5))
-			s += u"%s[%d, %d, %04X, %g, %g, '%s', %g, %g, %03X, %02X]" %(sep, n1, n2, n3, f1, f2, t1,  f3, f4, n4, n5)
+			s += u"%s(%d, %d, %04X, %g, %g, '%s', %g, %g, %03X, %02X)" %(sep, n1, n2, n3, f1, f2, t1,  f3, f4, n4, n5)
 			sep = u","
 		return lst, i, s
 
@@ -669,7 +669,7 @@ class SecNode(AbstractData):
 			i += 4
 			if (skip): i += 4
 			lst.append((f1, f2, n1, n2,  n3,  n4))
-			s += u"%s[%g, %g, %04X, %02X, %02X, %03X]" %(sep, f1, f2, n1, n2, n3, n4)
+			s += u"%s(%g, %g, %04X, %02X, %02X, %03X)" %(sep, f1, f2, n1, n2, n3, n4)
 			sep = u","
 		return lst, i, s
 
