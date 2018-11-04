@@ -166,6 +166,15 @@ class EeSceneReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
+
+	def Read_6E176BB6(self, node): # Object style ...
+		i = self.ReadHeaderSU32S(node, 'Style_B32BF6A7')
+		i = node.ReadFloat64(i, 'f64_0')
+		i = node.ReadFloat64_3D(i, 'vec')
+		i = node.ReadFloat64(i, 'f64_1')
+		i = node.ReadUInt32(i, 'u32_1')
+		return i
+
 	def Read_B32BF6A3(self, node): # visibility style
 		i = self.ReadHeaderSU32S(node, 'StyleVisibility')
 		i = node.ReadBoolean(i, 'visible')
@@ -179,6 +188,11 @@ class EeSceneReader(SegmentReader):
 	def Read_B32BF6A9(self, node):
 		i = self.ReadHeaderSU32S(node)
 		i = node.ReadUInt16(i, 'u16_0')
+		return i
+
+	def Read_B255D907(self, node): #
+		i = self.ReadHeaderSU32S(node)
+		i = node.ReadFloat64_3D(i, 'a0')
 		return i
 
 	def Read_B91E695F(self, node):

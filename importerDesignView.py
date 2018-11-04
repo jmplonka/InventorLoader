@@ -25,10 +25,10 @@ class DesignViewReader(SegmentReader):
 		i = node.Read_Header0('Camera')
 		i = node.ReadFloat64_3D(i, 'target')
 		i = node.ReadFloat64_3D(i, 'eye')
-		i = node.ReadFloat64A(i, 3, 'a0')
+		i = node.ReadFloat64_3D(i, 'a0')
 		i = node.ReadFloat64(i, 'angle')
 		i = node.ReadFloat64(i, 'f64_0')
-		i = node.ReadFloat64A(i, 3, 'up')
+		i = node.ReadFloat64_3D(i, 'up')
 		#aX=[00]
 		return i
 

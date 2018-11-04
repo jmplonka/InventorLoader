@@ -124,10 +124,13 @@ def buildBranchRef(parent, file, ref, level):
 	branch = getBranchNode(ref.data, True)
 	parent.append(branch)
 
-	if (ref.number >= 0):
-		file.write('%s-> [%02X] %s\n' %(level * '\t', ref.number, branch.getRefText()))
+	if (type(ref.number) is int):
+		if (ref.number >= 0):
+			file.write('%s-> [%02X] %s\n' %(level * '\t', ref.number, branch.getRefText()))
+		else:
+			file.write('%s-> %s\n' %(level * '\t', branch.getRefText()))
 	else:
-		file.write('%s-> %s\n' %(level * '\t', branch.getRefText()))
+		file.write('%s-> [%s] %s\n' %(level * '\t', ref.number, branch.getRefText()))
 
 	return
 
@@ -135,8 +138,14 @@ def buildBranch(parent, file, data, level, ref):
 	branch = getBranchNode(data, False)
 	parent.append(branch)
 
-	if ((ref is not None) and (ref.number >= 0)):
-		file.write('%s[%02X] %s\n' %(level * '\t', ref.number, branch))
+	if (ref is not None):
+		if (type(ref.number) is int):
+			if (ref.number >= 0):
+				file.write('%s[%02X] %s\n' %(level * '\t', ref.number, branch))
+			else:
+				file.write('%s%s\n' %(level * '\t', branch))
+		else:
+			file.write('%s[%s] %s\n' %(level * '\t', ref.number, branch))
 	else:
 		file.write('%s%s\n' %(level * '\t', branch))
 

@@ -101,6 +101,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16A(i, 3, 'a1')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadUInt32(i, 'index')
 		return i
 
 	def Read_0E7F99A4(self, node):
@@ -245,6 +246,7 @@ class BrowserReader(SegmentReader):
 	def Read_4D0B0CC5(self, node): # Text annotation
 		i = self.Read_Str53(node, 'AnnotationText')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadUInt32(i, 'index')
 		return i
 
 	def Read_50C73580(self, node):

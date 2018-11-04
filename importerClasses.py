@@ -663,6 +663,10 @@ class DataNode():
 				return u'(%04X): %s \'%s\'%s' %(node.index, node.typeName, name, content)
 			return u'(%04X): %s%s' %(node.index, node.typeName, content)
 		return "<NONE>"
+
+	def __repr__(self):
+		return self.__str__()
+
 	def getSubTypeName(self):
 		node = self.data
 		if (node is not None):

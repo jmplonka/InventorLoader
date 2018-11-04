@@ -248,20 +248,17 @@ class BRepReader(SegmentReader):
 
 	def Read_CCE92042(self, node):
 		i = node.Read_Header0()
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'cld_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
-		if (getFileVersion() < 2009):
-			i = node.ReadUUID(i, 'uid')
-			i = node.ReadUInt32(i, 'u32_0')
-			i = node.ReadUInt32(i, 'u32_1')
-		else:
-			cnt, i = getUInt32(node.data, i)
-			lst = {}
-			for j in range(cnt):
-				u, i = getUInt32(node.data, i)
-				r, i = self.ReadNodeRef(node, i, u, importerSegNode.SecNodeRef.TYPE_CHILD)
-				lst[u] = r
+		i = node.ReadUInt32(i, 'lastIdx')
+		cnt, i = getUInt32(node.data, i) # strange mapping of U32 and REF
+		lst = {}
+		for j in range(cnt):
+			key, i = getUInt32(node.data, i)
+			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD)
+			lst[key] = val
+		node.content += ' lst={%s}' %(len(lst))
+		node.set('lst', lst)
 		return i
 
 	def Read_D797B7B9(self, node):
