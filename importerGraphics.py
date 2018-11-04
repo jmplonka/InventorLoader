@@ -579,7 +579,7 @@ class GraphicsReader(EeSceneReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 2, 'a2')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadList7(i, importerSegNode._TYP_MAP_KEY_KEY_, 'lst1')
+		i = node.ReadList7(i, importerSegNode._TYP_MAP_U32_U32_, 'lst1')
 
 #		i = node.ReadUInt16A(i, 4, 'a3')
 #		a4, dummy = getUInt16A(node.data, i, 2)
@@ -939,7 +939,7 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_C29D5C11(self, node):
 		i = self.ReadHeaderSU32S(node)
-		i = node.ReadFloat64A(i, 3, 'a0')
+		i = node.ReadFloat64_3D(i, 'a0')
 		return i
 
 	def Read_C2A055C9(self, node): # MeshFolder
@@ -1135,29 +1135,3 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_FFB5643C(self, node):
 		return self.ReadDimensioning(node)
-
-	def HandleBlock(self, node):
-		i = 0
-		ntid = node.uid.time_low
-		if (ntid == 0x6e176bb6):
-			node.updateTypeId('B32BF6A7-11D2-09F4-6000-F99AC5361AB0')
-			ntid = 0xB32BF6A7
-		elif (ntid == 0xb255d907):
-			node.updateTypeId('C29D5C11-11D3-7C12-0000-279800000000')
-			ntid = 0xC29D5C11
-		try:
-			readType = getattr(self, 'Read_%s' %(node.typeName))
-			i = readType(node)
-		except AttributeError:
-			logError(u"ERROR> %s.Read_%s not defined!", self.__class__.__name__, node.typeName)
-		except:
-			logError(traceback.format_exc())
-
-		if (i < len(node.data)):
-			if (sys.version_info.major < 3):
-				s = " ".join(["%02X" % ord(c) for c in node.data[i:]])
-			else:
-				s = " ".join(["%02X" % c for c in node.data[i:]])
-			node.content += u"\taX=[%s]" %(s)
-			s = len(node.data)
-		return
