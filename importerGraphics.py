@@ -9,7 +9,6 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 import traceback, importerSegNode
 from importerSegment        import checkReadAll
 from importerEeScene        import EeSceneReader
-from importerClasses        import B32BF6AC
 from importerTransformation import Transformation
 from importerUtils          import *
 from math import fabs
@@ -844,10 +843,10 @@ class GraphicsReader(EeSceneReader):
 		cnt, i = getUInt16(node.data, i)
 		a1 = []
 		for j in range(cnt):
-			u32_0, i = getUInt32(node.data, i)
-			f32_0, i = getFloat32(node.data, i)
-			x = B32BF6AC(u32_0, f32_0)
-			a1.append(x)
+			u, i = getUInt32(node.data, i)
+			f, i = getFloat32(node.data, i)
+			a1.append((u, f))
+		node.content += u" a1=[%s]" %(u",".join(["(%04X,%g)" %(x[0], x[1]) for x in a1]))
 		node.set('a1', a1)
 		i = node.ReadFloat32_3D(i, 'a2')
 		i = self.skipBlockSize(i)

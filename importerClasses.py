@@ -1237,14 +1237,6 @@ class SurfaceBodiesNode(DataNode):
 		names = ','.join([u"'%s'" %(b.name) for b in bodies])
 		return u'(%04X): %s %s' %(self.index, self.typeName, names)
 
-class B32BF6AC():
-	def __init__(self, m, x):
-		self.m = m
-		self.x = x
-
-	def __str__(self):
-		return '%X:%g' %(self.m, self.x)
-
 class Header0():
 	def __init__(self, m, x):
 		self.m = m
