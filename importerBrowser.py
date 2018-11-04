@@ -186,8 +186,8 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_240BF169(self, node):
-		i = self.ReadHeaderStr664(node)
+	def Read_240BF169(self, node): # Surfaces
+		i = self.ReadHeaderStr664(node, 'Surfaces')
 		i = self.skipBlockSize(i)
 		return i
 

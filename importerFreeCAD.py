@@ -2690,6 +2690,45 @@ class FreeCADImporter:
 
 		return
 
+	def Create_FxMesh(self, meshNode):
+#		import Mesh
+#		# create a new empty mesh
+#		m = Mesh.Mesh()
+#		# build up box out of 12 facets
+#		m.addFacet(0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,1.0,1.0)
+#		m.addFacet(0.0,0.0,0.0, 0.0,1.0,1.0, 0.0,1.0,0.0)
+#		m.addFacet(0.0,0.0,0.0, 1.0,0.0,0.0, 1.0,0.0,1.0)
+#		m.addFacet(0.0,0.0,0.0, 1.0,0.0,1.0, 0.0,0.0,1.0)
+#		m.addFacet(0.0,0.0,0.0, 0.0,1.0,0.0, 1.0,1.0,0.0)
+#		m.addFacet(0.0,0.0,0.0, 1.0,1.0,0.0, 1.0,0.0,0.0)
+#		m.addFacet(0.0,1.0,0.0, 0.0,1.0,1.0, 1.0,1.0,1.0)
+#		m.addFacet(0.0,1.0,0.0, 1.0,1.0,1.0, 1.0,1.0,0.0)
+#		m.addFacet(0.0,1.0,1.0, 0.0,0.0,1.0, 1.0,0.0,1.0)
+#		m.addFacet(0.0,1.0,1.0, 1.0,0.0,1.0, 1.0,1.0,1.0)
+#		m.addFacet(1.0,1.0,0.0, 1.0,1.0,1.0, 1.0,0.0,1.0)
+#		m.addFacet(1.0,1.0,0.0, 1.0,0.0,1.0, 1.0,0.0,0.0)
+#		# add the mesh to the active document
+#		geo = newObject(self.doc, 'Mesh::Feature', meshNode.name)
+#		geo.Mesh=m
+		return notYetImplemented(meshNode)  # requires reading of Graphics => postponed!
+
+	def Create_FxRuledSurface(self, ruledSurfaceNode):
+		properties = ruledSurfaceNode.get('properties')
+		# = getProperty(properties, 0x00)     # ???
+		# = getProperty(properties, 0x01)     # 671CE131
+		# = getProperty(properties, 0x02)     # 9C38036E
+		dist = getProperty(properties, 0x03)  # distance
+		# = getProperty(properties, 0x04)     # flipped
+		# = getProperty(properties, 0x05)     # bool
+		# = getProperty(properties, 0x06)     # bool
+		dir = getProperty(properties, 0x07)   # direction
+		# = getProperty(properties, 0x08)     # base surface 
+		# = getProperty(properties, 0x09)     # bool
+		surf = getProperty(properties, 0x0A)  # resulting surface
+		# = getProperty(properties, 0x0B)     # ???
+		# = getProperty(properties, 0x0C)     # param
+		angle = getProperty(properties, 0x0D) # angle
+
 	def Create_FxBoss(self, bossNode):                           return notYetImplemented(bossNode) # MultiFuse Geometry
 	def Create_FxBoundaryPatch(self, boundaryPatchNode):         return notYetImplemented(boundaryPatchNode) # Sketches, Edges
 	def Create_FxCoreCavity(self, coreCavityNode):               return notYetImplemented(coreCavityNode)
@@ -2708,7 +2747,6 @@ class FreeCADImporter:
 	def Create_FxGrill(self, grillNode):                         return notYetImplemented(grillNode)
 	def Create_FxiFeature(self, iFeatureNode):                   return notSupportedNode(iFeatureNode)
 	def Create_FxLip(self, lipNode):                             return notYetImplemented(lipNode)
-	def Create_FxMesh(self, meshNode):                           return notYetImplemented(meshNode)  # requires reading of Graphics => postponed!
 	def Create_FxMidSurface(self, midSurfaceNode):               return notYetImplemented(midSurfaceNode)
 	def Create_FxMove(self, moveNode):                           return notYetImplemented(moveNode)
 	def Create_FxNonParametricBase(self, nonParametricBaseNode): return notYetImplemented(nonParametricBaseNode)
@@ -2717,7 +2755,6 @@ class FreeCADImporter:
 	def Create_FxReference(self, referenceNode):                 return notYetImplemented(referenceNode)
 	def Create_FxRest(self, restNode):                           return notYetImplemented(restNode)
 	def Create_FxRib(self, ribNode):                             return notYetImplemented(ribNode)
-	def Create_FxRuledSurface(self, ruledSurfaceNode):           return notYetImplemented(ruledSurfaceNode)
 	def Create_FxSculpt(self, sculptNode):                       return notYetImplemented(sculptNode)
 	def Create_FxShell(self, shellNode):                         return notYetImplemented(shellNode)
 	def Create_FxSnapFit(self, snapFitNode):                     return notYetImplemented(snapFitNode) # Cut Geometry (Wedge - Cube)
@@ -2884,6 +2921,7 @@ class FreeCADImporter:
 					try:
 						cell = sheet.cell(row, col)  # Get cell object by row, col
 						setTableValue(table, col, row + 1, cell.value)
+						# TODO: Add iPart feature to FreeCAD!!!
 					except:
 						pass
 		return

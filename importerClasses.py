@@ -1053,6 +1053,7 @@ class FeatureNode(DataNode):
 		elif (p0 is None):
 			p10 = self._getPropertyName(10)
 			if (p1 == 'Enum'):                      return 'Thicken'
+			if (p1 == '671CE131'):                  return 'RuledSurface'
 			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
 			if (p1 == 'EdgeCollectionProxy'):       return 'Lip'
 			if (p1 == 'FC203F47'):                  return 'ContourRoll'
