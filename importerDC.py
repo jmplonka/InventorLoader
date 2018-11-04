@@ -1227,7 +1227,6 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 4, 'u32_1')
 		return i
 
 	def Read_19573122(self, node): # new in 2019
@@ -2983,6 +2982,24 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, 4, 'a1')
 		return i
 
+	def Read_081D7F77(self, node):
+		i = self.ReadList2U32(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_4A944F03(self, node):
+		i = self.ReadList2U32(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_D4BDEE88(self, node):
+		i = self.ReadList2U32(node)
+		return i
+
 	def Read_48C52258(self, node): # BSpline3D
 		i = self.ReadContentHeader(node, 'BSpline3D')
 		i = self.skipBlockSize(i)
@@ -3727,7 +3744,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 4, 'a1')
 		return i
 
 	def Read_614A01F1(self, node):

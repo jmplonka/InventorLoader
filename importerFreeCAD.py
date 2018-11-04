@@ -2729,6 +2729,17 @@ class FreeCADImporter:
 		# = getProperty(properties, 0x0C)     # param
 		angle = getProperty(properties, 0x0D) # angle
 
+	def Create_FxExtend(self, extendNode):
+		properties = extendNode.get('properties')
+		edges  = getProperty(properties, 0x00) # EdgeCollectionProxy
+		# = getProperty(properties, 0x01) # FxExtend
+		fxType = getProperty(properties, 0x02) # ExtentType=To
+		dist   = getProperty(properties, 0x03) # Parameter 'd2'=1.75mm
+		face   = getProperty(properties, 0x04) # Face <=> extendType == to
+		# = getProperty(properties, 0x06) # bool
+		surf   = getProperty(properties, 0x07) # SurfaceBody 'Fläche2'
+		return notYetImplemented(extendNode)
+
 	def Create_FxBoss(self, bossNode):                           return notYetImplemented(bossNode) # MultiFuse Geometry
 	def Create_FxBoundaryPatch(self, boundaryPatchNode):         return notYetImplemented(boundaryPatchNode) # Sketches, Edges
 	def Create_FxCoreCavity(self, coreCavityNode):               return notYetImplemented(coreCavityNode)
@@ -2736,7 +2747,7 @@ class FreeCADImporter:
 	def Create_FxDecal(self, decalNode):                         return notYetImplemented(decalNode)
 	def Create_FxDirectEdit(self, directEditNode):               return notYetImplemented(directEditNode)
 	def Create_FxEmboss(self, embossNode):                       return notYetImplemented(embossNode)
-	def Create_FxExtend(self, extendNode):                       return notYetImplemented(extendNode)
+
 	def Create_FxFaceDelete(self, faceNode):                     return notYetImplemented(faceNode)
 	def Create_FxFaceDraft(self, faceNode):                      return notYetImplemented(faceNode)
 	def Create_FxFaceMove(self, faceNode):                       return notYetImplemented(faceNode)

@@ -970,7 +970,9 @@ class FeatureNode(DataNode):
 		p1 = self._getPropertyName(1)
 		p4 = self._getPropertyName(4)
 
-		if (p4 == 'Face'):                          return 'Rip'
+		if (p4 == 'Face'):
+			if (p1 == 'FxExtend'):                  return 'Extend'
+			return 'Rip'
 		if (p0 == 'EdgeCollectionProxy'):
 			p4 = self._getPropertyName(4)
 			if (p4 == '7DAA0032'):                  return 'Chamfer'
