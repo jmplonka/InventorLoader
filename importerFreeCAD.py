@@ -1754,7 +1754,7 @@ class FreeCADImporter:
 		if (label.typeName == 'BFD09C43'):
 			label = label.get('label')
 			if (label is None): return
-		if (label.typeName == '90874D15'):
+		if (label.typeName == 'Styles'):
 			id = label.get('associativeID')
 			sketch = node.get('refSketch')
 			entity = node.sketchEntity
