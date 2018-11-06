@@ -1249,24 +1249,6 @@ class Header0():
 		return 'm=%X x=%04X' %(self.m, self.x)
 	def __repr__(self): return self.__str__()
 
-class _32RRR2():
-	def __init__(self, i, f, n):
-		self.i = i
-		self.f = f
-		self.n = n
-
-	def __str__(self):
-		return 'i=%X f=%X n=%X' %(self.i, self.f, self.n)
-
-class _32RA():
-	def __init__(self, i, f, n):
-		self.i = i
-		self.f = f
-		self.n = n
-
-	def __str__(self):
-		return 'i=%X f=%X n=%X' %(self.i, self.f, self.n)
-
 class ModelerTxnMgr():
 	def __init__(self):
 		self.ref_1 = None

@@ -15,8 +15,8 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class EeDataReader(SegmentReader):
-	def __init__(self):
-		super(EeDataReader, self).__init__()
+	def __init__(self, segment):
+		super(EeDataReader, self).__init__(segment)
 
 	def ReadU32Arr(self, node, offset, name, size):
 		cnt, i = getUInt32(node.data, offset)

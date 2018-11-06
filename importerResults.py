@@ -16,8 +16,8 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class ResultReader(SegmentReader):
-	def __init__(self):
-		super(ResultReader, self).__init__()
+	def __init__(self, segment):
+		super(ResultReader, self).__init__(segment)
 
 	def Read_Header1(self, node):
 		i = self.skipBlockSize(0)

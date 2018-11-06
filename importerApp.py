@@ -15,8 +15,8 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class AppReader(SegmentReader):
-	def __init__(self):
-		super(AppReader, self).__init__()
+	def __init__(self, segment):
+		super(AppReader, self).__init__(segment)
 		self.defStyle = None
 
 	def readHeaderStyle(self, node, typeName = None):
@@ -766,7 +766,7 @@ class AppReader(SegmentReader):
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_TEXT16_REF_, 'lst0')
 		return i
 
-	def postRead(self, segment):
+	def postRead(self):
 		color = self.defStyle.get('color')
 		if (color is not None):
 			setColorDefault(color.red, color.green, color.blue)

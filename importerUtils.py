@@ -61,6 +61,17 @@ UUID_NAMES = {
 	'14533d8211d1087100085ba406e5dc09': 'UCxWorkplaneNode',
 	'2c7020f811d1b3c06000b1b801f31bb0': 'UCxWorkpointNode',
 }
+
+TRANSLATIONS = {
+	u"Ä": u"Ae",
+	u"ä": u"ae",
+	u"Ö": u"Oe",
+	u"ö": u"oe",
+	u"Ü": u"Ue",
+	u"ü": u"ue",
+	u"ß": u"ss",
+}
+
 ENCODING_FS      = 'utf8'
 
 _fileVersion     = None
@@ -749,13 +760,9 @@ def setInventorFile(file):
 		os.mkdir(folder)
 
 def translate(str):
-	res = str.replace(u'Ä', 'Ae')
-	res = res.replace(u'ä', 'ae')
-	res = res.replace(u'Ö', 'Oe')
-	res = res.replace(u'ö', 'oe')
-	res = res.replace(u'Ü', 'Ue')
-	res = res.replace(u'ü', 'ue')
-	res = res.replace(u'ß', 'ss')
+	res = str
+	for c in TRANSLATIONS:
+		res = res.replace(c, TRANSLATIONS[c])
 	return res
 
 def viewAxonometric():

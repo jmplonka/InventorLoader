@@ -2722,7 +2722,7 @@ class FreeCADImporter:
 		# = getProperty(properties, 0x05)     # bool
 		# = getProperty(properties, 0x06)     # bool
 		dir = getProperty(properties, 0x07)   # direction
-		# = getProperty(properties, 0x08)     # base surface 
+		# = getProperty(properties, 0x08)     # base surface
 		# = getProperty(properties, 0x09)     # bool
 		surf = getProperty(properties, 0x0A)  # resulting surface
 		# = getProperty(properties, 0x0B)     # ???
@@ -2747,7 +2747,6 @@ class FreeCADImporter:
 	def Create_FxDecal(self, decalNode):                         return notYetImplemented(decalNode)
 	def Create_FxDirectEdit(self, directEditNode):               return notYetImplemented(directEditNode)
 	def Create_FxEmboss(self, embossNode):                       return notYetImplemented(embossNode)
-
 	def Create_FxFaceDelete(self, faceNode):                     return notYetImplemented(faceNode)
 	def Create_FxFaceDraft(self, faceNode):                      return notYetImplemented(faceNode)
 	def Create_FxFaceMove(self, faceNode):                       return notYetImplemented(faceNode)
@@ -2968,21 +2967,20 @@ class FreeCADImporter:
 				return u"; E%d='%s'" %(r, comment)
 		return u''
 
-	def addOperandParameter(self, table, nextRow, parameters, operandRef):
+	def addOperandParameter(self, table, nextRow, operandRef):
 		if (operandRef):
-			return self.addReferencedParameters(table, nextRow, parameters, operandRef)
+			return self.addReferencedParameters(table, nextRow, operandRef)
 		return nextRow
 
-	def addReferencedParameters(self, table, r, parameters, value):
+	def addReferencedParameters(self, table, r, value):
 		nextRow = r
 		typeName   = value.typeName
 
 		if (typeName == 'ParameterRef'):
-			parameterData = value.get('refParameter').data
-			nextRow = self.addParameterToTable(table, nextRow, parameters, parameterData.name)
+			nextRow = self.addParameterToTable(table, nextRow, value.get('refParameter'))
 		elif (typeName.startswith('ParameterOperation')):
-			nextRow = self.addOperandParameter(table, nextRow, parameters, value.get('refOperand1'))
-			nextRow = self.addOperandParameter(table, nextRow, parameters, value.get('refOperand2'))
+			nextRow = self.addOperandParameter(table, nextRow, value.get('refOperand1'))
+			nextRow = self.addOperandParameter(table, nextRow, value.get('refOperand2'))
 		elif (typeName == 'ParameterValue'):
 			pass # Nothing to do here!
 		else:
@@ -2991,90 +2989,86 @@ class FreeCADImporter:
 				typeName   = value.typeName
 
 				if (typeName == 'ParameterUnaryMinus'):
-					nextRow = self.addReferencedParameters(table, nextRow, parameters, value)
+					nextRow = self.addReferencedParameters(table, nextRow, value)
 				elif (typeName == 'ParameterRef'):
-					parameterData = value.get('refParameter').data
-					nextRow = self.addParameterToTable(table, nextRow, parameters, parameterData.name)
+					nextRow = self.addParameterToTable(table, nextRow, value.get('refParameter'))
 				elif (typeName == 'ParameterFunction'):
 					operandRefs = value.get('operands')
-					sep = '('
 					for operandRef in operandRefs:
-						nextRow = self.addReferencedParameters(table, nextRow, parameters, operandRef)
+						nextRow = self.addReferencedParameters(table, nextRow, operandRef)
 				elif (typeName.startswith('ParameterOperation')):
-					nextRow = self.addOperandParameter(table, nextRow, parameters, value.get('refOperand1'))
-					nextRow = self.addOperandParameter(table, nextRow, parameters, value.get('refOperand2'))
+					nextRow = self.addOperandParameter(table, nextRow, value.get('refOperand1'))
+					nextRow = self.addOperandParameter(table, nextRow, value.get('refOperand2'))
 				elif (typeName == 'ParameterOperationPowerIdent'):
-					nextRow = self.addReferencedParameters(table, nextRow, parameters, value.get('refOperand1'))
+					nextRow = self.addReferencedParameters(table, nextRow, value.get('refOperand1'))
 		return nextRow
 
-	def addParameterToTable(self, table, r, parameters, key):
-		if (key in parameters):
-			valueNode = parameters[key].node
+	def addParameterToTable(self, table, r, ref):
+		valueNode = ref.node
 
-			if (isinstance(valueNode, ParameterNode)):
-				pass
-			elif (isinstance(valueNode, ParameterTextNode)):
-				pass
-			elif (isinstance(valueNode, ValueNode)):
-				pass
-			else:
-				return r
-
-			if ((valueNode is not None) and (valueNode.handled != True)):
-				valueNode.handled = True
-				mdlValue = u''
-				tlrValue = u''
-				remValue = u''
-				valueNode.set('alias', 'T_Parameters.%s_' %(key))
-				typeName = valueNode.typeName
-
-				if (typeName == 'Parameter'):
-					r = self.addReferencedParameters(table, r, parameters, valueNode)
-					#nominalValue = getNominalValue(valueNode)
-					#nominalFactor = valueNode.getUnitFactor()
-					#nominalOffset = valueNode.getUnitOffset()
-					#nominalUnit  = valueNode.data.getUnitName()
-					#if (len(nominalUnit) > 0): nominalUnit = ' ' + nominalUnit
-					#formula = '%s%s' %((nominalValue / nominalFactor)  - nominalOffset, nominalUnit)
-					value   = valueNode.getValue().__str__()
-					formula = valueNode.getFormula(True)
-					setTableValue(table, 'A', r, key)
-					setTableValue(table, 'B', r, value)
-					setTableValue(table, 'C', r, formula)
-					mdlValue = '; C%s=%s' %(r, formula)
-					tlrValue = self.addParameterTableTolerance(table, r, valueNode.get('tolerance'))
-					remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
-				elif (typeName == 'ParameterText'):
-					value = valueNode.get('value')
-					setTableValue(table, 'A', r, key)
-					setTableValue(table, 'B', r, "'%s" %(value))
-					remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
-				elif (typeName == 'ParameterBoolean'):
-					value = valueNode.get('value')
-					setTableValue(table, 'A', r, key)
-					setTableValue(table, 'B', r, value)
-					remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
-				else: #if (key.find('RDxVar') != 0):
-					value = valueNode
-					setTableValue(table, 'A', r, key)
-					setTableValue(table, 'B', r, value)
-					remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
-
-				if (key.find('RDxVar') != 0):
-					try:
-						aliasValue = '%s_' %(key.replace(':', '_'))
-						table.setAlias(u"B%d" %(r), aliasValue)
-					except Exception as e:
-						logError(u"    Can't set alias name for B%d - invalid name '%s' - %s!", r, aliasValue, e)
-
-					logInfo(u"        A%d='%s'; B%d='%s'%s'%s%s", r, key, r, value, mdlValue, tlrValue, remValue)
-					return r + 1
+		if (isinstance(valueNode, ParameterNode)):
+			pass
+		elif (isinstance(valueNode, ParameterTextNode)):
+			pass
+		elif (isinstance(valueNode, ValueNode)):
+			pass
 		else:
-			assert False, 'ERROR: %s not found in parameters!' %(key)
+			return r
+
+		if ((valueNode is not None) and (valueNode.handled != True)):
+			valueNode.handled = True
+			key      = translate(ref.name)
+			mdlValue = u''
+			tlrValue = u''
+			remValue = u''
+			valueNode.set('alias', 'T_Parameters.%s_' %(key))
+			typeName = valueNode.typeName
+
+			if (typeName == 'Parameter'):
+				r = self.addReferencedParameters(table, r, valueNode)
+				#nominalValue = getNominalValue(valueNode)
+				#nominalFactor = valueNode.getUnitFactor()
+				#nominalOffset = valueNode.getUnitOffset()
+				#nominalUnit  = valueNode.data.getUnitName()
+				#if (len(nominalUnit) > 0): nominalUnit = ' ' + nominalUnit
+				#formula = '%s%s' %((nominalValue / nominalFactor)  - nominalOffset, nominalUnit)
+				value   = valueNode.getValue().__str__()
+				formula = valueNode.getFormula(True)
+				setTableValue(table, 'A', r, key)
+				setTableValue(table, 'B', r, value)
+				setTableValue(table, 'C', r, formula)
+				mdlValue = '; C%s=%s' %(r, formula)
+				tlrValue = self.addParameterTableTolerance(table, r, valueNode.get('tolerance'))
+				remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
+			elif (typeName == 'ParameterText'):
+				value = valueNode.get('value')
+				setTableValue(table, 'A', r, key)
+				setTableValue(table, 'B', r, "'%s" %(value))
+				remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
+			elif (typeName == 'ParameterBoolean'):
+				value = valueNode.get('value')
+				setTableValue(table, 'A', r, key)
+				setTableValue(table, 'B', r, value)
+				remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
+			else: #if (key.find('RDxVar') != 0):
+				value = valueNode
+				setTableValue(table, 'A', r, key)
+				setTableValue(table, 'B', r, value)
+				remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
+
+			if (key.find('RDxVar') != 0):
+				try:
+					aliasValue = '%s_' %(key.replace(':', '_'))
+					table.setAlias(u"B%d" %(r), aliasValue)
+				except Exception as e:
+					logError(u"    Can't set alias name for B%d - invalid name '%s' - %s!", r, aliasValue, e)
+
+				logInfo(u"        A%d='%s'; B%d='%s'%s'%s%s", r, key, r, value, mdlValue, tlrValue, remValue)
+				return r + 1
 		return r
 
 	def createParameterTable(self, partNode):
-		parameterRefs = partNode.get('parameters')
+		parameters = partNode.get('parameters')
 		table = newObject(self.doc, 'Spreadsheet::Sheet', u'T_Parameters')
 		logInfo(u"    adding parameters table...")
 		setTableValue(table, 'A', 1, 'Parameter')
@@ -3083,9 +3077,9 @@ class FreeCADImporter:
 		setTableValue(table, 'D', 1, 'Tolerance')
 		setTableValue(table, 'E', 1, 'Comment')
 		r = 2
-		keys = parameterRefs.keys()
+		keys = parameters.keys()
 		for key in keys:
-			r = self.addParameterToTable(table, r, parameterRefs, key)
+			r = self.addParameterToTable(table, r, parameters[key])
 		return
 
 	def importModel(self, root, fcDoc):

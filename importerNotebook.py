@@ -18,8 +18,8 @@ __version__     = '0.1.1'
 __status__      = 'In-Development'
 
 class NotebookReader(SegmentReader):
-	def __init__(self):
-		super(NotebookReader, self).__init__()
+	def __init__(self, segment):
+		super(NotebookReader, self).__init__(segment)
 
 	def Read_386E04F0(self, node): # RtfContent
 		i = node.Read_Header0('RtfContent')

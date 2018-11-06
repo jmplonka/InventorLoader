@@ -15,8 +15,8 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class BRepReader(SegmentReader):
-	def __init__(self):
-		super(BRepReader, self).__init__()
+	def __init__(self, segment):
+		super(BRepReader, self).__init__(segment)
 
 	def Read_009A1CC4(self, node): return 0
 

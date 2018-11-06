@@ -93,32 +93,36 @@ def getStart(m, data, offset):
 		return m.start() - offset
 	return len(data)
 
+BRANCH_NODES = {
+	'Parameter':                       ParameterNode,
+	'ParameterText':                   ParameterTextNode,
+	'ParameterBoolean':                ValueNode,
+	'Enum':                            EnumNode,
+	'Feature':                         FeatureNode,
+	'Point2D':                         PointNode,
+	'BlockPoint2D':                    PointNode,
+	'Point3D':                         PointNode,
+	'Line2D':                          LineNode,
+	'Line3D':                          LineNode,
+	'Arc2D':                           CircleNode,
+	'Circle2D':                        CircleNode,
+	'Circle3D':                        CircleNode,
+	'Geometric_Radius2D':              GeometricRadius2DNode,
+	'Geometric_Coincident2D':          GeometricCoincident2DNode,
+	'Dimension_Distance2D':            DimensionDistance2DNode,
+	'Dimension_Distance_Horizontal2D': DimensionDistance2DNode,
+	'Dimension_Distance_Vertical2D':   DimensionDistance2DNode,
+	'Dimension_Angle2Line2D':          DimensionAngleNode,
+	'Dimension_Angle3Point2D':         DimensionAngleNode,
+	'SurfaceBodies':                   SurfaceBodiesNode,
+	'SolidBody':                       SurfaceBodiesNode,
+	'Direction':                       DirectionNode,
+	'A244457B':                        DirectionNode
+}
+
 def getBranchNode(data, isRef):
-	if (data.typeName == 'Parameter'):                       return ParameterNode(data, isRef)
-	if (data.typeName == 'ParameterText'):                   return ParameterTextNode(data, isRef)
-	if (data.typeName == 'ParameterBoolean'):                return ValueNode(data, isRef)
-	if (data.typeName == 'Enum'):                            return EnumNode(data, isRef)
-	if (data.typeName == 'Feature'):                         return FeatureNode(data, isRef)
-	if (data.typeName == 'Point2D'):                         return PointNode(data, isRef)
-	if (data.typeName == 'BlockPoint2D'):                    return PointNode(data, isRef)
-	if (data.typeName == 'Point3D'):                         return PointNode(data, isRef)
-	if (data.typeName == 'Line2D'):                          return LineNode(data, isRef)
-	if (data.typeName == 'Line3D'):                          return LineNode(data, isRef)
-	if (data.typeName == 'Arc2D'):                           return CircleNode(data, isRef)
-	if (data.typeName == 'Circle2D'):                        return CircleNode(data, isRef)
-	if (data.typeName == 'Circle3D'):                        return CircleNode(data, isRef)
-	if (data.typeName == 'Geometric_Radius2D'):              return GeometricRadius2DNode(data, isRef)
-	if (data.typeName == 'Geometric_Coincident2D'):          return GeometricCoincident2DNode(data, isRef)
-	if (data.typeName == 'Dimension_Distance2D'):            return DimensionDistance2DNode(data, isRef)
-	if (data.typeName == 'Dimension_Distance_Horizontal2D'): return DimensionDistance2DNode(data, isRef)
-	if (data.typeName == 'Dimension_Distance_Vertical2D'):   return DimensionDistance2DNode(data, isRef)
-	if (data.typeName == 'Dimension_Angle2Line2D'):          return DimensionAngleNode(data, isRef)
-	if (data.typeName == 'Dimension_Angle3Point2D'):         return DimensionAngleNode(data, isRef)
-	if (data.typeName == 'SurfaceBodies'):                   return SurfaceBodiesNode(data, isRef)
-	if (data.typeName == 'SolidBody'):                       return SurfaceBodiesNode(data, isRef)
-	if (data.typeName == 'Direction'):                       return DirectionNode(data, isRef)
-	if (data.typeName == 'A244457B'):                        return DirectionNode(data, isRef)
-	return DataNode(data, isRef)
+	nodeCls = BRANCH_NODES.get(data.typeName, DataNode)
+	return nodeCls(data, isRef)
 
 def buildBranchRef(parent, file, ref, level):
 	branch = getBranchNode(ref.data, True)
@@ -209,9 +213,7 @@ def resolveParentNodes(nodes):
 						ref.type = SecNodeRef.TYPE_CROSS
 	return
 
-def buildTree(file, seg):
-	nodes = seg.elementNodes
-
+def buildTree(file, nodes):
 	# link the node's references with the corresponding nodes
 	resolveReferencNodes(nodes)
 
@@ -223,8 +225,7 @@ def buildTree(file, seg):
 	for node in nodes.values():
 		if (node.parent is None):
 			buildBranch(roots, file, node, 0, None)
-
-	seg.tree = roots
+	return roots
 
 # Some of the ASM entities have extra chunks that needs to be deleted to ACIS conform
 def convert2Version7(entity):
@@ -242,11 +243,12 @@ def convert2Version7(entity):
 
 class SegmentReader(object):
 
-	def __init__(self):
+	def __init__(self, segment):
+		self.segment = segment
 		self.nodeCounter = 0
 		self.fmt_old = (getFileVersion() < 2011)
 
-	def postRead(self, seg):
+	def postRead(self):
 		return
 
 	def ReadNodeRef(self, node, offset, number, type):
@@ -266,13 +268,13 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		return i
 
-	def ReadHeaderU32RefU8List3(self, node, typeName = None):
+	def ReadHeaderU32RefU8List3(self, node, typeName = None, lstName='lst0'):
 		i = node.Read_Header0(typeName)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadChildRef(i, 'ref0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, _TYP_NODE_REF_, 'lst0')
+		i = node.ReadList3(i, _TYP_NODE_REF_, lstName)
 		i = self.skipBlockSize(i)
 		return i
 
@@ -294,6 +296,23 @@ class SegmentReader(object):
 			a, i = getFloat64A(node.data, i, 13)
 		elif (t == 0x17):
 			a, i = getFloat64A(node.data, i, 6)
+		elif (t == 0x2A):
+			#00 00 00 00 00 00 00 00 02 00 00 00 95 D6 26 E8 0B 2E 11 3E
+			#LLLdL
+			a1 = Struct(u"<LLLdL").unpack_from(node.data, i)
+			i  += 16
+			cnt, i = getUInt32(node.data, i)
+			#	[06 00 00 00,06 00 00 00,08 00 00 00,00 00 00 00,00 00 00 00],[00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 00 00]
+			a2, i = getUInt32A(node.data, i, 3)
+			a3, i = getFloat64A(node.data, i, cnt)
+			#	[08 00 00 00,03 00 00 00,03 00 00 00,08 00 00 00],[00 63 B2 54 5E 0A EC BF,E8 FB A9 F1 12 2C B4 BC,AD 9A C9 E6 29 98 F4 BF,98 D3 0B 30 DD 7E ED BF,E8 FB A9 F1 12 2C B4 BC,CA A3 3E 32 72 6C F5 BF,98 D3 0B 30 DD 7E ED BF,E8 FB A9 F1 12 2C B4 BC,FF EA 6F 3A DB A0 F6 BF,11 EA 2D 81 99 97 71 3D]
+			a4, i = getUInt32A(node.data, i, 4)
+			a5, i = getFloat64A(node.data, i, a4[1]*3)
+			#	[01 00 00 00,01 00 00 00,00 00 00 00,00 00 00 00],[00 00 00 00 00 00 F0 3F]
+			f2, i = getFloat64(node.data, i)
+			a6, i = getUInt32A(node.data, i, 4)
+			a7, i = getFloat64A(node.data, i, a6[1])
+			a = (a1, f1, a2, a3, a4, a5, a6, a7)
 		else:
 			raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
 		node.set(name, (t, a))
@@ -495,18 +514,18 @@ class SegmentReader(object):
 
 		return
 
-	def ReadBlock(self, data, offset, size, seg):
+	def ReadBlock(self, data, offset, size):
 		self.nodeCounter += 1
 		node = SecNode()
 		node.index = self.nodeCounter
 		node.size  = size
 		node.offset = offset
 		node.reader = self
-		seg.elementNodes[node.index] = node
-		node.segment = seg
+		node.segment = self.segment
+		self.segment.elementNodes[node.index] = node
 		# set node's data
 		n, i = getUInt32(data, node.offset)
-		node.uid = getNodeUID((n & 0xFF), node.segment)
+		node.uid = getNodeUID((n & 0xFF), self.segment)
 		node.typeName = '%08X' % (node.uid.time_low)
 		node.data = data[i:i + node.size]
 		self.HandleBlock(node)
@@ -581,7 +600,7 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		resolveEntityReferences(entities, lst)
 		node.set('SAT', [header, lst])
-		node.segment.AcisList.append(node)
+		self.segment.AcisList.append(node)
 		dumpSat(node)
 		return i
 
@@ -649,23 +668,23 @@ class SegmentReader(object):
 							values.append([txt, ref])
 		return i
 
-	def ReadSegmentData(self, file, buffer, seg):
+	def ReadSegmentData(self, file, buffer):
 		self.nodeCounter = 0
-		seg.elementNodes = {}
-		seg.indexNodes   = {}
+		self.segment.elementNodes = {}
+		self.segment.indexNodes   = {}
 
 		i = 0
 
-		for sec in seg.sec1:
+		for sec in self.segment.sec1:
 			if (sec.flags == 1):
 				start = i
-				data = self.ReadBlock(buffer, i, sec.length, seg)
+				data = self.ReadBlock(buffer, i, sec.length)
 				i += data.size + 4
 				l, i = getUInt32(buffer, i)
 				i = self.ReadTrailer(buffer, i)
 				if ((l != 0) and (sec.length != l)):
 					logError('%s: BLOCK[%04X] - incorrect block size %X != 	%X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, u32_0, start, data.typeName))
-		buildTree(file, seg)
-		self.postRead(seg)
+		self.segment.tree = buildTree(file, self.segment.elementNodes)
+		self.postRead()
 
 		return

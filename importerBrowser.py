@@ -16,8 +16,8 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class BrowserReader(SegmentReader):
 
-	def __init__(self):
-		super(BrowserReader, self).__init__()
+	def __init__(self, segment):
+		super(BrowserReader, self).__init__(segment)
 
 	def Read_Str53(self, node, typeName = None):
 		if (typeName is not None):

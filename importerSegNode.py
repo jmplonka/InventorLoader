@@ -140,6 +140,12 @@ TYP_2_FUNC = {
 	_TYP_LIST_X_REF_:            'getList2ListXRefs',
 }
 
+TYP_3_FUNC = {
+	_TYP_UINT32_:	             'getArrayU32',
+	_TYP_NODE_REF_:              'getArrayRef',
+	_TYP_NODE_X_REF_:            'getArrayXRef',
+}
+
 TYP_4_FUNC = {
 	_TYP_MAP_U16_U16_:          'getMapU16U16',
 	_TYP_MAP_U32_U32_:          'getMapU32U32',
@@ -443,6 +449,7 @@ class SecNode(AbstractData):
 	def getList2UInt32s(self, offset, cnt, arraysize):
 		lst = Struct('<' + 'L'*cnt).unpack_from(self.data, offset)
 		i   = offset + 4*cnt
+		if (len(lst) > 100): return list(lst), i, u"..."
 		return list(lst), i, u",".join([u"%06X" %(s32) for s32 in lst])
 
 	def getList2SInt32s(self, offset, cnt, arraysize):
@@ -516,6 +523,7 @@ class SecNode(AbstractData):
 			val = np.reshape([f32 for i, f32 in enumerate(val) if (i % (arraysize + 1)) != arraysize], (-1, arraysize))
 			i   = offset + (arraysize*4 + 4) * cnt # 2Bytes for Word + 4Bytes for blocklen
 		lst = val.tolist()
+		if (len(lst) > 100): return lst, i, u"..."
 		return lst, i, str(lst)
 
 	def getList2Float64sA(self, offset, cnt, arraysize):
@@ -856,23 +864,39 @@ class SecNode(AbstractData):
 			self.delete('tmp')
 		return lst, i
 
-	def ReadMetaData_ARRAY(self, offset, typ):
-		lst = []
+	def getArrayU32(self, offset, cnt):
+		lst, i = getUInt32A(self.data, offset, cnt)
+		self.content += IntArr2Str(lst, 4)
+		return lst, i
 
+	def getArrayRef(self, offset, cnt):
+		i = offset
+		lst = []
+		for j in range(cnt):
+			i = self.ReadChildRef(i, 'tmp', j, False)
+			lst.append(self.get('tmp'))
+		self.content += str(len(lst))
+		self.delete('tmp')
+		return lst, i
+
+	def getArrayXRef(self, offset, cnt):
+		i = offset
+		lst = []
+		for j in range(cnt):
+			i = self.ReadCrossRef(i, 'tmp', j, False)
+			lst.append(self.get('tmp'))
+		self.content += str(len(lst))
+		self.delete('tmp')
+		return lst, i
+
+	def ReadMetaData_ARRAY(self, offset, typ):
 		cnt, i = getUInt32(self.data, offset)
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
-			for j in range(cnt):
-				if (typ == _TYP_UINT32_):
-					i = self.ReadUInt32(i, 'tmp')
-				elif (typ == _TYP_NODE_X_REF_):
-					i = self.ReadCrossRef(i, 'tmp', j, False)
-				else:
-					i = self.ReadChildRef(i, 'tmp', j, False)
-				lst.append(self.get('tmp'))
-			self.delete('tmp')
-		return lst, i
-	
+			func = getattr(self, TYP_3_FUNC[typ])
+			return func(i, cnt)
+		return [], i
+
 	def	getMapU16U16(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -882,17 +906,17 @@ class SecNode(AbstractData):
 			lst[key] = val
 		self.content += u",".join([u"[%03X:%03X]" %(key, lst[key]) for key in lst])
 		return lst, i
-	
+
 	def	getMapU32U32(self, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
 			key, i = getUInt32(self.data, i)
 			val, i = getUInt32(self.data, i)
-			lst[key] = val		
+			lst[key] = val
 		self.content += u",".join([u"[%04X:%04X]" %(key, lst[key]) for key in lst])
 		return lst, i
-	
+
 	def	getMapU32Ref(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -903,7 +927,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapU32XRef(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -914,7 +938,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapRefRef(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -926,7 +950,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapXRefRef(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -938,7 +962,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapXRefXRef(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -950,7 +974,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapXRefU2D(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -962,7 +986,7 @@ class SecNode(AbstractData):
 		self.content += u",".join([u"[%s:(%s)]" %(key, IntArr2Str(lst[key], 4)) for key in lst])
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapXRefF64(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -974,7 +998,7 @@ class SecNode(AbstractData):
 		self.content += u",".join([u"[%s: %g]" %(key, lst[key]) for key in lst])
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapXRefXRefL(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -988,7 +1012,7 @@ class SecNode(AbstractData):
 		self.content = c + u",".join([u"[%s: (%s)]" %(getIndex(key), u"),(".join([u"%s" %(getIndex(h)) for h in lst[key]])) for key in lst])
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapUidU32(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -998,7 +1022,7 @@ class SecNode(AbstractData):
 			lst[key] = val
 		self.content += u",".join([u"[{%s}:%04X]" %(key, lst[key]) for key in lst])
 		return lst, i
-	
+
 	def	getMapUidXRef(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -1009,7 +1033,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapT8Ref(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -1020,7 +1044,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapT8XRef(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -1031,7 +1055,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapT16Ref(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -1042,7 +1066,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapT16XRef(self, offset, cnt):
 		lst = {}
 		i   = offset
@@ -1053,7 +1077,7 @@ class SecNode(AbstractData):
 		self.content += u"%d" %(len(lst))
 		self.delete('tmp')
 		return lst, i
-	
+
 	def	getMapMdlTxnMgr1(self, offset, cnt):
 		lst = {}
 		i   = offset

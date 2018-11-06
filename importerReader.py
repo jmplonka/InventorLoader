@@ -796,30 +796,30 @@ def getReader(seg):
 	seg.AcisList = []
 	if (seg.isBRep()): # BoundaryRepresentation for SAT/STEP based import
 		if (isStrategySat() or isStrategyStep()):
-			reader = BRepReader()
+			reader = BRepReader(seg)
 	elif (seg.isDC()):
 		if (isStrategyNative()):   # DocumentComponent for featured base import
-			reader = DCReader()
+			reader = DCReader(seg)
 	elif (seg.isApp()): # ApplicationSettings for colors
-		reader = AppReader()
-#	elif (seg.isBrowser():
-#		reader = BrowserReader()
+		reader = AppReader(seg)
+#	elif (seg.isBrowser()):
+#		reader = BrowserReader(seg)
 #	elif (seg.isDefault()):
-#		reader = DefaultReader()
+#		reader = DefaultReader(seg)
 	elif (seg.isGraphics()): # required for Meshes and Colors
-		reader = GraphicsReader()
+		reader = GraphicsReader(seg)
 #	elif (seg.isResult()):
-#		reader = ResultReader()
+#		reader = ResultReader(seg)
 #	elif (seg.isDesignView()):
-#		reader = DesignViewReader()
+#		reader = DesignViewReader(seg)
 #	elif (seg.isEeData()):
-#		reader = EeDataReader()
+#		reader = EeDataReader(seg)
 #	elif (seg.isEeScene()):
-#		reader = EeSceneReader()
+#		reader = EeSceneReader(seg)
 #	elif (seg.isFBAttribute()):
-#		reader = FBAttributeReader()
+#		reader = FBAttributeReader(seg)
 #	elif (seg.isNBNotebook()):
-#		reader = NotebookReader()
+#		reader = NotebookReader(seg)
 	if (reader is None):
 		logInfo(u"    IGNORED!")
 		#reader = SegmentReader()
@@ -840,7 +840,7 @@ def ReadRSeMetaDataB(dataB, seg):
 		z = zlib.decompressobj()
 		data = z.decompress(dataB[i:])
 
-		reader.ReadSegmentData(newFile, data, seg)
+		reader.ReadSegmentData(newFile, data)
 
 		newFile.close()
 

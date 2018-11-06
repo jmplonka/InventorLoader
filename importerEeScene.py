@@ -7,7 +7,6 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-from importerClasses import _32RRR2
 from importerUtils   import *
 import importerSegNode
 
@@ -16,22 +15,17 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 class EeSceneReader(SegmentReader):
-	def __init__(self):
-		super(EeSceneReader, self).__init__()
+	def __init__(self, segment):
+		super(EeSceneReader, self).__init__(segment)
 
 	def Read_32RRR2(self, node, typeName = None):
 		i = node.Read_Header0(typeName)
-		u16_0, i = getUInt16(node.data, i)
-		u16_1, i = getUInt16(node.data, i)
+		i = node.ReadUInt32(i, 'index') # until 2019 this is always 0 otherwise it references the element with sketch's index in DC-Segment
 		i = node.ReadChildRef(i, 'styles')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadParentRef(i)
-		u32_0, i = getUInt32(node.data, i)
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-
-		val = _32RRR2(u16_0, u16_1, u32_0)
-		node.set('32RA', val)
-		node.content += ' 32RA={%s}' %(val)
 		return i
 
 	def Read_ColorAttr(self, offset, node):
@@ -110,7 +104,7 @@ class EeSceneReader(SegmentReader):
 	def Read_A79EACCF(self, node): # 3dObject
 		i = node.Read_Header0('3dObject')
 		i = node.ReadUInt32(i, 'flags')
-		i = node.ReadChildRef(i, 'ref0')
+		i = node.ReadChildRef(i, 'styles')
 		i = node.ReadChildRef(i, 'ref1')
 		i = node.ReadCrossRef(i, 'ref2')
 		i = node.ReadCrossRef(i, 'styles')
@@ -155,7 +149,7 @@ class EeSceneReader(SegmentReader):
 		i = node.ReadUInt32A(i, 5, 'a3')
 		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
 		i = self.skipBlockSize(i)
-		i = node.ReadFloat64A(i, 2, 'a4')
+		i = node.ReadFloat64_2D(i, 'a4')
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
@@ -182,7 +176,7 @@ class EeSceneReader(SegmentReader):
 
 	def Read_7AE0E1A3(self, node): # Object style ...
 		i = self.ReadHeaderSU32S(node, 'Style_7AE0E1A3')
-		i = node.ReadFloat64A(i, 2, 'a0')
+		i = node.ReadFloat64_2D(i, 'a0')
 		return i
 
 	def Read_8F0B160B(self, node): # Object style ...
