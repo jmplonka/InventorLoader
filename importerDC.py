@@ -737,12 +737,12 @@ class DCReader(EeDataReader):
 			i += 1
 		return i
 
-	def Read_0830C1B0(self, node):
-		i = self.ReadHeadersS32ss(node)
-		i = node.ReadCrossRef(i, 'ref_1')
+	def Read_0830C1B0(self, node): # Location of a 2D-Point
+		i = self.ReadHeadersS32ss(node, 'LocationPoint2D')
+		i = node.ReadCrossRef(i, 'point3D')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16(i, 'u16_0')
-		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadCrossRef(i, 'point2D')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		if (getFileVersion() > 2017):

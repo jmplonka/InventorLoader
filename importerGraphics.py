@@ -35,16 +35,6 @@ class GraphicsReader(EeSceneReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def ReadTransformation(self, node, offset):
-		'''
-		Read the transformation matrix
-		'''
-		val = Transformation()
-		node.set('transformation', val)
-		i = val.read(node.data, offset)
-		node.content += 'transformation=%r' %(val)
-		return i
-
 	def Read_Float32Arr(self, offset, node, name):
 		cnt0, i = getUInt32(node.data, offset)
 		i = node.ReadUInt32A(i, 2, 'Float32Arr_' + name)
