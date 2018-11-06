@@ -80,6 +80,8 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
+- 0.11.0 (2018-11-06): Added support for Meshes
+
 - 0.10.0 Added table for iParts.
 
 - 0.9.5 Added chamfer feature for nativ strategy.
