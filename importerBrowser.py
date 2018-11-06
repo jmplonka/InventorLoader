@@ -208,7 +208,8 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_363E8E7D(self, node):
+	def Read_363E8E7D(self, node): # Mesh
+		node.typeName = 'Mesh'
 		i = node.ReadLen32Text16(0, 'str0')
 		return i
 
@@ -345,7 +346,8 @@ class BrowserReader(SegmentReader):
 		i = node.ReadLen32Text16(i, 'str0')
 		return i
 
-	def Read_87E10017(self, node):
+	def Read_87E10017(self, node): # Mesh folder
+		node.typeName = 'MeshFolder'
 		i = node.ReadLen32Text16(0, 'str0')
 		return i
 
@@ -529,7 +531,7 @@ class BrowserReader(SegmentReader):
 	def Read_DF9CA7B0(self, node):
 		i = node.Read_Header0()
 		i = node.ReadParentRef(i)
-		i = node.ReadChildRef(i)
+		i = node.ReadCrossRef(i)
 		i = node.ReadLen32Text16(i)
 		i = node.ReadList4(i, importerSegNode._TYP_STRING8_, 'lst0')
 		i = node.ReadUInt16(i, 'u16')

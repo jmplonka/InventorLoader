@@ -214,7 +214,7 @@ class BRepReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'lenFooter')
 		return i
 
 	def Read_CCC5085A(self, node):

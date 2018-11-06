@@ -3,7 +3,8 @@
 '''
 importerFreeCAD.py
 '''
-import sys, Draft, Part, Sketcher, traceback, re
+import sys, Draft, Part, Sketcher, traceback, re, Mesh
+
 from importerReader  import model
 from importerUtils   import *
 from importerClasses import *
@@ -2415,10 +2416,10 @@ class FreeCADImporter:
 		return
 
 	def Create_FxLoftedFlange(self, node):
-		flangeNode = node.get('properties')[0]
+		defNode = node.get('properties')[0]
 		bendNode   = node.get('properties')[0]
-		properties     = flangeNode.get('properties')
-		solid          = getProperty(properties, 0x00) # SurfaceBody 'Solid1'
+		properties     = defNode.get('properties')
+		surface        = getProperty(properties, 0x00) # SurfaceBody 'Solid1'
 		profile1       = getProperty(properties, 0x01) # A477243B
 		profile2       = getProperty(properties, 0x02) # A477243B
 		#= getProperty(properties, 0x03) # Parameter 'Thickness'=4mm
@@ -2434,17 +2435,17 @@ class FreeCADImporter:
 		#= getProperty(properties, 0x0D) # A96B5992
 		#= getProperty(properties, 0x0E) # 90B64134
 		edgeProxies    = getProperty(properties, 0x0F) # EdgeCollectionProxy
-		boundary1 = self.createBoundary(profile1, solid is not None)
-		boundary2 = self.createBoundary(profile2, solid is not None)
+		boundary1 = self.createBoundary(profile1, surface is None)
+		boundary2 = self.createBoundary(profile2, surface is None)
 		sections         = [boundary1, boundary2]
-		loftGeo          = self.createEntity(flangeNode, 'Part::Loft')
+		loftGeo          = self.createEntity(defNode, 'Part::Loft')
 		loftGeo.Sections = sections
 		loftGeo.Ruled    = True  #isTrue(ruled)
 		loftGeo.Closed   = False #isTrue(closed)
 		loftGeo.Solid    = False #
 		self.hide(sections)
 		setDefaultViewObjectValues(loftGeo)
-		self.addSolidBody(flangeNode, loftGeo, solid)
+		self.addSurfaceBody(defNode, loftGeo, surface)
 		return
 
 	def Create_FxSweep(self, sweepNode):
@@ -2690,27 +2691,40 @@ class FreeCADImporter:
 
 		return
 
-	def Create_FxMesh(self, meshNode):
-#		import Mesh
-#		# create a new empty mesh
-#		m = Mesh.Mesh()
-#		# build up box out of 12 facets
-#		m.addFacet(0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,1.0,1.0)
-#		m.addFacet(0.0,0.0,0.0, 0.0,1.0,1.0, 0.0,1.0,0.0)
-#		m.addFacet(0.0,0.0,0.0, 1.0,0.0,0.0, 1.0,0.0,1.0)
-#		m.addFacet(0.0,0.0,0.0, 1.0,0.0,1.0, 0.0,0.0,1.0)
-#		m.addFacet(0.0,0.0,0.0, 0.0,1.0,0.0, 1.0,1.0,0.0)
-#		m.addFacet(0.0,0.0,0.0, 1.0,1.0,0.0, 1.0,0.0,0.0)
-#		m.addFacet(0.0,1.0,0.0, 0.0,1.0,1.0, 1.0,1.0,1.0)
-#		m.addFacet(0.0,1.0,0.0, 1.0,1.0,1.0, 1.0,1.0,0.0)
-#		m.addFacet(0.0,1.0,1.0, 0.0,0.0,1.0, 1.0,0.0,1.0)
-#		m.addFacet(0.0,1.0,1.0, 1.0,0.0,1.0, 1.0,1.0,1.0)
-#		m.addFacet(1.0,1.0,0.0, 1.0,1.0,1.0, 1.0,0.0,1.0)
-#		m.addFacet(1.0,1.0,0.0, 1.0,0.0,1.0, 1.0,0.0,0.0)
-#		# add the mesh to the active document
-#		geo = newObject(self.doc, 'Mesh::Feature', meshNode.name)
-#		geo.Mesh=m
-		return notYetImplemented(meshNode)  # requires reading of Graphics => postponed!
+	def Create_MeshFolder(self, meshFolderNode):
+		global model
+
+		logInfo(u"    creating MeshFolder '%s' ...", meshFolderNode.name)
+		folder = createGroup(self.doc, meshFolderNode.name)
+
+		index = meshFolderNode.get('index')
+		gr = model.getGraphics()
+		dc = meshFolderNode.segment
+		grMeshFolderNode = gr.indexNodes[index]
+		for meshDC in meshFolderNode.get('meshes'):
+			meshId = meshDC.get('meshId')
+			if (meshId is None):
+				meshGR = gr.indexNodes[meshDC.get('index')]
+			else:
+				meshGR = gr.meshes[meshId]
+			for p, partGR in enumerate(meshGR.get('parts')):
+				obj3D  = partGR.get('ref3dObject')
+				for f, facetGR in enumerate(obj3D.get('lst0')):
+					name = u"%s_%d" %(meshDC.name, (f + 1))
+					logInfo(u"        addign Mesh '%s_%d' ...", name)
+					points  = facetGR.get('points').get('points')
+					indices = facetGR.get('pointIndices').get('indices')
+					if (facetGR.get('normals') is not None):
+						# create a new empty mesh
+						triangles = [[x * 10.0 for x in points[i]] for i in indices]
+						m = Mesh.Mesh(triangles)
+						# add the mesh to the active document
+						geo = newObject(self.doc, 'Mesh::Feature', name)
+						folder.addObject(geo)
+						geo.Mesh = m
+		return
+
+	def Create_FxMesh(self, meshNode): return ignoreBranch(meshNode) # created with Create_MeshFolder!
 
 	def Create_FxRuledSurface(self, ruledSurfaceNode):
 		properties = ruledSurfaceNode.get('properties')
@@ -2943,7 +2957,6 @@ class FreeCADImporter:
 	def Create_ModelAnnotations(self, modelNode):          return
 	def Create_Transformation(self, transformationNode):   return
 	def Create_UserCoordinateSystem(self, usrCrdSysNode):  return
-	def Create_MeshFolder(self, meshFolderNode):           return
 
 	def Create_2B48A42B(self, node): return
 	def Create_3902E4D1(self, node): return

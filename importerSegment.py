@@ -337,7 +337,7 @@ class SegmentReader(object):
 		val = Transformation()
 		node.set('transformation', val)
 		i = val.read(node.data, offset)
-		node.content += '%s' %(val)
+		node.content += 'transformation=%r' %(val)
 		return i
 
 	def Read_5F9D0021(self, node): # SystemOfUnitsCollection

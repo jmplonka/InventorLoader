@@ -21,6 +21,7 @@ class GraphicsReader(EeSceneReader):
 
 	def __init__(self, segment):
 		super(GraphicsReader, self).__init__(segment)
+		segment.meshes = {}
 
 	def ReadIndexDC(self, node, i):
 		i = node.ReadUInt32(i, 'indexDC')
@@ -41,7 +42,7 @@ class GraphicsReader(EeSceneReader):
 		val = Transformation()
 		node.set('transformation', val)
 		i = val.read(node.data, offset)
-		node.content += '%s' %(val)
+		node.content += 'transformation=%r' %(val)
 		return i
 
 	def Read_Float32Arr(self, offset, node, name):
@@ -318,7 +319,7 @@ class GraphicsReader(EeSceneReader):
 		return i
 
 	def Read_4B26ED59(self, node): # Mesh
-		i = self.ReadHeaderU32RefU8List3(node, 'Mesh')
+		i = self.ReadHeaderU32RefU8List3(node, 'Mesh', 'parts')
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_1')
 		i = self.ReadIndexDC(node, i)
@@ -389,9 +390,12 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'key')
 		return i
 
-	def Read_5EDE1890(self, node):
-		i = self.ReadHeaderU32RefU8List3(node)
-		i = node.ReadUInt16A(i, 6, 'a1')
+	def Read_5EDE1890(self, node): # Mesh
+		i = self.ReadHeaderU32RefU8List3(node, 'Mesh', 'parts')
+		i = node.ReadLen32Text16(i, 'meshId')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadChildRef(i, 'ref_1')
+		self.segment.meshes[node.get('meshId')] = node
 		return i
 
 	def Read_60FD1845(self, node): # Sketch2D
@@ -438,7 +442,14 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_6A05AA75(self, node): return node.Read_Header0()
 
-	def Read_6A6931DC(self, node): return 0
+	def Read_6A6931DC(self, node):
+		i = self.skipBlockSize(0)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.ReadTypedFloatsList(node, i, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
+		i = node.ReadFloat64_3D(i, 'p1')
+		i = node.ReadFloat64_3D(i, 'p2')
+		return i
 
 	def Read_6C8A5C53(self, node):
 		i = self.ReadHeaderU32RefU8List3(node)
@@ -496,10 +507,11 @@ class GraphicsReader(EeSceneReader):
 		return i
 
 	def Read_913D5CD2(self, node):
-		i = 0
-		# 00,00,00,00,00
-		# 01,00,00,00
-		# 52,04,00,00
+		i = self.ReadHeaderSU32S(node)
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_9360CF4D(self, node):
@@ -696,25 +708,27 @@ class GraphicsReader(EeSceneReader):
 		return i
 
 	def Read_A98235C4(self, node):
-		i = self.ReadHeaderU32RefU8List3(node)
-		i = node.ReadUInt16A(i, 2, 'a0')
+		i = self.ReadHeaderU32RefU8List3(node, 'MeshPart')
+		i = node.ReadChildRef(i, 'ref3dObject')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt8A(i, 4, 'a1')
+		i = self.ReadTransformation(node, i)
 		i = node.ReadUInt32(i, 'u32_1')
 
 		if (getFileVersion() < 2012):
 			i = node.ReadUInt16A(i, 5, 'a2')
 		else:
-			i = node.ReadUInt16A(i, 7, 'a2')
+			i = node.ReadLen32Text16(i, 'txt0')
+			i = node.ReadLen32Text16(i, 'txt1')
 
-		if (node.get('u32_0') == 1):
-			i = node.ReadUInt16A(i, 3, 'a3')
+		if (node.get('u32_1') == 1):
+			i = node.ReadUInt32A(i, 3, 'a3')
 			i = node.ReadFloat64(i, 'f64_0')
+			i = node.ReadUInt8(i, 'u8_0')
 		else:
-			node.set('a3', [])
+			node.set('a3', [0, 0, 0])
 			node.set('f64_0', 0.0)
-			node.content += u" a3=[] f64_0=0.0"
-		i = node.ReadUInt8(i, 'u8_1')
+			node.content += u" a3=[0000,0000,0000] f64_0=0.0"
+#			i = node.ReadLen32Text16(i, 'txt2')
 		return i
 
 	def Read_AC007F7A(self, node): return node.Read_Header0()
@@ -859,7 +873,7 @@ class GraphicsReader(EeSceneReader):
 	def Read_C18CE1AF(self, node): return node.Read_Header0()
 
 	def Read_C2A055C9(self, node): # MeshFolder
-		i = self.ReadHeaderU32RefU8List3(node, 'MeshFolder')
+		i = self.ReadHeaderU32RefU8List3(node, 'MeshFolder', 'meshes')
 		i = node.ReadUInt32(i, 'index')
 		i = self.ReadIndexDC(node, i)
 		if (getFileVersion() > 2017):
@@ -936,8 +950,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadFloat64_2D(i, 'a4')
 		return i
 
-	def Read_D4824069(self, node):
-		i = self.ReadHeaderU32RefU8List3(node)
+	def Read_D4824069(self, node): # Mesh folder
+		i = self.ReadHeaderU32RefU8List3(node, 'Mesh2', 'meshes')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt32(i, 'index')
@@ -1021,8 +1035,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'index')
 		return i
 
-	def Read_F96556CB(self, node):
-		i = self.ReadHeaderU32RefU8List3(node)
+	def Read_F96556CB(self, node): # MeshPart
+		i = self.ReadHeaderU32RefU8List3(node, 'MeshPart')
 		i = node.ReadChildRef(i, 'ref3dObject')
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_1')

@@ -449,7 +449,8 @@ class SecNode(AbstractData):
 	def getList2UInt32s(self, offset, cnt, arraysize):
 		lst = Struct('<' + 'L'*cnt).unpack_from(self.data, offset)
 		i   = offset + 4*cnt
-		if (len(lst) > 100): return list(lst), i, u"..."
+		if (len(lst) > 100):
+			return list(lst), i, u",".join([u"%d" %(s32) for s32 in lst[0:100]]) + u"..."
 		return list(lst), i, u",".join([u"%06X" %(s32) for s32 in lst])
 
 	def getList2SInt32s(self, offset, cnt, arraysize):
@@ -523,7 +524,8 @@ class SecNode(AbstractData):
 			val = np.reshape([f32 for i, f32 in enumerate(val) if (i % (arraysize + 1)) != arraysize], (-1, arraysize))
 			i   = offset + (arraysize*4 + 4) * cnt # 2Bytes for Word + 4Bytes for blocklen
 		lst = val.tolist()
-		if (len(lst) > 100): return lst, i, u"..."
+		if (len(lst) > 100):
+			return lst, i, str(lst[0:100]) + u"..."
 		return lst, i, str(lst)
 
 	def getList2Float64sA(self, offset, cnt, arraysize):

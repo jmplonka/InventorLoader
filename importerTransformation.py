@@ -105,7 +105,7 @@ class Transformation:
 			j += 1
 			if ((j % 4) == 0):
 				mask += '|'
-		return u' transformation={a0=%s m=[%s]}' %(mask, m)
+		return u' transformation={a0=%s m=%s}' %(mask, m)
 
 	def __repr__(self):
 		m0 = self.__m2s__(0)
