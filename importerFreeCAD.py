@@ -442,10 +442,10 @@ def getAssociatedSketchEntity(sketchNode, ai, entityType):
 	return idMap.get(entityType)
 
 def getBodyColor(bodyNode):
-	styles = bodyNode.get('ref0')
-	for style in styles.get('lst0'):
-		if (style.typeName == 'PartDrawAttr'):
-			return style.get('ColorAttr.c0')
+	attributes = bodyNode.get('attrs')
+	for attribute in attributes.get('attributes'):
+		if (attribute.typeName == 'AttrPartDraw'):
+			return attribute.get('c0')
 	return None
 
 def adjustColor(entity, color):
@@ -2417,6 +2417,7 @@ class FreeCADImporter:
 
 	def Create_FxLoftedFlange(self, node):
 		defNode = node.get('properties')[0]
+		defNode.handled = True
 		bendNode   = node.get('properties')[0]
 		properties     = defNode.get('properties')
 		surface        = getProperty(properties, 0x00) # SurfaceBody 'Solid1'
@@ -2670,18 +2671,18 @@ class FreeCADImporter:
 		properties = filletNode.get('properties')
 		constantR  = getProperty(properties, 0x00) # FxFilletConstant
 		variableR  = getProperty(properties, 0x01) # FxFilletVariable
-		# = getProperty(properties, 0x02) # ParameterBoolean=True
-		# rolling    = getProperty(properties, 0x03) # boolean - Rolling ball where possible
-		# smooth     = getProperty(properties, 0x04) # boolean - Smooth radius transition
+		# autoEdgeChain       = getProperty(properties, 0x02) # boolean - Automatic Edge chain
+		# rolling             = getProperty(properties, 0x03) # boolean - Rolling ball where possible
+		# smooth              = getProperty(properties, 0x04) # boolean - Smooth radius transition
 		# = getProperty(properties, 0x05) # boolean
 		# = getProperty(properties, 0x06) # (always None)
-		# dimension  = getProperty(properties, 0x07) # FeatureDimensions
-		# = getProperty(properties, 0x08) # boolean
+		# dimension           = getProperty(properties, 0x07) # FeatureDimensions
+		# rollAlongSharpEdges = getProperty(properties, 0x08) # boolean - roll along sharp edges
 		# = getProperty(properties, 0x09) # 660DEE07 => FilletSetback ??? -> organic-skulpture.ipt
 		# = getProperty(properties, 0x0A) # FilletFullRoundSet <=> type!='Edge'
-		# filletType  = getProperty(properties, 0x0B) # 'Edge', 'Face' or 'FullRound'
+		# filletType          = getProperty(properties, 0x0B) # 'Edge', 'Face' or 'FullRound'
 		faceRadius  = getProperty(properties, 0x0C) # Parameter 'd144'=54.1mm
-		# faceTangent = getProperty(properties, 0x0D) # boolean
+		# noOptimice          = getProperty(properties, 0x0D) # boolean
 		# = getProperty(properties, 0x0E) # None (always)
 		# = getProperty(properties, 0x0F) # SolidBody 'Solid1'
 		# = getProperty(properties, 0x10) # SolidBody 'Solid1'
@@ -2702,6 +2703,7 @@ class FreeCADImporter:
 		dc = meshFolderNode.segment
 		grMeshFolderNode = gr.indexNodes[index]
 		for meshDC in meshFolderNode.get('meshes'):
+			meshDC.handled = True
 			meshId = meshDC.get('meshId')
 			if (meshId is None):
 				meshGR = gr.indexNodes[meshDC.get('index')]
@@ -2709,7 +2711,7 @@ class FreeCADImporter:
 				meshGR = gr.meshes[meshId]
 			for p, partGR in enumerate(meshGR.get('parts')):
 				obj3D  = partGR.get('ref3dObject')
-				for f, facetGR in enumerate(obj3D.get('lst0')):
+				for f, facetGR in enumerate(obj3D.get('objects')):
 					name = u"%s_%d" %(meshDC.name, (f + 1))
 					logInfo(u"        addign Mesh '%s_%d' ...", name)
 					points  = facetGR.get('points').get('points')
@@ -2784,7 +2786,6 @@ class FreeCADImporter:
 	def Create_FxSnapFit(self, snapFitNode):                     return notYetImplemented(snapFitNode) # Cut Geometry (Wedge - Cube)
 	def Create_FxThread(self, threadNode):                       return notSupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
 	def Create_FxTrim(self, trimNode):                           return notYetImplemented(trimNode)
-
 	# Features requiring Nurbs
 	def Create_FxAliasFreeform(self, aliasFreeformNode):         return notYetImplemented(aliasFreeformNode)
 

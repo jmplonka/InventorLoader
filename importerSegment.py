@@ -5,7 +5,7 @@ importerSegment.py:
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import re, traceback
+import re, traceback,  numpy as np
 from importerClasses        import *
 from importerTransformation import Transformation
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_
@@ -241,6 +241,14 @@ def convert2Version7(entity):
 		del entity.chunks[9]
 	return
 
+def readTypedFloatArr(data, offset, size = 1):
+	n, i = getUInt32(data, offset)
+	a, i = getUInt32A(data, i, 2)
+	b, i = getFloat64A(data, i, n * size)
+	if (size > 1):
+		b = np.reshape(b, (-1, size)).tolist()
+	return (a, b), i
+
 class SegmentReader(object):
 
 	def __init__(self, segment):
@@ -271,7 +279,7 @@ class SegmentReader(object):
 	def ReadHeaderU32RefU8List3(self, node, typeName = None, lstName='lst0'):
 		i = node.Read_Header0(typeName)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadChildRef(i, 'ref0')
+		i = node.ReadChildRef(i, 'attrs')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList3(i, _TYP_NODE_REF_, lstName)
@@ -288,31 +296,28 @@ class SegmentReader(object):
 		return i
 
 	def ReadTypedFloats(self, node, offset, name):
-		t, i = getUInt32(node.data, offset)
+		n, i = getUInt16(node.data, offset)
+		if (n != 0):
+			i = offset
+		t, i = getUInt32(node.data, i)
+
 		if (t == 0x0203): t, i = getUInt32(node.data, i)
-		if (t == 0x0B):
+
+		if (t == 0x0B):   # 3D-Circle            # Center, normal, m, radius, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 12)
-		elif (t == 0x11):
+		elif (t == 0x11): # 3D-Ellipse           # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle ???
 			a, i = getFloat64A(node.data, i, 13)
-		elif (t == 0x17):
-			a, i = getFloat64A(node.data, i, 6)
-		elif (t == 0x2A):
-			#00 00 00 00 00 00 00 00 02 00 00 00 95 D6 26 E8 0B 2E 11 3E
-			#LLLdL
-			a1 = Struct(u"<LLLdL").unpack_from(node.data, i)
-			i  += 16
-			cnt, i = getUInt32(node.data, i)
-			#	[06 00 00 00,06 00 00 00,08 00 00 00,00 00 00 00,00 00 00 00],[00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 00 00]
-			a2, i = getUInt32A(node.data, i, 3)
-			a3, i = getFloat64A(node.data, i, cnt)
-			#	[08 00 00 00,03 00 00 00,03 00 00 00,08 00 00 00],[00 63 B2 54 5E 0A EC BF,E8 FB A9 F1 12 2C B4 BC,AD 9A C9 E6 29 98 F4 BF,98 D3 0B 30 DD 7E ED BF,E8 FB A9 F1 12 2C B4 BC,CA A3 3E 32 72 6C F5 BF,98 D3 0B 30 DD 7E ED BF,E8 FB A9 F1 12 2C B4 BC,FF EA 6F 3A DB A0 F6 BF,11 EA 2D 81 99 97 71 3D]
-			a4, i = getUInt32A(node.data, i, 4)
-			a5, i = getFloat64A(node.data, i, a4[1]*3)
-			#	[01 00 00 00,01 00 00 00,00 00 00 00,00 00 00 00],[00 00 00 00 00 00 F0 3F]
-			f2, i = getFloat64(node.data, i)
-			a6, i = getUInt32A(node.data, i, 4)
-			a7, i = getFloat64A(node.data, i, a6[1])
-			a = (a1, f1, a2, a3, a4, a5, a6, a7)
+		elif (t == 0x17): # 3D-Line
+			a, i = getFloat64A(node.data, i, 6)  # Point1, Point2
+		elif (t == 0x2A): # 3D-BSpline
+			a0 = Struct(u"<LLLd").unpack_from(node.data, i)
+			i  += 20
+			a1, i = readTypedFloatArr(node.data, i)
+			a2, i = readTypedFloatArr(node.data, i)
+			a3, i = readTypedFloatArr(node.data, i, 3)
+			a4 = Struct(u"<dLLdd").unpack_from(node.data, i)
+			i  += 32
+			a = a0 + a1 + a2 + a3 + a4
 		else:
 			raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
 		node.set(name, (t, a))
@@ -325,7 +330,7 @@ class SegmentReader(object):
 			i = self.ReadTypedFloats(node, i , 'tmp')
 			f = node.get('tmp')
 			lst.append(f)
-		node.content += ' %s=[%s]' %(name, ','.join(['(%02X:[%s])' %(r[0], FloatArr2Str(r[1])) for r in lst]))
+		node.content += ' %s=[%s]' %(name, ','.join(['(%02X:[%s])' %(r[0], str(r[1])) for r in lst]))
 		node.set(name, lst)
 		node.delete('tmp')
 		return i

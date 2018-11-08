@@ -232,8 +232,8 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
-	def Read_6759D86E(self, node): # Material
-		i = self.readHeaderStyle(node, 'Material')
+	def Read_6759D86E(self, node): # MaterialName
+		i = self.readHeaderStyle(node, 'MaterialName')
 		vers = getFileVersion()
 		i = node.ReadLen32Text16(i, 'comment')
 		i = node.ReadUInt16(i, 'u16_8')

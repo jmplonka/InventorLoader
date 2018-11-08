@@ -580,7 +580,7 @@ def ReadRSeDbRevisionInfo(data):
 		else:
 			info.type = 0
 		if (info.type == 0xFFFF):
-			b, i = getBoolean(data, i)
+			b, i = getUInt8(data, i)
 			f, i = getFloat32(data, i)
 			if (b):
 				info.data, i = getUInt16A(data, i, 4)

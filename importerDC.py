@@ -1241,39 +1241,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'idx')
-		i = node.ReadUInt32(i, 'cnt')
-		cnt = node.get('cnt')
-		lst = []
-		sep = ''
-		node.content += ' lst0=['
-		for j in range(cnt):
-			typ, i = getUInt32(node.data, i)
-			if (typ == 0x17):
-				a, i = getFloat64A(node.data, i, 6)
-				lst.append(a)
-				node.content += '%s(%s)' %(sep, FloatArr2Str(a))
-			elif (typ == 0x2A):
-				#00 00 00 00 00 00 00 00 02 00 00 00 95 D6 26 E8 0B 2E 11 3E
-				a1, i = getUInt32A(node.data, i, 3)
-				f1, i = getFloat64(node.data, i)
-				#	[06 00 00 00,06 00 00 00,08 00 00 00,00 00 00 00,00 00 00 00],[00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 F0 3F 00 00 00 00 00 00 00 00]
-				a2, i = getUInt32A(node.data, i, 5)
-				a3, i = getFloat64A(node.data, i, a2[1])
-				#	[08 00 00 00,03 00 00 00,03 00 00 00,08 00 00 00],[00 63 B2 54 5E 0A EC BF,E8 FB A9 F1 12 2C B4 BC,AD 9A C9 E6 29 98 F4 BF,98 D3 0B 30 DD 7E ED BF,E8 FB A9 F1 12 2C B4 BC,CA A3 3E 32 72 6C F5 BF,98 D3 0B 30 DD 7E ED BF,E8 FB A9 F1 12 2C B4 BC,FF EA 6F 3A DB A0 F6 BF,11 EA 2D 81 99 97 71 3D]
-				a4, i = getUInt32A(node.data, i, 4)
-				a5, i = getFloat64A(node.data, i, a4[1]*3)
-				#	[01 00 00 00,01 00 00 00,00 00 00 00,00 00 00 00],[00 00 00 00 00 00 F0 3F]
-				f2, i = getFloat64(node.data, i)
-				a6, i = getUInt32A(node.data, i, 4)
-				a7, i = getFloat64A(node.data, i, a6[1])
-				lst.append([a1, f1, a2, a3, a4, a5, a6, a7])
-				node.content += '%s(%s,%g,%s,%s,%s,%s,%g,%s,%s)' %(sep, IntArr2Str(a1, 2), f1, IntArr2Str(a2, 2), FloatArr2Str(a3), IntArr2Str(a4, 2), FloatArr2Str(a5), f2, IntArr2Str(a6, 2), FloatArr2Str(a7))
-			else:
-				logError(u"    ERROR in Read_%s: Unknown block type %X!", node.typeName, typ)
-				return i
-			sep = ','
-		node.content += ']'
-
+		i = self.ReadTypedFloatsList(node, i, 'lst0')
 		i = node.ReadCrossRef(i, 'refSketch')
 		i = node.ReadFloat64_3D(i, 'a1')
 		return i
@@ -6199,40 +6167,7 @@ class DCReader(EeDataReader):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'refParameter')
 		i = node.ReadCrossRef(i, 'refEntity')
-		i = node.ReadUInt32(i, 'cnt1')
-		cnt = node.get('cnt1')
-		lst = []
-		sep = ''
-		node.content += ' lst0=['
-		for j in range(cnt):
-			u16, i  = getUInt16(node.data, i)
-			typ, i = getUInt32(node.data, i)
-			if (typ == 0x17):
-				a, i = getFloat64A(node.data, i, 6)
-				lst.append([typ, u16, a])
-				node.content += '%s(%d,%s)' %(sep, u16, FloatArr2Str(a))
-			elif (typ == 0x2A):
-				a1, i = getUInt32A(node.data, i, 3)
-				f1, i = getFloat64(node.data, i)
-				c1, i = getUInt32A(node.data, i, 3)
-				l1, i = getFloat64A(node.data, i, c1[0])
-				c2, i = getUInt32A(node.data, i, 3)
-				l2 = []
-				c3, i = getUInt32A(node.data, i, 3)
-				for k in range(c3[0]):
-					a, i = getFloat64_3D(node.data, i)
-					l2.append(a)
-				f2, i = getFloat64(node.data, i)
-				a2, i = getUInt32A(node.data, i, 2)
-				a3, i = getFloat64_2D(node.data, i)
-				lst.append([typ, u16, a1, f1, c1, l1, c2, l2, c3, f2, a2, a3])
-				node.content += '%s(%d,%s,%g)' %(sep, u16, IntArr2Str(a1, 2), f1)
-			else:
-				logError(u"    ERROR in Read_%s: Unknown block type %X!", node.typeName, typ)
-				return i
-			sep = ','
-		node.content += ']'
-		node.set('lst0', lst)
+		i = self.ReadTypedFloatsList(node, i, 'lst0')
 		i = node.ReadFloat64(i, 'dirX')
 		i = node.ReadFloat64(i, 'dirY')
 		i = node.ReadFloat64(i, 'dirZ')
