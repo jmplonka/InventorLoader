@@ -186,7 +186,7 @@ def resolveReferencNodes(nodes):
 				radius._data = node
 				ref._data.set(radius.name, radius)
 
-		if (node.typeName in ['424EB7D7', '603428AE', 'Profile']):
+		if (node.typeName in ['Wire', '603428AE', 'Profile']):
 			refFx = node.get('fx')
 			refFx.set('profile', node)
 		elif (node.typeName in ['D61732C1']):

@@ -2426,7 +2426,7 @@ class FreeCADImporter:
 		bendRadius     = getProperty(properties, 0x04) # Parameter 'd11'=4mm
 		#= getProperty(properties, 0x05) # 5E50B969_Enum=1
 		#= getProperty(properties, 0x06) # ParameterBoolean=False
-		#= getProperty(properties, 0x07) # A2DF48D4_Enum=1
+		#= getProperty(properties, 0x07) # FacetControl=1
 		facetTolerance = getProperty(properties, 0x08) # Parameter 'd6'=4mm
 		#= getProperty(properties, 0x09)
 		#= getProperty(properties, 0x0A) # ParameterBoolean=False

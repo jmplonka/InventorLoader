@@ -23,7 +23,7 @@ class BrowserReader(SegmentReader):
 		if (typeName is not None):
 			node.typeName = typeName
 		i = node.ReadLen32Text16(0)
-		i = node.ReadUInt32(i, 'mask')
+		i = node.ReadUInt32(i, 'flags')
 		b, i = getBoolean(node.data, i)
 		if (b):
 			i = node.ReadUInt16(i, 'Str53.u16_0')
@@ -92,7 +92,7 @@ class BrowserReader(SegmentReader):
 	def Read_0C775998(self, node): # AnnotationsFolder
 		node.typeName = 'FolderAnnotations'
 		i = node.ReadLen32Text16(0)
-		i = node.ReadUInt32(i, 'masks')
+		i = node.ReadUInt32(i, 'flags')
 		if (getFileVersion() > 2018):
 			i = node.ReadUInt16(i, 'u16_0')
 		else:
@@ -126,10 +126,11 @@ class BrowserReader(SegmentReader):
 
 	def Read_10B2DF6C(self, node): return 0
 
-	def Read_11D83D80(self, node): # EndOfPart ???
-		i = node.ReadLen32Text16(0, 'txt')
-		i = node.ReadUInt16A(i, 4, 'a0')
-		if (node.get('a0')[2] == 1):
+	def Read_11D83D80(self, node): # EndOfPart
+		node.typeName = 'EndOfPart'
+		i = node.ReadLen32Text16(0)
+		i = node.ReadUInt32A(i, 2, 'a0')
+		if (node.get('a0')[1] == 1):
 			i = node.ReadUInt16(i, 'u16_0')
 		else:
 			node.content += u" u16_0=0000"
@@ -564,7 +565,9 @@ class BrowserReader(SegmentReader):
 
 	def Read_E4B915DD(self, node): return 0
 
-	def Read_E7A52E09(self, node): return 0
+	def Read_E7A52E09(self, node):
+		i = node.ReadLen32Text16(0)
+		return i
 
 	def Read_E7E4F967(self, node): return 0
 
@@ -647,7 +650,7 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_F7676AB1(self, node):
-		i = node.ReadUInt32(0, 'mask')
+		i = node.ReadUInt32(0, 'flags')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt8(i, 'u8_1')
@@ -668,7 +671,7 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_F8EEAD15(self, node):
-		i = node.ReadLen32Text16(0, 'txt0')
+		i = node.ReadLen32Text16(0)
 		return i
 
 	def Read_F99B4BFD(self, node):

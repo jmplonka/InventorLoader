@@ -2735,10 +2735,10 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64_2D(i, 'a6') # Angle (e.g.: -pi ... +pi)
 		return i
 
-	def Read_424EB7D7(self, node):
-		i = self.ReadHeadersS32ss(node)
+	def Read_424EB7D7(self, node): # Wire
+		i = self.ReadHeadersS32ss(node, 'Wire')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'loops')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
 		i = node.ReadUInt32(i, 'u32_0')
@@ -3678,7 +3678,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_5E50B969(self, node):
-		i = self.ReadHeaderEnum(node, 'FlipOffset', {0: 'No', 1: 'Yes'})
+		i = self.ReadHeaderEnum(node, 'FlipOffset', {0: 'Side1', 1: 'Side2', 2: 'Both'})
 		return i
 
 	def Read_5F425538(self, node):
@@ -4470,8 +4470,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_7777785F(self, node):
-		i = self.ReadContentHeader(node)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = self.ReadHeaderEnum(node, 'UnrollMethod', ['CentroidCylinder', 'CustomCylinder', 'DevelopedLength', 'NeutralRadius'])
 		return i
 
 	def Read_778752C6(self, node): # CurveToSurfaceProjection
@@ -5711,11 +5710,11 @@ class DCReader(EeDataReader):
 
 	def Read_93C7EE68(self, node):
 		i = self.ReadHeadersS32ss(node)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'entity3D')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadCrossRef(i, 'entity2D')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		if (getFileVersion() > 2017):
@@ -6046,8 +6045,8 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderEnum(node, 'SweepType', ['Path', 'PathAndGuideRail', 'PathAndGuideSurface', 'PathAndSectionTwist'])
 		return i
 
-	def Read_A2DF48D4(self, node): # Enum
-		i = self.ReadHeaderEnum(node)
+	def Read_A2DF48D4(self, node): # FacetControl
+		i = self.ReadHeaderEnum(node, 'FacetControl', ['FacetDistance', 'CordTolerance', 'FacetAngle'])
 		return i
 
 	def Read_A31E29E0(self, node):
@@ -7574,16 +7573,16 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i, 6, 'a0')
 		return i
 
-	def Read_D5F9E1E0(self, node):
-		i = self.ReadHeadersS32ss(node)
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadCrossRef(i, 'ref_4')
-		i = node.ReadCrossRef(i, 'ref_5')
-		i = node.ReadCrossRef(i, 'ref_6')
-		i = node.ReadCrossRef(i, 'ref_7')
-		i = node.ReadCrossRef(i, 'ref_8')
+	def Read_D5F9E1E0(self, node): # ContourRollDef
+		i = self.ReadHeadersS32ss(node, 'ContourRollDef')
+		i = node.ReadCrossRef(i, 'thickness')
+		i = node.ReadCrossRef(i, 'profile')
+		i = node.ReadCrossRef(i, 'asm')
+		i = node.ReadCrossRef(i, 'axis')
+		i = node.ReadCrossRef(i, 'bendRadius')
+		i = node.ReadCrossRef(i, 'offsetSide')
+		i = node.ReadCrossRef(i, 'rolledDir')
+		i = node.ReadCrossRef(i, 'solid')
 		return i
 
 	def Read_D61732C1(self, node):
