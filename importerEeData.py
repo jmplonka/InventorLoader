@@ -34,8 +34,8 @@ class EeDataReader(SegmentReader):
 		i = node.Read_Header0()
 		return i
 
-	def Read_CB0ADCAF(self, node):
-		i = node.Read_Header0()
+	def Read_CB0ADCAF(self, node): # Collector
+		i = node.Read_Header0('Collector')
 		i = node.ReadCrossRef(i, 'ref_0')
 		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadLen32Text16(i)

@@ -33,14 +33,14 @@ class NotebookReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadList3(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
-	def Read_4C415964(self, node): # Notice
-		i = node.Read_Header0('Notice')
+	def Read_4C415964(self, node): # Note
+		i = node.Read_Header0('Note')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
@@ -50,8 +50,8 @@ class NotebookReader(SegmentReader):
 		i = node.ReadUInt16A(i, 2, 'a1')
 		return i
 
-	def Read_74E34413(self, node):
-		i = node.Read_Header0()
+	def Read_74E34413(self, node): # Folder
+		i = node.Read_Header0('Folder')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
@@ -63,7 +63,7 @@ class NotebookReader(SegmentReader):
 		i = node.Read_Header0()
 		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUUID(i, 'uid_0')
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
@@ -74,7 +74,7 @@ class NotebookReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		return i
@@ -86,20 +86,20 @@ class NotebookReader(SegmentReader):
 		i = node.ReadUInt32A(i, 5, 'a1')
 		return i
 
-	def Read_CC253BB7(self, node): # Comment
-		i = node.Read_Header0('Comment')
+	def Read_CC253BB7(self, node): # TextArea
+		i = node.Read_Header0('TextArea')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 4, 'a1')
 		i = node.ReadLen32Text16(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_0')
 		i = node.ReadUInt8A(i, 8, 'a2')
 		i = node.ReadLen32Text16(i, 'author')
 		return i
 
-	def Read_D8705BC7(self, node): # View
-		i = node.Read_Header0('View')
+	def Read_D8705BC7(self, node): # GraphicsArea
+		i = node.Read_Header0('GraphicsArea')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 4, 'a1')

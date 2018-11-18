@@ -27,7 +27,7 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 # The model representing the content of the imported file
-model = Inventor()
+model = None
 
 KEY_SUM_INFO_AUTHOR      = 0x04
 KEY_SUM_INFO_COMMENT     = 0x06
@@ -158,7 +158,7 @@ def getProperty(properties, key):
 			value = value[0:-1]
 	return value
 
-def getPropertySetName(properties, path, model):
+def getPropertySetName(properties, path):
 	name = getProperty(properties, KEY_SET_NAME)
 
 	if (len(name)==0):
@@ -167,8 +167,8 @@ def getPropertySetName(properties, path, model):
 	languageCode = properties[KEY_LANGUAGE_CODE] if (KEY_LANGUAGE_CODE in properties) else 1031 # en_EN
 	logInfo(u"\t'%s': (LC = %X)", name, languageCode)
 
-	if (name not in model.iProperties):
-		model.iProperties[name] = {}
+	if (name not in getModel().iProperties):
+		getModel().iProperties[name] = {}
 
 	keys = properties.keys()
 	keys = sorted(keys)
@@ -176,9 +176,7 @@ def getPropertySetName(properties, path, model):
 	return name, keys
 
 def ReadInventorSummaryInformation(doc, properties, path):
-	global model
-
-	name, keys = getPropertySetName(properties, path, model)
+	name, keys = getPropertySetName(properties, path)
 
 	if (doc):
 		setAuthor(getProperty(properties, KEY_SUM_INFO_AUTHOR))
@@ -194,62 +192,17 @@ def ReadInventorSummaryInformation(doc, properties, path):
 					val = writeThumbnail(val)
 				elif (key == KEY_THUMBNAIL_2):
 					val = writeThumbnail(val)
-				if (type(val) == str):
-					if (sys.version_info.major < 3):
-						logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val.decode('utf8'))
-					else:
-						logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val)
-				else:
-					logInfo(u"\t\t%s = %s", Inventor_Summary_Information.get(key, key), val)
-				model.iProperties[name][key] = (Inventor_Summary_Information.get(key, key), val)
-	return
-
-def ReadInventorDocumentSummaryInformation(doc, properties, path):
-	global model
-
-	name, keys = getPropertySetName(properties, path, model)
-
-	if (doc):
-		doc.Company = getProperty(properties, KEY_DOC_SUM_INFO_COMPANY)
-
-	for key in keys:
-		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
-			val = getProperty(properties, key)
-			if (val is not None):
-				if (type(val) == str):
-					if (sys.version_info.major < 3):
-						logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val.decode('utf8'))
-					else:
-						logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val)
-				else:
-					logInfo(u"\t\t%s = %s", Inventor_Document_Summary_Information.get(key, key), val)
-				model.iProperties[name][key] = (Inventor_Document_Summary_Information.get(key, key), val)
+				getModel().iProperties[name][key] = (Inventor_Summary_Information.get(key, key), val)
 	return
 
 def ReadOtherProperties(properties, path, keynames={}):
-	global model
-
-	name, keys = getPropertySetName(properties, path, model)
+	name, keys = getPropertySetName(properties, path)
 
 	for key in keys:
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
 			val = getProperty(properties, key)
 			if (val is not None):
-				keyName = keynames.get(key, key)
-				if (keyName == 'PartIcon'):
-					logInfo(u"\t\t%s = [ICON]", keyName)
-				elif (type(val) == str):
-					try:
-						if (sys.version_info.major < 3):
-							logInfo(u"\t\t%s = %s", keyName, val.decode('utf8'))
-						else:
-							logInfo(u"\t\t%s = %s", keyName, val)
-					except:
-						logInfo(u"\t\t%s = %r", keyName, val)
-				else:
-					logInfo(u"\t\t%s = %s", keyName, val)
-
-				model.iProperties[name][key] = (keyName, val)
+				getModel().iProperties[name][key] = (keynames.get(key, key), val)
 
 	return
 
@@ -291,8 +244,6 @@ def ReadWorkbook(doc, data, name, stream):
 	return len(data)
 
 def ReadRSeSegment(data, offset, idx, count):
-	global model
-
 	seg = RSeSegment()
 	seg.name, i = getLen32Text16(data, offset)
 	seg.ID, i = getUUID(data, i)
@@ -305,12 +256,10 @@ def ReadRSeSegment(data, offset, idx, count):
 	seg.arr2, i = getUInt16A(data, i, count)
 	seg.objects = []
 	seg.nodes = []
-
-	model.RSeSegInfo.segments[seg.ID] = seg
-
+	getModel().RSeDb.segInfo.segments[seg.ID] = seg
 	return seg, i
 
-def ReadRSeSegmentObject(data, offset, seg, idx):
+def ReadRSeSegmentObject(seg, data, offset, idx):
 	obj = RSeSegmentObject()
 	obj.revisionRef, i = getUUID(data, offset)
 	obj.values, i = getUInt8A(data, i, 9)
@@ -318,10 +267,9 @@ def ReadRSeSegmentObject(data, offset, seg, idx):
 	obj.value1, i = getUInt32(data, i)
 	obj.value2, i = getUInt32(data, i)
 	seg.objects.append(obj)
-
 	return obj, i
 
-def ReadRSeSegmentNode(data, offset, seg, count, idx):
+def ReadRSeSegmentNode(seg, data, offset, count, idx):
 	node = RSeSegmentValue2()
 	node.index, i = getUInt32(data, offset)
 	node.indexSegList1, i = getSInt16(data, i)
@@ -329,243 +277,219 @@ def ReadRSeSegmentNode(data, offset, seg, count, idx):
 	node.values, i = getUInt16A(data, i, count)
 	node.number, i = getUInt16(data, i)
 	seg.nodes.append(node)
-
-	return node, i
-
-def ReadRSeSegmentType10(data, offset, seg):
-	i = offset
-	for idx in range(seg.count1):
-		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
 	return i
 
-def ReadRSeSegmentType15(data, offset, seg):
+def ReadRSeSegmentType10(seg, data, offset):
 	i = offset
 	for idx in range(seg.count1):
-		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
+		obj, i = ReadRSeSegmentObject(seg, data, i, idx)
+	return i
+
+def ReadRSeSegmentType15(seg, data, offset):
+	i = offset
+	for idx in range(seg.count1):
+		obj, i = ReadRSeSegmentObject(seg, data, i, idx)
 	cnt, i = getUInt32(data, i)
 	for idx in range(1, cnt):
-		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
+		i = ReadRSeSegmentNode(seg, data, i, 4, idx)
 	return i
 
-def ReadRSeSegmentType1A(data, offset, seg):
+def ReadRSeSegmentType1A(seg, data, offset):
 	i = offset
 	for idx in range(seg.count1):
-		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
+		obj, i = ReadRSeSegmentObject(seg, data, i, idx)
 	cnt, i = getUInt32(data, i)
 	for idx in range(1, cnt):
-		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
+		i = ReadRSeSegmentNode(seg, data, i, 4, idx)
 	return i
 
-def ReadRSeSegmentType1D(data, offset, seg):
+def ReadRSeSegmentType1D(seg, data, offset):
 	i = offset
 	for idx in range(seg.count1):
-		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
-	cnt, i = getUInt32(data, i)
-	for idx in range(1, cnt):
-		node, i = ReadRSeSegmentNode(data, i, seg, 4, idx)
+		obj, i = ReadRSeSegmentObject(seg, data, i, idx)
+	cnt2, i = getUInt32(data, i)
+	for idx in range(1, cnt2):
+		i = ReadRSeSegmentNode(seg, data, i, 4, idx)
 	return i
 
-def ReadRSeSegmentType1F(data, offset, seg):
+def ReadRSeSegmentType1E(seg, data, offset):
+	i = offset
+	cnt2 = 0
+	for idx in range(seg.count1):
+		obj, i = ReadRSeSegmentObject(seg, data, i, idx)
+		cnt2 = obj.value2
+	for idx in range(1, cnt2):
+		i = ReadRSeSegmentNode(seg, data, i, 6, idx)
+	return i
+
+def ReadRSeSegmentType1F(seg, data, offset):
 	i    = offset
 	cnt2 = 0
 	for idx in range(seg.count1):
-		obj, i = ReadRSeSegmentObject(data, i, seg, idx)
+		obj, i = ReadRSeSegmentObject(seg, data, i, idx)
 		cnt2 = obj.value2
 	for idx in range(1, cnt2):
-		node, i = ReadRSeSegmentNode(data, i, seg, 6, idx)
+		i = ReadRSeSegmentNode(seg, data, i, 6, idx)
 	return i
 
-def ReadRSeSegInfo10(data, offset):
-	global model
-
-	model.RSeSegInfo = RSeSegInformation()
-
+def ReadRSeSegInfo10(db, data, offset):
 	cnt, i = getSInt32(data, offset)
 	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 6)
-		i = ReadRSeSegmentType10(data, i, seg)
-		model.RSeSegInfo.segments[seg.name] = seg
-	return	 i
+		i = ReadRSeSegmentType10(seg, data, i)
+	return i
 
-def ReadRSeSegInfo15(data, offset):
-	global model
-
-	model.RSeSegInfo = RSeSegInformation()
+def ReadRSeSegInfo15(db, data, offset):
 	cnt, i = getSInt32(data, offset)
 	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 6)
-		i = ReadRSeSegmentType15(data, i, seg)
-		model.RSeSegInfo.segments[seg.name] = seg
-	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
+		i = ReadRSeSegmentType15(seg, data, i)
+	db.segInfo.val, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
 	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
-		model.RSeSegInfo.uidList1.append(txt)
+		db.segInfo.uidList1.append(txt)
 	cnt, i = getUInt32(data, i)
 	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
-		model.RSeSegInfo.uidList2.append(txt)
-	return	 i
+		db.segInfo.uidList2.append(txt)
+	return i
 
-def ReadRSeSegInfo1A(data, offset):
-	global model
-
-	model.RSeSegInfo = RSeSegInformation()
+def ReadRSeSegInfo1A(db, data, offset):
 	cnt, i = getSInt32(data, offset)
 	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 8)
-		i = ReadRSeSegmentType1A(data, i, seg)
-		model.RSeSegInfo.segments[seg.name] = seg
-	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
+		i = ReadRSeSegmentType1A(seg, data, i)
+	db.segInfo.arr1, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
 	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
-		model.RSeSegInfo.uidList1.append(txt)
+		db.segInfo.uidList1.append(txt)
 	cnt, i = getUInt32(data, i)
 	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
-		model.RSeSegInfo.uidList2.append(txt)
+		db.segInfo.uidList2.append(txt)
 	return i
 
-def ReadRSeSegInfo1D(data):
-	global model
-
-	model.RSeSegInfo = RSeSegInformation()
+def ReadRSeSegInfo1D(db, data):
 	cnt, i = getSInt32(data, 0)
 	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 8)
-		i = ReadRSeSegmentType1D(data, i, seg)
-		model.RSeSegInfo.segments[seg.name] = seg
-	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
+		i = ReadRSeSegmentType1D(seg, data, i)
+	db.segInfo.arr1, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
 	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
-		model.RSeSegInfo.uidList1.append(txt)
+		db.segInfo.uidList1.append(txt)
 	cnt, i = getUInt32(data, i)
 	for idx in range(cnt):
 		txt, i = getLen32Text16(data, i)
-		model.RSeSegInfo.uidList2.append(txt)
+		db.segInfo.uidList2.append(txt)
 	return i
 
-def ReadRSeSegInfo1F(data):
-	global model
-
-	model.RSeSegInfo = RSeSegInformation()
+def ReadRSeSegInfo1E(db, data):
 	cnt, i = getSInt32(data, 0)
 	for idx in range(cnt):
 		seg, i = ReadRSeSegment(data, i, idx, 10)
-		i = ReadRSeSegmentType1F(data, i, seg)
-		model.RSeSegInfo.segments[seg.name] = seg
-	model.RSeSegInfo.val, i = getUInt16A(data, i, 2)
+		i = ReadRSeSegmentType1E(seg, data, i)
+	db.segInfo.arr1, i = getUInt16A(data, i, 2)
+	cnt, i = getUInt32(data, i)
+	for idx in range(cnt):
+		txt, i = getLen32Text16(data, i)
+		if (txt not in UUID_NAMES.values()):
+			logAlways('\t' + txt)
+		db.segInfo.uidList1.append(txt)
+	cnt, i = getUInt32(data, i)
+	for idx in range(cnt):
+		txt, i = getLen32Text16(data, i)
+		if (txt not in UUID_NAMES.values()):
+			logAlways('\t' + txt)
+		db.segInfo.uidList2.append(txt)
+	return i
+
+def ReadRSeSegInfo1F(db, data):
+	cnt, i = getSInt32(data, 0)
+	for idx in range(cnt):
+		seg, i = ReadRSeSegment(data, i, idx, 10)
+		i = ReadRSeSegmentType1F(seg, data, i)
+	db.segInfo.arr1, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
 	for idx in range(cnt):
 		uid, i = getUUID(data, i)
 		txt = getUidText(uid)
-		model.RSeSegInfo.uidList1.append(txt)
+		db.segInfo.uidList1.append(txt)
 	cnt, i = getUInt32(data, i)
 	for idx in range(cnt):
 		uid, i = getUUID(data, i)
 		txt = getUidText(uid)
-		model.RSeSegInfo.uidList2.append(txt)
+		db.segInfo.uidList2.append(txt)
 	return i
 
 def ReadRSeDb10(db, data, offset):
-	db.arr3, i = getUInt16A(data, offset, 8)
-	db.arr2, i = getUInt16A(data, i, 4)
-	db.dat2, i = getDateTime(data, i)
-	db.uid2, i = getUUID(data, i)
-	db.arr4, i = getUInt32A(data, i, 2)
-	db.txt, i  = getLen32Text16(data, i)
-	db.arr5, i = getUInt32A(data, i, 6)
-
-	logInfo(u"\t%r: %s", db.txt, db.comment)
-	logInfo(u"\t%s [%X]", db.uid, db.version)
-	logInfo(u"\t[%s]", IntArr2Str(db.arr1, 4))
-	logInfo(u"\t[%s]", IntArr2Str(db.arr2, 4))
-
+	db.segInfo.arr1, i = getUInt16A(data, offset, 8)
+	db.arr2,         i = getUInt16A(data, i, 4)
+	db.dat2,         i = getDateTime(data, i)
+	db.segInfo.uid,  i = getUUID(data, i)
+	db.segInfo.arr2, i = getUInt32A(data, i, 2)
+	db.txt,          i = getLen32Text16(data, i)
+	db.segInfo.arr3, i = getUInt32A(data, i, 6)
 	return i
 
 def ReadRSeDb15(db, data, offset):
-	db.arr2, i = getUInt16A(data, offset, 4)
-	db.dat2, i = getDateTime(data, i)
-	db.arr3, i = getUInt16A(data, i, 14)
-	db.dat3, i = getDateTime(data, i)
-	db.uid2, i = getUUID(data, i)
-	db.arr4, i = getUInt32A(data, i, 2)
-	db.txt, i = getLen32Text16(data, i)
-	db.arr5, i = getUInt32A(data, i, 6)
-
-	logInfo(u"\t%r: %s", db.txt, db.comment)
-	logInfo(u"\t%s [%X]", db.uid, db.version)
-	logInfo(u"\t[%s]", IntArr2Str(db.arr1, 4))
-	logInfo(u"\t[%s]", IntArr2Str(db.arr2, 4))
-	logInfo(u"\t[%s]: %s", IntArr2Str(db.arr3, 4), db.uid2)
-	logInfo(u"\t[%s]", IntArr2Str(db.arr4, 4))
-	logInfo(u"\t[%s]", IntArr2Str(db.arr5, 4))
-
+	db.arr2,      i = getUInt16A(data, offset, 4)
+	db.dat2,      i = getDateTime(data, i)
+	db.segInfo.arr1, i = getUInt16A(data, i, 14)
+	db.segInfo.date, i = getDateTime(data, i)
+	db.segInfo.uid,  i = getUUID(data, i)
+	db.segInfo.arr2, i = getUInt32A(data, i, 2)
+	db.txt,       i = getLen32Text16(data, i)
+	db.segInfo.arr3, i = getUInt32A(data, i, 6)
 	return i
 
 def ReadRSeDb1A(db, data, offset):
+	db.arr2,       i = getUInt16A(data, offset, 4)
+	db.dat2,       i = getDateTime(data, i)
+	db.segInfo.text,  i = getLen32Text16(data, i)
+	db.segInfo.arr1,  i = getUInt16A(data, i, 12)
+	db.segInfo.date,  i = getDateTime(data, i)
+	db.segInfo.uid,   i = getUUID(data, i)
+	db.segInfo.u16,   i = getUInt16(data, i)
+	db.segInfo.arr2,  i = getUInt32A(data, i, 2)
+	db.txt,        i = getLen32Text16(data, i)
+	db.segInfo.arr3,  i = getUInt32A(data, i, 2)
+	db.segInfo.text2, i = getLen32Text16(data, i)
+	db.segInfo.arr4,  i = getUInt32A(data, i, 4)
+	return i
+
+def ReadRSeDb1F(db, data, offset):
 	db.arr2, i = getUInt16A(data, offset, 4)
 	db.dat2, i = getDateTime(data, i)
-	db.txt2, i = getLen32Text16(data, i)
-	db.arr3, i = getUInt16A(data, i, 12)
-	db.dat3, i = getDateTime(data, i)
-	db.uid2, i = getUUID(data, i)
-	db.u16, i  = getUInt16(data, i)
-	db.arr4, i = getUInt32A(data, i, 2)
 	db.txt, i  = getLen32Text16(data, i)
-	db.arr5, i = getUInt32A(data, i, 2)
-	db.txt3, i = getLen32Text16(data, i)
-	db.arr6, i = getUInt32A(data, i, 4)
-
-	logInfo(u"\t%r: %s", db.txt, db.txt2)
-	logInfo(u"\t%s [%X]", db.uid, db.version)
-	logInfo(u"\t[%s]", IntArr2Str(db.arr1, 4))
-	logInfo(u"\t[%s]", IntArr2Str(db.arr2, 4))
-	logInfo(u"\t[%s]: %s", IntArr2Str(db.arr3, 4), db.uid2)
-	logInfo(u"\t%d: [%s]", db.u16, IntArr2Str(db.arr4, 4))
-	logInfo(u"\t[%s]", IntArr2Str(db.arr5, 4))
-	logInfo(u"\t%r", db.txt3)
-	logInfo(u"\t[%s]", IntArr2Str(db.arr6, 4))
-
 	return i
 
-def ReadRSeDb(data):
-	global model
+def ReadRSeDb(db, data):
+	db.uid, i    = getUUID(data, 0)
+	db.schema, i = getUInt32(data, i)
+	db.arr1, i   = getUInt16A(data, i, 4)
+	db.dat1, i   = getDateTime(data, i)
 
-	db = RSeDatabase()
-	db.uid, i     = getUUID(data, 0)
-	db.version, i = getUInt32(data, i)
-	db.arr1, i    = getUInt16A(data, i, 4)
-	db.dat1, i    = getDateTime(data, i)
-
-	if (db.version in [0x1D, 0x1F]):
-		db.arr2, i = getUInt16A(data, i, 4)
-		db.dat2, i = getDateTime(data, i)
-		db.txt, i  = getLen32Text16(data, i)
-	elif (db.version == 0x10):
+	if (db.schema in [0x1D, 0x1E, 0x1F]):
+		i = ReadRSeDb1F(db, data, i)  # Inventor 2009 and later
+	elif (db.schema == 0x10):
 		i = ReadRSeDb10(db, data, i)
-		i = ReadRSeSegInfo10(data, i)
-	elif (db.version == 0x15):
+		i = ReadRSeSegInfo10(db, data, i)
+	elif (db.schema == 0x15):
 		i = ReadRSeDb15(db, data, i)
-		i = ReadRSeSegInfo15(data, i)
-	elif (db.version == 0x1A):
+		i = ReadRSeSegInfo15(db, data, i)
+	elif (db.schema == 0x1A):         # Inventor version v10
 		i = ReadRSeDb1A(db, data, i)
-		i = ReadRSeSegInfo1A(data, i)
+		i = ReadRSeSegInfo1A(db, data, i)
 	else:
-		logError(u"ERROR> Reading RSeDB version %X - unknown format!", model.RSeDb.version)
+		logError(u"ERROR> Reading RSeDB version %X - unknown format!", getModel().RSeDb.schema)
+	return db
 
-	model.RSeDb = db
-
-	return i
-
-def ReadRSeDbRevisionInfo(data):
-	global model
-
+def ReadRSeDbRevisionInfo(revisions, data):
 	version, i = getSInt32(data, 0)
-	model.RSeDbRevisionInfoMap = {}
-	model.RSeDbRevisionInfoList = []
 	cnt, i = getSInt32(data, i)
 	for n in range(cnt):
 		info = RSeDbRevisionInfo()
@@ -580,7 +504,7 @@ def ReadRSeDbRevisionInfo(data):
 		else:
 			info.type = 0
 		if (info.type == 0xFFFF):
-			b, i = getBoolean(data, i)
+			b, i = getUInt8(data, i)
 			f, i = getFloat32(data, i)
 			if (b):
 				info.data, i = getUInt16A(data, i, 4)
@@ -589,24 +513,17 @@ def ReadRSeDbRevisionInfo(data):
 			info.data = (f, n)
 		else:
 			info.data = (0.0, 0)
-		model.RSeDbRevisionInfoMap[info.ID] = info
-		model.RSeDbRevisionInfoList.append(info)
+		revisions.mapping[info.ID] = info
+		revisions.infos.append(info)
 	return i
 
 def getRevisionInfoByUID(revUID):
-	global model
-
-	if ((model.RSeDbRevisionInfoMap is not None) and (revUID in model.RSeDbRevisionInfoMap)):
-		return model.RSeDbRevisionInfoMap[revUID]
-
-	return revUID
+	return getModel().RSeRevisions.mapping.get(revUID, revUID)
 
 def getRevisionInfoByIndex(revIdx):
-	global model
-
-	if ((model.RSeDbRevisionInfoList is not None) and (len(model.RSeDbRevisionInfoList) > revIdx)):
-		return model.RSeDbRevisionInfoList[revIdx]
-
+	revisions = getModel().RSeRevisions
+	if (revIdx < len(revisions.infos)):
+		return revisions.infos[revIdx]
 	return revIdx
 
 def ReadRSeMetaDataBlocksSize(value, data, offset):
@@ -786,40 +703,38 @@ def ReadRSeMetaDataSectionB(value, data, offset, size, cnt):
 	return i
 
 def findSegment(segRef):
-	global model
-
-	return model.RSeSegInfo.segments.get(segRef)
+	return getModel().RSeDb.segInfo.segments.get(segRef)
 
 def getReader(seg):
 	logInfo(u"%2d: '%s' ('%s')", seg.index, seg.file, seg.name)
 	reader = None
 	seg.AcisList = []
 	if (seg.isBRep()): # BoundaryRepresentation for SAT/STEP based import
-		if (isStrategySat() or isStrategyStep()):
+		#if (isStrategySat() or isStrategyStep()):
 			reader = BRepReader(seg)
 	elif (seg.isDC()):
 		if (isStrategyNative()):   # DocumentComponent for featured base import
 			reader = DCReader(seg)
 	elif (seg.isApp()): # ApplicationSettings for colors
 		reader = AppReader(seg)
-#	elif (seg.isBrowser()):
-#		reader = BrowserReader(seg)
-#	elif (seg.isDefault()):
-#		reader = DefaultReader(seg)
 	elif (seg.isGraphics()): # required for Meshes and Colors
 		reader = GraphicsReader(seg)
-#	elif (seg.isResult()):
-#		reader = ResultReader(seg)
-#	elif (seg.isDesignView()):
-#		reader = DesignViewReader(seg)
-#	elif (seg.isEeData()):
-#		reader = EeDataReader(seg)
-#	elif (seg.isEeScene()):
-#		reader = EeSceneReader(seg)
-#	elif (seg.isFBAttribute()):
-#		reader = FBAttributeReader(seg)
-#	elif (seg.isNBNotebook()):
-#		reader = NotebookReader(seg)
+	elif (seg.isBrowser()):
+		reader = BrowserReader(seg)
+	elif (seg.isDefault()):
+		reader = DefaultReader(seg)
+	elif (seg.isResult()):
+		reader = ResultReader(seg)
+	elif (seg.isDesignView()):
+		reader = DesignViewReader(seg)
+	elif (seg.isEeData()):
+		reader = EeDataReader(seg)
+	elif (seg.isEeScene()):
+		reader = EeSceneReader(seg)
+	elif (seg.isFBAttribute()):
+		reader = FBAttributeReader(seg)
+	elif (seg.isNBNotebook()):
+		reader = NotebookReader(seg)
 	if (reader is None):
 		logInfo(u"    IGNORED!")
 		#reader = SegmentReader()
@@ -847,8 +762,6 @@ def ReadRSeMetaDataB(dataB, seg):
 	return len(dataB)
 
 def ReadRSeMetaDataM(dataM, name):
-	global model
-
 	i = 0
 	folder = getInventorFile()[0:-4]
 
@@ -921,5 +834,4 @@ def ReadRSeMetaDataM(dataM, name):
 		k -= 1
 
 	value.uid2, i = getUUID(data, len(data)-0x10)
-	model.RSeStorageData[value.name] = value
 	return value

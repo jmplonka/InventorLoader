@@ -60,7 +60,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt8(i, '664.u8_0')
 		i = node.ReadUInt16A(i, 6, '664.a1')
 		i = node.ReadUInt8(i, '664.u8_1')
-		i = node.ReadUInt16A(i, 4, '664.a2')
+		i = node.ReadUInt32A(i, 2, '664.a2')
 		i = node.ReadUInt8(i, '664.u8_2')
 		i = self.skipBlockSize(i)
 		return i
@@ -174,7 +174,8 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_1B16984A(self, node):
+	def Read_1B16984A(self, node): # Hospital
+		node.typeName = 'Hospital'
 		i = node.ReadUInt16A(0, 3, 'a0')
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
@@ -230,14 +231,17 @@ class BrowserReader(SegmentReader):
 	def Read_44DBCB35(self, node):
 		i = node.ReadUInt32(0, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_1')
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadParentRef(i)
 		return i
 
-	def Read_46DE5489(self, node): return 0
+	def Read_46DE5489(self, node):
+		i = self.ReadHeaderStr664(node)
+		i = self.skipBlockSize(i)
+		return i
 
 	def Read_4A156CBC(self, node):
 		i = self.ReadHeaderStr664(node, '3dSketch')
@@ -290,8 +294,8 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_716B5CD1(self, node):
-		i = self.ReadHeader0_664(node)
+	def Read_716B5CD1(self, node): # ATEntry
+		i = self.ReadHeader0_664(node, 'AnalysisToolEntry')
 		i = self.Read_Str01(i, node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 4, 'a0')
@@ -305,13 +309,22 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_761C4FA0(self, node):
-		i = self.ReadHeaderStr664(node)
+		i = self.Read_Str53(node)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadParentRef(i)
+		i = node.ReadUInt16A(i, 4, '664.a0')
+		i = node.ReadUInt8(i, '664.u8_0')
+		i = node.ReadUInt16A(i, 6, '664.a1')
+		i = node.ReadUInt8(i, '664.u8_1')
+		i = node.ReadUInt32A(i, 2, '664.a2')
+		i = node.ReadUInt8(i, '664.u8_2')
+		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
-	def Read_7DFCC817(self, node):
-		i = self.ReadHeader0_664(node)
+	def Read_7DFCC817(self, node): # ConstructionFolderEntry
+		i = self.ReadHeader0_664(node, 'ConstructionFolderEntry')
 		i = self.Read_Str01(i, node)
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
@@ -351,7 +364,8 @@ class BrowserReader(SegmentReader):
 		i = node.ReadLen32Text16(0, 'str0')
 		return i
 
-	def Read_89B87C6F(self, node):
+	def Read_89B87C6F(self, node): # DiagProfileInvalidLoop
+		node.typeName = 'DiagProfileInvalidLoop'
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
@@ -373,14 +387,16 @@ class BrowserReader(SegmentReader):
 
 	def Read_93C65F8A(self, node): return 0
 
-	def Read_9632B3FA(self, node): return 0
+	def Read_9632B3FA(self, node):
+		i = node.ReadLen32Text16(0)
+		return i
 
 	def Read_9B451345(self, node):
 		i = node.ReadUInt32(0, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i)
+		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadParentRef(i)
 		return i
 
@@ -473,7 +489,11 @@ class BrowserReader(SegmentReader):
 
 	def Read_BF03D5B6(self, node): return 0
 
-	def Read_C0465062(self, node): return 0
+	def Read_C0465062(self, node):
+		i = self.ReadHeaderStr664(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUUID(i, 'ui')
+		return i
 
 	def Read_CBBCFA51(self, node):
 		i = node.ReadParentRef(0)
@@ -531,7 +551,7 @@ class BrowserReader(SegmentReader):
 	def Read_DF9CA7B0(self, node):
 		i = node.Read_Header0()
 		i = node.ReadParentRef(i)
-		i = node.ReadCrossRef(i)
+		i = node.ReadCrossRef(i, 'ref_0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadList4(i, importerSegNode._TYP_STRING8_, 'lst0')
 		i = node.ReadUInt16(i, 'u16')
@@ -558,7 +578,7 @@ class BrowserReader(SegmentReader):
 		if (vers > 2015):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst2')
 		else:
-			i = node.ReadChildRef(i)
+			i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt8A(i, 5, 'a1')
@@ -586,7 +606,11 @@ class BrowserReader(SegmentReader):
 
 	def Read_E84595D1(self, node): return 0
 
-	def Read_EAFCF33F(self, node): return 0
+	def Read_EAFCF33F(self, node):
+		i = self.ReadHeaderStr664(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUUID(i, 'ui')
+		return i
 
 	def Read_F1EDED3E(self, node): return 0
 
@@ -598,11 +622,9 @@ class BrowserReader(SegmentReader):
 		cnt, i = getUInt32(node.data, i)
 		lst = []
 		for j in range(cnt):
-			i = node.ReadChildRef(i, 'tmp', j, False)
-			lst.append(node.get('tmp'))
-		node.delete('tmp')
+			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CHILD, 'lst0')
+			lst.append(ref)
 		node.set('lst0', lst)
-		node.content += u" lst0={%d}" %(len(lst))
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt32A(i, 2, 'a1')
@@ -619,7 +641,7 @@ class BrowserReader(SegmentReader):
 		# 01 01 B7 00 00 00 00 00 00
 		return i
 
-	def Read_F7676AB0(self, node):
+	def Read_F7676AB0(self, node): # Sketch entry
 		i = self.ReadHeaderStr664(node, 'Sketch')
 		i = self.skipBlockSize(i)
 		return i
@@ -642,9 +664,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUUID(i, 'uid_0')
 		i = node.ReadUInt32(i, 'u32_0')
 		if (getFileVersion() > 2011):
-			i = node.ReadSInt32A(i, 2, 'a5')
-		else:
-			node.set('a5', [0, 0])
+			i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
 	def Read_F8EEAD15(self, node):

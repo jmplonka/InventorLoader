@@ -30,7 +30,7 @@ class ResultReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'flags')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref0')
+		i = node.ReadCrossRef(i, 'ref_0')
 		return i
 
 	def Read_09780457(self, node):
@@ -111,7 +111,7 @@ class ResultReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2018): i += 1
 		i = node.ReadChildRef(i, 'ref_1')
-		i = node.ReadSInt32(i, 's32_1')
+		i = node.ReadSInt32(i, 'lastKey')
 		return i
 
 	def Read_F78B08D5(self, node):

@@ -27,7 +27,26 @@ class BRepReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
-	def Read_07BA7419(self, node): return 0
+	def Read_07BA7419(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		return i
+
+	def Read_56A95F20(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		return i
+
+	def Read_6F891B34(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		return i
 
 	def Read_0811C56E(self, node): return 0
 
@@ -62,8 +81,18 @@ class BRepReader(SegmentReader):
 	def Read_3DE78F81(self, node): return 0
 
 	def Read_481DFC84(self, node):
-		i = node.Read_Header0()
-		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_X_REF_, 'lst0')
+		i = self.skipBlockSize(0)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_U32_U32_, 'lst0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadFloat64A(i, 6, 'a0')
+		i = node.ReadUInt32A(i, 2, 'a1')
+		i = node.ReadFloat64_2D(i, 'a2')
+		i = node.ReadUInt16(i, 'u16_1')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 		return i
 
 	def Read_4DAB0A79(self, node): return 0
@@ -78,13 +107,6 @@ class BRepReader(SegmentReader):
 		return i
 
 	def Read_537799E0(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		return i
-
-	def Read_56A95F20(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
@@ -120,11 +142,6 @@ class BRepReader(SegmentReader):
 	def Read_6D0B7807(self, node):
 		i = node.Read_Header0()
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
-		return i
-
-	def Read_6F891B34(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_736C138D(self, node): return 0
@@ -172,6 +189,11 @@ class BRepReader(SegmentReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
 		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 3, 'a0')
+		i = node.ReadFloat64_3D(i, 'a1')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_AE0E267A(self, node): return 0
@@ -200,26 +222,25 @@ class BRepReader(SegmentReader):
 		i = self.skipBlockSize(0)
 		return i
 
-	def Read_CADD6468(self, node):
-		i = node.Read_Header0()
+	def Read_CADD6468(self, node): # BrepComponent
+		i = node.Read_Header0('BrepComponent')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
-		if (getFileVersion() > 2009):
-			i = node.ReadLen32Text16(i)
-			i = node.ReadLen32Text16(i, 'txt_0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
-	def Read_CC0F7521(self, node): # AcisEntityWrapper
-		i = node.Read_Header0('AcisEntityWrapper')
-		i = node.ReadUInt32(i, 'u32_0')
+	def Read_CC0F7521(self, node): # AsmEntityWrapper
+		i = node.Read_Header0('AsmEntityWrapper')
+		i = node.ReadUInt32(i, 'index')
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadChildRef(i, 'ref_1')
+		i = node.ReadChildRef(i, 'asm')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt32(i, 'lenFooter')
 		return i
 
-	def Read_CCC5085A(self, node):
-		i = node.Read_Header0()
-		i = node.ReadSInt32(i, 'u32_0')
+	def Read_CCC5085A(self, node): # FaceMergeData
+		i = node.Read_Header0('FaceMergeData')
+		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i, 'ref_1')
 		i = self.ReadRefU32AList(node, i, 'lst0', 2, importerSegNode.SecNodeRef.TYPE_CHILD)
@@ -246,8 +267,8 @@ class BRepReader(SegmentReader):
 		node.set('lst3', lst)
 		return i
 
-	def Read_CCE92042(self, node):
-		i = node.Read_Header0()
+	def Read_CCE92042(self, node): # NameTable
+		i = node.Read_Header0('NameTable')
 		i = node.ReadChildRef(i, 'cld_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'lastIdx')
@@ -255,9 +276,8 @@ class BRepReader(SegmentReader):
 		lst = {}
 		for j in range(cnt):
 			key, i = getUInt32(node.data, i)
-			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD)
+			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD, 'lst')
 			lst[key] = val
-		node.content += ' lst={%s}' %(len(lst))
 		node.set('lst', lst)
 		return i
 
@@ -275,9 +295,9 @@ class BRepReader(SegmentReader):
 
 	def Read_E9132E94(self, node): return 0
 
-	def Read_EA7DA988(self, node):
-		i = node.Read_Header0()
-		i = node.ReadList8(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+	def Read_EA7DA988(self, node): # AcisEntityContainer
+		i = node.Read_Header0('AcisEntityContainer')
+		i = node.ReadList8(i, importerSegNode._TYP_NODE_REF_, 'wrappers')
 		return i
 
 	def Read_F78B08D5(self, node):

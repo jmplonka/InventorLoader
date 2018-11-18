@@ -9,12 +9,14 @@ __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-import os, FreeCAD, FreeCADGui, importerBRep, importerSAT
+import os, FreeCAD, FreeCADGui, importerBRep, importerSAT, io #, importerUFRxDoc
 from olefile           import OleFileIO
 from importerUtils     import *
 from importerReader    import *
+from importerClasses   import Inventor
 from importerFreeCAD   import FreeCADImporter, createGroup
 from importerSAT       import readEntities, importModel, convertModel
+from uuid              import UUID
 
 def ReadIgnorable(fname, data):
 	logInfo(u'    IGNORED!')
@@ -23,42 +25,14 @@ def skip(data):
 	return
 
 def ReadElement(ole, fname, doc, counter, readProperties):
-	name = fname[-1]
-	if (len(fname) > 1):
-		parent = fname[-2]
-	else:
-		parent = ''
-	path = PrintableName(fname)
-	stream = ole.openstream(fname).read()
+	name        = fname[-1]
+	path        = PrintableName(fname)
+	stream      = ole.openstream(fname).read()
 
 	if (len(stream)>0):
-		if (len(fname) == 1):
-			logInfo(u"%2d: %s", counter, path)
-			if (name.startswith('\x05')):
-				if (readProperties):
-					props = ole.getproperties(fname, convert_time=True)
-					if (name == '\x05Aaalpg0m0wzvuhc41dwauxbwJc'):
-						ReadInventorDocumentSummaryInformation(doc, props, fname)
-					elif (name == '\x05Zrxrt4arFafyu34gYa3l3ohgHg'):
-						ReadInventorSummaryInformation(doc, props, fname)
-					elif (name == '\x05Qz4dgm1gRjudbpksAayal4qdGf'):
-						ReadOtherProperties(props, fname, Design_Tracking_Control)
-					elif (name == '\x05PypkizqiUjudbposAayal4qdGf'):
-						ReadOtherProperties(props, fname, Design_Tracking_Properties)
-						setDescription(getProperty(props, 29))
-					elif (name == '\x05Qm0qv30hP3udrkgvAaitm1o20d'):
-						ReadOtherProperties(props, fname, Private_Model_Information)
-					elif (name == '\x05Ynltsm4aEtpcuzs1Lwgf30tmXf'):
-						ReadOtherProperties(props, fname, Inventor_User_Defined_Properties)
-					elif (name == '\x05C3vnhh4uFrpeuhcsBpg4yptkTb'):
-						ReadOtherProperties(props, fname, Inventor_Piping_Style_Properties)
-					else:
-						ReadOtherProperties(props, fname)
-			elif (name == 'Protein'):
-#				ReadProtein(stream)
-				ReadIgnorable(fname, stream)
-			else:
-				ReadIgnorable(fname, stream)
+		if (fname[0] == 'Protein'):
+#			ReadProtein(stream)
+			ReadIgnorable(fname, stream)
 		elif (fname[0]=='CacheGraphics'):
 			skip(stream)
 		elif (fname[0]=='RSeStorage'):
@@ -67,62 +41,159 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 					ReadWorkbook(doc, stream, fname[-2], name)
 				else:
 					skip(stream)
+			elif (name.startswith('M')):
+				fnameB = []
+				for n in (fname):
+					fnameB.append(n)
+				fnameB[-1] = 'B' + name[1:]
+				seg = ReadRSeMetaDataM(stream, name[1:])
+				seg.file = name[1:]
+				seg.index = counter
+				getModel().RSeMetaData[seg.name] = seg
+				dataB = ole.openstream(fnameB).read()
+				ReadRSeMetaDataB(dataB, seg)
 			else:
-				if (name.startswith('M')):
-					fnameB = []
-					for n in (fname):
-						fnameB.append(n)
-					fnameB[-1] = 'B' + name[1:]
-					seg = ReadRSeMetaDataM(stream, name[1:])
-					seg.file = name[1:]
-					seg.index = counter
-					dataB = ole.openstream(fnameB).read()
-					ReadRSeMetaDataB(dataB, seg)
-				else:
-					ReadIgnorable(fname, stream)
+				ReadIgnorable(fname, stream)
 		else:
 			ReadIgnorable(fname, stream)
 
 	return
 
-def ListElement(ole, fname, counter):
-	name = fname[-1]
+def dumpRSeDBFile(db, log):
+	log.write(u"Schema: %d\n"   %(db.schema))
+	log.write(u"UID:    {%s}\n" %(db.uid))
+	log.write(u"Date1:  %s\n"   %(db.dat1))
+	log.write(u"Date2:  %s\n"   %(db.dat2))
+	log.write(u"arr1:   [%s]\n" %(IntArr2Str(db.arr1, 3)))
+	log.write(u"arr2:   [%s]\n" %(IntArr2Str(db.arr2, 3)))
+	log.write(u"%s\n" %(db.txt))
 
-	path = PrintableName(fname)
-	stream = ole.openstream(fname).read()
-	logAlways(u"%2d: %s size=%s", counter, path, len(stream))
+	log.write(u"segInfo:\n")
+	log.write(u"\tUID:   {%s}\n" %(db.segInfo.uid))
+	log.write(u"\tDate:  %s\n"   %(db.segInfo.date))
+	log.write(u"\tText:  '%s'\n" %(db.segInfo.text))
+	log.write(u"\tU16:   %03X\n" %(db.segInfo.u16))
+	log.write(u"\tText2: '%s'\n" %(db.segInfo.text2))
+	log.write(u"\tarr1:  [%s]\n" %(IntArr2Str(db.segInfo.arr1, 3)))
+	log.write(u"\tarr2:  [%s]\n" %(IntArr2Str(db.segInfo.arr2, 4)))
+	log.write(u"\tarr3:  [%s]\n" %(IntArr2Str(db.segInfo.arr3, 4)))
+	log.write(u"\tarr4:  [%s]\n" %(IntArr2Str(db.segInfo.arr4, 4)))
+	log.write(u"\tUID1:\n")
+	for n, txt in enumerate(db.segInfo.uidList1):
+		log.write(u"\t\t[%02X]: '%s'\n" %(n, txt))
+	log.write(u"\tUID2:\n")
+	for n, txt in enumerate(db.segInfo.uidList2):
+		log.write(u"\t\t[%02X]: '%s'\n" %(n, txt))
+	log.write(u"\tSegments:\n")
+	for id in db.segInfo.segments:
+		log.write(u"\t\t%s: %s\n" %(id, db.segInfo.segments[id]))
+
+def dumpRSeDB(db):
+	folder = getInventorFile()[0:-4]
+	filename = u"%s/RSeDb.log" %(folder)
+	with io.open(filename, mode='w', encoding='utf-8') as log:
+		dumpRSeDBFile(db, log)
+
+	return
+
+def dumpiProperties(iProps):
+	folder = getInventorFile()[0:-4]
+	filename = '%s\\iProperties.log' %(folder)
+	with io.open(filename, mode='w', encoding="utf-8") as file:
+		setNames = sorted(iProps.keys())
+		for setName in setNames:
+			file.write(u"%s:\n" %(setName))
+			setProps = iProps[setName]
+			prpNames = sorted(setProps.keys())
+			for prpNum in prpNames:
+				val = setProps[prpNum]
+				prpName = val[0]
+				prpVal  = val[1]
+				if (isinstance(prpVal, datetime.datetime)):
+					if (prpVal.year > 1900):
+						file.write(u"%3d - %26s: %s\n" %(prpNum, prpName, prpVal.strftime("%Y/%m/%d %H:%M:%S.%f")))
+				else:
+					file.write(u"%3d - %26s: %r\n" %(prpNum, prpName, prpVal))
+			file.write(u"\n")
+	return
 
 def read(doc, filename, readProperties):
-	global model
+	createNewModel()
 
-	ole = OleFileIO(filename)
-	setInventorFile(filename)
+	ole = setInventorFile(filename)
 	setFileVersion(ole)
-	setThumbnail(ole)
-	chooseImportStrategy()
 
 	elements = ole.listdir(streams=True, storages=False)
+	counter  = 1
+	list     = []
+	handled  = {}
 
-	counter = 1
-	list = []
+	if (readProperties):
+		for fname in elements:
+			name = fname[-1]
+			if (name.startswith('\x05')):
+				props = ole.getproperties(fname, convert_time=True)
+				if (name == '\x05Aaalpg0m0wzvuhc41dwauxbwJc'):
+					ReadOtherProperties(props, fname, Inventor_Document_Summary_Information)
+					doc.Company = getProperty(props, KEY_DOC_SUM_INFO_COMPANY)
+				elif (name == '\x05Zrxrt4arFafyu34gYa3l3ohgHg'):
+					ReadInventorSummaryInformation(doc, props, fname)
+				elif (name == '\x05Qz4dgm1gRjudbpksAayal4qdGf'):
+					ReadOtherProperties(props, fname, Design_Tracking_Control)
+				elif (name == '\x05PypkizqiUjudbposAayal4qdGf'):
+					ReadOtherProperties(props, fname, Design_Tracking_Properties)
+					setDescription(getProperty(props, 29))
+				elif (name == '\x05Qm0qv30hP3udrkgvAaitm1o20d'):
+					ReadOtherProperties(props, fname, Private_Model_Information)
+				elif (name == '\x05Ynltsm4aEtpcuzs1Lwgf30tmXf'):
+					ReadOtherProperties(props, fname, Inventor_User_Defined_Properties)
+				elif (name == '\x05C3vnhh4uFrpeuhcsBpg4yptkTb'):
+					ReadOtherProperties(props, fname, Inventor_Piping_Style_Properties)
+				else:
+					ReadOtherProperties(props, fname, {})
+				handled[PrintableName(fname)] = True
+
+	chooseImportStrategy()
+
 	for fname in elements:
-		#ensure RSeDb is the very first "file" to be parsed
 		if (fname[-1] == 'UFRxDoc'):
-			pass
-		elif (fname[-1] == 'RSeDb'):
+#			stream = ole.openstream(fname).read()
+#			getModel().UFRxDoc = importerUFRxDoc.read(stream)
+			handled[PrintableName(fname)] = True
+			break
+
+	for fname in elements:
+		if (fname[-1] == 'RSeDb'):
 			stream = ole.openstream(fname).read()
-			ReadRSeDb(stream)
-		elif (fname[-1] == 'RSeSegInfo'):
+			ReadRSeDb(getModel().RSeDb, stream)
+			handled[PrintableName(fname)] = True
+			break
+
+	for fname in elements:
+		if (fname[-1] == 'RSeSegInfo'):
 			stream = ole.openstream(fname).read()
-			if ((model.RSeDb is None) or (model.RSeDb.version != 0x1D)):
-				ReadRSeSegInfo1F(stream)
+			if ((getModel().RSeDb is None) or (getModel().RSeDb.schema == 0x1F)):
+				ReadRSeSegInfo1F(getModel().RSeDb, stream)
+			elif (getModel().RSeDb.schema == 0x1E):
+				ReadRSeSegInfo1E(getModel().RSeDb, stream)
 			else:
-				ReadRSeSegInfo1D(stream)
-		elif (fname[-1] == 'RSeDbRevisionInfo'):
-			stream = ole.openstream(fname).read()
-			ReadRSeDbRevisionInfo(stream)
-		elif (not fname[-1].startswith('B')):
+				ReadRSeSegInfo1D(getModel().RSeDb, stream)
+			handled[PrintableName(fname)] = True
+			break;
+
+	for fname in elements:
+		if (not handled.get(PrintableName(fname), False)):
+			if (fname[-1] == 'RSeDbRevisionInfo'):
+				stream = ole.openstream(fname).read()
+				ReadRSeDbRevisionInfo(getModel().RSeRevisions, stream)
+				break;
+
+	for fname in elements:
+		if (not fname[-1].startswith('B')):
 			list.append(fname)
+
+	dumpRSeDB(getModel().RSeDb)
+	dumpiProperties(getModel().iProperties)
 
 	for fname in list:
 		ReadElement(ole, fname, doc, counter, readProperties)
@@ -139,21 +210,18 @@ def read(doc, filename, readProperties):
 	return True
 
 def create3dModel(root, doc):
-	if (model):
-		storage = model.RSeStorageData
-		strategy = getStrategy()
-		if (strategy == STRATEGY_NATIVE):
-			creator = FreeCADImporter()
-			creator.importModel(root, doc)
-		else:
-			brep = model.getBRep()
-			importerSAT._fileName = getInventorFile()
-			if (brep is not None):
-				for asm in brep.AcisList:
-					readEntities(asm)
-					if (strategy == STRATEGY_SAT):
-						importModel(root, doc)
-					elif (strategy == STRATEGY_STEP):
-						convertModel(root, doc)
-
+	strategy = getStrategy()
+	if (strategy == STRATEGY_NATIVE):
+		creator = FreeCADImporter()
+		creator.importModel(root, doc)
+	else:
+		brep = getModel().getBRep()
+		importerSAT._fileName = getInventorFile()
+		if (brep is not None):
+			for asm in brep.AcisList:
+				readEntities(asm)
+				if (strategy == STRATEGY_SAT):
+					importModel(root, doc)
+				elif (strategy == STRATEGY_STEP):
+					convertModel(root, doc)
 	return

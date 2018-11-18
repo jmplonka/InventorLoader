@@ -14,20 +14,34 @@ __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
+model = None
+
 class RSeDatabase():
 	def __init__(self):
-		self.uid         = None # Internal-Name of the object
-		self.version     = -1
-		self.arr1        = []   # UInt16A[4]
-		self.dat1        = None # datetime
-		self.arr2        = []   # UInt16A[4]
-		self.dat2        = None # datetime
-		self.arr3        = []   # UInt16A[4]
-		self.dat3        = None # datetime
-		self.arr4        = []   # UInt16A[4]
-		self.arr5        = []   # UInt16A[8]
-		self.txt         = ''
-		self.comment     = ''
+		self.segInfo = RSeSegInformation()
+		self.uid     = None # Internal-Name of the object
+		self.schema  = -1
+		self.arr1    = []
+		self.dat1    = None
+		self.arr2    = []
+		self.dat2    = None
+		self.txt     = u""
+
+class RSeSegInformation():
+	def __init__(self):
+		self.text     = u""
+		self.arr1     = []
+		self.date     = None
+		self.uid      = None
+		self.arr2     = []
+		self.arr3     = []
+		self.u16      = 0
+		self.text2    = u""
+		self.arr4     = []
+		self.segments = {}
+		self.val      = []      # UInt16[2]
+		self.uidList1 = []
+		self.uidList2 = []
 
 class RSeSegmentObject():
 	def __init__(self):
@@ -67,14 +81,9 @@ class RSeSegment():
 		self.nodes       = []
 
 	def __str__(self):
-		return '{0:<24}: count=({1}/{2}) {4} - [{5}]'.format(self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.values, 4))
-
-class RSeSegInformation():
-	def __init__(self):
-		self.segments    = {}
-		self.val         = []      # UInt16[2]
-		self.uidList1    = []
-		self.uidList2    = []
+		return u"%s, count=(%d/%d), ID={%s}, value1=%04X, arr1=[%s], arr2=[%s]" %(self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.arr1, 4), IntArr2Str(self.arr2, 4))
+	def __repr__(self):
+		return self.__str__()
 
 class RSeStorageBlockSize():
 	'''
@@ -314,41 +323,41 @@ class RSeMetaData():
 	def isNBNotebook(self):
 		return (self.name == RSeMetaData.SEG_NOTEBOOK_NB)
 
+class RSeRevisions():
+	def __init__(self, *args, **kwargs):
+		self.mapping = {}
+		self.infos   = []
+
 class Inventor():
 	def __init__(self):
-		self.UFRxDoc               = None
-		self.RSeDb                 = None
-		self.RSeSegInfo            = None
-		self.RSeDbRevisionInfoMap  = None
-		self.RSeDbRevisionInfoList = None
-		self.DatabaseInterfaces    = None
-		self.iProperties           = {}
-		self.RSeStorageData        = {}
+		self.UFRxDoc            = None
+		self.RSeDb              = RSeDatabase()
+		self.RSeRevisions       = RSeRevisions()
+		self.DatabaseInterfaces = None
+		self.iProperties        = {}
+		self.RSeMetaData        = {}
 
 	def getDC(self):
 		'''
-		storage The map of defined RSeStorageDatas
 		Returns the segment that contains the 3D-objects.
 		'''
-		for seg in self.RSeStorageData.values():
+		for seg in self.RSeMetaData.values():
 			if (seg.isDC()): return seg
 		return None
 
 	def getBRep(self):
 		'''
-		storage The map of defined RSeStorageDatas
 		Returns the segment that contains the boundary representation.
 		'''
-		for seg in self.RSeStorageData.values():
+		for seg in self.RSeMetaData.values():
 			if (seg.isBRep()): return seg
 		return None
 
 	def getGraphics(self):
 		'''
-		storage The map of defined RSeStorageDatas
 		Returns the segment that contains the graphic objects.
 		'''
-		for seg in self.RSeStorageData.values():
+		for seg in self.RSeMetaData.values():
 			if (seg.isGraphics()): return seg
 		return None
 
@@ -711,7 +720,7 @@ class ParameterNode(DataNode):
 				else: # floating point value!
 					subFormula = '%g%s' %((value / factor) - offset, unitName)
 		elif (typeName == 'ParameterUnaryMinus'):
-			subFormula = '-' + self.getParameterFormula(parameterData.get('refValue'), withUnits)
+			subFormula = '-' + self.getParameterFormula(parameterData.get('value'), withUnits)
 		elif (typeName == 'ParameterConstant'):
 			unitName = ''
 			if (self.asText or withUnits):
@@ -719,10 +728,11 @@ class ParameterNode(DataNode):
 				if (len(unitName) > 0): unitName = ' ' + unitName
 			subFormula = '%s%s' %(parameterData.name, unitName)
 		elif (typeName == 'ParameterRef'):
+			target = parameterData.get('target')
 			if (self.asText):
-				subFormula = parameterData.get('refParameter').name
+				subFormula = target.name
 			else:
-				subFormula = '%s_' %(parameterData.get('refParameter').name)
+				subFormula = '%s_' %(target.name)
 		elif (typeName == 'ParameterFunction'):
 			function          = parameterData.name
 			functionSupported = (function not in FunctionsNotSupported)
@@ -737,13 +747,13 @@ class ParameterNode(DataNode):
 				# Modulo operation not supported by FreeCAD
 				raise UserWarning('Function \'%s\' not supported' %function)
 		elif (typeName == 'ParameterOperationPowerIdent'):
-			operand1 = self.getParameterFormula(parameterData.get('refOperand1'), withUnits)
+			operand1 = self.getParameterFormula(parameterData.get('operand1'), withUnits)
 			subFormula = operand1
 		elif (typeName.startswith('ParameterOperation')):
 			operation = parameterData.name
 			if (self.asText or (operation != '%')):
-				operand1 = self.getParameterFormula(parameterData.get('refOperand1'), withUnits)
-				operand2 = self.getParameterFormula(parameterData.get('refOperand2'), withUnits)
+				operand1 = self.getParameterFormula(parameterData.get('operand1'), withUnits)
+				operand2 = self.getParameterFormula(parameterData.get('operand2'), withUnits)
 				subFormula = '(%s %s %s)' %(operand1, operation, operand2)
 			else:
 				# Modulo operation not supported by FreeCAD
@@ -757,7 +767,7 @@ class ParameterNode(DataNode):
 		data = self.data
 		self.asText = asText
 		if (data):
-			refValue = data.get('refValue')
+			refValue = data.get('value')
 			if (refValue):
 				if (asText):
 					return u'\'' + self.getParameterFormula(refValue, True)
@@ -778,7 +788,7 @@ class ParameterNode(DataNode):
 
 	def getValue(self):
 		x = self.getValueRaw()
-		#unitRef = self.get('refUnit')
+		#unitRef = self.get('unit')
 		#type = unitRef.get('type')
 
 		type = self.getUnitName()
@@ -918,11 +928,15 @@ class EnumNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getValueText(self):
-		values = self.get('Values')
-		i = self.get('value')
-		value = '%d' %(i)
-		if ((values) and (i < len(values))):
-			value = values[i]
+		enum = self.get('Values')
+		value = self.get('value')
+		if (type(enum) is list):
+			if (value < len(enum)):
+				return u"'%s'" % enum[value]
+			return value
+		assert (type(enum) is dict), "Expected %s to contain dict or list as enum values!"
+		if (value in enum.keys()):
+			return u"'%s'" % enum[value]
 		return value
 
 	def getRefText(self): # return unicode
@@ -939,6 +953,15 @@ class DirectionNode(DataNode):
 
 	def getRefText(self): # return unicode
 		return u'(%04X): %s - (%g,%g,%g)' %(self.index, self.typeName, self.get('dirX'), self.get('dirY'), self.get('dirZ'))
+
+class BendEdgeNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self): # return unicode
+		p1 = self.get('from')
+		p2 = self.get('to')
+		return u'(%04X): %s - (%g,%g,%g)-(%g,%g,%g)' %(self.index, self.typeName, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
 
 class FeatureNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1036,14 +1059,16 @@ class FeatureNode(DataNode):
 			if (p1 == 'FaceCollection'):            return 'FaceDraft'
 		elif (p0 == 'CA02411F'):                    return 'NonParametricBase'
 		elif (p0 == 'EB9E49B0'):                    return 'Freeform'
-		elif (p0 == 'FC203F47'):                    return 'Hem'
+		elif (p0 == 'FC203F47'):
+			if (p4 == 'EdgeCollectionProxy'):       return 'Hem'
+			return 'Plate'
 		elif (p0 == 'SolidBody'):                   return 'Knit'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'EA680672'):                    return 'Trim'
 		elif (p0 == 'SurfaceBody'):
 			if (p1 == 'A477243B'):                  return 'LoftedFlangeDefinition'
 			if (p1 == 'SurfaceBody'):               return 'Reference'
-		elif (p0 == '8677CE83'):                    return 'Corner'
+		elif (p0 == 'CornerSeam'):                  return 'Corner'
 		elif (p0 == 'AFD8A8E0'):                    return 'Corner'
 		elif (p0 == 'LoftSections'):                return 'Loft'
 #		elif (p0 == 'Parameter'):                   return 'Loft'
@@ -1089,12 +1114,7 @@ class FeatureNode(DataNode):
 		return label.get('lst0')
 
 	def __str__(self):
-		data = self.data
-		list = data.get('properties')
-		if (list is not None):
-			return '(%04X): %s\t%s\t\'%s\'\tpropererties=%d\t%s' %(data.index, data.typeName, self.getSubTypeName(), self.name, len(list), data.content)
-		return '(%04X): %s\t%s\t\'%s\'\tpropererties=None\t%s' %(data.index, data.typeName, self.getSubTypeName(), self.name, data.content)
-
+		return u"(%04X): Fx%s '%s'%s" %(self.data.index, self.getSubTypeName(), self.name, self.data.content)
 
 class ValueNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1174,7 +1194,7 @@ class CircleNode(DataNode):
 				else:
 					points += ', (%g,%g,%g)' %(i.get('x'), i.get('y'), i.get('z'))
 		if (self.typeName[-2:] == '2D'):
-			c = self.get('refCenter')
+			c = self.get('center')
 			return u'(%04X): %s - (%g,%g), r=%g%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points)
 		return u'(%04X): %s - (%g,%g,%g), r=%g%s' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'), r, points)
 
@@ -1183,8 +1203,8 @@ class GeometricRadius2DNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		o = self.get('refObject')
-		c = self.get('refCenter')
+		o = self.get('entity')
+		c = self.get('center')
 		return u'(%04X): %s - o=(%04X): %s, c=(%04X)' %(self.index, self.typeName, o.index, o.typeName, c.index)
 
 class GeometricCoincident2DNode(DataNode):
@@ -1192,8 +1212,8 @@ class GeometricCoincident2DNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		e1 = self.get('refEntity1')
-		e2 = self.get('refEntity2')
+		e1 = self.get('entity1')
+		e2 = self.get('entity2')
 		if (e1.typeName == 'Point2D'):
 			return u'(%04X): %s - (%g,%g)\t(%04X): %s' %(self.index, self.typeName, e1.get('x'), e1.get('y'), e2.index, e2.typeName)
 		if (e2.typeName == 'Point2D'):
@@ -1205,14 +1225,14 @@ class DimensionAngleNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		d = self.get('refParameter')
+		d = self.get('parameter')
 		if (self.typeName == 'Dimension_Angle2Line2D'):
-			l1 = self.get('refLine1')
-			l2 = self.get('refLine2')
+			l1 = self.get('line1')
+			l2 = self.get('line2')
 			return u'(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name, l1.index, l1.typeName, l2.index, l2.typeName)
-		p1 = self.get('refPoint1')
-		p2 = self.get('refPoint2')
-		p3 = self.get('refPoint3')
+		p1 = self.get('point1')
+		p2 = self.get('point2')
+		p3 = self.get('point3')
 		return u'(%04X): %s - d=\'%s\', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s' %(self.index, self.typeName, d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
 
 class DimensionDistance2DNode(DataNode):
@@ -1220,9 +1240,9 @@ class DimensionDistance2DNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		d = self.get('refParameter')
-		e1 = self.get('refEntity1')
-		e2 = self.get('refEntity2')
+		d = self.get('parameter')
+		e1 = self.get('entity1')
+		e2 = self.get('entity2')
 		if (e1.typeName == 'Point2D'):
 			if (e2.typeName == 'Point2D'):
 				return u'(%04X): %s - d=\'%s\', (%g,%g), (%g,%g)' %(self.index, self.typeName, d.name, e1.get('x'), e1.get('y'), e2.get('x'), e2.get('y'))
@@ -1357,3 +1377,11 @@ Functions  = Enum([''        , \
                    'isolate'])
 
 FunctionsNotSupported = ['sign', 'random', 'acosh', 'asinh', 'atanh', 'isolate']
+
+def createNewModel():
+	global model
+	model = Inventor()
+
+def getModel():
+	global model
+	return model
