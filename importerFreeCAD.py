@@ -920,7 +920,7 @@ class FreeCADImporter:
 
 		profile  = boundaryPatch.get('profile')
 		if (profile is not None):
-			if (profile.typeName in ['424EB7D7', '603428AE', 'D61732C1', 'Profile']):
+			if (profile.typeName in ['Wire', '603428AE', 'D61732C1', 'Profile']):
 				shape = None
 				# create all parts of the profile
 				for part in profile.get('parts'):
