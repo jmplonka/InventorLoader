@@ -5630,23 +5630,36 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, 3, 'a1')
 		return i
 
-	def Read_914B3439(self, node):
-		i = self.ReadHeadersS32ss(node)
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadCrossRef(i, 'ref_4')
-		i = node.ReadCrossRef(i, 'ref_5')
-		i = node.ReadCrossRef(i, 'ref_6')
-		i = node.ReadCrossRef(i, 'ref_7')
-		i = node.ReadCrossRef(i, 'ref_8')
-		i = node.ReadCrossRef(i, 'ref_9')
-		i = node.ReadCrossRef(i, 'ref_A')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+	def ReadHeaderHemShape(self, node, name):
+		i = self.ReadHeadersS32ss(node, 'HemShape' + name)
+		i = node.ReadCrossRef(i, 'length')
+		i = node.ReadCrossRef(i, 'gap')
+		i = node.ReadCrossRef(i, 'angle')
+		i = node.ReadCrossRef(i, 'thickness')
+		i = node.ReadCrossRef(i, 'radius')
+		i = node.ReadCrossRef(i, 'flip')
+		i = node.ReadCrossRef(i, 'edge')
+		i = node.ReadCrossRef(i, 'surface')
+		i = node.ReadCrossRef(i, 'plane')
+		i = node.ReadCrossRef(i, 'boundaryPatch')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		if (getFileVersion() > 2017):
 			i += 4
-		i = node.ReadCrossRef(i, 'ref_B')
+		i = node.ReadCrossRef(i, 'surfaces')
 		return i
+		return i
+
+	def Read_72E8B3EB(self, node):
+		i = self.ReadHeaderHemShape(node, 'Teardrop')
+
+	def Read_77C03471(self, node):
+		i = self.ReadHeaderHemShape(node, 'Doubled')
+
+	def Read_914B3439(self, node):
+		i = self.ReadHeaderHemShape(node, 'Single')
+
+	def Read_FD4843EB(self, node):
+		i = self.ReadHeaderHemShape(node, 'Rolled')
 
 	def Read_91637937(self, node):
 		i = self.ReadChildHeader1(node, ref1Name='fx')
@@ -6262,7 +6275,7 @@ class DCReader(EeDataReader):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'thickness')
 		i = node.ReadCrossRef(i, 'radius')
-		i = node.ReadCrossRef(i, 'ref_1')       # ref to A96B5992
+		i = node.ReadCrossRef(i, 'definition')
 		i = node.ReadCrossRef(i, 'reliefWidth')
 		i = node.ReadCrossRef(i, 'minRemnant')
 		i = node.ReadCrossRef(i, 'ref_2')       # bool
@@ -6564,19 +6577,19 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_B310B8E5(self, node): # HemFeature {D9AB7AE5-6A67-4165-9E0B-0F008C9135B0}
-		i = self.ReadCntHdr2SRef(node, 'FxHem')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadCrossRef(i, 'ref_4')
-		i = node.ReadCrossRef(i, 'ref_5')
+		i = self.ReadCntHdr2SRef(node, 'HemDef')
+		i = node.ReadCrossRef(i, 'thickness')
+		i = node.ReadCrossRef(i, 'ref_3')        # Enum
+		i = node.ReadCrossRef(i, 'axis')
+		i = node.ReadCrossRef(i, 'dir')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_6')
-		i = node.ReadCrossRef(i, 'ref_7')
-		i = node.ReadCrossRef(i, 'ref_8')
-		i = node.ReadCrossRef(i, 'ref_9')
-		i = node.ReadCrossRef(i, 'ref_A')
+		i = node.ReadCrossRef(i, 'radius')
+		i = node.ReadCrossRef(i, 'ref_7')        # Enum
+		i = node.ReadCrossRef(i, 'ref_8')        # Parameter
+		i = node.ReadCrossRef(i, 'ref_9')        # Parameter
+		i = node.ReadCrossRef(i, 'ref_A')        # bool
 		i = node.ReadUInt8A(i, 3, 'a0')
-		i = node.ReadCrossRef(i, 'ref_B')
+		i = node.ReadCrossRef(i, 'ref_B')        # bool
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
