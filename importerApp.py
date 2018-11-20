@@ -19,13 +19,13 @@ class AppReader(SegmentReader):
 		super(AppReader, self).__init__(segment)
 		self.defStyle = None
 
-	def readHeaderStyle(self, node, typeName = None):
+	def readHeaderStyle(self, node, typeName = None, ref1Name = 'collection'):
 		i = node.Read_Header0(typeName)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16A(i, 3, 'a0')
 		i = node.ReadUInt32(i, 'default')
 		i = node.ReadUInt32(i, 'u32')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, ref1Name)
 		i = node.ReadLen32Text16(i)
 		i = node.ReadLen32Text16(i, 'comment')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -40,7 +40,7 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_10D6C06B(self, node): # SheetMetalRule
-		i = self.readHeaderStyle(node, 'SheetMetalRule')
+		i = self.readHeaderStyle(node, 'SheetMetalRule', )
 		i = node.ReadLen32Text16(i, 'txt_1')
 		i = node.ReadLen32Text16(i, 'txt_2')
 		i = node.ReadLen32Text16(i, 'txt_3')
@@ -224,7 +224,7 @@ class AppReader(SegmentReader):
 
 	def Read_6759D86E(self, node): # MaterialName
 		vers = getFileVersion()
-		i = self.readHeaderStyle(node, 'MaterialName')
+		i = self.readHeaderStyle(node, 'MaterialName', 'materials')
 		if (vers > 2012):
 			i = node.ReadLen32Text16(i, 'txt_1') # UUID's
 			i = node.ReadLen32Text16(i, 'txt_2') #

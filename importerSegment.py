@@ -186,13 +186,13 @@ def resolveReferencNodes(nodes):
 				radius._data = node
 				ref._data.set(radius.name, radius)
 
-		if (node.typeName in ['Wire', '603428AE', 'Profile']):
-			refFx = node.get('fx')
+		if (node.typeName in ['FaceBound', '603428AE', 'FaceBoundOuter']):
+			refFx = node.get('proxy')
 			refFx.set('profile', node)
-		elif (node.typeName in ['D61732C1']):
-			refFx = node.get('refPatch1')
+		elif (node.typeName in ['FaceBounds']):
+			refFx = node.get('proxy1')
 			refFx.set('profile', node)
-			refFx = node.get('refPatch2')
+			refFx = node.get('proxy2')
 			refFx.set('profile', node)
 		elif (node.typeName == 'NMx_FFColor_Entity'):
 			refFx = node.get('fx')

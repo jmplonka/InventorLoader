@@ -173,7 +173,10 @@ class GraphicsReader(EeSceneReader):
 		i = self.skipBlockSize(i)
 		i = self.Read_ColorAttr(i, node)
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 5, 'a1')
+		a1 = Struct('<HfHh').unpack_from(node.data, i)
+		node.content += " a1=[%03X,%g,%03X,%d]" %(a1[0], a1[1], a1[2], a1[3])
+		i += 10
+		node.set('a1', a1)
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt16A(i, 8, 'a2')
 		i = self.skipBlockSize(i, 8)
@@ -188,7 +191,10 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.Read_ColorAttr(i, node)
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 5, 'a1')
+		a1 = Struct('<HfHh').unpack_from(node.data, i)
+		node.content += " a1=[%03X,%g,%03X,%d]" %(a1[0], a1[1], a1[2], a1[3])
+		i += 10
+		node.set('a1', a1)
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt16A(i, 8, 'a2')
 		i = self.skipBlockSize(i, 8)

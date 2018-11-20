@@ -513,7 +513,7 @@ class FreeCADImporter:
 
 	def hide(self, sections):
 		for section in sections:
-			if (section): section.ViewObject.Visibility = False
+			if (section is not None): section.ViewObject.Visibility = False
 		return
 
 	def addSolidBody(self, fxNode, obj3D, solid):
@@ -920,7 +920,7 @@ class FreeCADImporter:
 
 		profile  = boundaryPatch.get('profile')
 		if (profile is not None):
-			if (profile.typeName in ['Wire', '603428AE', 'D61732C1', 'Profile']):
+			if (profile.typeName in ['FaceBound', '603428AE', 'FaceBounds', 'FaceBoundOuter']):
 				shape = None
 				# create all parts of the profile
 				for part in profile.get('parts'):
@@ -940,10 +940,24 @@ class FreeCADImporter:
 							logError(u"    BoundaryPart (%04X): %s has an unknown operation %X!", part.index, part.typeName, operation)
 				if (shape is not None):
 					fx = profile.get('sketch')
-					if (fx is None):
-						fx = profile.get('fx')
-					else:
+					if (fx is not None):
+						fxName = fx.name
 						self.hide([fx.sketchEntity])
+					else:
+						fx = profile.get('proxy')
+						if (fx is not None):
+							fxName = fx.name
+							self.hide([fx.sketchEntity])
+						else:
+							fx = profile.get('proxy1')
+							if (fx is not None):
+								fxName = fx.name
+								self.hide([fx.sketchEntity])
+							fx = profile.get('proxy2')
+							if (fx is not None):
+								fxName = fx.name
+								self.hide([fx.sketchEntity])
+
 					boundary = newObject(self.doc, 'Part::Feature', '%s_bp' %fx.name)
 					boundary.Shape = shape
 					return boundary
@@ -2420,8 +2434,8 @@ class FreeCADImporter:
 		bendNode   = node.get('properties')[0]
 		properties     = defNode.get('properties')
 		surface        = getProperty(properties, 0x00) # SurfaceBody 'Solid1'
-		profile1       = getProperty(properties, 0x01) # A477243B
-		profile2       = getProperty(properties, 0x02) # A477243B
+		proxy1         = getProperty(properties, 0x01) # FaceBoundProxy
+		proxy2         = getProperty(properties, 0x02) # FaceBoundProxy
 		#= getProperty(properties, 0x03) # Parameter 'Thickness'=4mm
 		bendRadius     = getProperty(properties, 0x04) # Parameter 'd11'=4mm
 		#= getProperty(properties, 0x05) # 5E50B969_Enum=1
@@ -2435,8 +2449,8 @@ class FreeCADImporter:
 		#= getProperty(properties, 0x0D) # A96B5992
 		#= getProperty(properties, 0x0E) # 90B64134
 		edgeProxies    = getProperty(properties, 0x0F) # EdgeCollectionProxy
-		boundary1 = self.createBoundary(profile1, surface is None)
-		boundary2 = self.createBoundary(profile2, surface is None)
+		boundary1 = self.createBoundary(proxy1, surface is None)
+		boundary2 = self.createBoundary(proxy2, surface is None)
 		sections         = [boundary1, boundary2]
 		loftGeo          = self.createEntity(defNode, 'Part::Loft')
 		loftGeo.Sections = sections
@@ -2453,7 +2467,7 @@ class FreeCADImporter:
 		definitionRef = sweepNode.get('label')
 		solid         = (definitionRef.typeName == 'Label')
 		boundary      = getProperty(properties, 0x00)
-		profile1      = getProperty(properties, 0x01) # A477243B or FC203F47
+		proxy1        = getProperty(properties, 0x01) # FaceBoundProxy or FaceBoundOuterProxy
 		#= getProperty(properties, 0x02) # PartFeatureOperation or 90874D63
 		taperAngle    = getProperty(properties, 0x03) # Parameter
 		#= getProperty(properties, 0x04) # ExtentType
@@ -2462,12 +2476,12 @@ class FreeCADImporter:
 		#= getProperty(properties, 0x08) # SweepType=Path
 		frenet        = getProperty(properties, 0x09) # SweepProfileOrientation, e.g. 'NormalToPath', other not yet supported by FreeCAD
 		scaling       = getProperty(properties, 0x0A) # SweepProfileScaling, e.g. 'XY', other not yet supported by FreeCAD
-		profile2      = getProperty(properties, 0x0B) # A477243B
+		proxy2        = getProperty(properties, 0x0B) # FaceBoundProxy
 		#= getProperty(properties, 0x0C): ???
 		#= getProperty(properties, 0x0D): ???
 		skip   = []
 
-		path = self.createBoundary(profile1, solid is not None)
+		path = self.createBoundary(proxy1, solid is not None)
 		if (path is None):
 			profile = sweepNode.getParticipants()[1]
 			path = self.getEntity(profile)

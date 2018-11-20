@@ -147,6 +147,19 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		return properties, i
 
+	def ReadHeaderFaceBound(self, node, typeName = None):
+		i = self.ReadHeadersS32ss(node, typeName)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
+		i = node.ReadUInt32A(i, 2, 'a1')
+		if (getFileVersion() > 2011):
+			i = node.ReadCrossRef(i, 'sketch')
+		else:
+			i = self.skipBlockSize(i)
+		return i
+
 	def ReadSketch2DEntityHeader(self, node, typeName = None):
 		i = self.ReadHeadersss2S16s(node, typeName)
 		i = node.ReadCrossRef(i, 'sketch')
@@ -611,7 +624,7 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64_3D(i, 'center')
 		return i
 
-	def Read_05C619B6(self, node):
+	def Read_05C619B6(self, node): # AsmEntityWrapperNode
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -625,11 +638,7 @@ class DCReader(EeDataReader):
 			i += 16
 		return i
 
-	def Read_06262CC1(self, node):
-		i = self.ReadHeaderEnum(node, 'BendLocation', ['Centerline', 'Start', 'End'])
-		return i
-
-	def Read_0645C2A5(self, node):
+	def Read_0645C2A5(self, node): # AsmEntityWrapperNode
 		i = self.ReadList2U32(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
@@ -641,6 +650,111 @@ class DCReader(EeDataReader):
 #			i = node.ReadUInt32(i, 'u32_1')
 #		if ((a1[6] & 0xFF) != 0):
 #			i = node.ReadUInt32(i, 'u32_2')
+		return i
+
+	def Read_0811C56E(self, node): # AsmEntityWrapperNode
+		i = self.ReadList2U32(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = node.ReadUInt32(i, 'u32_1')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt32A(i, 4, 'a1')
+		if (getFileVersion() > 2011):
+			i += 1
+		return i
+
+	def Read_2E04A208(self, node): # AsmEntityWrapperNode
+		i = self.ReadList2U32(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 5, 'a1')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a2')
+		i = node.ReadUInt32A(i, 3, 'a3')
+		return i
+
+	def Read_8E5D4198(self, node): # AsmEntityWrapperNode
+		i = self.ReadList2U32(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = node.ReadUInt32(i, 'u32_1')
+		i = self.skipBlockSize(i)
+		if (node.get('u32_1') == 0):
+			i = node.ReadUInt8(i, 'u8_0')
+			cnt, i = getUInt32(node.data, i)
+			i = node.ReadUInt32A(i, cnt, 'a1')
+			cnt, i = getUInt32(node.data, i)
+			i = node.ReadUInt32A(i, cnt, 'a2')
+			i = node.ReadUInt32A(i, 2, 'a3')
+			i = node.ReadUInt8(i, 'u8_1')
+		else:
+			if(getFileVersion() > 2010):
+				i = node.ReadCrossRef(i, 'ref_1')
+			i = node.ReadUInt32(i, 'u32_0')
+			i = self.skipBlockSize(i)
+		return i
+
+	def Read_90F4820A(self, node): # AsmEntityWrapperNode
+		i = self.ReadList2U32(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 3, 'a1')
+		return i
+
+	def Read_9BB4281C(self, node): # AsmEntityWrapperNode
+		i = self.ReadList2U32(node)
+		i = node.ReadUInt32A(i, 2, 'val_key_1')
+		i = node.ReadUInt32A(i, 2, 'val_key_2')
+		i = node.ReadUInt8(i, 'u8_2')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.ReadU32U32U8List(node, i, 'lst2')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
+		i = node.ReadUInt32A(i, 2, 'val_key_3')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 3, 'a2')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a3')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a4')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a5')
+		i = node.ReadUInt32A(i, 3, 'a5')
+		return i
+
+	def Read_BF32E0A6(self, node): # AsmEntityWrapperNode
+		i = self.ReadList2U32(node)
+		i = node.ReadUInt32(i, 'ref_1')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'ref_2')
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt8(i, 'u8_2')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.ReadU32U32U8List(node, i, 'lst2')
+		i = self.skipBlockSize(i)
+		i = self.ReadU32U32List(node, i, 'lst3')
+		return i
+
+	def Read_F4360D18(self, node): # AsmEntityWrapperNode
+		i = self.ReadList2U32(node)
+		i = node.ReadUInt32A(i, 2, 'val_key_1')
+		i = node.ReadUInt32A(i, 2, 'val_key_2')
+		i = node.ReadUInt8(i, 'u8_2')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.ReadU32U32U8List(node, i, 'lst2')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
+		i = node.ReadUInt32A(i, 2, 'val_key_3')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 3, 'a3')
+		return i
+
+	def Read_06262CC1(self, node):
+		i = self.ReadHeaderEnum(node, 'BendLocation', ['Centerline', 'Start', 'End'])
 		return i
 
 	def Read_065FFFB3(self, node):
@@ -734,19 +848,6 @@ class DCReader(EeDataReader):
 		i = self.ReadContentHeader(node)
 		if (getFileVersion() > 2018): i += 4 # ???
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'transformations')
-		return i
-
-	def Read_0811C56E(self, node):
-		i = self.ReadList2U32(node)
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
-		i = node.ReadUInt32(i, 'u32_1')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt32A(i, 4, 'a1')
-		if (getFileVersion() > 2011):
-			i += 1
 		return i
 
 	def Read_0830C1B0(self, node): # Location of a 2D-Point
@@ -1847,6 +1948,7 @@ class DCReader(EeDataReader):
 
 	def Read_2AF9B62B(self, node):
 		i = self.ReadContentHeader(node)
+		i = node.ReadFloat64_3D(i, 'a1')
 		return i
 
 	def Read_2B241309(self, node): # BrowserFolder {9D063FDB-B597-49B0-8DBC-7EB3D5F715B8}
@@ -1854,7 +1956,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_2B3E0C72(self, node): # Flange-Corner relief shape
+	def Read_2B3E0C72(self, node): # relief shape enum
 		i = self.ReadHeaderEnum(node, 'Relief', {
 			0: 'Round',	               # Bend
 			1: 'Straight',             # Bend
@@ -2077,17 +2179,6 @@ class DCReader(EeDataReader):
 		i = node.ReadChildRef(i, 'ref_2')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_X_REF_, 'lst0')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_X_REF_, 'lst1')
-		return i
-
-	def Read_2E04A208(self, node):
-		i = self.ReadList2U32(node)
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 5, 'a1')
-		cnt, i = getUInt32(node.data, i)
-		i = node.ReadUInt32A(i, cnt, 'a2')
-		i = node.ReadUInt32A(i, 3, 'a3')
 		return i
 
 	def Read_2E692E29(self, node):
@@ -2746,20 +2837,38 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64_2D(i, 'a6') # Angle (e.g.: -pi ... +pi)
 		return i
 
-	def Read_424EB7D7(self, node): # Wire
-		i = self.ReadHeadersS32ss(node, 'Wire')
+	def Read_603428AE(self, node):
+		i = self.ReadHeadersS32ss(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'u32_1')
-		if (getFileVersion() > 2011):
-			i = node.ReadCrossRef(i, 'sketch')
-		else:
-			i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'fx')
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'proxy')
+		return i
 
+	def Read_424EB7D7(self, node, typeName = 'FaceBound'): # Face Bound
+		i = self.ReadHeaderFaceBound(node, 'FaceBound')
+		i = node.ReadCrossRef(i, 'proxy')
+		return i
+
+	def Read_F9884C43(self, node): # Face Outer Bound 
+		i = self.ReadHeaderFaceBound(node, 'FaceBoundOuter')
+		i = node.ReadCrossRef(i, 'proxy')
+		return i
+
+	def Read_D61732C1(self, node):
+		i = self.ReadHeaderFaceBound(node, 'FaceBounds')
+		i = node.ReadCrossRef(i, 'proxy1')
+		i = node.ReadCrossRef(i, 'proxy2')
+		i = node.ReadCrossRef(i, 'parameter1')
+		i = node.ReadCrossRef(i, 'body')
+		i = node.ReadCrossRef(i, 'parameter2')
+		i = node.ReadCrossRef(i, 'ref_7')
+		i = node.ReadCrossRef(i, 'parameter3')
+		i = node.ReadCrossRef(i, 'fx')
+		i = node.ReadCrossRef(i, 'parameter4')
+		i = node.ReadCrossRef(i, 'parameter5')
+		i = node.ReadCrossRef(i, 'parameter6')
 		return i
 
 	def Read_42BC8C9A(self, node):
@@ -2880,10 +2989,10 @@ class DCReader(EeDataReader):
 	def Read_4580CAF0(self, node):
 		i = self.ReadContentHeader(node)
 		if (getFileVersion() > 2017): i += 4 # skip FF FF FF FF
-		i = node.ReadCrossRef(i, 'ref0')
+		i = node.ReadCrossRef(i, 'point')
 		i = node.ReadCrossRef(i, 'ref1')
-		i = node.ReadCrossRef(i, 'ref2')
-		i = node.ReadCrossRef(i, 'ref3')
+		i = node.ReadCrossRef(i, 'param1')
+		i = node.ReadCrossRef(i, 'param2')
 		return i
 
 	def Read_45825754(self, node):
@@ -3705,15 +3814,6 @@ class DCReader(EeDataReader):
 	def Read_5FB25A7E(self, node):
 		i = self.ReadCntHdr3S(node, 'SurfacesSculpt')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		return i
-
-	def Read_603428AE(self, node):
-		i = self.ReadHeadersS32ss(node)
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'fx')
 		return i
 
 	def Read_60406697(self, node):
@@ -4913,7 +5013,7 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'reliefType')
 		i = node.ReadCrossRef(i, 'gapType')
 		i = node.ReadCrossRef(i, 'relief_2')
-		i = node.ReadCrossRef(i, 'jacobiRadiusSize')
+		i = node.ReadCrossRef(i, 'jacobiRadius')
 		return i
 
 	def Read_86A4AAC4(self, node): # SketchBlock
@@ -5066,27 +5166,6 @@ class DCReader(EeDataReader):
 
 	def Read_8DFFE0CD(self, node):
 		i = node.Read_Header0()
-		return i
-
-	def Read_8E5D4198(self, node):
-		i = self.ReadList2U32(node)
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
-		i = node.ReadUInt32(i, 'u32_1')
-		i = self.skipBlockSize(i)
-		if (node.get('u32_1') == 0):
-			i = node.ReadUInt8(i, 'u8_0')
-			cnt, i = getUInt32(node.data, i)
-			i = node.ReadUInt32A(i, cnt, 'a1')
-			cnt, i = getUInt32(node.data, i)
-			i = node.ReadUInt32A(i, cnt, 'a2')
-			i = node.ReadUInt32A(i, 2, 'a3')
-			i = node.ReadUInt8(i, 'u8_1')
-		else:
-			if(getFileVersion() > 2010):
-				i = node.ReadCrossRef(i, 'ref_1')
-			i = node.ReadUInt32(i, 'u32_0')
-			i = self.skipBlockSize(i)
 		return i
 
 	def Read_8EB19F04(self, node):
@@ -5633,14 +5712,6 @@ class DCReader(EeDataReader):
 		if (getFileVersion() > 2017): i += 1 # skip 01
 		return i
 
-	def Read_90F4820A(self, node):
-		i = self.ReadList2U32(node)
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 3, 'a1')
-		return i
-
 	def ReadHeaderHemShape(self, node, name):
 		i = self.ReadHeadersS32ss(node, 'HemShape' + name)
 		i = node.ReadCrossRef(i, 'length')
@@ -5894,27 +5965,6 @@ class DCReader(EeDataReader):
 		i = node.Read_Header0()
 		return i
 
-	def Read_9BB4281C(self, node):
-		i = self.ReadList2U32(node)
-		i = node.ReadUInt32A(i, 2, 'val_key_1')
-		i = node.ReadUInt32A(i, 2, 'val_key_2')
-		i = node.ReadUInt8(i, 'u8_2')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
-		i = self.ReadU32U32U8List(node, i, 'lst2')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
-		i = node.ReadUInt32A(i, 2, 'val_key_3')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 3, 'a2')
-		cnt, i = getUInt32(node.data, i)
-		i = node.ReadUInt32A(i, cnt, 'a3')
-		cnt, i = getUInt32(node.data, i)
-		i = node.ReadUInt32A(i, cnt, 'a4')
-		cnt, i = getUInt32(node.data, i)
-		i = node.ReadUInt32A(i, cnt, 'a5')
-		i = node.ReadUInt32A(i, 3, 'a5')
-		return i
-
 	def Read_9C38036E(self, node):
 		i = self.ReadContentHeader(node)
 		if (getFileVersion() > 2017): i += 4 # skip FF FF FF FF
@@ -6157,7 +6207,7 @@ class DCReader(EeDataReader):
 		i = node.ReadLen32Text16(i, 'txtD')
 		return i
 
-	def Read_A477243B(self, node, typeName=None):
+	def Read_A477243B(self, node, typeName='FaceBoundProxy'): # Profile to Asm mapping
 		i = self.ReadCntHdr2SChild(node, typeName, 'refWrapper')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -6165,7 +6215,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_FC203F47(self, node):
-		i = self.Read_A477243B(node)
+		i = self.Read_A477243B(node, 'FaceBoundOuterProxy')
 		return i
 
 	def Read_A5410F0A(self, node):
@@ -6939,19 +6989,6 @@ class DCReader(EeDataReader):
 		if (getFileVersion() > 2017): i += 4 # skip FF FF FF FF
 		return i
 
-	def Read_BF32E0A6(self, node):
-		i = self.ReadList2U32(node)
-		i = node.ReadUInt32(i, 'ref_1')
-		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'ref_2')
-		i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadUInt8(i, 'u8_2')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
-		i = self.ReadU32U32U8List(node, i, 'lst2')
-		i = self.skipBlockSize(i)
-		i = self.ReadU32U32List(node, i, 'lst3')
-		return i
-
 	def Read_BF3B5C84(self, node): # ThreePointAngleDimConstraint {C173A07D-012F-11D5-8DEA-0010B541CAA8}:
 		i = self.ReadHeaderConstraint2D(node, 'Dimension_Angle3Point2D')
 		i = node.ReadUInt32(i, 'u32_0')
@@ -7610,32 +7647,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'offsetSide')
 		i = node.ReadCrossRef(i, 'rolledDir')
 		i = node.ReadCrossRef(i, 'solid')
-		return i
-
-	def Read_D61732C1(self, node):
-		i = self.ReadHeadersS32ss(node)
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'u32_1')
-		i = self.skipBlockSize(i)
-		if (getFileVersion()> 2011):
-			i = node.ReadCrossRef(i, 'sketch')
-		else:
-			node.content += ' refSketch=None'
-		i = node.ReadCrossRef(i, 'refPatch1')
-		i = node.ReadCrossRef(i, 'refPatch2')
-		i = node.ReadCrossRef(i, 'parameter1')
-		i = node.ReadCrossRef(i, 'body')
-		i = node.ReadCrossRef(i, 'parameter2')
-		i = node.ReadCrossRef(i, 'ref_7')
-		i = node.ReadCrossRef(i, 'parameter3')
-		i = node.ReadCrossRef(i, 'fx')
-		i = node.ReadCrossRef(i, 'parameter4')
-		i = node.ReadCrossRef(i, 'parameter5')
-		i = node.ReadCrossRef(i, 'parameter6')
 		return i
 
 	def Read_D70E9DDA(self, node):
@@ -8511,20 +8522,6 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
-	def Read_F4360D18(self, node):
-		i = self.ReadList2U32(node)
-		i = node.ReadUInt32A(i, 2, 'val_key_1')
-		i = node.ReadUInt32A(i, 2, 'val_key_2')
-		i = node.ReadUInt8(i, 'u8_2')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
-		i = self.ReadU32U32U8List(node, i, 'lst2')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
-		i = node.ReadUInt32A(i, 2, 'val_key_3')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 3, 'a3')
-		return i
-
 	def Read_F4B6001D(self, node):
 		i = node.Read_Header0()
 		i = node.ReadCrossRef(i, 'ref_1')
@@ -8756,29 +8753,16 @@ class DCReader(EeDataReader):
 			addEmptyLists(node, [1, 2])
 		return i
 
-	def Read_F9884C43(self, node): # Profile
-		i = self.ReadHeadersS32ss(node, 'Profile')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
-		i = node.ReadUInt32A(i, 2, 'a1')
-		i = self.skipBlockSize(i)
-		if (getFileVersion() > 2011):
-			i = node.ReadCrossRef(i, 'sketch')
-		i = node.ReadCrossRef(i, 'fx')
-		return i
-
 	def Read_F9DB9290(self, node):
 		i = self.ReadContentHeader(node)
 		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2017): i += 4 # skip FF FF FF FF
 		if (getFileVersion() > 2018): i += 8 # skip 00 00 00 00 00 00 00 00
-		i = node.ReadCrossRef(i, 'ref1')
-		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadCrossRef(i, 'plane1')
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadCrossRef(i, 'plane2')
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadCrossRef(i, 'entity')
 		i = node.ReadUInt32(i, 'u32_3')
 		i = node.ReadCrossRef(i, 'point')
 		return i
@@ -8897,8 +8881,8 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, 9, 'a1')
 		return i
 
-	def Read_FEB0D977(self, node):
-		i = self.ReadHeadersS32ss(node)
+	def Read_FEB0D977(self, node): # Representation3DPoint
+		i = self.ReadHeadersS32ss(node, 'Representation3DPoint')
 		i = node.ReadCrossRef(i, 'point2D')
 		i = node.ReadCrossRef(i, 'transformation')
 		i = node.ReadCrossRef(i, 'point3D')

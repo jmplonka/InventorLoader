@@ -77,7 +77,7 @@ class EeSceneReader(StyleReader):
 
 	def ReadHeaderSurface(self, node, typeName  =None):
 		if (typeName is None):
-			typeName = 'Edge_%s' %(node.typeName)
+			typeName = 'Surface_%s' %(node.typeName)
 		node.typeName = typeName
 		i = self.skipBlockSize(0, 8)
 		i = node.ReadParentRef(i)

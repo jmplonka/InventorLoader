@@ -1048,8 +1048,8 @@ class FeatureNode(DataNode):
 		elif (p0 == 'FxBoundaryPatch'):
 			p2 = self._getPropertyName(2)
 			if (p2 == 'FxBoundaryPatch'):           return 'Grill'
-			if (p1 == 'FC203F47'):                  return 'Sweep'
-			if (p1 == 'A477243B'):                  return 'Sweep'
+			if (p1 == 'FaceBoundOuterProxy'):       return 'Sweep'
+			if (p1 == 'FaceBoundProxy'):            return 'Sweep'
 			if (p1 == 'Direction'):                 return 'Extrude'
 			if (p1 == 'FxBoundaryPatch'):           return 'Rib'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
@@ -1061,14 +1061,14 @@ class FeatureNode(DataNode):
 			if (p1 == 'FaceCollection'):            return 'FaceDraft'
 		elif (p0 == 'CA02411F'):                    return 'NonParametricBase'
 		elif (p0 == 'EB9E49B0'):                    return 'Freeform'
-		elif (p0 == 'FC203F47'):
+		elif (p0 == 'FaceBoundOuterProxy'):
 			if (p4 == 'EdgeCollectionProxy'):       return 'Hem'
 			return 'Plate'
 		elif (p0 == 'SolidBody'):                   return 'Knit'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'EA680672'):                    return 'Trim'
 		elif (p0 == 'SurfaceBody'):
-			if (p1 == 'A477243B'):                  return 'LoftedFlangeDefinition'
+			if (p1 == 'FaceBoundProxy'):            return 'LoftedFlangeDefinition'
 			if (p1 == 'SurfaceBody'):               return 'Reference'
 		elif (p0 == 'CornerSeam'):                  return 'Corner'
 		elif (p0 == 'AFD8A8E0'):                    return 'Corner'
@@ -1085,7 +1085,7 @@ class FeatureNode(DataNode):
 			if (p1 == '671CE131'):                  return 'RuledSurface'
 			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
 			if (p1 == 'EdgeCollectionProxy'):       return 'Lip'
-			if (p1 == 'FC203F47'):                  return 'ContourRoll'
+			if (p1 == 'FaceBoundOuterProxy'):       return 'ContourRoll'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p10 == 'FilletFullRoundSet'):       return 'Fillet'
 		elif (p0 == 'D70E9DDA'):                    return 'Boss'
