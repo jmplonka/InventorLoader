@@ -2247,9 +2247,9 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'fx')
-		i = node.ReadParentRef(i) 
+		i = node.ReadParentRef(i)
 		i = node.ReadChildRef(i, 'label')
-		# 01 
+		# 01
 		# 00 00
 		return i
 
@@ -2749,7 +2749,7 @@ class DCReader(EeDataReader):
 	def Read_424EB7D7(self, node): # Wire
 		i = self.ReadHeadersS32ss(node, 'Wire')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'loops')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
 		i = node.ReadUInt32(i, 'u32_0')
@@ -4893,7 +4893,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
-	def Read_8677CE83(self, node):
+	def Read_8677CE83(self, node): # CornerSeam
 		i = self.ReadCntHdr2SRef(node, 'CornerSeam')
 		i = node.ReadCrossRef(i, 'gapDim')       # dim-parameter
 		i = node.ReadCrossRef(i, 'reliefSize')   # dim-parameter
@@ -5658,19 +5658,22 @@ class DCReader(EeDataReader):
 			i += 4
 		i = node.ReadCrossRef(i, 'surfaces')
 		return i
-		return i
 
 	def Read_72E8B3EB(self, node):
 		i = self.ReadHeaderHemShape(node, 'Teardrop')
+		return i
 
 	def Read_77C03471(self, node):
 		i = self.ReadHeaderHemShape(node, 'Doubled')
+		return i
 
 	def Read_914B3439(self, node):
 		i = self.ReadHeaderHemShape(node, 'Single')
+		return i
 
 	def Read_FD4843EB(self, node):
 		i = self.ReadHeaderHemShape(node, 'Rolled')
+		return i
 
 	def Read_91637937(self, node):
 		i = self.ReadChildHeader1(node, ref1Name='fx')
@@ -6154,8 +6157,8 @@ class DCReader(EeDataReader):
 		i = node.ReadLen32Text16(i, 'txtD')
 		return i
 
-	def Read_A477243B(self, node):
-		i = self.ReadCntHdr2SChild(node, None, 'refWrapper')
+	def Read_A477243B(self, node, typeName=None):
+		i = self.ReadCntHdr2SChild(node, typeName, 'refWrapper')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)

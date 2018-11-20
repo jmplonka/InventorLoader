@@ -58,7 +58,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt32(i, 'flags')
 		i = node.ReadChildRef(i, 'styles')
 		i = node.ReadChildRef(i, ref1Name)
-		i = node.ReadCrossRef(i, 'ref2')
+		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		node.object3D = True
@@ -395,12 +395,14 @@ class EeSceneReader(StyleReader):
 
 	def Read_B91E695F(self, node): # MultiBodyNode
 		i = node.Read_Header0('MultiBodyNode')
-		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'attrs')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadUInt32A(i, 4, 'a2')
+		i = node.ReadChildRef(i, 'body')
+		i = node.ReadUInt32A(i, 3, 'a2')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32A(i, 5, 'a3')
 		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
@@ -408,6 +410,10 @@ class EeSceneReader(StyleReader):
 		i = node.ReadFloat64_2D(i, 'a4')
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadUInt32(i, 'u32_0')
+		b = node.get('u32_0')
+		if (b == 1):
+			i = node.ReadUInt32(i, 'u32_1')
+			i = node.ReadChildRef(i, 'ref_2')
 		return i
 
 	def Read_0BC8EA6D(self, node): # key reference
