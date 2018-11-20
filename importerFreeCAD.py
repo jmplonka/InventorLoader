@@ -121,9 +121,9 @@ def ignoreBranch(node):
 
 def notSupportedNode(node):
 	if (node.typeName == 'Feature'):
-		logWarning(u"        ... %s '%s' not supported (yet?) - sorry!", node.typeName, node.getSubTypeName())
+		logWarning(u"        ... %s '%s' not supported (yet?) - please use SAT or STEP instead!", node.typeName, node.getSubTypeName())
 	else:
-		logWarning(u"        ... %s not supported (yet?) - sorry!", node.typeName)
+		logWarning(u"        ... %s not supported (yet?) - please use SAT or STEP instead!", node.typeName)
 	node.setSketchEntity(-1, None)
 	return None
 
@@ -2768,7 +2768,6 @@ class FreeCADImporter:
 	def Create_FxFilletRule(self, filletNode):                   return notYetImplemented(filletNode)
 	def Create_FxFreeform(self, freeformNode):                   return notYetImplemented(freeformNode)
 	def Create_FxGrill(self, grillNode):                         return notYetImplemented(grillNode)
-	def Create_FxiFeature(self, iFeatureNode):                   return notSupportedNode(iFeatureNode)
 	def Create_FxLip(self, lipNode):                             return notYetImplemented(lipNode)
 	def Create_FxMidSurface(self, midSurfaceNode):               return notYetImplemented(midSurfaceNode)
 	def Create_FxMove(self, moveNode):                           return notYetImplemented(moveNode)
@@ -2781,7 +2780,6 @@ class FreeCADImporter:
 	def Create_FxSculpt(self, sculptNode):                       return notYetImplemented(sculptNode)
 	def Create_FxShell(self, shellNode):                         return notYetImplemented(shellNode)
 	def Create_FxSnapFit(self, snapFitNode):                     return notYetImplemented(snapFitNode) # Cut Geometry (Wedge - Cube)
-	def Create_FxThread(self, threadNode):                       return notSupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
 	def Create_FxTrim(self, trimNode):                           return notYetImplemented(trimNode)
 	def Create_FxPlate(self, trimNode):                          return notYetImplemented(trimNode)
 
@@ -2803,11 +2801,14 @@ class FreeCADImporter:
 	def Create_FxFold(self, foldNode):                           return notYetImplemented(foldNode)
 	def Create_FxHem(self, hemNode):                             return notYetImplemented(hemNode)
 	def Create_FxKnit(self, knitNode):                           return notYetImplemented(knitNode)
-	def Create_FxPunchTool(self, punchToolNode):                 return notYetImplemented(punchToolNode)
 	def Create_FxRefold(self, refoldNode):                       return notYetImplemented(refoldNode)
 	def Create_FxRip(self, ripNode):                             return notYetImplemented(ripNode)
 	def Create_FxUnfold(self, unfoldNode):                       return notYetImplemented(unfoldNode)
 	def Create_FxLoftedFlangeDefinition(self, fxNode):           return notYetImplemented(fxNode)
+
+	def Create_FxThread(self, threadNode):                       return notSupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
+	def Create_FxPunchTool(self, punchToolNode):                 return notSupportedNode(punchToolNode)
+	def Create_FxiFeature(self, iFeatureNode):                   return notSupportedNode(iFeatureNode)
 
 	def Create_FxUnknown(self, unknownNode):
 		logWarning(u"    Can't process unknown Feature '%s' - probably an unsupported iFeature!", unknownNode.name)

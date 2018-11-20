@@ -2242,6 +2242,17 @@ class DCReader(EeDataReader):
 		i = self.ReadCntHdr2SRef(node)
 		return i
 
+	def Read_327D097B(self, node): # FlatPatternPunchRepresentation
+		i = node.Read_Header0('FlatPatternPunchRepresentation')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'fx')
+		i = node.ReadParentRef(i) 
+		i = node.ReadChildRef(i, 'label')
+		# 01 
+		# 00 00
+		return i
+
 	def Read_3384E515(self, node): # Geometric_Custom3D
 		i = self.ReadHeadersS32ss(node, 'Geometric_Custom3D')
 		i = node.ReadUInt32(i, 'u32_0')
@@ -5436,7 +5447,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'face')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'edgeIdx')
 		return i
 
 	def Read_90874D56(self, node):
@@ -6834,7 +6845,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'edgeIdx')
 		return i
 
 	def Read_B8E19017(self, node): # SplitToolTypeEnum {F7304638-1AF5-4E5D-8704-D9DE52F1A8B4}

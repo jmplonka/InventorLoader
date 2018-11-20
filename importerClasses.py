@@ -1017,12 +1017,14 @@ class FeatureNode(DataNode):
 				p6 = self._getPropertyName(6)
 				if (p2 == 'Line3D'):
 					if (p6 is None):                return 'Revolve'
-					if (p6 == 'ExtentType'):        return 'Extrude' #Map cut feature to extrusion!
+					if (p6 == 'ExtentType'):        return 'Cut'
 					return 'Coil'
 				elif (p2 == 'Direction'):
-					p10 = self._getPropertyName(0x10)
 					if (p6 == 'Parameter'):         return 'Emboss'
+					p10 = self._getPropertyName(0x10)
 					if (p10 == 'ParameterBoolean'): return 'Cut'
+					p21 = self._getPropertyName(0x21)
+					if (p21 == 'ParameterBoolean'): return 'Cut'
 					return 'Extrude'
 				return 'Coil'
 			if (p1 == 'FaceCollection'):            return 'Shell'
