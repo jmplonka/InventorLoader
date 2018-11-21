@@ -75,7 +75,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i, 8)
 		return i
 
-	def ReadHeaderFeature(self, node, name):
+	def ReadHeaderFeature(self, node, name): # if changing the name => change importerFreeCAD.Create_Fx... accordingly!
 		i = self.ReadHeadersS32ss(node, 'Feature')
 		node.set('Feature', name)
 		return i
@@ -1053,8 +1053,8 @@ class DCReader(EeDataReader):
 		i = self.ReadContentHeader(node, 'ModelGeneralNote')
 		return i
 
-	def Read_0E6870AE(self, node): # SolidBody
-		i = self.ReadCntHdr3S(node, 'SolidBody')
+	def Read_0E6870AE(self, node): # ObjectCollection
+		i = self.ReadCntHdr3S(node, 'ObjectCollection')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'bodies')
 		return i
 
@@ -1643,7 +1643,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_22947391(self, node): # BoundaryPatchFeature {16B36EBE-2DFA-4474-B11B-DF3D57C109B0}
-		i = self.ReadCntHdr3S(node, 'FxBoundaryPatch')
+		i = self.ReadCntHdr3S(node, 'BoundaryPatch')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
@@ -2252,7 +2252,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_3170E5B0(self, node): # FaceDraftFeature {EA1D0D38-93AD-48BB-84AC-7707FAC29BAF}
-		i = self.ReadHeadersss2S16s(node, 'FxFaceDraft')
+		i = self.ReadHeadersss2S16s(node, 'FaceDraft')
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
@@ -4847,7 +4847,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'images')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadCrossRef(i, 'sketch')
@@ -6730,7 +6730,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_B59F6734(self, node):
-		i = self.ReadChildHeader1(node)
+		i = self.ReadChildHeader1(node, ref2Name = 'label')
 		i = node.ReadUInt16A(i, 5, 'a0')
 		return i
 
@@ -7865,14 +7865,16 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_DC93DB08(self, node):
-		# TODO: constraint together with Geometric_TextBox2D and 8FEC335F <-> Hairdryer: Sketch47, Sketch48, Speedometer: Sketch3, Sketch10
-		i = self.ReadCntHdr2SRef(node, 'Image2D', 'sketch')
-		i = node.ReadFloat64A(i, 4, 'a0')
+		i = self.ReadCntHdr2SRef(node, 'Image2D', 'sketch') # The image is def
+		i = node.ReadFloat64(i, 'width')
+		i = node.ReadFloat64(i, 'height')
+		i = node.ReadFloat64(i, 'x')
+		i = node.ReadFloat64(i, 'y')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.ReadTransformation(node, i)
 		i = node.ReadUInt16A(i, 3, 'a1')
-		i = node.ReadFloat64(i, 'f64_0')
-		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadFloat64(i, 'scale')
+		i = node.ReadUInt8(i, 'refIndex') # UFRxDoc.fRefs[refIndex]
 		return i
 
 	def Read_DD64FF02(self, node):
@@ -7988,9 +7990,9 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderEnum(node, 'LoftType', ['Rails', 'Centerline', 'AreaLoft', 'RegularLoft'])
 		return i
 
-	def Read_E0EA12F2(self, node):
-		i = self.ReadCntHdr3S(node)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+	def Read_E0EA12F2(self, node): # ImageCollection
+		i = self.ReadCntHdr3S(node, 'ImageCollection')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'images')
 		return i
 
 	def Read_E1108C00(self, node): # ConcentricConstraint {8006A078-ECC4-11D4-8DE9-0010B541CAA8}:

@@ -50,6 +50,7 @@ UUID_NAMES = {
 	'af48560f11d48dc71000d58dc04a0ab5': 'PMxColorStylePrimAttr',
 	'7dfc244811d461a01000c895bba647b5': 'PMxCompositeFeatureOutline',
 	'b251bfc011d24761a0001580d694c7c9': 'PMxEntryManager',
+	'c0014c894bd6a537fa9444be54ebc63d': 'PMxImage2D',
 	'022ac1b511d20d356000f99ac5361ab0': 'PMxPartDrawAttr',
 	'ca7163a311d0d3b20008bfbb21eddc09': 'PMxPartNode',
 	'5e382456497725cff44fdeafccace65e': 'PMxPartRepresentation',
@@ -70,6 +71,7 @@ UUID_NAMES = {
 	'90874d5911d0d1f80008cabc0663dc09': 'RDxComponent',
 	'81afc10f11d514051000569772d147b5': 'RDxCompositeInterfaceDef',
 	'778752c64a5426253aab58b51014c910': 'RDxCurveToSurfaceProjection',
+	'7f936baa4aef3859f4b80e8c548a4a11': 'RDxDecalFeature',
 	'27ecb60f11d430c3c0001985e89c6b4f': 'RDxDerivedAssembly',
 	'cd7c1c534dd0d3096a46e89e3ba9d923': 'RDxDerivedOccDataCollector',
 	'bfb5eb9311d443e8c0001c85e89c6b4f': 'RDxDerivedOccFeature',
@@ -142,6 +144,7 @@ UUID_NAMES = {
 	'14533d8211d1087100085ba406e5dc09': 'UCxWorkplaneNode',
 	'2c7020f811d1b3c06000b1b801f31bb0': 'UCxWorkpointNode',
 	'd31891c248bf14c3aa42ea872a846b2a': 'UFRxRef',
+
 }
 
 TRANSLATIONS = {

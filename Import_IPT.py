@@ -9,7 +9,7 @@ __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-import os, FreeCAD, FreeCADGui, importerBRep, importerSAT, io #, importerUFRxDoc
+import os, FreeCAD, FreeCADGui, importerBRep, importerSAT, io, importerUFRxDoc
 from olefile           import OleFileIO
 from importerUtils     import *
 from importerReader    import *
@@ -157,8 +157,8 @@ def read(doc, filename, readProperties):
 
 	for fname in elements:
 		if (fname[-1] == 'UFRxDoc'):
-#			stream = ole.openstream(fname).read()
-#			getModel().UFRxDoc = importerUFRxDoc.read(stream)
+			stream = ole.openstream(fname).read()
+			getModel().UFRxDoc = importerUFRxDoc.read(stream)
 			handled[PrintableName(fname)] = True
 			break
 

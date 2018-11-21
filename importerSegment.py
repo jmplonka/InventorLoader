@@ -116,7 +116,7 @@ BRANCH_NODES = {
 	'Dimension_Angle2Line2D':          DimensionAngleNode,
 	'Dimension_Angle3Point2D':         DimensionAngleNode,
 	'SurfaceBodies':                   SurfaceBodiesNode,
-	'SolidBody':                       SurfaceBodiesNode,
+	'ObjectCollection':                SurfaceBodiesNode,
 	'Direction':                       DirectionNode,
 	'A244457B':                        DirectionNode,
 	'BendEdge':                        BendEdgeNode,

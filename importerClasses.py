@@ -1003,7 +1003,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'FxExtend'):                  return 'Extend'
 			if (p1 is None):                        return 'CornerChamfer'
 		elif (p0 == 'SurfaceBodies'):
-			if (p1 == 'SolidBody'):                 return 'Combine'
+			if (p1 == 'ObjectCollection'):          return 'Combine'
 			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'
 			if (p1 == 'SurfaceBodies'):             return 'CoreCavity'
 			if (p1 == 'Face'):
@@ -1013,7 +1013,7 @@ class FeatureNode(DataNode):
 		elif (p0 == 'Enum'):
 			p2 = self._getPropertyName(2)
 			p3 = self._getPropertyName(3)
-			if (p1 == 'FxBoundaryPatch'):
+			if (p1 == 'BoundaryPatch'):
 				p6 = self._getPropertyName(6)
 				if (p2 == 'Line3D'):
 					if (p6 is None):                return 'Revolve'
@@ -1045,15 +1045,17 @@ class FeatureNode(DataNode):
 				p3 = self._getPropertyName(3)
 				if (p3 == 'SurfaceBodies'):         return 'FaceDelete'
 				if (p3 == 'Parameter'):             return 'Thread'
-		elif (p0 == 'FxBoundaryPatch'):
+		elif (p0 == 'BoundaryPatch'):
 			p2 = self._getPropertyName(2)
-			if (p2 == 'FxBoundaryPatch'):           return 'Grill'
+			if (p2 == 'BoundaryPatch'):             return 'Grill'
 			if (p1 == 'FaceBoundOuterProxy'):       return 'Sweep'
 			if (p1 == 'FaceBoundProxy'):            return 'Sweep'
 			if (p1 == 'Direction'):                 return 'Extrude'
-			if (p1 == 'FxBoundaryPatch'):           return 'Rib'
+			if (p1 == 'BoundaryPatch'):             return 'Rib'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
-			if (p1 == 'Parameter'):                 return 'Rest'
+			if (p1 == 'Parameter'):
+				if (p2 == 'ShellDirection'):        return 'Rest'
+				return 'BendPart'
 			p4 = self._getPropertyName(4)
 			if (p4 == 'SurfaceBody'):               return 'BoundaryPatch'
 		elif (p0 == 'Direction'):
@@ -1064,7 +1066,7 @@ class FeatureNode(DataNode):
 		elif (p0 == 'FaceBoundOuterProxy'):
 			if (p4 == 'EdgeCollectionProxy'):       return 'Hem'
 			return 'Plate'
-		elif (p0 == 'SolidBody'):                   return 'Knit'
+		elif (p0 == 'ObjectCollection'):            return 'Knit'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'EA680672'):                    return 'Trim'
 		elif (p0 == 'SurfaceBody'):

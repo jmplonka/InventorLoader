@@ -536,7 +536,7 @@ class FreeCADImporter:
 		return
 
 	def getBodyNode(self, ref):
-		if (ref.typeName == 'SolidBody'):
+		if (ref.typeName == 'ObjectCollection'):
 			bodies = ref.get('bodies')
 			try:
 				body = bodies[0]
@@ -966,6 +966,15 @@ class FreeCADImporter:
 		else:
 			logError(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
+
+	def getBasesEdgesFromProxy(self, proxy):
+		allBases = []
+		allEdges = []
+		if (proxy is not None):
+			bases, edges = self.getBasesAndEdges(proxy.get('edges'))				
+			allEdges += edges
+			allBases += bases
+		return allBases, allEdges
 
 	def collectSections(self, fxNode, action): #
 		participants = fxNode.getParticipants()
@@ -1915,7 +1924,7 @@ class FreeCADImporter:
 		# = getPropertyValue(properties, 0x14, 'value')# ParameterBoolean=False
 		# = getProperty(properties, 0x15)#               CEFD3973_Enum=0
 		# = getPropertyValue(properties, 0x16, 'value')# ParameterBoolean=True
-		# = getProperty(properties, 0x17)#               FxBoundaryPatch
+		# = getProperty(properties, 0x17)#               BoundaryPatch
 		solid      = getProperty(properties, 0x1A)
 		dimLength2 = getProperty(properties, 0x1B)               # The length of the extrusion in direction 2
 
@@ -1995,7 +2004,7 @@ class FreeCADImporter:
 			properties = revolveNode.get('properties')
 			pathName   = participants[0].name
 			operation  = getProperty(properties, 0x00) # PartFeatureOperation
-			profile1   = getProperty(properties, 0x01) # FxBoundaryPatch
+			profile1   = getProperty(properties, 0x01) # BoundaryPatch
 			lineAxis   = getProperty(properties, 0x02) # Line3D
 			extend1    = getProperty(properties, 0x03) # ExtentType
 			angle1     = getProperty(properties, 0x04) # Parameter
@@ -2004,7 +2013,7 @@ class FreeCADImporter:
 			#= getProperty(properties, 0x07) # FeatureDimensions
 			#= getProperty(properties, 0x09) # CEFD3973_Enum
 			#= getProperty(properties, 0x0A) # ParameterBoolean
-			#= getProperty(properties, 0x0B) # FxBoundaryPatch
+			#= getProperty(properties, 0x0B) # BoundaryPatch
 			#= getProperty(properties, 0x0C) # ParameterBoolean
 			#= getProperty(properties, 0x0D) # ???
 			#= getProperty(properties, 0x0E) # ???
@@ -2449,14 +2458,18 @@ class FreeCADImporter:
 		#= getProperty(properties, 0x0D) # A96B5992
 		#= getProperty(properties, 0x0E) # 90B64134
 		edgeProxies    = getProperty(properties, 0x0F) # EdgeCollectionProxy
-		boundary1 = self.createBoundary(proxy1, surface is None)
-		boundary2 = self.createBoundary(proxy2, surface is None)
+
+		boundary1    = self.createBoundary(proxy1, surface is None)
+		boundary2    = self.createBoundary(proxy2, surface is None)
+		bases, edges = self.getBasesEdgesFromProxy(edgeProxies)
+
 		sections         = [boundary1, boundary2]
 		loftGeo          = self.createEntity(defNode, 'Part::Loft')
 		loftGeo.Sections = sections
 		loftGeo.Ruled    = True  #isTrue(ruled)
 		loftGeo.Closed   = False #isTrue(closed)
 		loftGeo.Solid    = False #
+
 		self.hide(sections)
 		setDefaultViewObjectValues(loftGeo)
 		self.addSurfaceBody(defNode, loftGeo, surface)
@@ -2568,7 +2581,7 @@ class FreeCADImporter:
 	def Create_FxCoil(self, coilNode):
 		properties  = coilNode.get('properties')
 		operation   = getProperty(properties, 0x00) # PartFeatureOperation=Join
-		profile     = getProperty(properties, 0x01) # FxBoundaryPatch
+		profile     = getProperty(properties, 0x01) # BoundaryPatch
 		axis        = getProperty(properties, 0x02) # Line3D - (-1.49785,-1.08544,1.11022e-16) - (-1.49785,-0.085438,1.11022e-16)
 		negative    = getProperty(properties, 0x03) # ParameterBoolean 'AxisDirectionReversed'
 		rotate      = getProperty(properties, 0x04) # RotateClockwise clockwise=0
@@ -2757,71 +2770,423 @@ class FreeCADImporter:
 		angle = getProperty(properties, 0x0D) # angle
 
 	def Create_FxExtend(self, extendNode):
-		properties = extendNode.get('properties')
-		edges  = getProperty(properties, 0x00) # EdgeCollectionProxy
+		properties  = extendNode.get('properties')
+		edgeProxies = getProperty(properties, 0x00) # EdgeCollectionProxy
 		# = getProperty(properties, 0x01) # FxExtend
-		fxType = getProperty(properties, 0x02) # ExtentType=To
-		dist   = getProperty(properties, 0x03) # Parameter 'd2'=1.75mm
-		face   = getProperty(properties, 0x04) # Face <=> extendType == to
+		fxType      = getProperty(properties, 0x02) # ExtentType=To
+		dist        = getProperty(properties, 0x03) # Parameter 'd2'=1.75mm
+		face        = getProperty(properties, 0x04) # Face <=> extendType == to
 		# = getProperty(properties, 0x06) # bool
-		surf   = getProperty(properties, 0x07) # SurfaceBody 'Fläche2'
+		surf        = getProperty(properties, 0x07) # SurfaceBody 'Fläche2'
+
+		bases, edges = self.getBasesEdgesFromProxy(edgeProxies)
+
 		return notYetImplemented(extendNode)
 
-	def Create_FxBoss(self, bossNode):                           return notYetImplemented(bossNode) # MultiFuse Geometry
-	def Create_FxBoundaryPatch(self, boundaryPatchNode):         return notYetImplemented(boundaryPatchNode) # Sketches, Edges
-	def Create_FxCoreCavity(self, coreCavityNode):               return notYetImplemented(coreCavityNode)
-	def Create_FxCut(self, cutNode):                             return notYetImplemented(cutNode)
-	def Create_FxDecal(self, decalNode):                         return notYetImplemented(decalNode)
-	def Create_FxDirectEdit(self, directEditNode):               return notYetImplemented(directEditNode)
-	def Create_FxEmboss(self, embossNode):                       return notYetImplemented(embossNode)
-	def Create_FxFaceDelete(self, faceNode):                     return notYetImplemented(faceNode)
-	def Create_FxFaceDraft(self, faceNode):                      return notYetImplemented(faceNode)
-	def Create_FxFaceMove(self, faceNode):                       return notYetImplemented(faceNode)
-	def Create_FxFaceOffset(self, faceNode):                     return notYetImplemented(faceNode)
-	def Create_FxFaceReplace(self, faceNode):                    return notYetImplemented(faceNode)
-	def Create_FxFilletRule(self, filletNode):                   return notYetImplemented(filletNode)
-	def Create_FxFreeform(self, freeformNode):                   return notYetImplemented(freeformNode)
-	def Create_FxGrill(self, grillNode):                         return notYetImplemented(grillNode)
-	def Create_FxLip(self, lipNode):                             return notYetImplemented(lipNode)
-	def Create_FxMidSurface(self, midSurfaceNode):               return notYetImplemented(midSurfaceNode)
-	def Create_FxMove(self, moveNode):                           return notYetImplemented(moveNode)
-	def Create_FxNonParametricBase(self, nonParametricBaseNode): return notYetImplemented(nonParametricBaseNode)
-	def Create_FxPatternSketchDriven(self, patternNode):         return notYetImplemented(patternNode)
-	def Create_FxPresentationMesh(self, presentationMeshNode):   return notYetImplemented(presentationMeshNode)
-	def Create_FxReference(self, referenceNode):                 return notYetImplemented(referenceNode)
-	def Create_FxRest(self, restNode):                           return notYetImplemented(restNode)
-	def Create_FxRib(self, ribNode):                             return notYetImplemented(ribNode)
-	def Create_FxSculpt(self, sculptNode):                       return notYetImplemented(sculptNode)
-	def Create_FxShell(self, shellNode):                         return notYetImplemented(shellNode)
-	def Create_FxSnapFit(self, snapFitNode):                     return notYetImplemented(snapFitNode) # Cut Geometry (Wedge - Cube)
-	def Create_FxTrim(self, trimNode):                           return notYetImplemented(trimNode)
-	def Create_FxPlate(self, trimNode):                          return notYetImplemented(trimNode)
+	def Create_FxBoss(self, bossNode):
+		properties   = bossNode.get('properties')
+		definition   = getProperty(properties, 0)  # D70E9DDA -> definition values
+		edgesProxies = getProperty(properties, 2)  # EdgeCollectionProxy
+#		??? = getProperty(properties, 3)  # Boolean
+#		??? = getProperty(properties, 4)  # Boolean
+#		??? = getProperty(properties, 5)  # Boolean
+#		??? = getProperty(properties, 6)  # Boolean
+#		??? = getProperty(properties, 7)  # Boolean
+#		??? = getProperty(properties, 8)  # Boolean
+		body         = getProperty(properties, 9)  # SolidBody 'None'
+		fxDim        = getProperty(properties, 10) # FeatureDimensions
+		value        = getProperty(properties, 11) # Parameter 'RDxVar14'=1
+
+		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+			
+		return notYetImplemented(bossNode) # MultiFuse Geometry
+
+	def Create_FxBoundaryPatch(self, boundaryPatchNode):
+		properties = boundaryPatchNode.get('properties')
+		profile    = getProperty(properties, 0) # BoundaryPatch
+		bound      = getProperty(properties, 1) # 8B2B8D96
+		value      = getProperty(properties, 3) # Parameter
+		surface    = getProperty(properties, 4) # SurfaceBody 'Fläche4'
+
+		if (profile is None):
+			pass
+		else:
+			boundary   = self.createBoundary(profile, False)
+
+		return notYetImplemented(boundaryPatchNode) # Sketches, Edges
+
+	def Create_FxCoreCavity(self, coreCavityNode):
+		properties = coreCavityNode.get('properties')
+#		getProperty(properties, 0) # SurfaceBodies 'None'
+#		getProperty(properties, 1) # SurfaceBodies 'None'
+#		getProperty(properties, 2) # SolidBody 'Srf29','Srf34'
+#		getProperty(properties, 3) # SolidBody 'Srf1','Srf2','Srf3','Srf4','Srf5','Srf6','Srf7','Srf8','Srf9','Srf10','Srf11','Srf24','Srf25','Srf26','Srf27'
+		dir   =	getProperty(properties, 5) # Direction - (0,0,1)
+		value = getProperty(properties, 6) # Parameter 'RDxVar5'=0.001
+#		getProperty(properties, 7) # SolidBody 'Solid3','Solid4'
+		return notYetImplemented(coreCavityNode)
+
+	def Create_FxDecal(self, decalNode):
+		properties = decalNode.get('properties')
+		
+		images = getProperty(properties, 0) # ImageCollection
+		face   = getProperty(properties, 1) # Face
+#		       = getProperty(properties, 2) # Boolean
+		solids = getProperty(properties, 3) # SurfaceBodies 'Solid1'
+#		       = getProperty(properties, 4) # 7C6D7B13 (opt.)
+
+#		images = decalNode.get('images') # same as properties[0]!
+		sketch   = decalNode.get('sketch')
+
+		return notYetImplemented(decalNode)
+
+	def Create_FxDirectEdit(self, directEditNode):
+		properties = directEditNode.get('properties')
+		fx = getProperty(properties, 0) # FxFaceMove 'None'
+		entity = self.getEntity(fx) # ensure that the feature is already created!
+		return notYetImplemented(directEditNode)
+
+	def Create_FxEmboss(self, embossNode):
+		properties = embossNode.get('properties')
+		operation  = getProperty(properties, 0)  # PartFeatureOperation='Cut'
+		boundary   = getProperty(properties, 1)  # BoundaryPatch
+		dir        = getProperty(properties, 2)  # Direction - (-0.0238873,-6.12323e-17,0.999715)
+#		getProperty(properties, 3)  # Boolean
+#		getProperty(properties, 4)  # Boolean
+		depth      = getProperty(properties, 5)  # Parameter 'd474'=0.25mm
+		taperAngle = getProperty(properties, 6)  # Parameter 'd475'=0°
+#		getProperty(properties, 7)  # Boolean
+#		getProperty(properties, 8)  # Boolean
+		faces      = getProperty(properties, 9)  # FaceCollection
+		bodies     = getProperty(properties, 10) # SurfaceBodies 'Solid1'
+		fxDim      = getProperty(properties, 11) # FeatureDimensions
+#		getProperty(properties, 12) # Boolean
+		text       = getProperty(properties, 13) # RtfContent 'Default'
+
+		base     = self.createBoundary(boundary, solid is not None)
+
+		return notYetImplemented(embossNode)
+
+	def Create_FxFaceDelete(self, faceNode):
+		properties = faceNode.get('properties')
+		faces = getProperty(properties, 0) # FaceCollection
+#		getProperty(properties, 1) # ParameterBoolean=False
+#		getProperty(properties, 2) # ParameterBoolean=False
+		body = getProperty(properties, 3) # SurfaceBodies 'Solid1'
+		return notYetImplemented(faceNode)
+
+	def Create_FxFaceDraft(self, faceNode):
+		properties   = faceNode.get('properties')
+		dir          = getProperty(properties,  0) #  Direction - (-2.96059e-16,1,0)
+		faces        = getProperty(properties,  1) #  FaceCollection
+		edgesProxies = getProperty(properties,  2) #  EdgeCollectionProxy
+		angle        = getProperty(properties,  3) #  Parameter (opt.)
+		bodies       = getProperty(properties,  4) #  SurfaceBodies 'Solid1'
+		fxDim        = getProperty(properties,  5) #  FeatureDimensions
+		draft        = getProperty(properties,  6) #  FaceDraft
+#		getProperty(properties,  7) #  Boolean
+#		getProperty(properties,  9) #  0B85010C
+#		getProperty(properties, 14) #  Boolean
+		splitType    = getProperty(properties, 15) #  SplitToolType='Path'
+#		getProperty(properties, 16) #  1A1C8265
+#		getProperty(properties, 17) #  Boolean
+#		getProperty(properties, 18) #  Boolean
+#		getProperty(properties, 20) #  Boolean
+		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+		return notYetImplemented(faceNode)
+
+	def Create_FxFaceMove(self, faceNode):
+		properties = faceNode.get('properties')
+		faces      = getProperty(properties, 0) # FaceCollection
+		moveType   = getProperty(properties, 1) # FaceMoveType
+		direction  = getProperty(properties, 2) # Direction
+		distandce  = getProperty(properties, 3) # Parameter
+#		getProperty(properties, 4) # ParameterBoolean=False
+		bodies     = getProperty(properties, 8) # SurfaceBodies
+		fxDim      = getProperty(properties, 9) # FeatureDimensions
+#		getProperty(properties,11) # ParameterBoolean=False
+		matrix     = getProperty(properties,12) # Transformation
+
+		return notYetImplemented(faceNode)
+
+	def Create_FxFaceReplace(self, faceNode):
+		properties = faceNode.get('properties')
+		oldFaces   = getProperty(properties, 0) # FaceCollection
+		newFaces   = getProperty(properties, 1) # FaceCollection
+		bodies     = getProperty(properties, 2) # SurfaceBodies
+#		getProperty(properties, 4) # Boolean
+		return notYetImplemented(faceNode)
+
+	def Create_FxFilletRule(self, filletNode):
+		properties = filletNode.get('properties')
+#		getProperty(properties, 0)  # Boolean
+#		getProperty(properties, 1)  # Direction - (0,1,0)
+#		getProperty(properties, 2)  # Boolean
+#		getProperty(properties, 3)  # Direction - (1,0,0)
+#		getProperty(properties, 4)  # Boolean
+#		getProperty(properties, 5)  # Parameter =0.3mm
+#		getProperty(properties, 6)  # 4668C201_Enum
+#		getProperty(properties, 7)  # Parameter =8mm
+#		getProperty(properties, 8)  # Parameter =1.5mm
+#		getProperty(properties, 9)  # Parameter =0.5mm
+#		getProperty(properties, 10) # Parameter =7mm
+#		getProperty(properties, 11) # Parameter =1.5mm
+#		getProperty(properties, 12) # Parameter =3mm
+#		getProperty(properties, 13) # Parameter =2.5°
+#		getProperty(properties, 14) # Parameter =2.5°
+#		getProperty(properties, 15) # Parameter =2.5°
+#		getProperty(properties, 16) # Parameter =2.5°
+#		getProperty(properties, 17) # Parameter =90°
+#		getProperty(properties, 18) # Boolean
+#		getProperty(properties, 19) # CA70D2C6_Enum=1
+#		getProperty(properties, 20) # Parameter =8mm
+#		getProperty(properties, 21) # Parameter =3mm
+#		getProperty(properties, 22) # Parameter =9.5mm
+#		getProperty(properties, 23) # Parameter =2°
+#		getProperty(properties, 24) # Parameter =1°
+#		getProperty(properties, 25) # Boolean
+#		getProperty(properties, 26) # Parameter =2
+#		getProperty(properties, 27) # Parameter =2mm
+#		getProperty(properties, 28) # Parameter =2mm
+#		getProperty(properties, 29) # Parameter =10mm
+#		getProperty(properties, 30) # Parameter =0mm
+#		getProperty(properties, 31) # Parameter =10°
+#		getProperty(properties, 32) # Parameter =2.5°
+#		getProperty(properties, 33) # Parameter =0mm
+#		getProperty(properties, 34) # Parameter =0mm
+#		getProperty(properties, 35) # Parameter =0°
+#		getProperty(properties, 36) # 0A077221_Enum=1
+#		getProperty(properties, 37) # 0CAC6298
+#		getProperty(properties, 38) # Transformation
+#		getProperty(properties, 39) # Direction - (0,1,0)
+#		getProperty(properties, 40) # 4DC465DF
+#		getProperty(properties, 41) # SurfaceBodies 
+#		getProperty(properties, 42) # Parameter =0mm
+#		getProperty(properties, 43) # Parameter =360°
+#		getProperty(properties, 44) # Direction - (1,0,0)
+		return notYetImplemented(filletNode)
+
+	def Create_FxFreeform(self, freeformNode):
+		properties = freeformNode.get('properties')
+#		getProperty(properties, 0) # EB9E49B0
+#		getProperty(properties, 1) # EB9E49B0
+#		getProperty(properties, 2) # Boolean
+		return notYetImplemented(freeformNode)
+
+	def Create_FxGrill(self, grillNode):
+		properties = grillNode.get('properties')
+		boundary0  = getProperty(properties, 0)  # FxBoundaryPatch
+		boundary1  = getProperty(properties, 1)  # FxBoundaryPatch
+		boundary2  = getProperty(properties, 2)  # FxBoundaryPatch
+		boundary3  = getProperty(properties, 3)  # FxBoundaryPatch
+		boundary4  = getProperty(properties, 4)  # FxBoundaryPatch
+		boundary5  = getProperty(properties, 5)  # FxBoundaryPatch
+#		getProperty(properties, 6)  # Parameter 'd136'=2mm
+#		getProperty(properties, 7)  # Parameter 'd137'=0mm
+#		getProperty(properties, 8)  # Parameter 'd138'=0mm
+#		getProperty(properties, 9)  # Parameter 'd145'=0mm
+#		getProperty(properties, 10) # Parameter 'd140'=0.2mm
+#		getProperty(properties, 11) # Parameter 'd139'=1.3mm
+#		getProperty(properties, 12) # Parameter 'd141'=2.5mm
+#		getProperty(properties, 13) # Parameter 'd142'=0.5mm
+#		getProperty(properties, 14) # Parameter 'd143'=0mm
+#		getProperty(properties, 15) # Parameter 'd144'=5mm
+		draftAngle = getProperty(properties, 16) # Parameter 'd146'=0°
+#		getProperty(properties, 17) # Boolean
+#		getProperty(properties, 18) # Parameter 'd147'=0mm
+		bodies     = getProperty(properties, 19) # SurfaceBodies 'None'
+#		getProperty(properties, 20) # Parameter 'd148'=11.9994mm^2
+
+		boundary = self.createBoundary(boundary0, bodies is not None)
+		island   = self.createBoundary(boundary1, bodies is not None)
+		ribs     = self.createBoundary(boundary2, bodies is not None)
+		spares   = self.createBoundary(boundary3, bodies is not None)
+		base4    = self.createBoundary(boundary4, bodies is not None)
+		base5    = self.createBoundary(boundary5, bodies is not None)
+
+		return notYetImplemented(grillNode)
+
+	def Create_FxLip(self, lipNode):
+		properties  = lipNode.get('properties')
+		dir         = getProperty(properties, 0)  # Direction - (0,1,0)
+		edgeProxies = getProperty(properties, 1)  # EdgeCollectionProxy
+#		getProperty(properties, 2)  # Boolean
+		faces       = getProperty(properties, 3)  # FaceCollection
+#		getProperty(properties, 4)  # 7414D5CA -> Workplanes ?!?
+		width       = getProperty(properties, 5)  # Parameter 'd424'=6.35mm
+		height      = getProperty(properties, 6)  # Parameter 'd425'=6.35mm
+		outerOffset = getProperty(properties, 7)  # Parameter 'd426'=0mm
+		innerAngle  = getProperty(properties, 8)  # Parameter 'd427'=0°
+		outerAngle  = getProperty(properties, 9)  # Parameter 'd428'=0°
+		grooveDepth = getProperty(properties, 10) # Parameter 'd429'=0mm
+		bottom      = getProperty(properties, 11) # Boolean
+		bodies      = getProperty(properties, 12) # SurfaceBodies 'Solid63'
+
+		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+
+		return notYetImplemented(lipNode)
+
+	def Create_FxMidSurface(self, midSurfaceNode):
+		properties = midSurfaceNode.get('properties')
+		return notYetImplemented(midSurfaceNode)
+
+	def Create_FxMove(self, moveNode):
+		properties = moveNode.get('properties')
+		return notYetImplemented(moveNode)
+
+	def Create_FxNonParametricBase(self, nonParametricBaseNode):
+		properties = nonParametricBaseNode.get('properties')
+		base = getProperty(properties, 0) # Feature, CA02411F
+#		 = getProperty(properties, 1) # CA02411F 'Srf2'
+#		 = getProperty(properties, 2) # ParameterBoolean=False
+		entity = self.getEntity(base)
+
+		return notYetImplemented(nonParametricBaseNode)
+
+	def Create_FxPatternSketchDriven(self, patternNode):
+		properties = patternNode.get('properties')
+		return notYetImplemented(patternNode)
+
+	def Create_FxPresentationMesh(self, presentationMeshNode):
+		properties = presentationMeshNode.get('properties')
+		return notYetImplemented(presentationMeshNode)
+
+	def Create_FxReference(self, referenceNode):
+		properties = referenceNode.get('properties')
+#		getProperty(properties, 0) # SurfaceBody
+#		getProperty(properties, 1) # SurfaceBody 'Srf8'
+#		getProperty(properties, 2) # Boolean (opt.)
+		return notYetImplemented(referenceNode)
+
+	def Create_FxRest(self, restNode):
+		properties = restNode.get('properties')
+		boundary   = getProperty(properties, 0)  # FxBoundaryPatch
+#		getProperty(properties, 1)  # Parameter 'd157'=1.5mm
+		direction  = getProperty(properties, 2)  # ShellDirection='Inside'
+		extentWhat = getProperty(properties, 3)  # ExtentType='All'
+		extentType = getProperty(properties, 4)  # ExtentType='Dimension'
+		width      = getProperty(properties, 5)  # Parameter 'd151'=5mm
+#		getProperty(properties, 6)  # Parameter 'd152'=0mm
+#		getProperty(properties, 7)  # Parameter 'd153'=0mm
+#		getProperty(properties, 8)  # Parameter 'd154'=0mm
+		direction  = getProperty(properties, 11) # Direction - (0,1,0)
+#		getProperty(properties, 12) # Boolean
+#		getProperty(properties, 13) # Boolean
+		innerAngle = getProperty(properties, 14) # Parameter 'd155'=0°
+		outerAngle = getProperty(properties, 15) # Parameter 'd156'=0°
+		bodies     = getProperty(properties, 16) # SurfaceBodies 'None'
+		fxDim      = getProperty(properties, 17) # FeatureDimensions
+
+		base = self.createBoundary(boundary, True)
+
+		return notYetImplemented(restNode)
+
+	def Create_FxRib(self, ribNode):
+		properties = ribNode.get('properties')
+		return notYetImplemented(ribNode)
+
+	def Create_FxSculpt(self, sculptNode):
+		properties = sculptNode.get('properties')
+		return notYetImplemented(sculptNode)
+
+	def Create_FxShell(self, shellNode):
+		properties = shellNode.get('properties')
+		return notYetImplemented(shellNode)
+
+	def Create_FxSnapFit(self, snapFitNode):
+		properties = snapFitNode.get('properties')
+		return notYetImplemented(snapFitNode) # Cut Geometry (Wedge - Cube)
+
+	def Create_FxTrim(self, trimNode):
+		properties = trimNode.get('properties')
+		return notYetImplemented(trimNode)
 
 	# Features requiring Nurbs
-	def Create_FxAliasFreeform(self, aliasFreeformNode):         return notYetImplemented(aliasFreeformNode)
+	def Create_FxAliasFreeform(self, aliasFreeformNode):
+		properties = aliasFreeformNode.get('properties')
+		return notYetImplemented(aliasFreeformNode)
 
 	# Features requiring BOPTools
-	def Create_FxSplit(self, splitNode):                         return notYetImplemented(splitNode)
+	def Create_FxSplit(self, splitNode):
+		properties = splitNode.get('properties')
+		return notYetImplemented(splitNode)
 
 	# Features requiring SheetMetal
-	def Create_FxBend(self, bendNode):                           return notYetImplemented(bendNode)
-	def Create_FxBendCosmetic(self, bendNode):                   return notYetImplemented(bendNode)
-	def Create_FxContourRoll(self, contourRollNode):             return notYetImplemented(contourRollNode)
-	def Create_FxCorner(self, cornerNode):                       return notYetImplemented(cornerNode)
-	def Create_FxCornerChamfer(self, cornerNode):                return notYetImplemented(cornerNode)
-	def Create_FxFace(self, faceNode):                           return notYetImplemented(faceNode)
-	def Create_FxFlange(self, flangeNode):                       return notYetImplemented(flangeNode)
-	def Create_FxFlangeContour(self, flangeNode):                return notYetImplemented(flangeNode)
-	def Create_FxFold(self, foldNode):                           return notYetImplemented(foldNode)
-	def Create_FxHem(self, hemNode):                             return notYetImplemented(hemNode)
-	def Create_FxKnit(self, knitNode):                           return notYetImplemented(knitNode)
-	def Create_FxRefold(self, refoldNode):                       return notYetImplemented(refoldNode)
-	def Create_FxRip(self, ripNode):                             return notYetImplemented(ripNode)
-	def Create_FxUnfold(self, unfoldNode):                       return notYetImplemented(unfoldNode)
-	def Create_FxLoftedFlangeDefinition(self, fxNode):           return notYetImplemented(fxNode)
+	def Create_FxPlate(self, trimNode):
+		properties = trimNode.get('properties')
+		return notYetImplemented(trimNode)
 
+	def Create_FxBend(self, bendNode):
+		properties = bendNode.get('properties')
+		return notYetImplemented(bendNode)
+
+	def Create_FxCut(self, cutNode):
+		properties = cutNode.get('properties')
+		return notYetImplemented(cutNode)
+
+	def Create_FxBendCosmetic(self, bendNode):
+		properties = bendNode.get('properties')
+		return notYetImplemented(bendNode)
+
+	def Create_FxContourRoll(self, contourRollNode):
+		properties = contourRollNode.get('properties')
+		return notYetImplemented(contourRollNode)
+
+	def Create_FxCorner(self, cornerNode):
+		properties = cornerNode.get('properties')
+		return notYetImplemented(cornerNode)
+
+	def Create_FxCornerChamfer(self, cornerNode):
+		properties = cornerNode.get('properties')
+		return notYetImplemented(cornerNode)
+
+	def Create_FxFace(self, faceNode):
+		properties = faceNode.get('properties')
+		return notYetImplemented(faceNode)
+
+	def Create_FxFlange(self, flangeNode):
+		properties = flangeNode.get('properties')
+		return notYetImplemented(flangeNode)
+
+	def Create_FxFlangeContour(self, flangeNode):
+		properties = flangeNode.get('properties')
+		return notYetImplemented(flangeNode)
+
+	def Create_FxFold(self, foldNode):
+		properties = foldNode.get('properties')
+		return notYetImplemented(foldNode)
+
+	def Create_FxHem(self, hemNode):
+		properties = hemNode.get('properties')
+		return notYetImplemented(hemNode)
+
+	def Create_FxKnit(self, knitNode):
+		properties = knitNode.get('properties')
+		return notYetImplemented(knitNode)
+
+	def Create_FxRefold(self, refoldNode):
+		properties = refoldNode.get('properties')
+		return notYetImplemented(refoldNode)
+
+	def Create_FxRip(self, ripNode):
+		properties = ripNode.get('properties')
+		return notYetImplemented(ripNode)
+
+	def Create_FxUnfold(self, unfoldNode):
+		properties = unfoldNode.get('properties')
+		return notYetImplemented(unfoldNode)
+
+	def Create_FxLoftedFlangeDefinition(self, fxNode):
+		properties = fxNode.get('properties')
+		return notYetImplemented(fxNode)
+
+	def Create_FxBendPart(self, fxNode):
+		properties = fxNode.get('properties')
+		return notYetImplemented(fxNode)
+
+	# not supported features as too much work to implement additional readers or workarounds
 	def Create_FxThread(self, threadNode):                       return notSupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
-	def Create_FxPunchTool(self, punchToolNode):                 return notSupportedNode(punchToolNode)
+	def Create_FxPunchTool(self, punchToolNode):                 return notSupportedNode(punchToolNode) # Special iFeature and requires the punch tool file -> additional parser!
 	def Create_FxiFeature(self, iFeatureNode):                   return notSupportedNode(iFeatureNode)
 
 	def Create_FxUnknown(self, unknownNode):
@@ -2874,9 +3239,8 @@ class FreeCADImporter:
 	def addSketch_Spline3D_Fixed(self, splineNode, edges):               return
 	def addSketch_Spiral3D_Curve(self, spiralNode, edges):               return
 
-	def addSketch_Dimension_Length3D(self, dimensionNode, edges):        return notSupportedNode(dimensionNode)
-	def addSketch_Dimension_Angle2Planes3D(self, dimensionNode, edges):  return notSupportedNode(dimensionNode)
-
+	def addSketch_Dimension_Length3D(self, dimensionNode, edges):        return None # notSupportedNode(dimensionNode)
+	def addSketch_Dimension_Angle2Planes3D(self, dimensionNode, edges):  return None # notSupportedNode(dimensionNode)
 	def addSketch_Geometric_Bend3D(self, geometricNode, edges):
 		if (SKIP_CONSTRAINTS & BIT_GEO_BEND == 0): return
 		entities = geometricNode.get('lst0')
@@ -2920,14 +3284,14 @@ class FreeCADImporter:
 		return
 
 	def Create_Line3D(self, lineNode):
-#		#work axis not supported!
+		# work axis not supported!
 #		sketchObj = self.createEntity(lineNode, 'Part::Feature')
 #		logInfo(u"    adding 3D-Line '%s' ...", sketchObj.Label)
 #		edges = {}
 #		self.addSketch_Line3D(lineNode, edges)
 #		sketchObj.Shape = Part.Shape(edges.values())
 #		if (self.root): self.root.addObject(sketchObj)
-		return
+		return ignoreBranch(lineNode)
 
 	def Create_Plane(self, planeNode):                             return ignoreBranch(planeNode)
 	def Create_BodiesFolder(self, folderNode):                     return ignoreBranch(folderNode)
@@ -2965,7 +3329,6 @@ class FreeCADImporter:
 						pass
 		return
 
-
 	def Create_Dimension(self, dimensionNode):             return
 	def Create_Direction(self, directionNode):             return
 	def Create_Label(self, labelNode):                     return
@@ -2977,6 +3340,7 @@ class FreeCADImporter:
 	def Create_3902E4D1(self, node): return
 	def Create_5844C14D(self, node): return
 	def Create_CADC79F0(self, node): return
+	def Create_CA02411F(self, node): return notYetImplemented(node) # list of ASM parts
 	def Create_EBA98FD3(self, node): return
 	def Create_FBC6C635(self, node): return
 	def Create_F3DBA9D8(self, node): return
