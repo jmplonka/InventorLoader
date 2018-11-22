@@ -971,7 +971,7 @@ class FreeCADImporter:
 		allBases = []
 		allEdges = []
 		if (proxy is not None):
-			bases, edges = self.getBasesAndEdges(proxy.get('edges'))				
+			bases, edges = self.getBasesAndEdges(proxy.get('edges'))
 			allEdges += edges
 			allBases += bases
 		return allBases, allEdges
@@ -1080,6 +1080,14 @@ class FreeCADImporter:
 						base = self.getEntity(baseNode)
 						bases.append(base)
 		return bases, edges
+
+	def resolveParticiants(self, fxNode):
+		geos = []
+		for participant in fxNode.getParticipants():
+			fxGeo = self.getEntity(participant)
+			if (fxGeo is not None):
+				geos.append(fxGeo)
+		return geos
 
 ########################
 	def addSketch_Geometric_Fix2D(self, constraintNode, sketchObj):
@@ -2381,20 +2389,18 @@ class FreeCADImporter:
 		return
 
 	def Create_FxClient(self, clientNode):
-		clients = clientNode.getParticipants()
 		# create a subfolder
 		name = clientNode.name
 		if (len(name) == 0):
 			name = node.typeName
+
 		if (INVALID_NAME.match(name)):
 			fx = createGroup(self.doc, '_' + name)
 		else:
 			fx = createGroup(self.doc, name)
 		# add/move all objects to this folder
-		for client in clients:
-			clientGeo = self.getEntity(client)
-			if (clientGeo is not None):
-				fx.addObject(client.sketchEntity)
+		for geo in self.resolveParticiants(clientNode):
+			fx.addObject(geo)
 		return
 
 	def Create_FxLoft(self, loftNode):
@@ -2810,7 +2816,7 @@ class FreeCADImporter:
 
 	def Create_FxDecal(self, decalNode):
 		properties = decalNode.get('properties')
-		
+
 		images = getProperty(properties, 0) # ImageCollection
 		face   = getProperty(properties, 1) # Face
 #		       = getProperty(properties, 2) # Boolean
@@ -3006,9 +3012,9 @@ class FreeCADImporter:
 		value        = getProperty(properties, 11) # Parameter 'RDxVar14'=1
 
 		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
-			
+
 		return notYetImplemented(bossNode) # MultiFuse Geometry
-	
+
 	def Create_FxRib(self, ribNode): # Belongs to FxBoss!
 		properties = ribNode.get('properties')
 #		getProperty(properties, 0)  # FxBoundaryPatch
@@ -3070,7 +3076,7 @@ class FreeCADImporter:
 #		getProperty(properties, 38) # Transformation
 #		getProperty(properties, 39) # Direction - (0,1,0)
 #		getProperty(properties, 40) # 4DC465DF
-#		getProperty(properties, 41) # SurfaceBodies 
+#		getProperty(properties, 41) # SurfaceBodies
 #		getProperty(properties, 42) # Parameter =0mm
 #		getProperty(properties, 43) # Parameter =360°
 #		getProperty(properties, 44) # Direction - (1,0,0)
@@ -3188,26 +3194,75 @@ class FreeCADImporter:
 	# Features requiring SheetMetal
 	def Create_FxPlate(self, trimNode):
 		properties = trimNode.get('properties')
+#		getProperty(properties, 0) # FC203F47
+#		getProperty(properties, 1) # Direction - (0,0,1)
+#		getProperty(properties, 2) # ParameterBoolean=False
+#		getProperty(properties, 3) # Parameter 'Thickness'=1.524mm
+#		getProperty(properties, 4) # PlateDef
+#		getProperty(properties, 5) # EdgeCollectionProxy
+#		getProperty(properties, 6) # SurfaceBody 'Solid1'
+#		getProperty(properties, 7) # EdgeCollectionProxy
+#		getProperty(properties, 8) # FeatureDimensions
 		return notYetImplemented(trimNode)
 
 	def Create_FxBend(self, bendNode):
 		properties = bendNode.get('properties')
+#		getProperty(properties, 0) # EdgeCollectionProxy
+#		getProperty(properties, 1) # Parameter 'd9'=1.524mm
+#		getProperty(properties, 2) # Parameter 'Thickness'=1.524mm
+#		getProperty(properties, 3) # PlateDef, 0455B440
+#		getProperty(properties, 4) # 96058864
+#		getProperty(properties, 5) # SurfaceBody 'Solid1'
+#		getProperty(properties, 6) # FeatureDimensions
+#		getProperty(properties, 7) # BendTransition
+#		getProperty(properties, 8) # 90B64134
 		return notYetImplemented(bendNode)
 
 	def Create_FxCut(self, cutNode):
 		properties = cutNode.get('properties')
+#		getProperty(properties, 0)  # PartFeatureOperation='Cut'
+#		getProperty(properties, 1)  # FxBoundaryPatch
+#		getProperty(properties, 2)  # Direction - (0,1,0)
+#		getProperty(properties, 3)  # ParameterBoolean=True
+#		getProperty(properties, 4)  # Parameter 'd15'=3mm
+#		getProperty(properties, 5)  # Parameter 'd16'=0°
+#		getProperty(properties, 6)  # ExtentType='Dimension'
+#		getProperty(properties, 7)  # ParameterBoolean=False
+#		getProperty(properties, 14) # SurfaceBody 'Solid1'
+#		getProperty(properties, 15) # FeatureDimensions
+#		getProperty(properties, 16) # ParameterBoolean=False
+#		getProperty(properties, 18) # ParameterBoolean=False
+#		getProperty(properties, 26) # ObjectCollection 'Solid1'
+#		getProperty(properties, 31) # ParameterBoolean=False
+#		getProperty(properties, 33) # ParameterBoolean=False
 		return notYetImplemented(cutNode)
-
-	def Create_FxBendCosmetic(self, bendNode):
-		properties = bendNode.get('properties')
-		return notYetImplemented(bendNode)
 
 	def Create_FxContourRoll(self, contourRollNode):
 		properties = contourRollNode.get('properties')
+#		getProperty(properties, 1)  # FC203F47
+#		getProperty(properties, 2)  # Line3D - (19.33,3.434,-22.9) - (18.33,3.434,-22.9)
+#		getProperty(properties, 3)  # Parameter 'd161'=90°
+#		getProperty(properties, 4)  # Parameter 'Thickness'=0.5mm
+#		getProperty(properties, 5)  # FlipOffset='Side1'
+#		getProperty(properties, 6)  # Direction - (-6.84788e-31,5.3904e-15,-1)
+#		getProperty(properties, 7)  # UnrollMethod='CentroidCylinder'
+#		getProperty(properties, 8)  # Parameter 'd162'=37.1616mm
+#		getProperty(properties, 9)  # Parameter 'd163'=23.6578mm
+#		getProperty(properties, 10) # Line3D - (0,0,0) - (1,0,0)
+#		getProperty(properties, 11) # 90B64134
+#		getProperty(properties, 12) # FeatureDimensions
+#		getProperty(properties, 13) # SolidBody 'Solid1'
+#		getProperty(properties, 14) # PartFeatureOperation='Join'
 		return notYetImplemented(contourRollNode)
 
 	def Create_FxCorner(self, cornerNode):
 		properties = cornerNode.get('properties')
+#		getProperty(properties, 0) # CornerSeam
+#		getProperty(properties, 1) # SurfaceBody 'Solid1'
+#		getProperty(properties, 2) # FeatureDimensions
+#		getProperty(properties, 3) # 299B2DCE
+#		getProperty(properties, 4) # FC203F47, FaceBoundOuterProxy
+#		getProperty(properties, 6) # ObjectCollection 'Solid1'
 		return notYetImplemented(cornerNode)
 
 	def Create_FxCornerChamfer(self, cornerNode):
@@ -3216,22 +3271,54 @@ class FreeCADImporter:
 
 	def Create_FxFace(self, faceNode):
 		properties = faceNode.get('properties')
+		self.resolveParticiants(faceNode)
+		plate = getProperty(properties, 0) # FxPlate 'Plate1'
+		self.getEntity(plate) # should already created while resolving participants!
 		return notYetImplemented(faceNode)
 
 	def Create_FxFlange(self, flangeNode):
 		properties = flangeNode.get('properties')
+		plate      = getProperty(properties, 0) # FxPlate
+		bend       = getProperty(properties, 1) # FxBend
+		corner     = getProperty(properties, 2) # FxCorner
 		return notYetImplemented(flangeNode)
 
 	def Create_FxFlangeContour(self, flangeNode):
 		properties = flangeNode.get('properties')
+		plate      = getProperty(properties, 0) # FxPlate
+		bend       = getProperty(properties, 1) # FxBend
+		corner     = getProperty(properties, 2) # FxCorner
 		return notYetImplemented(flangeNode)
 
 	def Create_FxFold(self, foldNode):
 		properties = foldNode.get('properties')
+#		getProperty(properties, 0) # BendLocation='Centerline'
+#		getProperty(properties, 1) # ParameterBoolean=True
+#		getProperty(properties, 2) # ParameterBoolean=False
+#		getProperty(properties, 3) # Parameter 'd24'=90°
+#		getProperty(properties, 4) # Parameter 'd25'=0.25mm
+#		getProperty(properties, 5) # 833D1B91
+#		getProperty(properties, 6) # 96058864
+#		getProperty(properties, 7) # SurfaceBodies 'Solid1'
+#		getProperty(properties, 8) # ParameterBoolean=False
+#		getProperty(properties, 10) # Parameter 'd32'=0.25mm
+#		getProperty(properties, 12) # ParameterBoolean=True
+#		getProperty(properties, 13) # BendTransition
+#		getProperty(properties, 14) # 90B64134
 		return notYetImplemented(foldNode)
 
 	def Create_FxHem(self, hemNode):
 		properties = hemNode.get('properties')
+#		getProperty(properties, 0) # FC203F47
+#		getProperty(properties, 1) # Direction - (9.15804e-17,-1,2.51846e-16)
+#		getProperty(properties, 2) # Parameter 'd227'=1mm
+#		getProperty(properties, 3) # HemDef
+#		getProperty(properties, 4) # EdgeCollectionProxy
+#		getProperty(properties, 5) # 96058864
+#		getProperty(properties, 6) # SurfaceBodies 'Solid1'
+#		getProperty(properties, 7) # FeatureDimensions
+#		getProperty(properties, 8) # BendTransition
+#		getProperty(properties, 9) # 90B64134
 		return notYetImplemented(hemNode)
 
 	def Create_FxKnit(self, knitNode):
@@ -3240,10 +3327,25 @@ class FreeCADImporter:
 
 	def Create_FxRefold(self, refoldNode):
 		properties = refoldNode.get('properties')
+#		getProperty(properties, 0) # SurfaceBodies 'Solid1'
+#		getProperty(properties, 1) # Face
+#		getProperty(properties, 2) # FaceCollection
+#		getProperty(properties, 3) # ParameterBoolean=True
+#		getProperty(properties, 4) # 7E15AA39
+#		getProperty(properties, 5) # MatchedEdge
+#		getProperty(properties, 6) # MatchedEdge
+#		getProperty(properties, 7) # EBB23D6E_Enum=2
 		return notYetImplemented(refoldNode)
 
 	def Create_FxRip(self, ripNode):
 		properties = ripNode.get('properties')
+#		getProperty(properties, 0) # SurfaceBody 'Solid1'
+#		getProperty(properties, 1) # Parameter 'd13'=4mm
+#		getProperty(properties, 2) # Point3D - (2.2318,-2.1818,10.225)
+#		getProperty(properties, 2) # Point3D - (-7.10543e-15,30,200)
+#		getProperty(properties, 4) # Face
+#		getProperty(properties, 5) # RipType='PointToPoint'
+#		getProperty(properties, 6) # FlipOffset=2
 		return notYetImplemented(ripNode)
 
 	def Create_FxUnfold(self, unfoldNode):

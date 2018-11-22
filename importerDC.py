@@ -565,19 +565,19 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_0455B440(self, node):
-		i = self.ReadCntHdr2SRef(node)
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
+		i = self.ReadCntHdr2SRef(node, 'A96B5993_Def')
+		i = node.ReadCrossRef(i, 'thickness')
 		i = node.ReadCrossRef(i, 'ref_4')
 		i = node.ReadCrossRef(i, 'ref_5')
-		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_6')
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'radius')
 		i = node.ReadCrossRef(i, 'ref_7')
-		i = node.ReadCrossRef(i, 'ref_8')
-		i = node.ReadCrossRef(i, 'ref_9')
-		i = node.ReadCrossRef(i, 'ref_A')
+		i = node.ReadCrossRef(i, 'reliefWidth')
+		i = node.ReadCrossRef(i, 'minRemnant')
+		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadUInt8A(i, 3, 'a0')
-		i = node.ReadCrossRef(i, 'ref_B')
+		i = node.ReadCrossRef(i, 'ref_3')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 
