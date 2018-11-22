@@ -1115,7 +1115,7 @@ class FeatureNode(DataNode):
 			label = label.get('label')
 			if (label is None):
 				logError(u"    (%04X): %s - has no required label attribute!", dummy.index, dummy.typeName)
-		return label.get('lst0')
+		return label.get('participants')
 
 	def __str__(self):
 		return u"(%04X): Fx%s '%s'%s" %(self.data.index, self.getSubTypeName(), self.name, self.data.content)

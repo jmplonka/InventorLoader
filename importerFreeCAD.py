@@ -2783,24 +2783,6 @@ class FreeCADImporter:
 
 		return notYetImplemented(extendNode)
 
-	def Create_FxBoss(self, bossNode):
-		properties   = bossNode.get('properties')
-		definition   = getProperty(properties, 0)  # D70E9DDA -> definition values
-		edgesProxies = getProperty(properties, 2)  # EdgeCollectionProxy
-#		??? = getProperty(properties, 3)  # Boolean
-#		??? = getProperty(properties, 4)  # Boolean
-#		??? = getProperty(properties, 5)  # Boolean
-#		??? = getProperty(properties, 6)  # Boolean
-#		??? = getProperty(properties, 7)  # Boolean
-#		??? = getProperty(properties, 8)  # Boolean
-		body         = getProperty(properties, 9)  # SolidBody 'None'
-		fxDim        = getProperty(properties, 10) # FeatureDimensions
-		value        = getProperty(properties, 11) # Parameter 'RDxVar14'=1
-
-		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
-			
-		return notYetImplemented(bossNode) # MultiFuse Geometry
-
 	def Create_FxBoundaryPatch(self, boundaryPatchNode):
 		properties = boundaryPatchNode.get('properties')
 		profile    = getProperty(properties, 0) # BoundaryPatch
@@ -2917,6 +2899,134 @@ class FreeCADImporter:
 #		getProperty(properties, 4) # Boolean
 		return notYetImplemented(faceNode)
 
+	def Create_FxFreeform(self, freeformNode):
+		properties = freeformNode.get('properties')
+#		getProperty(properties, 0) # EB9E49B0
+#		getProperty(properties, 1) # EB9E49B0
+#		getProperty(properties, 2) # Boolean
+		return notYetImplemented(freeformNode)
+
+	def Create_FxMidSurface(self, midSurfaceNode):
+		properties = midSurfaceNode.get('properties')
+		return notYetImplemented(midSurfaceNode)
+
+	def Create_FxMove(self, moveNode):
+		properties = moveNode.get('properties')
+		return notYetImplemented(moveNode)
+
+	def Create_FxNonParametricBase(self, nonParametricBaseNode):
+		properties = nonParametricBaseNode.get('properties')
+		base = getProperty(properties, 0) # Feature, CA02411F
+#		 = getProperty(properties, 1) # CA02411F 'Srf2'
+#		 = getProperty(properties, 2) # ParameterBoolean=False
+
+		entity = self.getEntity(base)
+
+		return notYetImplemented(nonParametricBaseNode)
+
+	def Create_FxPatternSketchDriven(self, patternNode):
+		properties = patternNode.get('properties')
+		return notYetImplemented(patternNode)
+
+	def Create_FxPresentationMesh(self, presentationMeshNode):
+		properties = presentationMeshNode.get('properties')
+		return notYetImplemented(presentationMeshNode)
+
+	def Create_FxReference(self, referenceNode):
+		properties = referenceNode.get('properties')
+#		getProperty(properties, 0) # SurfaceBody
+#		getProperty(properties, 1) # SurfaceBody 'Srf8'
+#		getProperty(properties, 2) # Boolean (opt.)
+		return notYetImplemented(referenceNode)
+
+	def Create_FxSculpt(self, sculptNode):
+		properties = sculptNode.get('properties')
+#		getProperty(properties, 0) # SurfacesSculpt
+#		getProperty(properties, 1) # ParameterBoolean=False
+#		getProperty(properties, 2) # SurfaceBodies 'Solid1'
+#		getProperty(properties, 3) # ParameterBoolean=False
+		return notYetImplemented(sculptNode)
+
+	def Create_FxShell(self, shellNode):
+		properties = shellNode.get('properties')
+#		getProperty(properties, 0) # ShellDirection='Inside'
+#		getProperty(properties, 1) # FaceCollection
+#		getProperty(properties, 2) # SurfaceSelection
+#		getProperty(properties, 3) # Parameter 'Shell_Thickness'=2mm
+#		getProperty(properties, 5) # FeatureDimensions
+#		getProperty(properties, 6) # Parameter 'RDxVar5'=10
+#		getProperty(properties, 7) # FeatureApproximationType='No'
+#		getProperty(properties, 8) # 637B1CC1_Enum=0
+#		getProperty(properties, 9) # SolidBody 'Solid1'
+		return notYetImplemented(shellNode)
+
+	def Create_FxTrim(self, trimNode):
+		properties = trimNode.get('properties')
+#		getProperty(properties, 0) # EA680672
+#		getProperty(properties, 1) # SolidBody 'Srf31'
+#		getProperty(properties, 2) # FxBoundaryPatch
+#		getProperty(properties, 3) # Plane 'Work Plane11'
+#		getProperty(properties, 5) # SurfaceBody 'Srf29'
+#		getProperty(properties, 6) # F0677096
+		return notYetImplemented(trimNode)
+
+	# Features requiring Nurbs
+	def Create_FxAliasFreeform(self, aliasFreeformNode):
+		properties = aliasFreeformNode.get('properties')
+#		getProperty(properties, 0) # SurfaceBodies 'Solid1'
+#		getProperty(properties, 1) # SurfaceBody
+#		getProperty(properties, 2) # ParameterBoolean=False
+		return notYetImplemented(aliasFreeformNode)
+
+	# Features requiring BOPTools
+	def Create_FxSplit(self, splitNode):
+		properties = splitNode.get('properties')
+#		getProperty(properties, 0) # SplitType='SplitFaces'
+#		getProperty(properties, 1) # ParameterBoolean=False
+#		getProperty(properties, 3) # SplitToolType='WorkSurface'
+#		getProperty(properties, 4) # FxBoundaryPatch
+#		getProperty(properties, 5) # Plane 'YZ Plane'
+#		getProperty(properties, 6) # RotateClockwise
+#		getProperty(properties, 7) # SurfaceBodies 'Solid1'
+		return notYetImplemented(splitNode)
+
+	# Features for Platis Parts
+	def Create_FxBoss(self, bossNode):
+		properties   = bossNode.get('properties')
+		definition   = getProperty(properties, 0)  # D70E9DDA -> definition values
+		edgesProxies = getProperty(properties, 2)  # EdgeCollectionProxy
+#		??? = getProperty(properties, 3)  # Boolean
+#		??? = getProperty(properties, 4)  # Boolean
+#		??? = getProperty(properties, 5)  # Boolean
+#		??? = getProperty(properties, 6)  # Boolean
+#		??? = getProperty(properties, 7)  # Boolean
+#		??? = getProperty(properties, 8)  # Boolean
+		body         = getProperty(properties, 9)  # SolidBody 'None'
+		fxDim        = getProperty(properties, 10) # FeatureDimensions
+		value        = getProperty(properties, 11) # Parameter 'RDxVar14'=1
+
+		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+			
+		return notYetImplemented(bossNode) # MultiFuse Geometry
+	
+	def Create_FxRib(self, ribNode): # Belongs to FxBoss!
+		properties = ribNode.get('properties')
+#		getProperty(properties, 0)  # FxBoundaryPatch
+#		getProperty(properties, 1)  # FxBoundaryPatch
+#		getProperty(properties, 2)  # ParameterBoolean=False
+#		getProperty(properties, 3)  # Parameter 'rib_thickness'=2.38125mm
+#		getProperty(properties, 4)  # ExtentType='2_Dimensions'
+#		getProperty(properties, 5)  # ParameterBoolean=False
+#		getProperty(properties, 6)  # Parameter 'd31'=2.54mm
+#		getProperty(properties, 7)  # Direction - (0,1,0)
+#		getProperty(properties, 8)  # SurfaceBodies 'Solid1'
+#		getProperty(properties, 9)  # FeatureDimensions
+#		getProperty(properties, 10) # ParameterBoolean=True
+#		getProperty(properties, 11) # Parameter 'rib_draft_dont_use'=0°
+#		getProperty(properties, 12) # ParameterBoolean=False
+#		getProperty(properties, 17) # Transformation
+		return notYetImplemented(ribNode)
+
 	def Create_FxFilletRule(self, filletNode):
 		properties = filletNode.get('properties')
 #		getProperty(properties, 0)  # Boolean
@@ -2965,13 +3075,6 @@ class FreeCADImporter:
 #		getProperty(properties, 43) # Parameter =360°
 #		getProperty(properties, 44) # Direction - (1,0,0)
 		return notYetImplemented(filletNode)
-
-	def Create_FxFreeform(self, freeformNode):
-		properties = freeformNode.get('properties')
-#		getProperty(properties, 0) # EB9E49B0
-#		getProperty(properties, 1) # EB9E49B0
-#		getProperty(properties, 2) # Boolean
-		return notYetImplemented(freeformNode)
 
 	def Create_FxGrill(self, grillNode):
 		properties = grillNode.get('properties')
@@ -3026,38 +3129,6 @@ class FreeCADImporter:
 
 		return notYetImplemented(lipNode)
 
-	def Create_FxMidSurface(self, midSurfaceNode):
-		properties = midSurfaceNode.get('properties')
-		return notYetImplemented(midSurfaceNode)
-
-	def Create_FxMove(self, moveNode):
-		properties = moveNode.get('properties')
-		return notYetImplemented(moveNode)
-
-	def Create_FxNonParametricBase(self, nonParametricBaseNode):
-		properties = nonParametricBaseNode.get('properties')
-		base = getProperty(properties, 0) # Feature, CA02411F
-#		 = getProperty(properties, 1) # CA02411F 'Srf2'
-#		 = getProperty(properties, 2) # ParameterBoolean=False
-		entity = self.getEntity(base)
-
-		return notYetImplemented(nonParametricBaseNode)
-
-	def Create_FxPatternSketchDriven(self, patternNode):
-		properties = patternNode.get('properties')
-		return notYetImplemented(patternNode)
-
-	def Create_FxPresentationMesh(self, presentationMeshNode):
-		properties = presentationMeshNode.get('properties')
-		return notYetImplemented(presentationMeshNode)
-
-	def Create_FxReference(self, referenceNode):
-		properties = referenceNode.get('properties')
-#		getProperty(properties, 0) # SurfaceBody
-#		getProperty(properties, 1) # SurfaceBody 'Srf8'
-#		getProperty(properties, 2) # Boolean (opt.)
-		return notYetImplemented(referenceNode)
-
 	def Create_FxRest(self, restNode):
 		properties = restNode.get('properties')
 		boundary   = getProperty(properties, 0)  # FxBoundaryPatch
@@ -3081,35 +3152,38 @@ class FreeCADImporter:
 
 		return notYetImplemented(restNode)
 
-	def Create_FxRib(self, ribNode):
-		properties = ribNode.get('properties')
-		return notYetImplemented(ribNode)
-
-	def Create_FxSculpt(self, sculptNode):
-		properties = sculptNode.get('properties')
-		return notYetImplemented(sculptNode)
-
-	def Create_FxShell(self, shellNode):
-		properties = shellNode.get('properties')
-		return notYetImplemented(shellNode)
-
 	def Create_FxSnapFit(self, snapFitNode):
 		properties = snapFitNode.get('properties')
+#		getProperty(properties, 0)  # 15729F01_Enum=1
+#		getProperty(properties, 1)  # Direction - (1.17886e-15,-1,0)
+#		getProperty(properties, 2)  # ParameterBoolean=False
+#		getProperty(properties, 3)  # Direction - (1,0,0)
+#		getProperty(properties, 4)  # ParameterBoolean=True
+#		getProperty(properties, 5)  # Parameter 'd92'=5.5mm
+#		getProperty(properties, 6)  # Parameter 'd94'=2mm
+#		getProperty(properties, 7)  # Parameter 'd95'=1.4mm
+#		getProperty(properties, 8)  # Parameter 'd96'=2.5mm
+#		getProperty(properties, 9)  # Parameter 'd97'=2mm
+#		getProperty(properties, 10) # Parameter 'd93'=2.5mm
+#		getProperty(properties, 11) # Parameter 'd98'=1mm
+#		getProperty(properties, 12) # Parameter 'd99'=1mm
+#		getProperty(properties, 13) # Parameter 'd100'=50°
+#		getProperty(properties, 14) # Parameter 'd101'=50°
+#		getProperty(properties, 15) # Parameter 'd186'=4mm
+#		getProperty(properties, 16) # Parameter 'd189'=5mm
+#		getProperty(properties, 17) # Parameter 'd187'=0.5mm
+#		getProperty(properties, 18) # Parameter 'd188'=0.3mm
+#		getProperty(properties, 19) # Parameter 'd190'=2mm
+#		getProperty(properties, 20) # Parameter 'd191'=0.5mm
+#		getProperty(properties, 21) # Parameter 'd192'=0.5mm
+#		getProperty(properties, 22) # Parameter 'd193'=0.5mm
+#		getProperty(properties, 23) # 0A077221_Enum=0
+#		getProperty(properties, 24) # 0CAC6298
+#		getProperty(properties, 25) # Transformation
+#		getProperty(properties, 26) # Direction - (-0.214923,0.976631,4.62593e-17)
+#		getProperty(properties, 27) # 4DC465DF
+#		getProperty(properties, 28) # SurfaceBodies 'None'
 		return notYetImplemented(snapFitNode) # Cut Geometry (Wedge - Cube)
-
-	def Create_FxTrim(self, trimNode):
-		properties = trimNode.get('properties')
-		return notYetImplemented(trimNode)
-
-	# Features requiring Nurbs
-	def Create_FxAliasFreeform(self, aliasFreeformNode):
-		properties = aliasFreeformNode.get('properties')
-		return notYetImplemented(aliasFreeformNode)
-
-	# Features requiring BOPTools
-	def Create_FxSplit(self, splitNode):
-		properties = splitNode.get('properties')
-		return notYetImplemented(splitNode)
 
 	# Features requiring SheetMetal
 	def Create_FxPlate(self, trimNode):

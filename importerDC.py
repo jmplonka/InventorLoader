@@ -2114,7 +2114,7 @@ class DCReader(EeDataReader):
 			i = node.ReadChildRef(i, 'ref_2')
 			i = self.skipBlockSize(i)
 			i = node.ReadUInt32(i, 'index')
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'participants')
 			i = node.ReadLen32Text16(i)
 			i = node.ReadUUID(i, 'uid')
 		return i
