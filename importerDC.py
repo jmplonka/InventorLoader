@@ -6208,7 +6208,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_FC203F47(self, node):
+	def Read_FC203F47(self, node): # FaceBoundOuterProxy
 		i = self.Read_A477243B(node, 'FaceBoundOuterProxy')
 		return i
 
@@ -8213,8 +8213,8 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_2')
 		return i
 
-	def Read_EA680672(self, node): #
-		i = self.ReadHeadersss2S16s(node)
+	def Read_EA680672(self, node):
+		i = self.ReadHeaderEnum(node, 'TrimType')
 		return i
 
 	def Read_EAA82E7B(self, node):

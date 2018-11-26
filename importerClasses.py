@@ -1074,7 +1074,7 @@ class FeatureNode(DataNode):
 			return 'Plate'
 		elif (p0 == 'ObjectCollection'):            return 'Knit'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
-		elif (p0 == 'EA680672'):                    return 'Trim'
+		elif (p0 == 'TrimType'):                    return 'Trim'
 		elif (p0 == 'SurfaceBody'):
 			if (p1 == 'FaceBoundProxy'):            return 'LoftedFlangeDefinition'
 			if (p1 == 'SurfaceBody'):               return 'Reference'
@@ -1096,8 +1096,8 @@ class FeatureNode(DataNode):
 			if (p1 == 'FaceBoundOuterProxy'):       return 'ContourRoll'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p10 == 'FilletFullRoundSet'):       return 'Fillet'
-		elif (p0 == 'D70E9DDA'):                    return 'Boss'
-		elif (p0 == 'ParameterBoolean'):            return 'FilletRule'
+		elif (p0 == 'D70E9DDA'):                    return 'FilletRule'
+		elif (p0 == 'ParameterBoolean'):            return 'Boss'
 
 		# Missing Features:
 		# - (Cosmetic-)Weld - only IAM files???
