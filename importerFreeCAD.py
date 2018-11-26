@@ -2063,6 +2063,7 @@ class FreeCADImporter:
 
 	def Create_FxExtrude(self, extrudeNode):
 		name = extrudeNode.name
+
 		participants = extrudeNode.getParticipants()
 
 		if (participants):
@@ -3160,7 +3161,7 @@ class FreeCADImporter:
 
 	def Create_FxSnapFit(self, snapFitNode):
 		properties = snapFitNode.get('properties')
-#		getProperty(properties, 0)  # 15729F01_Enum=1
+#		getProperty(properties, 0)  # SnapFitType=1
 #		getProperty(properties, 1)  # Direction - (1.17886e-15,-1,0)
 #		getProperty(properties, 2)  # ParameterBoolean=False
 #		getProperty(properties, 3)  # Direction - (1,0,0)
@@ -3350,10 +3351,32 @@ class FreeCADImporter:
 
 	def Create_FxUnfold(self, unfoldNode):
 		properties = unfoldNode.get('properties')
+		for unfold in unfoldNode.get('unfolds'):
+			self.getEntity(unfold)
+#		getProperty(properties, 0) # SurfaceBod(ies|y) 'Solid1'
+#		getProperty(properties, 1) # Face
+#		getProperty(properties, 2) # FaceCollection
+#		getProperty(properties, 3) # ParameterBoolean=True
+#		getProperty(properties, 4) # 7E15AA39
+#		getProperty(properties, 7) # 4688EBA3_Enum=1
 		return notYetImplemented(unfoldNode)
 
 	def Create_FxLoftedFlangeDefinition(self, fxNode):
 		properties = fxNode.get('properties')
+#		getProperty(properties, 0)  # SurfaceBody 'Solid1'
+#		getProperty(properties, 1)  # A477243B
+#		getProperty(properties, 2)  # A477243B
+#		getProperty(properties, 3)  # Parameter 'Thickness'=5mm
+#		getProperty(properties, 4)  # Parameter 'd6'=5mm
+#		getProperty(properties, 5)  # FlipOffset='No'
+#		getProperty(properties, 6)  # ParameterBoolean=False
+#		getProperty(properties, 7)  # A2DF48D4_Enum=1, FacetControl='CordTolerance'
+#		getProperty(properties, 8)  # Parameter 'd5'=0.5mm
+#		getProperty(properties, 10) # ParameterBoolean=False
+#		getProperty(properties, 12) # FeatureDimensions
+#		getProperty(properties, 13) # PlateDef
+#		getProperty(properties, 14) # 90B64134
+#		getProperty(properties, 15) # EdgeCollectionProxy
 		return notYetImplemented(fxNode)
 
 	def Create_FxBendPart(self, fxNode):

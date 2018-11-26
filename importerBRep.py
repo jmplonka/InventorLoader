@@ -20,11 +20,16 @@ class BRepReader(SegmentReader):
 
 	def Read_009A1CC4(self, node): return 0
 
-	def Read_0645C2A5(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+	def Read_0645C2A5(self, node): # EntityWrapperNode
+		i = self.ReadHeaderEntityWrapperNode(node)
+		return i
+
+	def Read_31D7A200(self, node): # EntityWrapperNode
+		i = self.ReadHeaderEntityWrapperNode(node)
+		return i
+
+	def Read_36895B07(self, node): # EntityWrapperNode
+		i = self.ReadHeaderEntityWrapperNode(node)
 		return i
 
 	def Read_07BA7419(self, node):
@@ -73,8 +78,6 @@ class BRepReader(SegmentReader):
 	def Read_2169ED74(self, node): return 0
 
 	def Read_2892C3E0(self, node): return 0
-
-	def Read_31D7A200(self, node): return 0
 
 	def Read_357D669C(self, node): return 0
 

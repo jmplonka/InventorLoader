@@ -82,6 +82,7 @@ class RSeSegment():
 
 	def __str__(self):
 		return u"%s, count=(%d/%d), ID={%s}, value1=%04X, arr1=[%s], arr2=[%s]" %(self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.arr1, 4), IntArr2Str(self.arr2, 4))
+
 	def __repr__(self):
 		return self.__str__()
 
@@ -1006,6 +1007,11 @@ class FeatureNode(DataNode):
 			if (p1 == 'ObjectCollection'):          return 'Combine'
 			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'
 			if (p1 == 'SurfaceBodies'):             return 'CoreCavity'
+			if (p1 == 'Face'):
+				p7 = self._getPropertyEnumName(7)
+				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
+				if (p7 == '4688EBA3_Enum'):         return 'Unfold'
+		elif (p0 == 'SurfaceBody'):
 			if (p1 == 'Face'):
 				p7 = self._getPropertyEnumName(7)
 				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'

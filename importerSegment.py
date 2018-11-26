@@ -8,7 +8,7 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 import re, traceback,  numpy as np
 from importerClasses        import *
 from importerTransformation import Transformation
-from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_
+from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
 from importerUtils          import *
 from Acis                   import clearEntities
 from importerSAT            import readEntityBinary, Header
@@ -289,6 +289,16 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		i = node.ReadList3(i, _TYP_NODE_REF_, lstName)
 		i = self.skipBlockSize(i)
+		return i
+
+	def ReadHeaderEntityWrapperNode(self, node, typeName = None):
+		i = node.Read_Header0(typeName)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
+		i = node.ReadUInt32A(i, 7, 'a0')
+		i = self.skipBlockSize(i, 8)
+		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		return i
 
 	def ReadFloat64A(self, node, i, cnt, name, size):

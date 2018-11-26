@@ -150,7 +150,7 @@ TYP_04_FUNC = {
 }
 
 TYP_ARRAY_FUNC = {
-	_TYP_UINT32_:	             'getArrayU32',
+	_TYP_UINT32_:                'getArrayU32',
 	_TYP_NODE_REF_:              'getArrayRef',
 	_TYP_NODE_X_REF_:            'getArrayXRef',
 }

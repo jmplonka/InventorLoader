@@ -208,7 +208,6 @@ class BrowserReader(SegmentReader):
 	def Read_33DDFC82(self, node):
 		i = self.ReadHeaderStr664(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadLen32Text16(i, 'path')
 		return i
 
 	def Read_363E8E7D(self, node): # Mesh
