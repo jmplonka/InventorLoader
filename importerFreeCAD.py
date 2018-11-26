@@ -2860,10 +2860,10 @@ class FreeCADImporter:
 
 	def Create_FxFaceDelete(self, faceNode):
 		properties = faceNode.get('properties')
-		faces = getProperty(properties, 0) # FaceCollection
+		faces      = getProperty(properties, 0) # FaceCollection
 #		getProperty(properties, 1) # ParameterBoolean=False
 #		getProperty(properties, 2) # ParameterBoolean=False
-		body = getProperty(properties, 3) # SurfaceBodies 'Solid1'
+		body       = getProperty(properties, 3) # SurfaceBodies 'Solid1'
 		return notYetImplemented(faceNode)
 
 	def Create_FxFaceDraft(self, faceNode):
@@ -2960,7 +2960,7 @@ class FreeCADImporter:
 	def Create_FxShell(self, shellNode):
 		properties = shellNode.get('properties')
 #		getProperty(properties, 0) # ShellDirection='Inside'
-#		getProperty(properties, 1) # FaceCollection
+		faces      = getProperty(properties, 1) # FaceCollection
 #		getProperty(properties, 2) # SurfaceSelection
 #		getProperty(properties, 3) # Parameter 'Shell_Thickness'=2mm
 #		getProperty(properties, 5) # FeatureDimensions
@@ -3369,8 +3369,8 @@ class FreeCADImporter:
 	def Create_FxRefold(self, refoldNode):
 		properties = refoldNode.get('properties')
 #		getProperty(properties, 0) # SurfaceBodies 'Solid1'
-#		getProperty(properties, 1) # Face
-#		getProperty(properties, 2) # FaceCollection
+		face       = getProperty(properties, 1) # Face
+		faces      = getProperty(properties, 2) # FaceCollection
 #		getProperty(properties, 3) # ParameterBoolean=True
 #		getProperty(properties, 4) # 7E15AA39
 #		getProperty(properties, 5) # MatchedEdge
@@ -3384,7 +3384,7 @@ class FreeCADImporter:
 #		getProperty(properties, 1) # Parameter 'd13'=4mm
 #		getProperty(properties, 2) # Point3D - (2.2318,-2.1818,10.225)
 #		getProperty(properties, 2) # Point3D - (-7.10543e-15,30,200)
-#		getProperty(properties, 4) # Face
+		face       = getProperty(properties, 4) # Face
 #		getProperty(properties, 5) # RipType='PointToPoint'
 #		getProperty(properties, 6) # FlipOffset=2
 		return notYetImplemented(ripNode)
@@ -3394,8 +3394,8 @@ class FreeCADImporter:
 		for unfold in unfoldNode.get('unfolds'):
 			self.getEntity(unfold)
 #		getProperty(properties, 0) # SurfaceBod(ies|y) 'Solid1'
-#		getProperty(properties, 1) # Face
-#		getProperty(properties, 2) # FaceCollection
+		face       = getProperty(properties, 1) # Face
+		faces      = getProperty(properties, 2) # FaceCollection
 #		getProperty(properties, 3) # ParameterBoolean=True
 #		getProperty(properties, 4) # 7E15AA39
 #		getProperty(properties, 7) # 4688EBA3_Enum=1
@@ -3440,8 +3440,8 @@ class FreeCADImporter:
 
 	# not supported features as too much work to implement additional readers or workarounds
 	def Create_FxThread(self, threadNode):
-		properties = fxNode.get('properties')
-#		getProperty(properties, 0) # FaceCollection
+		properties   = fxNode.get('properties')
+		faces        = getProperty(properties, 0) # FaceCollection
 #		getProperty(properties, 1) # ParameterBoolean=True
 #		getProperty(properties, 2) # ParameterBoolean=True
 #		getProperty(properties, 3) # Parameter 'd16'=0mm

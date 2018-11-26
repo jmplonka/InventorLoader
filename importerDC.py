@@ -734,10 +734,8 @@ class DCReader(EeDataReader):
 
 	def Read_BF32E0A6(self, node): # EntityWrapperNode
 		i = self.ReadList2U32(node)
-		i = node.ReadUInt32(i, 'ref_1')
-		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'ref_2')
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32A(i, 2, 'val_key_1')
+		i = node.ReadUInt32A(i, 2, 'val_key_2')
 		i = node.ReadUInt8(i, 'u8_2')
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
 		i = self.ReadU32U32U8List(node, i, 'lst2')
