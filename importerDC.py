@@ -3016,8 +3016,8 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, cnt, 'a0')
 		return i
 
-	def Read_4668C201(self, node):
-		i = self.ReadHeaderEnum(node)
+	def Read_4668C201(self, node): # HeadStyle
+		i = self.ReadHeaderEnum(node, 'HeadStyle', ['CounterBore', 'CounterSink', 'None'])
 		return i
 
 	def Read_4688EBA3(self, node):
@@ -7164,8 +7164,8 @@ class DCReader(EeDataReader):
 		i = self.ReadRefU32List(node, i, 'lst2')
 		return i
 
-	def Read_CA70D2C6(self, node):
-		i = self.ReadHeaderEnum(node)
+	def Read_CA70D2C6(self, node): # ThreadType
+		i = self.ReadHeaderEnum(node, 'ThreadType', ['Depth','Full Depth','Through'])
 		return i
 
 	def Read_CA7AA850(self, node): # FxFilletVariable

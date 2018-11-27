@@ -28,7 +28,7 @@ class UFRxDocument(object):
 		self.comment  = u""                                          # UTF_16_LE
 		self.arr4     = []*12                                        # UInt16A[12]
 		self.dat3     = None                                         # creation date of 1st version
-		self.uid1     = UUID('00000000-0000-0000-0000-000000000000') # UID
+		self.revision     = UUID('00000000-0000-0000-0000-000000000000') # UID
 		self.flags    = 0                                            # UInt32
 		self.uid2     = UUID('00000000-0000-0000-0000-000000000000') # UID
 		self.fName    = u""                                          # UTF_16_LE
@@ -446,7 +446,7 @@ def readL7BHLst1(data, offset, log, txt):
 		cntK, i = getUInt32(data, i)
 		for k in range(cntK):
 			t, i = getLen32Text16(data, i)
-			u, i = getUUID(data, i)	
+			u, i = getUUID(data, i)
 			s, i = getLen32Text8(data, i)
 			l7bhls.a3.append((t, u, s))
 		l7bhls.a4, i = getUInt8A(data, i, 6)
@@ -618,20 +618,20 @@ def read(data):
 		try:
 			ufrx.schema, i  = readUInt16(data,   0, log, 'schema')
 			schema = ufrx.schema
-			cnt, i          = getUInt16(data,    i)
-			ufrx.arr1, i    = readUInt16A(data,  i, log, 'arr1', cnt)
-			ufrx.arr2, i    = readUInt16A(data,  i, log, 'arr2', 4)
-			ufrx.dat1, i    = readDateTime(data, i, log, 'dat1')
-			ufrx.arr3, i    = readUInt16A(data,  i, log, 'arr3', 4)
-			ufrx.dat2, i    = readDateTime(data, i, log, 'dat2')
-			ufrx.comment, i = readText16(data,   i, log, 'comm')
-			ufrx.arr4, i    = readUInt16A(data,  i, log, 'arr4', 12)
-			ufrx.dat3, i    = readDateTime(data, i, log, 'dat3') # creation date of version 1
-			ufrx.uid1, i    = readUID(data,      i, log, 'uid1')
-			ufrx.flags, i   = readUInt32(data,   i, log, 'flags')
-			ufrx.uid2, i    = readUID(data,      i, log, 'uid2')
-			ufrx.fName, i   = readText16(data,   i, log, 'fName')
-			ufrx.n0, i      = readUInt16(data,   i, log, 'n0')
+			cnt, i           = getUInt16(data,    i)
+			ufrx.arr1, i     = readUInt16A(data,  i, log, 'arr1', cnt)
+			ufrx.arr2, i     = readUInt16A(data,  i, log, 'arr2', 4)
+			ufrx.dat1, i     = readDateTime(data, i, log, 'dat1')
+			ufrx.arr3, i     = readUInt16A(data,  i, log, 'arr3', 4)
+			ufrx.dat2, i     = readDateTime(data, i, log, 'dat2')
+			ufrx.comment, i  = readText16(data,   i, log, 'comm')
+			ufrx.arr4, i     = readUInt16A(data,  i, log, 'arr4', 12)
+			ufrx.dat3, i     = readDateTime(data, i, log, 'dat3') # creation date of version 1
+			ufrx.revision, i = readUID(data,      i, log, 'revision')
+			ufrx.flags, i    = readUInt32(data,   i, log, 'flags')
+			ufrx.uid2, i     = readUID(data,      i, log, 'uid2')
+			ufrx.fName, i    = readText16(data,   i, log, 'fName')
+			ufrx.n0, i       = readUInt16(data,   i, log, 'n0')
 			cnt, i = getUInt32(data, i)
 			log.write(u"arr5: count=%d\n" %(cnt))
 			for j in range(cnt):
@@ -697,7 +697,7 @@ def read(data):
 
 			if (ufrx.schema >= 0x0C): ufrx.n10, i = getUInt16(data, i)
 			log.write(u"n10:\t%04X\n" %(ufrx.n10))
-			
+
 			if (ufrx.schema >= 0x0B): ufrx.n11, i = getUInt16(data, i)
 			log.write(u"n11:\t%03X\n" %(ufrx.n11))
 

@@ -2946,7 +2946,7 @@ class FreeCADImporter:
 		profile    = getProperty(properties, 4) # BoundaryPatch
 #		getProperty(properties, 5) # Plane 'YZ Plane'
 #		getProperty(properties, 6) # RotateClockwise
-#		getProperty(properties, 7) # SurfaceBodies 'Solid1'
+		solid      = getProperty(properties, 7) # SurfaceBodies 'Solid1'
 
 		base     = self.createBoundary(profile, solid is not None)
 
@@ -2961,7 +2961,7 @@ class FreeCADImporter:
 #		getProperty(properties, 3)  # Direction - (1,0,0)
 #		getProperty(properties, 4)  # Boolean
 #		getProperty(properties, 5)  # Parameter =0.3mm
-#		getProperty(properties, 6)  # 4668C201_Enum
+#		getProperty(properties, 6)  # HeadStyle
 #		getProperty(properties, 7)  # Parameter =8mm
 #		getProperty(properties, 8)  # Parameter =1.5mm
 #		getProperty(properties, 9)  # Parameter =0.5mm
@@ -2974,7 +2974,7 @@ class FreeCADImporter:
 #		getProperty(properties, 16) # Parameter =2.5°
 #		getProperty(properties, 17) # Parameter =90°
 #		getProperty(properties, 18) # Boolean
-#		getProperty(properties, 19) # CA70D2C6_Enum=1
+#		getProperty(properties, 19) # ThreadType='Full Depth'
 #		getProperty(properties, 20) # Parameter =8mm
 #		getProperty(properties, 21) # Parameter =3mm
 #		getProperty(properties, 22) # Parameter =9.5mm
@@ -3385,7 +3385,7 @@ class FreeCADImporter:
 
 	# not supported features as too much work to implement additional readers or workarounds
 	def Create_FxThread(self, threadNode):
-		properties   = fxNode.get('properties')
+		properties   = threadNode.get('properties')
 		faces        = getProperty(properties, 0) # FaceCollection
 #		getProperty(properties, 1) # ParameterBoolean=True
 #		getProperty(properties, 2) # ParameterBoolean=True
