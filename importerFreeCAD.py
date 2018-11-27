@@ -801,7 +801,7 @@ class FreeCADImporter:
 		self.getEntity(participant) # Not part fo the section!
 		return None
 
-	def createEdgeFromNode(self, wires, sketchEdge, direct):
+	def addGeometryFromNode(self, boundarySketch, sketchEdge, direct):
 		sketch = sketchEdge.get('sketch')
 		# ensure that the sketch is already created!
 		self.getEntity(sketch)
@@ -816,18 +816,13 @@ class FreeCADImporter:
 			p2     = getAssociatedSketchEntity(sketch, sketchEdge.get('point2AI'), sketchEdge.get('typPt2'))
 		if (e is None):
 			return
-		edge   = e.sketchEntity
-		if (isinstance(edge, Part.Line)):
-			edge = None
+		edge   = None
+		entity = e.sketchEntity
+		if (isinstance(entity, Part.Line) or isinstance(entity, Part.LineSegment)):
 			if (isSamePoint(p1, p2) == False):
 				edge = createLine(p2v(p1), p2v(p2))
-		elif (isinstance(edge, Part.LineSegment)):
-			edge = None
-			if (isSamePoint(p1, p2) == False):
-				edge = createLine(p2v(p1), p2v(p2))
-		elif (isinstance(edge, Part.ArcOfCircle)):
-			c = e.sketchEntity.Center
-			edge = Part.Circle(c, edge.Axis, edge.Radius)
+		elif (isinstance(entity, Part.ArcOfCircle)):
+			edge = Part.Circle(entity.Center, entity.Axis, entity.Radius)
 			if (isSamePoint(p1, p2) == False):
 				alpha   = edge.parameter(p2v(p1))
 				beta    = edge.parameter(p2v(p2))
@@ -835,16 +830,17 @@ class FreeCADImporter:
 					edge = Part.ArcOfCircle(edge, alpha, beta)
 				else:
 					edge = Part.ArcOfCircle(edge, beta, alpha)
-		elif (isinstance(edge, Part.ArcOfEllipse)):
-			edge = edge.Ellipse
+		elif (isinstance(entity, Part.ArcOfEllipse)):
+			edge = entity
 			if (isSamePoint(p1, p2) == False):
-				alpha   = edge.parameter(p2v(p1))
-				beta    = edge.parameter(p2v(p2))
+				alpha   = entity.parameter(p2v(p1))
+				beta    = entity.parameter(p2v(p2))
 				if (sketchEdge.get('posDir')):
 					edge = Part.ArcOfEllipse(edge, alpha, beta)
 				else:
 					edge = Part.ArcOfEllipse(edge, beta, alpha)
-		elif (isinstance(edge, Part.Circle)):
+		elif (isinstance(entity, Part.Circle)):
+			edge = entity
 			if (isSamePoint(p1, p2) == False):
 				alpha   = edge.parameter(p2v(p1))
 				beta    = edge.parameter(p2v(p2))
@@ -852,7 +848,8 @@ class FreeCADImporter:
 					edge = Part.ArcOfCircle(edge, alpha, beta)
 				else:
 					edge = Part.ArcOfCircle(edge, beta, alpha)
-		elif (isinstance(edge, Part.Ellipse)):
+		elif (isinstance(entity, Part.Ellipse)):
+			edge = entity
 			if (isSamePoint(p1, p2) == False):
 				alpha   = edge.parameter(p2v(p1))
 				beta    = edge.parameter(p2v(p2))
@@ -860,21 +857,21 @@ class FreeCADImporter:
 					edge = Part.ArcOfEllipse(edge, alpha, beta)
 				else:
 					edge = Part.ArcOfEllipse(edge, beta, alpha)
-		elif (isinstance(edge, Part.BSplineCurve)):
-			a = edge.parameter(p2v(p1))
-			b = edge.parameter(p2v(p2))
+		elif (isinstance(entity, Part.BSplineCurve)):
+			a = entity.parameter(p2v(p1))
+			b = entity.parameter(p2v(p2))
 			if (a > b):
 				old = a
 				a = b
 				b = old
 			if not (isEqual1D(a, 0.0) and isEqual1D(b, 1.0)):
 				try:
-					edge = edge.trim(a, b)
+					edge = entity.trim(a, b)
 				except:
 					logWarning(u"    Can't trim BSpline for a=%g and b=%g!", a, b)
-					edge = edge.copy()
+					edge = entity.copy()
 			else:
-				edge = edge.copy()
+				edge = entity.copy()
 	#	elif (typ[0: 4] == 'Text'):
 	#	elif (typ[0:12] == 'OffsetSpline'):
 	#	elif (typ[0:12] == 'SplineHandle'):
@@ -883,85 +880,33 @@ class FreeCADImporter:
 		else:
 			logWarning(u"    ... Don't know how to create edge from %s.%s" %(edge.__class__.__module__, edge.__class__.__name__))
 		if (edge is not None):
-			wire = edge.toShape()
-			wire.Placement = sketch.sketchEntity.Placement.copy()
-			wires.append(wire)
+			boundarySketch.addGeometry(edge)
 
 		return
 
-	def createBoundaryPart(self, part, solid):
+	def addBoundaryPart(self, boundarySketch, part):
 		if (part.typeName in ['1E3A132C', 'Loop']):
-			partEdges = []
 			for sketchEdge in part.get('edges'): # should be SketchEntityRef
-				sketch = sketchEdge.get('sketch')
-				if (sketch is not None):
-					self.getEntity(sketch) # ensure that the sketch is already created!
-				self.createEdgeFromNode(partEdges, sketchEdge, part.typeName == '1E3A132C')
-
-			if (len(partEdges) > 0):
-				try:
-					w = Part.Wire(partEdges)
-					if (solid):
-						if (w.isClosed()):
-							return Part.Face(w)
-						else:
-							logError(u"    BoundaryPart (%04X): %s is not closed!", part.index, part.typeName)
-					return w
-				except:
-					s = u",".join([u"%s([%g,%g,%g] - [%g,%g,%g])" %(e.Curve.__class__.__name__, e.Vertexes[0].Point.x, e.Vertexes[0].Point.y, e.Vertexes[0].Point.z,e.Vertexes[-1].Point.x, e.Vertexes[-1].Point.y, e.Vertexes[-1].Point.z) for e in partEdges])
-					logError(u"Can't create wire from edges: [%s]", s)
-					w = partEdges[0].multiFuse(partEdges[1:])
-					Part.show(w)
+				sketchNode = sketchEdge.get('sketch')
+				self.getEntity(sketchNode) # ensure that the sketch is already created!
+				self.addGeometryFromNode(boundarySketch, sketchEdge, part.typeName == '1E3A132C')
 		else:
 			logError(u"    Error:  unknown boundaryPart (%04X): %s!", part.index, part.typeName)
-		return None
+		return
 
 	def createBoundary(self, boundaryPatch, solid):
-		''' Returns a Part.Wire if solid is False, otherwise a Part.Face '''
-
 		profile  = boundaryPatch.get('profile')
 		if (profile is not None):
 			if (profile.typeName in ['FaceBound', '603428AE', 'FaceBounds', 'FaceBoundOuter']):
-				shape = None
+				sketch = profile.get('sketch')
+				self.getEntity(sketch)
+				boundary = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketch.name))
+				boundary.Placement = sketch.sketchEntity.Placement
 				# create all parts of the profile
 				for part in profile.get('parts'):
-					partBoundary = self.createBoundaryPart(part, solid)
-					if (shape is None):
-						shape = partBoundary
-					else:
-						operation = part.get('operation')
-						if (operation is None):
-							logError(u"    BoundaryPart (%04X): %s has not operation attribute!", part.index, part.typeName)
-						if (operation in [0x00, 0x10]):
-							shape = shape.cut(partBoundary)
-						elif (operation in [0x08, 0x18]):
-							shape = shape.fuse(partBoundary)
-							shape = shape.removeSplitter()
-						else:
-							logError(u"    BoundaryPart (%04X): %s has an unknown operation %X!", part.index, part.typeName, operation)
-				if (shape is not None):
-					fx = profile.get('sketch')
-					if (fx is not None):
-						fxName = fx.name
-						self.hide([fx.sketchEntity])
-					else:
-						fx = profile.get('proxy')
-						if (fx is not None):
-							fxName = fx.name
-							self.hide([fx.sketchEntity])
-						else:
-							fx = profile.get('proxy1')
-							if (fx is not None):
-								fxName = fx.name
-								self.hide([fx.sketchEntity])
-							fx = profile.get('proxy2')
-							if (fx is not None):
-								fxName = fx.name
-								self.hide([fx.sketchEntity])
-
-					boundary = newObject(self.doc, 'Part::Feature', '%s_bp' %fx.name)
-					boundary.Shape = shape
-					return boundary
+					self.addBoundaryPart(boundary, part)
+				self.hide([sketch.sketchEntity])
+				return boundary
 			else:
 				logError(u"        ... can't create boundary from (%04X): %s - expected next node type (%s) unknown!", boundaryPatch.index, boundaryPatch.typeName, profile.typeName)
 		else:
@@ -1385,7 +1330,7 @@ class FreeCADImporter:
 		revolution.Source = source
 		revolution.Axis = axis
 		revolution.Base = base
-		revolution.Solid = solid
+		revolution.Solid = solid and source.Shape.isClosed()
 		revolution.Placement = PLC(VEC(), ROT(axis, -beta), base)
 		setDefaultViewObjectValues(revolution)
 		source.ViewObject.Visibility = False
@@ -2038,6 +1983,7 @@ class FreeCADImporter:
 			solid      = (isTrue(isSurface) == False)
 
 			if (boundary):
+				self.doc.recompute()
 				if (extend1.get('value') == 1): # 'Direction' => AngleExtent
 					alpha = getGRAD(angle1)
 					if (angle2 is None):
@@ -2111,11 +2057,10 @@ class FreeCADImporter:
 			participants = []
 			label = patternNode.get('label')
 			ref2 = label.get('ref_2')
-			lst0 = ref2.get('lst0')
-			if (lst0):
-				for ref in lst0:
-					if (ref.name in self.bodyNodes):
-						participants.append(self.bodyNodes[lst0[0].name])
+			lst0 = ref2.get('lst0') or []
+			for ref in lst0:
+				if (ref.name in self.bodyNodes):
+					participants.append(self.bodyNodes[lst0[0].name])
 		if (len(participants) > 0):
 			geos  = []
 			count = getNominalValue(countRef)
@@ -2189,11 +2134,10 @@ class FreeCADImporter:
 			participants = []
 			label = patternNode.get('label')
 			ref2 = label.get('ref_2')
-			lst0 = ref2.get('lst0')
-			if (lst0):
-				for ref in lst0:
-					if (ref.name in self.bodyNodes):
-						participants.append(self.bodyNodes[lst0[0].name])
+			lst0 = ref2.get('lst0') or []
+			for ref in lst0:
+				if (ref.name in self.bodyNodes):
+					participants.append(self.bodyNodes[lst0[0].name])
 		if (len(participants) > 0):
 			geos  = []
 			if (distance1Ref is None):
@@ -2299,7 +2243,7 @@ class FreeCADImporter:
 
 	def Create_FxHole(self, holeNode):
 		name           = holeNode.name
-		defRef         = holeNode.get('label')
+		definition     = holeNode.get('label')
 		properties     = holeNode.get('properties')
 		holeType       = getProperty(properties, 0x00)
 		holeDiam_1     = getProperty(properties, 0x01)
@@ -2483,25 +2427,26 @@ class FreeCADImporter:
 		return
 
 	def Create_FxSweep(self, sweepNode):
-		properties    = sweepNode.get('properties')
-		definitionRef = sweepNode.get('label')
-		solid         = (definitionRef.typeName == 'Label')
-		boundary      = getProperty(properties, 0x00)
-		proxy1        = getProperty(properties, 0x01) # FaceBoundProxy or FaceBoundOuterProxy
+		properties = sweepNode.get('properties')
+		defintion  = sweepNode.get('label')
+		solid      = (defintion.typeName == 'Label')
+		boundary   = getProperty(properties, 0x00)
+		proxy1     = getProperty(properties, 0x01) # FaceBoundProxy or FaceBoundOuterProxy
 		#= getProperty(properties, 0x02) # PartFeatureOperation or 90874D63
-		taperAngle    = getProperty(properties, 0x03) # Parameter
+		taperAngle = getProperty(properties, 0x03) # Parameter
 		#= getProperty(properties, 0x04) # ExtentType
 		#= getProperty(properties, 0x05) # ???
 		#= getProperty(properties, 0x07) # FeatureDimensions
 		#= getProperty(properties, 0x08) # SweepType=Path
-		frenet        = getProperty(properties, 0x09) # SweepProfileOrientation, e.g. 'NormalToPath', other not yet supported by FreeCAD
-		scaling       = getProperty(properties, 0x0A) # SweepProfileScaling, e.g. 'XY', other not yet supported by FreeCAD
-		proxy2        = getProperty(properties, 0x0B) # FaceBoundProxy
+		frenet     = getProperty(properties, 0x09) # SweepProfileOrientation, e.g. 'NormalToPath', other not yet supported by FreeCAD
+		scaling    = getProperty(properties, 0x0A) # SweepProfileScaling, e.g. 'XY', other not yet supported by FreeCAD
+		proxy2     = getProperty(properties, 0x0B) # FaceBoundProxy
 		#= getProperty(properties, 0x0C): ???
 		#= getProperty(properties, 0x0D): ???
+
 		skip   = []
 
-		self.resolveParticiants(fxNode) # no further action necessary
+		self.resolveParticiants(sweepNode) # no further action necessary
 
 		path = self.createBoundary(proxy1, solid is not None)
 		if (path is None):
@@ -2610,7 +2555,7 @@ class FreeCADImporter:
 		# = getProperty(properties, 0x12) # FeatureDimensions
 		solid       = getProperty(properties, 0x13) # SolidBody 'Solid1'
 
-		self.resolveParticiants(fxNode) # no further action necessary
+		self.resolveParticiants(coilNode) # no further action necessary
 
 		boundary = self.createBoundary(profile, solid is not None)
 		base    = p2v(axis)
@@ -3759,7 +3704,7 @@ class FreeCADImporter:
 			self.createParameterTable(elements.node)
 
 			label = doc.get('label')
-			lst = label.get('lst0') or []
+			lst = label.get('participants') or []
 			for ref in lst:
 				self.getEntity(ref)
 			if (self.doc):
