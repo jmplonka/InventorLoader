@@ -3088,7 +3088,7 @@ class FreeCADImporter:
 		bottom      = getProperty(properties, 11) # Boolean
 		bodies      = getProperty(properties, 12) # SurfaceBodies 'Solid63'
 
-		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+		bases, edges = self.getBasesEdgesFromProxy(edgeProxies)
 
 		return notYetImplemented(lipNode)
 
