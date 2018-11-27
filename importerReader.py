@@ -494,25 +494,19 @@ def ReadRSeDbRevisionInfo(revisions, data):
 	for n in range(cnt):
 		info = RSeDbRevisionInfo()
 		info.ID, i = getUUID(data, i)
-		info.value1, i = getUInt16(data, i)
-		info.value2, i = getUInt16(data, i)
+		info.flags, i = getUInt32(data, i)
 		if (version == 3):
 			info.type, i = getUInt16(data, i)
+			if (info.type == 0xFFFF):
+				info.b, i = getBoolean(data, i)
+				if (info.b):
+					info.a = Struct('<fL').unpack_from(data, i)
+					i += 8
+				else:
+					info.a = Struct('<fLfL').unpack_from(data, i)
+					i += 16
 		elif (version == 2):
-			info.data, i = getUInt16A(data, i, 8)
-			info.type = 0
-		else:
-			info.type = 0
-		if (info.type == 0xFFFF):
-			b, i = getUInt8(data, i)
-			f, i = getFloat32(data, i)
-			if (b):
-				info.data, i = getUInt16A(data, i, 4)
-			else:
-				info.data, i = getUInt32A(data, i, 4)
-			info.data = (f, n)
-		else:
-			info.data = (0.0, 0)
+			info.a, i = getUInt16A(data, i, 8)
 		revisions.mapping[info.ID] = info
 		revisions.infos.append(info)
 	return i

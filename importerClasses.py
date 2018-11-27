@@ -383,25 +383,21 @@ class DbInterface():
 
 class RSeDbRevisionInfo():
 	def __init__(self):
-		self.ID     = ''      # UUID
-		self.value1 = 0       # UINT16
-		self.value2 = 0       # UINT16
-		self.type   = -1
-		# If type = 0xFFFF:
-		#	BYTE + [UInt16]{8 <=> BYTE=0, 4 <=> BYTE==0}
-		self.data   = []
+		self.ID     = ''
+		self.flags  = 0
+		self.type   = 0
+		self.b      = 0
+		self.a      = []
 	def __repr__(self):
 		return "%s" %(self.ID)
 
 	def __str__(self):
-		if (self.value3 is None):
-			v = '(%04X/%04X)' %(self.value1, self.value2)
-		else:
-			v = '(%04X/%04X/%04)' %(self.value1, self.value2, self.value3)
-		if (len(self.data) > 0):
-			return '%s,%s,[%s]' % (self.ID, v, IntArr2Str(self.data, 8))
-		else:
-			return '%s,%s)' % (self.ID, v)
+		if len(self.a) == 2: return u"{%s},%06X,%04X,%02X,[%g,%08X]" %(str(self.ID).upper(), self.flags, self.type, self.b, self.a[0], self.a[1])
+		if len(self.a) == 4: return u"{%s},%06X,%04X,%02X,[%g,%08X]" %(str(self.ID).upper(), self.flags, self.type, self.b, self.a[0], self.a[1])
+		return u"{%s},%06X,%04X,%02X,%s" %(str(self.ID).upper(), self.flags, self.type, self.b, self.a)
+
+	def __repr__(self):
+		return self.__str__()
 
 class ResultItem4():
 	a0 = None

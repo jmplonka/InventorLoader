@@ -117,6 +117,14 @@ def dumpiProperties(iProps):
 			file.write(u"\n")
 	return
 
+def dumpRevisionInfo(revisions):
+	folder = getInventorFile()[0:-4]
+	filename = '%s\\RSeDbRevisionInfo.log' %(folder)
+	with io.open(filename, mode='w', encoding="utf-8") as file:
+		for rev in revisions.infos:
+			file.write(u"%s\n" %(rev))
+	return
+
 def read(doc, filename, readProperties):
 	createNewModel()
 
@@ -194,6 +202,7 @@ def read(doc, filename, readProperties):
 
 	dumpRSeDB(getModel().RSeDb)
 	dumpiProperties(getModel().iProperties)
+	dumpRevisionInfo(getModel().RSeRevisions)
 
 	for fname in list:
 		ReadElement(ole, fname, doc, counter, readProperties)

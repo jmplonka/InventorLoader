@@ -647,10 +647,6 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 10, 'a1')
 		a1 = node.get('a1')
-#		if (a1[5] != 0):
-#			i = node.ReadUInt32(i, 'u32_1')
-#		if ((a1[6] & 0xFF) != 0):
-#			i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_0811C56E(self, node): # EntityWrapperNode
