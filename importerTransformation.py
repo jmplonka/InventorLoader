@@ -15,10 +15,82 @@ __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-class Transformation:
+class Transformation2D:
 	def __init__(self):
 		self.a0 = 0x00000000
-		self.a1 = []
+		self.m  = [[1,0,0],[0,1,0],[0,0,1]]
+
+	def read(self, data, offset):
+		self.a0, i = getUInt32(data, offset)
+		d1 = (self.a0 & 0xFFFF0000) >> 16
+		d2 = (self.a0 & 0x0000FFFF)
+		self.m = [[1,0,0],[0,1,0],[0,0,1]]
+		if (d1 == 0xCA):
+			self.m[0][2], i = getFloat64(data, i)
+			self.m[1][2], i = getFloat64(data, i)
+		else:
+			if (d2 == 0x0111):
+				self.m[0][1], i = getFloat64(data, i)
+				self.m[0][2], i = getFloat64(data, i)
+				self.m[1][0], i = getFloat64(data, i)
+				self.m[1][2], i = getFloat64(data, i)
+			else:
+				self.m[0][0], i = getFloat64(data, i)
+				self.m[0][1], i = getFloat64(data, i)
+				self.m[0][2], i = getFloat64(data, i)
+				self.m[1][0], i = getFloat64(data, i)
+				self.m[1][1], i = getFloat64(data, i)
+				self.m[1][2], i = getFloat64(data, i)
+		return i
+
+	def getX(self):
+		return self.m[0][2] * 10.0
+
+	def getY(self):
+		return self.m[1][2] * 10.0
+
+	def __m2s__(self, index):
+		v = self.m[index]
+		return u"[%g, %g, %g]" %(v[0], v[1], v[2] * 10.0)
+
+	def getBase(self):
+		x = self.m[0, 2]
+		y = self.m[1, 2]
+		return VEC(x, y, 0)
+
+	def __str__(self): # return unicode
+		m = self.__repr__()
+		j = 0
+		mask = '|'
+		d1 = (self.a0 & 0xFFFF0000) >> 16
+		d2 = (self.a0 & 0x0000FFFF)
+		while (j < 9):
+			b = (1 << j)
+			if (d1 & b):
+				if (d2 & b):
+					mask += '-'
+				else:
+					mask += '0'
+			else:
+				if (d2 & b):
+					mask += '+'
+				else:
+					mask += 'x'
+			j += 1
+			if ((j % 3) == 0):
+				mask += '|'
+		return u' transformation={a0=%s m=%s}' %(mask, m)
+
+	def __repr__(self):
+		m0 = self.__m2s__(0)
+		m1 = self.__m2s__(1)
+		m2 = self.__m2s__(2)
+		return u"[%s, %s, %s]" %(m0, m1, m2)
+
+class Transformation3D:
+	def __init__(self):
+		self.a0 = 0x00000000
+		self.m = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
 
 	def read(self, data, offset):
 		n, k = getUInt32(data, offset)

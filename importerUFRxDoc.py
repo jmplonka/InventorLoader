@@ -28,7 +28,7 @@ class UFRxDocument(object):
 		self.comment  = u""                                          # UTF_16_LE
 		self.arr4     = []*12                                        # UInt16A[12]
 		self.dat3     = None                                         # creation date of 1st version
-		self.revision     = UUID('00000000-0000-0000-0000-000000000000') # UID
+		self.revision = UUID('00000000-0000-0000-0000-000000000000') # UID
 		self.flags    = 0                                            # UInt32
 		self.uid2     = UUID('00000000-0000-0000-0000-000000000000') # UID
 		self.fName    = u""                                          # UTF_16_LE

@@ -110,7 +110,7 @@ class EeSceneReader(StyleReader):
 	def ReadOptionalTransformation(self, node, offset):
 		b, i = getBoolean(node.data, offset)
 		if (b):
-			i = self.ReadTransformation(node, i)
+			i = self.ReadTransformation3D(node, i)
 		return i
 
 	def Read_120284EF(self, node):
@@ -341,7 +341,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		a3, i = getUInt16A(node.data, i, 2)
-#		i = self.ReadTransformation(node, i)
+#		i = self.ReadTransformation3D(node, i)
 		return i
 
 	def Read_3A5FA872(self, node): # ??? 3D-Object

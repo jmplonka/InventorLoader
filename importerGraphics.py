@@ -9,7 +9,7 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 import traceback, importerSegNode
 from importerSegment        import checkReadAll
 from importerEeScene        import EeSceneReader
-from importerTransformation import Transformation
+from importerTransformation import Transformation3D
 from importerUtils          import *
 from math import fabs
 
@@ -219,19 +219,19 @@ class GraphicsReader(EeSceneReader):
 	def Read_14533D82(self, node): # WrkPlane
 		i = self.ReadHeaderObject(node, 'WrkPlane')
 		i = node.ReadFloat64A(i, 6, 'a1')
-		i = self.ReadTransformation(node, i)
+		i = self.ReadTransformation3D(node, i)
 		i = node.ReadUInt8A(i, 3, 'a3')
 		return i
 
 	def Read_2C7020F6(self, node): # WrkAxis
 		i = self.ReadHeaderObject(node, 'WkrAxis')
-		i = self.ReadTransformation(node, i)
+		i = self.ReadTransformation3D(node, i)
 		i = node.ReadUInt8A(i, 3, 'a3')
 		return i
 
 	def Read_2C7020F8(self, node): # WrkPoint
 		i = self.ReadHeaderObject(node, 'WrkPoint')
-		i = self.ReadTransformation(node, i)
+		i = self.ReadTransformation3D(node, i)
 		i = node.ReadUInt8A(i, 2, 'a3')
 		return i
 
@@ -242,7 +242,7 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'key')
-		i = self.ReadTransformation(node, i)
+		i = self.ReadTransformation3D(node, i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst2')
 		i = node.ReadUInt8(i, 'u8_1')
@@ -558,7 +558,7 @@ class GraphicsReader(EeSceneReader):
 		i = self.ReadHeaderU32RefU8List3(node, 'MeshPart')
 		i = node.ReadChildRef(i, 'object3D')
 		i = self.skipBlockSize(i)
-		i = self.ReadTransformation(node, i)
+		i = self.ReadTransformation3D(node, i)
 		i = node.ReadUInt32(i, 'u32_1')
 
 		if (getFileVersion() < 2012):
@@ -634,7 +634,7 @@ class GraphicsReader(EeSceneReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64_2D(i, 'a1')
 		i = node.ReadUInt8A(i, 4, 'a2')
-		i = self.ReadTransformation(node, i)
+		i = self.ReadTransformation3D(node, i)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 7, 'a5')
 		return i

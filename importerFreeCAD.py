@@ -468,6 +468,19 @@ def adjustFxColor(entity, nodColor):
 					entity.ViewObject.ShapeColor = color
 	return
 
+def __hide__(geo):
+	if (geo is not None):
+		geo.ViewObject.Visibility = False
+	return
+
+def hide(geos):
+	if (type(geos) == list):
+		for geo in geos:
+			__hide__(geo)
+	else:
+		__hide__(geos)
+	return
+
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
 	FX_EXTRUDE_CUT          = 0x0002
@@ -510,11 +523,6 @@ class FreeCADImporter:
 		index = sketchObj.addConstraint(constraint)
 		self.mapConstraints[key] = constraint
 		return index
-
-	def hide(self, sections):
-		for section in sections:
-			if (section is not None): section.ViewObject.Visibility = False
-		return
 
 	def addSolidBody(self, fxNode, obj3D, solid):
 		fxNode.setSketchEntity(-1, obj3D)
@@ -889,28 +897,36 @@ class FreeCADImporter:
 			for sketchEdge in part.get('edges'): # should be SketchEntityRef
 				sketchNode = sketchEdge.get('sketch')
 				self.getEntity(sketchNode) # ensure that the sketch is already created!
+				if (boundarySketch is None):
+					if (sketchNode is not None):
+						boundarySketch = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketchNode.name))
+						boundarySketch.Placement = sketchNode.sketchEntity.Placement
+
 				self.addGeometryFromNode(boundarySketch, sketchEdge, part.typeName == '1E3A132C')
 		else:
 			logError(u"    Error:  unknown boundaryPart (%04X): %s!", part.index, part.typeName)
-		return
+		return boundarySketch
 
 	def createBoundary(self, boundaryPatch, solid):
-		profile  = boundaryPatch.get('profile')
-		if (profile is not None):
-			if (profile.typeName in ['FaceBound', '603428AE', 'FaceBounds', 'FaceBoundOuter']):
-				sketch = profile.get('sketch')
-				self.getEntity(sketch)
-				boundary = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketch.name))
-				boundary.Placement = sketch.sketchEntity.Placement
-				# create all parts of the profile
-				for part in profile.get('parts'):
-					self.addBoundaryPart(boundary, part)
-				self.hide([sketch.sketchEntity])
-				return boundary
+		if (boundaryPatch is not None):
+			profile  = boundaryPatch.get('profile')
+			if (profile is not None):
+				if (profile.typeName in ['FaceBound', '603428AE', '79D4DD11', 'FaceBounds', 'FaceBoundOuter']):
+					sketch = profile.get('sketch')
+					boundary = None
+					if (sketch is not None):
+						self.getEntity(sketch)
+						boundary = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketch.name))
+						boundary.Placement = sketch.sketchEntity.Placement
+						hide(sketch.sketchEntity)
+					# create all parts of the profile
+					for part in profile.get('parts'):
+						boundary = self.addBoundaryPart(boundary, part)
+					return boundary
+				else:
+					logError(u"        ... can't create boundary from (%04X): %s - expected next node type (%s) unknown!", boundaryPatch.index, boundaryPatch.typeName, profile.typeName)
 			else:
-				logError(u"        ... can't create boundary from (%04X): %s - expected next node type (%s) unknown!", boundaryPatch.index, boundaryPatch.typeName, profile.typeName)
-		else:
-			logError(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
+				logError(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
 	def getBasesEdgesFromProxy(self, proxy):
@@ -1283,13 +1299,9 @@ class FreeCADImporter:
 		pointNode.valid = False
 		return
 
-	def addSketch_BlockPoint2D(self, node, sketchObj):
-		point = node.get('point')
-		self.addSketch_Point2D(point, sketchObj)
-		node.setSketchEntity(point.sketchIndex, point.sketchEntity)
-		return
+	def addSketch_BlockPoint2D(self, node, sketchObj): return
 
-	def addSketch_Point3D(self, pointNode, edges): return
+	def addSketch_Point3D(self, pointNode, edges):     return
 
 	def removeFromPointRef(self, point, index):
 		vec2D = (getX(point), getY(point))
@@ -1695,8 +1707,16 @@ class FreeCADImporter:
 		splineHandleNode.setSketchEntity(-1, None)
 		return
 	def addSketch_Block2D(self, blockNode, sketchObj):
-		blockNode.setSketchEntity(-1, None)
+		sourceSketch = blockNode.get('source')
+		transformation = blockNode.get('transformation')
+		for geo in sourceSketch.sketchEntity.Geometry:
+			entity = geo.copy()
+			entity.transpose(transformation)
+			sketchObj.addGeometry(geo, geo.Construction)
+		node.setSketchEntity(-1, None)
+		logInfo(u"        ... added Block '%s'", blockNode.name)
 		return
+
 	def addSketch_BSplineCurve2D(self, splineNode, sketchObj):
 		ptIndices = splineNode.get('ptIdcs')
 		poleInfo  = splineNode.get('poles')
@@ -1715,15 +1735,17 @@ class FreeCADImporter:
 
 		logInfo(u"        ... added BSpline = %s", splineNode.sketchIndex)
 		return
+
 	def addSketch_Image2D(self, imageNode, sketchObj):
 		imageNode.setSketchEntity(-1, None)
 		return
+
+	def addSketch_BlockInserts(self, node, sketchObj): return
 
 	def addSketch_5D8C859D(self, node, sketchObj): return
 	def addSketch_8EC6B314(self, node, sketchObj): return
 	def addSketch_8FEC335F(self, node, sketchObj): return
 	def addSketch_DD80AC37(self, node, sketchObj): return
-	def addSketch_F2568DCF(self, node, sketchObj): return
 
 	def handleAssociativeID(self, node):
 		label  = node.get('label')
@@ -1739,25 +1761,12 @@ class FreeCADImporter:
 				sketch.data.sketchEdges[id]  = entity
 			setAssociatedSketchEntity(sketch, node, id, label.get('typEntity'))
 
-	def Create_Sketch2D_Node(self, sketchObj, node):
+	def Create_Sketch_Node(self, sketchObj, node):
 		if ((node.handled == False) and (node.valid)):
 			node.handled = True
 			try:
-				addSketchObj = getattr(self, 'addSketch_%s' %(node.typeName))
+				addSketchObj = getattr(self, u"addSketch_%s" %(node.typeName))
 				addSketchObj(node, sketchObj)
-				self.handleAssociativeID(node)
-
-			except Exception as e:
-				logError(u"ERROR> (%04X): %s - %s", node.index, node.typeName, e)
-				logError(traceback.format_exc())
-		return
-
-	def Create_Sketch3D_Node(self, edges, node):
-		if ((node.handled == False) and (node.valid)):
-			node.handled = True
-			try:
-				addSketchObj = getattr(self, "addSketch_%s" %(node.typeName))
-				addSketchObj(node, edges)
 				self.handleAssociativeID(node)
 
 			except Exception as e:
@@ -1789,11 +1798,10 @@ class FreeCADImporter:
 						self.addConstraint(sketchObj, constraint, key)
 		return
 
-	def Create_Sketch2D(self, sketchNode):
-		sketch2D = self.createEntity(sketchNode, 'Sketcher::SketchObject')
-		logInfo(u"    adding 2D-Sketch '%s' ...", sketch2D.Label)
-		sketch2D.Placement = getPlacement(sketchNode.get('transformation'))
-		sketchNode.setSketchEntity(-1, sketch2D)
+	def createSketch(self, sketchNode, strType):
+		sketch = self.createEntity(sketchNode, 'Sketcher::SketchObject')
+		logInfo(u"    adding %s '%s' ...", strType, sketch.Label)
+		sketchNode.setSketchEntity(-1, sketch)
 		geos = []
 		dims = []
 		self.pointDataDict = {}
@@ -1804,23 +1812,33 @@ class FreeCADImporter:
 			elif (child.typeName.startswith('Dimension_')):
 				dims.append(child)
 			else:
-				self.Create_Sketch2D_Node(sketch2D, child.node)
+				self.Create_Sketch_Node(sketch, child.node)
 
 		for g in geos:
-			self.Create_Sketch2D_Node(sketch2D, g.node)
+			self.Create_Sketch_Node(sketch, g.node)
 
 		# need to recompute otherwise FreeCAD messes up directions for other constraints!
 		if (self.doc): self.doc.recompute()
 
 		for d in dims:
-			self.Create_Sketch2D_Node(sketch2D, d.node)
+			self.Create_Sketch_Node(sketch, d.node)
 
-		self.addSketch_PostCreateCoincidences(sketch2D)
-
-		if (self.root):
-			self.root.addObject(sketch2D)
+		self.addSketch_PostCreateCoincidences(sketch)
 
 		self.pointDataDict = None
+		return sketch
+
+	def Create_SketchBlock(self, sketchNode):
+		sketchBlock = self.createSketch(sketchNode, 'Sketch-Block')
+		hide(sketchBlock)
+		return
+
+	def Create_Sketch2D(self, sketchNode):
+		sketch2D = self.createSketch(sketchNode, '2D-Sketch')
+
+		if (self.root): self.root.addObject(sketch2D)
+
+		sketch2D.Placement = getPlacement(sketchNode.get('transformation'))
 
 		return
 
@@ -1839,14 +1857,14 @@ class FreeCADImporter:
 			elif (child.typeName.startswith('Dimension_')):
 				dims.append(child)
 			else:
-				self.Create_Sketch3D_Node(edges, child.node)
+				self.Create_Sketch_Node(edges, child.node)
 
 		for g in geos:
-			self.Create_Sketch3D_Node(edges, g.node)
+			self.Create_Sketch_Node(edges, g.node)
 
 ## 3DConstraints not supported in FreeCAD
 #		for d in dims:
-#			self.Create_Sketch3D_Node(edges, d.node)
+#			self.Create_Sketch_Node(edges, d.node)
 #			# need to recompute otherwise FreeCAD messes up directions for other constraints!
 #			if (self.doc): self.doc.recompute()
 
@@ -1927,7 +1945,7 @@ class FreeCADImporter:
 			pad.Placement.Base.x -= dirX * len2
 			pad.Placement.Base.y -= dirY * len2
 			pad.Placement.Base.z -= dirZ * len2
-			self.hide([base])
+			hide(base)
 		else:
 			logWarning(u"        can't create new extrusion '%s' - (%04X): %s properties[04] is None!", name, padNode.index, padNode.typeName)
 		return pad
@@ -2381,7 +2399,7 @@ class FreeCADImporter:
 				loftGeo.Ruled    = isTrue(ruled)
 				loftGeo.Closed   = isTrue(closed)
 			loftGeo.Solid    = surface is None
-			self.hide(sections)
+			hide(sections)
 			setDefaultViewObjectValues(loftGeo)
 			self.addBody(loftNode, loftGeo, 0x0D, 0x06)
 		return
@@ -2421,7 +2439,7 @@ class FreeCADImporter:
 		loftGeo.Closed   = False #isTrue(closed)
 		loftGeo.Solid    = False #
 
-		self.hide(sections)
+		hide(sections)
 		setDefaultViewObjectValues(loftGeo)
 		self.addSurfaceBody(defNode, loftGeo, surface)
 		return
@@ -2461,8 +2479,8 @@ class FreeCADImporter:
 			sweepGeo.Spine    = (path, edges)
 			sweepGeo.Solid    = solid
 			#sweepGeo.Frenet   = (frenet.getValueText() == 'ParallelToOriginalProfile')
-			self.hide(sections)
-			self.hide([path])
+			hide(sections)
+			hide(path)
 			setDefaultViewObjectValues(sweepGeo)
 			self.addBody(sweepNode, sweepGeo, 0x0F, 0x06)
 		return
@@ -2529,7 +2547,7 @@ class FreeCADImporter:
 				self.addBody(thickenNode, thickenGeo, 0x0F, 0x08)
 			else:
 				self.addBody(thickenNode, thickenGeo, 0x0F, 0x0B)
-		self.hide(sourceGeos.values())
+		hide(list(sourceGeos.values()))
 		return
 
 	def Create_FxCoil(self, coilNode):
@@ -2604,7 +2622,7 @@ class FreeCADImporter:
 		setDefaultViewObjectValues(sweepGeo)
 
 		self.addBody(coilNode, sweepGeo, 0x13, 0x11)
-		self.hide([coilGeo])
+		hide(coilGeo)
 
 		return
 
@@ -2646,7 +2664,7 @@ class FreeCADImporter:
 			chamferGeo = geos[0]
 
 		self.addSolidBody(chamferNode, chamferGeo, body)
-		self.hide(bases)
+		hide(bases)
 		return
 
 	def Create_FxFillet(self, filletNode):
@@ -2670,7 +2688,7 @@ class FreeCADImporter:
 		# = getProperty(properties, 0x10) # SolidBody 'Solid1'
 
 #		self.addSolidBody(filletNode, filletGeo, body)
-#		self.hide(bases)
+#		hide(bases)
 
 		return
 
@@ -2799,7 +2817,7 @@ class FreeCADImporter:
 #		getProperty(properties, 12) # Boolean
 		text       = getProperty(properties, 13) # RtfContent 'Default'
 
-		base     = self.createBoundary(profile, solid is not None)
+		base     = self.createBoundary(profile, False)
 
 		return notYetImplemented(embossNode)
 
@@ -2948,7 +2966,7 @@ class FreeCADImporter:
 #		getProperty(properties, 6) # RotateClockwise
 		solid      = getProperty(properties, 7) # SurfaceBodies 'Solid1'
 
-		base     = self.createBoundary(profile, solid is not None)
+		base     = self.createBoundary(profile, solid is not None) if (profile.get('profile') is not None) else None
 
 		return notYetImplemented(splitNode)
 
@@ -3073,43 +3091,43 @@ class FreeCADImporter:
 		return notYetImplemented(grillNode)
 
 	def Create_FxLip(self, lipNode):
-		properties  = lipNode.get('properties')
-		dir         = getProperty(properties, 0)  # Direction - (0,1,0)
-		edgeProxies = getProperty(properties, 1)  # EdgeCollectionProxy
+		properties   = lipNode.get('properties')
+		dir          = getProperty(properties, 0)  # Direction - (0,1,0)
+		edgesProxies = getProperty(properties, 1)  # EdgeCollectionProxy
 #		getProperty(properties, 2)  # Boolean
-		faces       = getProperty(properties, 3)  # FaceCollection
+		faces        = getProperty(properties, 3)  # FaceCollection
 #		getProperty(properties, 4)  # 7414D5CA -> Workplanes ?!?
-		width       = getProperty(properties, 5)  # Parameter 'd424'=6.35mm
-		height      = getProperty(properties, 6)  # Parameter 'd425'=6.35mm
-		outerOffset = getProperty(properties, 7)  # Parameter 'd426'=0mm
-		innerAngle  = getProperty(properties, 8)  # Parameter 'd427'=0°
-		outerAngle  = getProperty(properties, 9)  # Parameter 'd428'=0°
-		grooveDepth = getProperty(properties, 10) # Parameter 'd429'=0mm
-		bottom      = getProperty(properties, 11) # Boolean
-		bodies      = getProperty(properties, 12) # SurfaceBodies 'Solid63'
+		width        = getProperty(properties, 5)  # Parameter 'd424'=6.35mm
+		height       = getProperty(properties, 6)  # Parameter 'd425'=6.35mm
+		outerOffset  = getProperty(properties, 7)  # Parameter 'd426'=0mm
+		innerAngle   = getProperty(properties, 8)  # Parameter 'd427'=0°
+		outerAngle   = getProperty(properties, 9)  # Parameter 'd428'=0°
+		grooveDepth  = getProperty(properties, 10) # Parameter 'd429'=0mm
+		bottom       = getProperty(properties, 11) # Boolean
+		bodies       = getProperty(properties, 12) # SurfaceBodies 'Solid63'
 
-		bases, edges = self.getBasesEdgesFromProxy(edgeProxies)
+		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
 
 		return notYetImplemented(lipNode)
 
 	def Create_FxRest(self, restNode):
-		properties = restNode.get('properties')
-		profile    = getProperty(properties, 0)  # BoundaryPatch
+		properties     = restNode.get('properties')
+		profile        = getProperty(properties, 0)  # BoundaryPatch
 #		getProperty(properties, 1)  # Parameter 'd157'=1.5mm
-		direction  = getProperty(properties, 2)  # ShellDirection='Inside'
-		extentWhat = getProperty(properties, 3)  # ExtentType='All'
-		extentType = getProperty(properties, 4)  # ExtentType='Dimension'
-		width      = getProperty(properties, 5)  # Parameter 'd151'=5mm
+		direction      = getProperty(properties, 2)  # ShellDirection='Inside'
+		extentWhat     = getProperty(properties, 3)  # ExtentType='All'
+		extentType     = getProperty(properties, 4)  # ExtentType='Dimension'
+		width          = getProperty(properties, 5)  # Parameter 'd151'=5mm
 #		getProperty(properties, 6)  # Parameter 'd152'=0mm
 #		getProperty(properties, 7)  # Parameter 'd153'=0mm
 #		getProperty(properties, 8)  # Parameter 'd154'=0mm
-		direction  = getProperty(properties, 11) # Direction - (0,1,0)
+		direction      = getProperty(properties, 11) # Direction - (0,1,0)
 #		getProperty(properties, 12) # Boolean
 #		getProperty(properties, 13) # Boolean
-		innerAngle = getProperty(properties, 14) # Parameter 'd155'=0°
-		outerAngle = getProperty(properties, 15) # Parameter 'd156'=0°
-		bodies     = getProperty(properties, 16) # SurfaceBodies 'None'
-		fxDim      = getProperty(properties, 17) # FeatureDimensions
+		landingTaper   = getProperty(properties, 14) # Parameter 'd155'=0°
+		clearanceTaper = getProperty(properties, 15) # Parameter 'd156'=0°
+		bodies         = getProperty(properties, 16) # SurfaceBodies 'None'
+		fxDim          = getProperty(properties, 17) # FeatureDimensions
 
 		boundary = self.createBoundary(profile, True)
 
@@ -3311,18 +3329,6 @@ class FreeCADImporter:
 
 		return notYetImplemented(knitNode)
 
-	def Create_FxRefold(self, refoldNode):
-		properties = refoldNode.get('properties')
-#		getProperty(properties, 0) # SurfaceBodies 'Solid1'
-		face       = getProperty(properties, 1) # Face
-		faces      = getProperty(properties, 2) # FaceCollection
-#		getProperty(properties, 3) # ParameterBoolean=True
-#		getProperty(properties, 4) # 7E15AA39
-#		getProperty(properties, 5) # MatchedEdge
-#		getProperty(properties, 6) # MatchedEdge
-#		getProperty(properties, 7) # EBB23D6E_Enum=2
-		return notYetImplemented(refoldNode)
-
 	def Create_FxRip(self, ripNode):
 		properties = ripNode.get('properties')
 #		getProperty(properties, 0) # SurfaceBody 'Solid1'
@@ -3335,16 +3341,34 @@ class FreeCADImporter:
 		return notYetImplemented(ripNode)
 
 	def Create_FxUnfold(self, unfoldNode):
-		properties = unfoldNode.get('properties')
-		for unfold in unfoldNode.get('unfolds'):
+		unfolds = unfoldNode.get('unfolds')
+		if (unfolds is None):
+			properties = unfoldNode.get('properties')
+#			getProperty(properties, 0) # SurfaceBod(ies|y) 'Solid1'
+			face       = getProperty(properties, 1) # Face
+			faces      = getProperty(properties, 2) # FaceCollection
+#			getProperty(properties, 3) # ParameterBoolean=True
+#			getProperty(properties, 4) # 7E15AA39
+#			getProperty(properties, 7) # 4688EBA3_Enum=1
+			return notYetImplemented(unfoldNode)
+		for unfold in unfolds:
 			self.getEntity(unfold)
-#		getProperty(properties, 0) # SurfaceBod(ies|y) 'Solid1'
-		face       = getProperty(properties, 1) # Face
-		faces      = getProperty(properties, 2) # FaceCollection
-#		getProperty(properties, 3) # ParameterBoolean=True
-#		getProperty(properties, 4) # 7E15AA39
-#		getProperty(properties, 7) # 4688EBA3_Enum=1
-		return notYetImplemented(unfoldNode)
+
+	def Create_FxRefold(self, refoldNode):
+		refolds = refoldNode.get('unfolds')
+		if (refolds is None):
+			properties = refoldNode.get('properties')
+#			getProperty(properties, 0) # SurfaceBodies 'Solid1'
+			face       = getProperty(properties, 1) # Face
+			faces      = getProperty(properties, 2) # FaceCollection
+#			getProperty(properties, 3) # ParameterBoolean=True
+#			getProperty(properties, 4) # 7E15AA39
+#			getProperty(properties, 5) # MatchedEdge
+#			getProperty(properties, 6) # MatchedEdge
+#			getProperty(properties, 7) # EBB23D6E_Enum=2
+			return notYetImplemented(refoldNode)
+		for refold in refolds:
+			self.getEntity(refold)
 
 	def Create_FxLoftedFlangeDefinition(self, fxNode):
 		properties = fxNode.get('properties')
@@ -3367,8 +3391,8 @@ class FreeCADImporter:
 
 		return notYetImplemented(fxNode)
 
-	def Create_FxBendPart(self, fxNode):
-		properties = fxNode.get('properties')
+	def Create_FxBendPart(self, bendPartNode):
+		properties = bendPartNode.get('properties')
 		profile    = getProperty(properties, 0) # BoundaryPatch
 #		getProperty(properties, 1) # Parameter 'd11'=2mm
 #		getProperty(properties, 2) # Parameter 'd12'=35°
@@ -3376,12 +3400,12 @@ class FreeCADImporter:
 #		getProperty(properties, 5) # ParameterBoolean=True
 #		getProperty(properties, 6) # ParameterBoolean=False
 #		getProperty(properties, 7) # ParameterBoolean=True
-#		getProperty(properties, 8) # SurfaceBodies 'Solid1'
+		getProperty(properties, 8) # SurfaceBodies 'Solid1'
 #		getProperty(properties, 9) # FeatureDimensions
 
-		boundary = self.createBoundary(profile, solid is not None)
+		boundary = self.createBoundary(profile, False)
 
-		return notYetImplemented(fxNode)
+		return notYetImplemented(bendPartNode)
 
 	# not supported features as too much work to implement additional readers or workarounds
 	def Create_FxThread(self, threadNode):
@@ -3400,9 +3424,11 @@ class FreeCADImporter:
 
 		return unsupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
 
-	def Create_FxPunchTool(self, punchToolNode): return unsupportedNode(punchToolNode) # Special iFeature and requires the punch tool file -> additional parser!
-
-	def Create_FxiFeature(self, iFeatureNode):   return unsupportedNode(iFeatureNode)
+	def Create_FxPunchTool(self, node):     return unsupportedNode(node) # Special iFeature and requires the punch tool file -> additional parser!
+	def Create_FxiFeature(self, node):      return unsupportedNode(node)
+	def Create_DerivedAssembly(self, node): return unsupportedNode(node)
+	def Create_DerivedPart(self, node):     return unsupportedNode(node)
+	def Create_Text2D(self, node):          return unsupportedNode(node)
 
 	def Create_FxUnknown(self, unknownNode):
 		logWarning(u"    Can't process unknown Feature '%s' - probably an unsupported iFeature!", unknownNode.name)
@@ -3498,34 +3524,6 @@ class FreeCADImporter:
 
 		return
 
-	def Create_Line3D(self, lineNode):
-		# work axis not supported!
-#		sketchObj = self.createEntity(lineNode, 'Part::Feature')
-#		logInfo(u"    adding 3D-Line '%s' ...", sketchObj.Label)
-#		edges = {}
-#		self.addSketch_Line3D(lineNode, edges)
-#		sketchObj.Shape = Part.Shape(edges.values())
-#		if (self.root): self.root.addObject(sketchObj)
-		return ignoreBranch(lineNode)
-
-	def Create_Plane(self, planeNode):                             return ignoreBranch(planeNode)
-	def Create_BodiesFolder(self, folderNode):                     return ignoreBranch(folderNode)
-	def Create_Circle3D(self, radiusNode):                         return ignoreBranch(radiusNode)
-	def Create_DerivedAssembly(self, derivedAssemblyNode):         return unsupportedNode(derivedAssemblyNode)
-	def Create_DerivedPart(self, derivedPartNode):                 return unsupportedNode(derivedPartNode)
-	def Create_EndOfFeatures(self, stopNode):                      return ignoreBranch(stopNode)
-	def Create_Group2D(self, groupNode):                           return ignoreBranch(groupNode)
-	def Create_Group3D(self, groupNode):                           return ignoreBranch(groupNode)
-	def Create_Point3D(self, pointNode):                           return ignoreBranch(pointNode)
-	def Create_RDxVar(self, varNode):                              return ignoreBranch(varNode)
-	def Create_RevolutionTransformation(self, transformationNode): return ignoreBranch(transformationNode)
-	def Create_Sketch2DPlacementPlane(self, placementNode):        return ignoreBranch(surfaceNode)
-	def Create_Sketch2DPlacement(self, placementNode):             return ignoreBranch(placementNode)
-	def Create_SurfaceBody(self, surfaceBodyNode):                 return ignoreBranch(surfaceBodyNode)
-	def Create_Text2D(self, textNode):                             return unsupportedNode(textNode)
-	def Create_ParameterBoolean(self, valueNode):                  return ignoreBranch(valueNode)
-	def Create_Blocks(self, blocksNode):                           return notYetImplemented(blocksNode)
-
 	def Create_iPart(self, iPartNode):
 		# create a iPart Table
 		table = newObject(self.doc, 'Spreadsheet::Sheet', iPartNode.name)
@@ -3544,21 +3542,39 @@ class FreeCADImporter:
 						pass
 		return
 
-	def Create_Dimension(self, dimensionNode):             return
-	def Create_Direction(self, directionNode):             return
-	def Create_Label(self, labelNode):                     return
-	def Create_ModelAnnotations(self, modelNode):          return
-	def Create_Transformation(self, transformationNode):   return
-	def Create_UserCoordinateSystem(self, usrCrdSysNode):  return
+	def Create_Blocks(self, blocksNode):
+		self.resolveParticiants(blocksNode)
+		return
 
-	def Create_2B48A42B(self, node): return
-	def Create_3902E4D1(self, node): return
-	def Create_5844C14D(self, node): return
-	def Create_CADC79F0(self, node): return
-	def Create_CA02411F(self, node): return notYetImplemented(node) # list of ASM parts
-	def Create_EBA98FD3(self, node): return
-	def Create_FBC6C635(self, node): return
-	def Create_F3DBA9D8(self, node): return
+	# Nothin to do for the following nodes:
+	def Create_BodiesFolder(self, node):             return ignoreBranch(node)
+	def Create_Circle3D(self, node):                 return ignoreBranch(node)
+	def Create_Dimension(self, node):                return ignoreBranch(node)
+	def Create_Direction(self, node):                return ignoreBranch(node)
+	def Create_EndOfFeatures(self, node):            return ignoreBranch(node)
+	def Create_Group2D(self, node):                  return ignoreBranch(node)
+	def Create_Group3D(self, node):                  return ignoreBranch(node)
+	def Create_Label(self, node):                    return ignoreBranch(node)
+	def Create_Line3D(self, lineNode):               return ignoreBranch(lineNode)
+	def Create_MatchedEdge(self, node):              return ignoreBranch(node)
+	def Create_ModelAnnotations(self, node):         return ignoreBranch(node)
+	def Create_ParameterBoolean(self, node):         return ignoreBranch(node)
+	def Create_Plane(self, node):                    return ignoreBranch(node)
+	def Create_Point3D(self, node):                  return ignoreBranch(node)
+	def Create_RDxVar(self, node):                   return ignoreBranch(node)
+	def Create_RevolutionTransformation(self, node): return ignoreBranch(node)
+	def Create_Sketch2DPlacement(self, node):        return ignoreBranch(node)
+	def Create_Sketch2DPlacementPlane(self, node):   return ignoreBranch(node)
+	def Create_SurfaceBody(self, node):              return ignoreBranch(node)
+	def Create_Transformation(self, node):           return ignoreBranch(node)
+	def Create_UserCoordinateSystem(self, node):     return ignoreBranch(node)
+
+	def Create_2B48A42B(self, node):                 return ignoreBranch(node)
+	def Create_5844C14D(self, node):                 return ignoreBranch(node)
+	def Create_CADC79F0(self, node):                 return ignoreBranch(node)
+	def Create_CA02411F(self, node):                 return ignoreBranch(node)
+	def Create_EBA98FD3(self, node):                 return ignoreBranch(node)
+	def Create_FBC6C635(self, node):                 return ignoreBranch(node)
 
 	def addParameterTableTolerance(self, table, r, tolerance):
 		if (tolerance):

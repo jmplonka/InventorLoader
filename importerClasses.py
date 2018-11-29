@@ -679,6 +679,18 @@ class DataNode():
 			return node.typeName
 		return None
 
+	def getParticipants(self):
+		label = self.get('label')
+		if (label is None):
+			logError(u"    (%04X): %s - has no required label attribute!", self.index, self.typeName)
+			return []
+		while (label.typeName != 'Label'):
+			dummy = label
+			label = label.get('label')
+			if (label is None):
+				logError(u"    (%04X): %s - has no required label attribute!", dummy.index, dummy.typeName)
+		return label.get('participants')
+
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
@@ -960,6 +972,29 @@ class BendEdgeNode(DataNode):
 		p2 = self.get('to')
 		return u'(%04X): %s - (%g,%g,%g)-(%g,%g,%g)' %(self.index, self.typeName, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
 
+class SketchNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+		data.sketchEdges = {}
+		data.associativeIDs = {}
+		return
+
+class BlockPointNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		p = self.get('point')
+		return u"(%04X): %s - (%g,%g)" %(self.index, self.typeName, p.get('x'), p.get('y'))
+
+class Block2DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		sketch = self.get('source')
+		return u"(%04X): %s '%s'" %(self.index, self.typeName, sketch.name)
+
 class FeatureNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
@@ -1106,18 +1141,6 @@ class FeatureNode(DataNode):
 
 	def getRefText(self): # return unicode
 		return u'(%04X): Fx%s \'%s\'' %(self.data.index, self.getSubTypeName(), self.name)
-
-	def getParticipants(self):
-		label = self.get('label')
-		if (label is None):
-			logError(u"    (%04X): %s - has no required label attribute!", self.index, self.typeName)
-			return []
-		while (label.typeName != 'Label'):
-			dummy = label
-			label = label.get('label')
-			if (label is None):
-				logError(u"    (%04X): %s - has no required label attribute!", dummy.index, dummy.typeName)
-		return label.get('participants')
 
 	def __str__(self):
 		return u"(%04X): Fx%s '%s'%s" %(self.data.index, self.getSubTypeName(), self.name, self.data.content)

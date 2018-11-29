@@ -7,7 +7,7 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 
 import re, traceback,  numpy as np
 from importerClasses        import *
-from importerTransformation import Transformation
+from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
 from importerUtils          import *
 from Acis                   import clearEntities
@@ -101,7 +101,6 @@ BRANCH_NODES = {
 	'Enum':                            EnumNode,
 	'Feature':                         FeatureNode,
 	'Point2D':                         PointNode,
-	'BlockPoint2D':                    PointNode,
 	'Point3D':                         PointNode,
 	'Line2D':                          LineNode,
 	'Line3D':                          LineNode,
@@ -120,6 +119,11 @@ BRANCH_NODES = {
 	'Direction':                       DirectionNode,
 	'A244457B':                        DirectionNode,
 	'BendEdge':                        BendEdgeNode,
+	'SketchBlock':                     SketchNode,
+	'Sketch2D':                        SketchNode,
+	'Sketch3D':                        SketchNode,
+	'BlockPoint2D':                    BlockPointNode,
+	'Block2D':                         Block2DNode,
 }
 
 def getBranchNode(data, isRef):
@@ -186,7 +190,7 @@ def resolveReferencNodes(nodes):
 				radius._data = node
 				ref._data.set(radius.name, radius)
 
-		if (node.typeName in ['FaceBound', '603428AE', 'FaceBoundOuter']):
+		if (node.typeName in ['FaceBound', '603428AE', '79D4DD11', 'FaceBoundOuter']):
 			refFx = node.get('proxy')
 			refFx.set('profile', node)
 		elif (node.typeName in ['FaceBounds']):
@@ -349,14 +353,24 @@ class SegmentReader(object):
 		node.set(name, lst)
 		node.delete('tmp')
 		return i
-
-	def ReadTransformation(self, node, offset):
+	
+	def ReadTransformation2D(self, node, offset):
 		'''
-		Read the transformation matrix
+		Read the 2D transformation matrix
 		'''
-		val = Transformation()
-		node.set('transformation', val)
+		val = Transformation2D()
 		i = val.read(node.data, offset)
+		node.set('transformation', val)
+		node.content += u" transformation=%r" %(val)
+		return i
+
+	def ReadTransformation3D(self, node, offset):
+		'''
+		Read the 3D transformation matrix
+		'''
+		val = Transformation3D()
+		i = val.read(node.data, offset)
+		node.set('transformation', val)
 		node.content += u" transformation=%r" %(val)
 		return i
 
