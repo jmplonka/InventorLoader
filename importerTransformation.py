@@ -22,63 +22,62 @@ class Transformation2D:
 
 	def read(self, data, offset):
 		self.a0, i = getUInt32(data, offset)
-		d1 = (self.a0 & 0xFFFF0000) >> 16
-		d2 = (self.a0 & 0x0000FFFF)
-		self.m = [[1,0,0],[0,1,0],[0,0,1]]
-		if (d1 == 0xCA):
-			self.m[0][2], i = getFloat64(data, i)
-			self.m[1][2], i = getFloat64(data, i)
-		else:
-			if (d2 == 0x0111):
-				self.m[0][1], i = getFloat64(data, i)
-				self.m[0][2], i = getFloat64(data, i)
-				self.m[1][0], i = getFloat64(data, i)
-				self.m[1][2], i = getFloat64(data, i)
-			else:
-				self.m[0][0], i = getFloat64(data, i)
-				self.m[0][1], i = getFloat64(data, i)
-				self.m[0][2], i = getFloat64(data, i)
-				self.m[1][0], i = getFloat64(data, i)
-				self.m[1][1], i = getFloat64(data, i)
-				self.m[1][2], i = getFloat64(data, i)
+		#                   +--- Value for the 3. row to be used for the transformation matrix
+		#                   |+-- Value for the 2. row to be used for the transformation matrix
+		#                   ||+- Value for the 1. row to be used for the transformation matrix
+		#                   |||
+		#                   vvv
+		m1 = (self.a0 & 0x00FF0000) >> 16
+		#                      +------- Mask for the 3. row of the transformation matrix
+		#                      |+------ Mask for the 2. row of the transformation matrix
+		#                      ||+----- Mask for the 1. row of the transformation matrix
+		#                      |||
+		#                      vvv
+		m2 = (self.a0 & 0x000001FF)
+		for row in range(3):
+			for col in range(3):
+				j = col + 3 * row
+				b = (1 << j)
+				if ((m1 & b) == 0):
+					if ((m2 & b) == 0):
+						value, i = getFloat64(data, i)
+						if (math.fabs(value) < 1.0e-6): value = 0.0
+						self.m[row][col] = value
 		return i
 
-	def getX(self):
-		return self.m[0][2] * 10.0
+	def getX(self): return self.m[0][2] * 10.0
 
-	def getY(self):
-		return self.m[1][2] * 10.0
-
-	def __m2s__(self, index):
-		v = self.m[index]
-		return u"[%g, %g, %g]" %(v[0], v[1], v[2] * 10.0)
+	def getY(self): return self.m[1][2] * 10.0
 
 	def getBase(self):
 		x = self.m[0, 2]
 		y = self.m[1, 2]
 		return VEC(x, y, 0)
 
+	def getMatrix(self):
+		return MAT(
+			self.m[0][0], self.m[0][1], 0, self.m[0][2],
+			self.m[1][0], self.m[1][1], 0, self.m[1][2],
+			           0,            0, 1,            0,
+			self.m[2][0], self.m[2][1], 0, self.m[2][2],
+			)
+
+	def __m2s__(self, index):
+		v = self.m[index]
+		return u"[%g, %g, %g]" %(v[0], v[1], v[2] * 10.0)
+
 	def __str__(self): # return unicode
 		m = self.__repr__()
-		j = 0
 		mask = '|'
-		d1 = (self.a0 & 0xFFFF0000) >> 16
-		d2 = (self.a0 & 0x0000FFFF)
-		while (j < 9):
+		d1 = (self.a0 & 0x00FF0000) >> 16
+		d2 = (self.a0 & 0x000001FF)
+		for j in range(9):
 			b = (1 << j)
 			if (d1 & b):
-				if (d2 & b):
-					mask += '-'
-				else:
-					mask += '0'
+				mask += '-' if (d2 & b) else '0'
 			else:
-				if (d2 & b):
-					mask += '+'
-				else:
-					mask += 'x'
-			j += 1
-			if ((j % 3) == 0):
-				mask += '|'
+				mask += '+' if (d2 & b) else 'x'
+			if (((j+1) % 3) == 0): mask += '|'
 		return u' transformation={a0=%s m=%s}' %(mask, m)
 
 	def __repr__(self):
@@ -98,59 +97,42 @@ class Transformation3D:
 			i = k
 		else:
 			i = offset
-		#             +---- Value for the 4. row to be used for the transformation matrix
-		#             |+--- Value for the 3. row to be used for the transformation matrix
-		#             ||+-- Value for the 2. row to be used for the transformation matrix
-		#             |||+- Value for the 1. row to be used for the transformation matrix
-		#             ||||
-		#             vvvv
+		'''           +---- Value for the 4. row to be used for the transformation matrix
+		              |+--- Value for the 3. row to be used for the transformation matrix
+		              ||+-- Value for the 2. row to be used for the transformation matrix
+		              |||+- Value for the 1. row to be used for the transformation matrix
+		              ||||
+		              vvvv '''
 		d1, i = getUInt16(data, i)
-		#             +-------- Mask for the 4. row of the transformation matrix
-		#             |+------- Mask for the 3. row of the transformation matrix
-		#             ||+------ Mask for the 2. row of the transformation matrix
-		#             |||+----- Mask for the 1. row of the transformation matrix
-		#             ||||
-		#             vvvv
+		'''           +-------- Mask for the 4. row of the transformation matrix
+		              |+------- Mask for the 3. row of the transformation matrix
+		              ||+------ Mask for the 2. row of the transformation matrix
+		              |||+----- Mask for the 1. row of the transformation matrix
+		              ||||
+		              vvvv'''
 		d2, i = getUInt16(data, i)
 		self.a0 = d1 | (d2 << 16)
-		n = 16 - bin(d1 | d2).count('1')
 		self.m = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
-		j = 0
-		r = 0
-		c = 0
-		v = self.m[0]
-		while (j < 16):
-			b = (1 << j)
-			if (d2 & b == 0):
-				if (d1 & b == 0):
-					v[c], i = getFloat64(data, i)
-					if (math.fabs(v[c]) < 0.00001): v[c] = 0.0
+		for row in range(4):
+			for col in range(4):
+				j = col + 4 * row
+				b = (1 << j)
+				if (d2 & b == 0):
+					if (d1 & b == 0):
+						value, i = getFloat64(data, i)
+						if (math.fabs(value) < 1.0e-6): value = 0.0
+					else:
+						value = 1
 				else:
-					v[c] = 1
-			else:
-				if (d1 & b == 0):
-					v[c] = 0
-				else:
-					v[c] = -1
-
-			j += 1
-			if ((j % 4) == 0):
-				c = 0
-				r += 1
-				if (r < 4):
-					v = self.m[r]
-			else:
-				c += 1
+					value = 0 if (d1 & b == 0) else -1
+				self.m[row][col] = value
 		return i
 
-	def getX(self):
-		return self.m[0][3] * 10.0
+	def getX(self): return self.m[0][3] * 10.0
 
-	def getY(self):
-		return self.m[1][3] * 10.0
+	def getY(self): return self.m[1][3] * 10.0
 
-	def getZ(self):
-		return self.m[2][3] * 10.0
+	def getZ(self): return self.m[2][3] * 10.0
 
 	def __m2s__(self, index):
 		v = self.m[index]
