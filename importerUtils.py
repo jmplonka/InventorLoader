@@ -285,7 +285,7 @@ def chooseImportStrategy():
 
 	QApplication.setOverrideCursor(Qt.ArrowCursor)
 	result = msgBox.exec_()
-	QApplication.setOverrideCursor(Qt.WaitCursor)
+	QApplication.restoreOverrideCursor()
 
 	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE}
 	strategy = resultMapping[result]
