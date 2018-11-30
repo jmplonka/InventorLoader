@@ -1296,18 +1296,6 @@ class SecNodeRef():
 			self._data.sketchIndex = index
 			self._data.sketchEntity = entity
 
-	@property
-	def first(self):
-		node = self.node
-		if (node): return node.first
-		return None
-
-	@property
-	def next(self):
-		node = self.node
-		if (node): return node.next
-		return None
-
 	def getValue(self):
 		node = self.node
 		if (node): return node.getValue()
@@ -1339,4 +1327,5 @@ class SecNodeRef():
 		return u'[%04X,%X]' %(self.index, self.mask)
 
 	def __repr__(self):
-		return self.__str__()
+		if (self.node is None): return self.__str__()
+		return self.node.getRefText()

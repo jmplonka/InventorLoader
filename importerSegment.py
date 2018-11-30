@@ -131,6 +131,7 @@ def getBranchNode(data, isRef):
 	return nodeCls(data, isRef)
 
 def __dumpBranch(file, ref, branch, level, prefix):
+	# branch can be either an branch node or an text representation!
 	indent = u"%s%s" %('\t' * level, prefix)
 	if (ref is not None):
 		if (ref.number is not None):
@@ -148,19 +149,10 @@ def __dumpBranch(file, ref, branch, level, prefix):
 		file.write(u"%s%s\n" %(indent, branch))
 	return
 
-def buildBranchRef(parent, file, ref, level):
-	branch = getBranchNode(ref.data, True)
-	parent.append(branch)
-
-	__dumpBranch(file, ref, branch.getRefText(), level, '*')
-
-	return
-
 def buildBranch(parent, file, data, level, ref):
-	branch = getBranchNode(data, False)
-	parent.append(branch)
+	parent.append(data.node)
 
-	__dumpBranch(file, ref, branch.__str__(), level, '')
+	__dumpBranch(file, ref, data.node.__str__(), level, '')
 
 	for childRef in data.references:
 		if (not childRef.analysed):
@@ -168,13 +160,17 @@ def buildBranch(parent, file, data, level, ref):
 			child = childRef._data
 			if (child is not None):
 				if (childRef.type == SecNodeRef.TYPE_CHILD):
-					buildBranch(branch, file, child, level + 1, childRef)
+					buildBranch(data.node, file, child, level + 1, childRef)
 				elif (childRef.type == SecNodeRef.TYPE_CROSS):
-					buildBranchRef(branch, file, childRef, level + 1)
+					node = childRef.node
+					if (node is not None):
+						parent.append(childRef.node)
+						__dumpBranch(file, childRef, node.getRefText(), level + 1, '*')
 	return
 
 def resolveReferencNodes(nodes):
 	for node in nodes.values():
+		getBranchNode(node, False)
 		node.handled = False
 		node.sketchIndex = None
 		node.parent = None
@@ -201,6 +197,9 @@ def resolveReferencNodes(nodes):
 		elif (node.typeName == 'NMx_FFColor_Entity'):
 			refFx = node.get('fx')
 			refFx.set('fxColor', node)
+		elif (node.typeName == 'FaceCollectionProxy'):
+			proxy = node.get('proxyDef')
+			proxy.set('faceCollection', node)
 	return
 
 def resolveParentNodes(nodes):

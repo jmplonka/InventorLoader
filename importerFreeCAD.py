@@ -568,16 +568,7 @@ class FreeCADImporter:
 			self.addSurfaceBody(fxNode, body, sourface)
 		return
 
-	def findBase(self, baseNode):
-		if (baseNode is not None):
-			assert (baseNode.typeName == 'FaceCollectionProxy'), 'FATA> Expected FaceCollectionProxy not (%04X): %s!' %(baseNode.index, baseNode.typeName)
-			base = baseNode.get('proxyDef')
-			if (base):
-				return self.findBase2(base)
-			logError(u"ERROR> Base (%04X): %s not defined!", baseNode.index, baseNode.typeName)
-		return None
-
-	def findBase2(self, base):
+	def findBase(self, base):
 		baseGeo = None
 		if (base is not None):
 			name = getFirstBodyName(base)
@@ -809,7 +800,7 @@ class FreeCADImporter:
 		self.getEntity(participant) # Not part fo the section!
 		return None
 
-	def addGeometryFromNode(self, boundarySketch, sketchEdge, direct):
+	def addGeometryFromNode(self, boundarySketch, sketchEdge):
 		sketch = sketchEdge.get('sketch')
 		# ensure that the sketch is already created!
 		self.getEntity(sketch)
@@ -832,12 +823,14 @@ class FreeCADImporter:
 		elif (isinstance(entity, Part.ArcOfCircle)):
 			edge = Part.Circle(entity.Center, entity.Axis, entity.Radius)
 			if (isSamePoint(p1, p2) == False):
-				alpha   = edge.parameter(p2v(p1))
-				beta    = edge.parameter(p2v(p2))
 				if (sketchEdge.get('posDir')):
-					edge = Part.ArcOfCircle(edge, alpha, beta)
+					alpha   = edge.parameter(p2v(p1))
+					beta    = edge.parameter(p2v(p2))
 				else:
-					edge = Part.ArcOfCircle(edge, beta, alpha)
+					alpha   = edge.parameter(p2v(p2))
+					beta    = edge.parameter(p2v(p1))
+				edge = Part.ArcOfCircle(edge, alpha, beta)
+				print (u"Circle r=%g, c=(%g,%g) from %g to %g" %(entity.Radius, entity.Center.x, entity.Center.y, alpha, beta))
 		elif (isinstance(entity, Part.ArcOfEllipse)):
 			edge = entity
 			if (isSamePoint(p1, p2) == False):
@@ -902,7 +895,7 @@ class FreeCADImporter:
 						boundarySketch = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketchNode.name))
 						boundarySketch.Placement = sketchNode.sketchEntity.Placement
 
-				self.addGeometryFromNode(boundarySketch, sketchEdge, part.typeName == '1E3A132C')
+				self.addGeometryFromNode(boundarySketch, sketchEdge)
 		else:
 			logError(u"    Error:  unknown boundaryPart (%04X): %s!", part.index, part.typeName)
 		return boundarySketch
@@ -1419,7 +1412,11 @@ class FreeCADImporter:
 		y = getY(center)
 		r = getCoord(circleNode, 'r')
 		points = circleNode.get('points')
-		mode = (circleNode.next.typeName == '64DE16F3') or isConstructionMode(circleNode)
+		mode = isConstructionMode(circleNode)
+		if (not mode):
+			nextNode = circleNode.segment.elementNodes.get(circleNode.index+1, None)
+			if (nextNode is not None):
+				mode = (nextNode.typeName == '64DE16F3')
 		point1 = None
 		point2 = None
 		circle = createCircle(center, 0, 0, 1, r)
@@ -1711,9 +1708,9 @@ class FreeCADImporter:
 		transformation = blockNode.get('transformation')
 		for geo in sourceSketch.sketchEntity.Geometry:
 			entity = geo.copy()
-			entity.transpose(transformation)
+			entity.transform(transformation.getMatrix())
 			sketchObj.addGeometry(geo, geo.Construction)
-		node.setSketchEntity(-1, None)
+		blockNode.setSketchEntity(-1, None)
 		logInfo(u"        ... added Block '%s'", blockNode.name)
 		return
 
@@ -1952,14 +1949,14 @@ class FreeCADImporter:
 
 	def createFxExtrude_Operation(self, padNode, sectionNode, name, nameExtension, className):
 		properties = padNode.get('properties')
-		baseData   = getProperty(properties, 0x1A)
+		baseRef   = getProperty(properties, 0x1A)
 		boolean    = None
 
-		if (baseData is None):
+		if (baseRef is None):
 			logWarning(u"    Can't find base info for (%04X): %s - not yet created!", padNode.index, name)
 			return None
 		tool = self.Create_FxExtrude_New(padNode, sectionNode, name + nameExtension)
-		base    = self.findBase(baseData.next)
+		base = self.findBase(baseRef)
 		if (base is not None):
 			if (tool is not None): # no need to raise a warning as it's already done!
 				return self.createBoolean(className, name, base, [tool])
@@ -2095,7 +2092,7 @@ class FreeCADImporter:
 				logInfo(u"        .... Base = '%s'", baseRef.name)
 				baseGeo = self.getEntity(baseRef)
 				if (baseGeo is None):
-					baseGeo = self.findBase2(baseRef)
+					baseGeo = self.findBase(baseRef)
 				if (baseGeo is not None):
 					if (baseGeo.isDerivedFrom('Part::Cut')):
 						cutGeo = baseGeo
@@ -2179,7 +2176,7 @@ class FreeCADImporter:
 				baseGeo = self.getEntity(baseRef)
 				logInfo(u"        .... Base = '%s'", baseRef.name)
 				if (baseGeo is None):
-					baseGeo = self.findBase2(baseRef)
+					baseGeo = self.findBase(baseRef)
 				if (baseGeo is not None):
 					if (baseGeo.isDerivedFrom('Part::Cut')):
 						cutGeo = baseGeo
@@ -2219,8 +2216,8 @@ class FreeCADImporter:
 		else:
 			logWarning(u"        FxCombine: don't know how to '%s' - (%04X): %s!", operationData.node.getValueText(), combineNode.index, combineNode.typeName)
 			return
-		baseGeo       = self.findBase2(bodyRef)
-		toolGeos      = self.findGeometries(sourceData.next)
+		baseGeo       = self.findBase(bodyRef)
+		toolGeos      = self.findGeometries(sourceData.get('faceCollection'))
 		if ((baseGeo is not None) and (len(toolGeos) > 0)):
 			cmbineGeo = self.createBoolean(className, name, baseGeo, toolGeos)
 			if (cmbineGeo is None):
@@ -2287,13 +2284,13 @@ class FreeCADImporter:
 		#    = getProperty(properties, 0x15)	# <=> placement == "linear"
 		#    = getProperty(properties, 0x16)	#
 		# 0x17 ???
-		baseData      = getProperty(properties, 0x18)
+		baseRef      = getProperty(properties, 0x18)
 		vec3D         = None
 
 		self.resolveParticiants(holeNode) # No need to take further care on created objectes.
 
 		if (holeType is not None):
-			base = self.findBase(baseData.next)
+			base = self.findBase(baseRef)
 
 			if (base is None):
 				logWarning(u"    Can't find base info for (%04X): %s - not yet created!", holeNode.index, name)
@@ -3517,11 +3514,8 @@ class FreeCADImporter:
 
 	def Create_BrowserFolder(self, originNode):
 		# Skip creation of origin objects.
-		child = originNode.first
-		while (child):
+		for child in originNode.children:
 			child.handled = True
-			child = child.next
-
 		return
 
 	def Create_iPart(self, iPartNode):

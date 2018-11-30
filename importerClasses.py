@@ -528,11 +528,6 @@ class DataNode():
 		self.data = data
 		self.isRef = isRef
 		self.children = []
-		self._map = {}
-		self.parent = None
-		self.first = None
-		self.previous = None
-		self.next = None
 
 	@property
 	def typeName(self):
@@ -576,10 +571,6 @@ class DataNode():
 	def isLeaf(self):
 		return self.size() == 0
 
-	def getRef(self, ref):
-		if (ref): return self.getChild(ref.index)
-		return None
-
 	@property
 	def name(self):
 		if (self.data): return self.data.getName()
@@ -596,40 +587,25 @@ class DataNode():
 			self.data.sketchEntity = entity
 
 	def append(self, node):
-		if (self.size() > 0):
-			previous = self.children[len(self.children) -1]
-			previous.next = node
-			node.previous = previous
-		else:
-			self.first = node
-			node.previous = None
 		self.children.append(node)
-		self._map[node.index] = node
-		node.next = None
 		node.parent = self
-
 		return node
 
-	def getChild(self, index):
-		try:
-			return self._map[index]
-		except:
+	@property
+	def next(self):
+		p = self.parent
+		if (p is None):
 			return None
-
-	def getFirstChild(self, key):
-		child = self.first
-		while (child):
-			if (child.typeName == key): return child
-			child = child.next
+		for i, e in enumerate(p.children):
+			if (e.index == self.index):
+				if (i < p.size()-1):
+					return p.children[i+1]
 		return None
 
-	def getChildren(self, key):
-		lst = []
-		child = self.first
-		while (child):
-			if (child.typeName == key): lst.append(child)
-			child = child.next
-		return lst
+	def getFirstChild(self, key):
+		for child in self.children:
+			if (child.typeName == key): return child
+		return None
 
 	def get(self, name):
 		if (self.data): return self.data.get(name)
@@ -985,7 +961,7 @@ class BlockPointNode(DataNode):
 
 	def getRefText(self):
 		p = self.get('point')
-		return u"(%04X): %s - (%g,%g)" %(self.index, self.typeName, p.get('x'), p.get('y'))
+		return u"(%04X): %s - (%s)" %(self.index, self.typeName, p.typeName)
 
 class Block2DNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1330,6 +1306,7 @@ class AbstractData():
 		self.sketchPos    = None
 		self.valid        = True
 		self.handled      = False
+		self.node         = None
 
 	def set(self, name, value):
 		'''
@@ -1369,9 +1346,11 @@ class AbstractData():
 		return u"(%04X): %s '%s'%s" %(self.index, self.uid, self.name, self.content.encode(sys.getdefaultencoding()))
 
 	def __repr__(self):
-		if (self.name is None):
-			return u"(%04X): %s" %(self.index, self.uid)
-		return u"(%04X): %s '%s'" %(self.index, self.uid, self.name)
+		if (self.node is None):
+			if (self.name is None):
+				return u"(%04X): %s" %(self.index, self.uid)
+			return u"(%04X): %s '%s'" %(self.index, self.uid, self.name)
+		return self.node.getRefText()
 
 class Enum(tuple): __getattr__ = tuple.index
 

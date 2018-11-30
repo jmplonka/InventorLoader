@@ -1485,15 +1485,6 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_3')
 		return i
 
-	def Read_1E3A132C(self, node):
-		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'ref_1')
-		i = node.ReadUInt32(i, 'operation') # 8 = Fuse, 0 = Cut
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'edges') #
-		i = node.ReadUInt32(i, 'faceIndex')
-		return i
-
 	def Read_1EF28758(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'ref_1')
@@ -5261,16 +5252,16 @@ class DCReader(EeDataReader):
 		i = node.Read_Header0('SketchEntityRef')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'entityAI')  # association number of the entity inside the referenced sketch
-		i = node.ReadUInt32(i, 'typEntity') # type of the entity (should be 2)
-		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'point1AI')  # association number of the start point inside the referenced sketch
-		i = node.ReadUInt32(i, 'typPt1')    # type of the entity (should be 1)
-		i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadUInt32(i, 'point2AI')  # association number of the start point inside the referenced sketch
-		i = node.ReadUInt32(i, 'typPt2')    # type of the entity (should be 1)
-		i = node.ReadUInt8(i,  'posDir')    # Indicator for the orientation of edge (required for e.g. circles)
+		i = node.ReadUInt32(i,  'u32_0')
+		i = node.ReadUInt32(i,  'entityAI')  # association number of the entity inside the referenced sketch
+		i = node.ReadUInt32(i,  'typEntity') # type of the entity (should be 2)
+		i = node.ReadUInt32(i,  'u32_1')
+		i = node.ReadUInt32(i,  'point1AI')  # association number of the start point inside the referenced sketch
+		i = node.ReadUInt32(i,  'typPt1')    # type of the entity (should be 1)
+		i = node.ReadUInt32(i,  'u32_2')
+		i = node.ReadUInt32(i,  'point2AI')  # association number of the start point inside the referenced sketch
+		i = node.ReadUInt32(i,  'typPt2')    # type of the entity (should be 1)
+		i = node.ReadBoolean(i, 'posDir')    # Indicator for the orientation of edge (required for e.g. circles)
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'sketch')
 		return i
@@ -6088,6 +6079,15 @@ class DCReader(EeDataReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadCrossRef(i, 'surface')
 		i = self.skipBlockSize(i)
+		return i
+
+	def Read_1E3A132C(self, node):
+		i = node.Read_Header0()
+		i = node.ReadChildRef(i, 'ref_1')
+		i = node.ReadUInt32(i, 'operation') # 8 = Fuse, 0 = Cut
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'edges') #
+		i = node.ReadUInt32(i, 'faceIndex')
 		return i
 
 	def Read_A3277869(self, node): # Loop

@@ -467,8 +467,8 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0()
 		i = node.ReadUUID(i, 'uid_0')
 		i = node.ReadUInt32A(i, 6, 'a0')
-		i = node.ReadUUID(i, 'uid_1')
-		i = node.ReadUUID(i, 'uid_2')
+		i = node.ReadUUID(i, 'brepUID')
+		i = node.ReadUUID(i, 'graphicsUID')
 		i = node.ReadParentRef(i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_)
 		if (getFileVersion() < 2012):
