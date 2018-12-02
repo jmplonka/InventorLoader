@@ -820,7 +820,7 @@ class SecNode(AbstractData):
 			key, i = getUInt16(self.data, i)
 			val, i = getUInt16(self.data, i)
 			lst[key] = val
-		self.content += u",".join([u"[%03X:%03X]" %(key, lst[key]) for key in lst])
+		self.content += u" %s=[%s]" % (name, u",".join([u"[%03X:%03X]" %(key, lst[key]) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -831,7 +831,7 @@ class SecNode(AbstractData):
 			key, i = getUInt32(self.data, i)
 			val, i = getUInt32(self.data, i)
 			lst[key] = val
-		self.content += u",".join([u"[%04X:%04X]" %(key, lst[key]) for key in lst])
+		self.content += u" %s=[%s]" % (name, u",".join([u"[%04X:%04X]" %(key, lst[key]) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -896,7 +896,7 @@ class SecNode(AbstractData):
 			key = self.get(name)
 			val, i = getUInt32A(self.data, i, 2)
 			lst[key] = val
-		self.content += u",".join([u"[%s:(%s)]" %(key, IntArr2Str(lst[key], 4)) for key in lst])
+		self.content += u" %s=[%s]" % (name, u",".join([u"[%s:(%s)]" %(key, IntArr2Str(lst[key], 4)) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -908,7 +908,7 @@ class SecNode(AbstractData):
 			key = self.get(name)
 			val, i = getFloat64(self.data, i)
 			lst[key] = val
-		self.content += u",".join([u"[%s: %g]" %(key, lst[key]) for key in lst])
+		self.content += u" %s=[%s]" % (name, u",".join([u"[%s: %g]" %(key, lst[key]) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -924,7 +924,7 @@ class SecNode(AbstractData):
 			i = self.ReadList2(i, _TYP_NODE_X_REF_, tmp)
 			lst[key] = self.get(tmp)
 			self.delete(tmp)
-		self.content = c + u",".join([u"[%s: (%s)]" %(getIndex(key), u"),(".join([u"%s" %(getIndex(h)) for h in lst[key]])) for key in lst])
+		self.content = c + u" %s=[%s]" % (name, u",".join([u"[%s: (%s)]" %(getIndex(key), u"),(".join([u"%s" %(getIndex(h)) for h in lst[key]])) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -935,7 +935,7 @@ class SecNode(AbstractData):
 			key, i = getUUID(self.data, i)
 			val, i = getUInt32(self.data, i)
 			lst[key] = val
-		self.content += u" %s={%s}" %(name, u",".join([u"[{%s}:%04X]" %(key, lst[key]) for key in lst]))
+		self.content += u" %s=[%s]" % (name, u" %s={%s}" %(name, u",".join([u"[{%s}:%04X]" %(key, lst[key]) for key in lst])))
 		self.set(name, lst)
 		return i
 
@@ -1016,7 +1016,7 @@ class SecNode(AbstractData):
 			elif (getFileVersion() > 2018):
 				i += 1
 			self.delete(tmp)
-		self.content = c + u",".join([u"[\'%s\': (%s)]" %(key, lst[val]) for key in lst])
+		self.content = c + u" %s=[%s]" % (name, u",".join([u"[\'%s\': (%s)]" %(key, lst[val]) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -1042,7 +1042,7 @@ class SecNode(AbstractData):
 				i += 8
 			elif (getFileVersion() > 2018):
 				i += 1
-		self.content += u",".join([u"[\'%s\': (%s)]" %(key, lst[val]) for key in lst])
+		self.content += u" %s=[%s]" % (name, u",".join([u"[\'%s\': (%s)]" %(key, lst[val]) for key in lst]))
 		self.delete('tmp')
 		self.set(name, lst)
 		return i

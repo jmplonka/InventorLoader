@@ -241,7 +241,7 @@ class GraphicsReader(EeSceneReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_1')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'key')
+		i = node.ReadUInt32(i, 'index')
 		i = self.ReadTransformation3D(node, i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst2')
@@ -262,7 +262,7 @@ class GraphicsReader(EeSceneReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt8A(i, 4, 'a2')
+		i = node.ReadUInt8A(i, 4, 'a5')
 		return i
 
 	def Read_424221E2(self, node): return 0
@@ -325,7 +325,7 @@ class GraphicsReader(EeSceneReader):
 	def Read_6A6931DC(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = self.ReadTypedFloatsList(node, i, 'lst0')
+		i = self.ReadEdgeList(node, i)
 		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst1', 3)
 		i = node.ReadFloat64_3D(i, 'p1')
 		i = node.ReadFloat64_3D(i, 'p2')
@@ -435,19 +435,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadFloat64_2D(i, 'a2')
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadList7(i, importerSegNode._TYP_MAP_U32_U32_, 'lst1')
-
-#		i = node.ReadUInt16A(i, 4, 'a3')
-#		a4, dummy = getUInt16A(node.data, i, 2)
-#		if (a4[0] == 0x02 and a4[1] == 0x3000):
-#			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst2')
-#			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst3')
-#			i = node.ReadUInt16A(i, 2, 'a4')
-#		else:
-#			node.set('lst0', [])
-#			node.set('lst1', [])
-#			i = dummy
-#
-#		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32A(i, 2, 'a3')
+		i = node.ReadChildRef(i, 'wire') # -> 6A6931DC with
 		return i
 
 	def Read_9E2FB889(self, node): return 0
@@ -486,18 +475,15 @@ class GraphicsReader(EeSceneReader):
 # 		return i
 
 	def Read_A94779E0(self, node):
-		'''
-		SingleFeatureOutline
-		'''
 		node.typeName = 'SingleFeatureOutline'
 		i = self.skipBlockSize(0)
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'key')
+		i = node.ReadUInt32(i, 'index')
 		i = node.ReadFloat64A(i, 3, 'a1')
 		i = node.ReadFloat64A(i, 3, 'a2')
-		i = self.ReadTypedFloatsList(node, i, 'a3')
+		i = self.ReadEdgeList(node, i)
 		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst0', 3)
 		return i
 
@@ -530,7 +516,7 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadFloat64A(i, 6, 'a3')
 		i = node.ReadUInt8A(i, 2, 'a4')
-		i = self.ReadTypedFloatsList(node, i, 'a5')
+		i = self.ReadEdgeList(node, i)
 		return i
 
 	def Read_A94779E4(self, node):
@@ -544,10 +530,10 @@ class GraphicsReader(EeSceneReader):
 		i = self.ReadFloat64A(node, i, cnt, 'a1', 12)
 		cnt, i = getUInt32(node.data, i)
 		i = self.ReadFloat64A(node, i, cnt, 'a2', 6)
-		i = self.ReadTypedFloatsList(node, i, 'a3')
+		i = self.ReadEdgeList(node, i, 'edges1')
 		i = node.ReadFloat64A(i, 6, 'a4')
 		i = node.ReadUInt8A(i, 2, 'a5')
-		i = self.ReadTypedFloatsList(node, i, 'a6')
+		i = self.ReadEdgeList(node, i, 'edges2')
 		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst2', 3)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
@@ -622,9 +608,9 @@ class GraphicsReader(EeSceneReader):
 		return i
 
 	def Read_BD5BB62B(self, node):
-		i = self.ReadHeaderParent(node)
-		i = node.ReadUInt32(i, 'key')
-		i = node.ReadUInt8(i, 'u8_0')
+		i = self.ReadHeaderParent(node, 'IndexDef_1')
+		i = node.ReadUInt32(i, 'index')
+		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
 	def Read_C0014C89(self, node):

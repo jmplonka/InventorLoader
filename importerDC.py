@@ -478,7 +478,7 @@ class DCReader(EeDataReader):
 			ref, i = self.ReadNodeRef(node, i, 0, REF_CROSS, 'lst0')
 			node.set('lst0', [ref])
 		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst1', 3)
-		i = self.ReadTypedFloatsList(node, i, 'a1')
+		i = self.ReadEdgeList(node, i)
 		return i
 
 	def Read_0229768D(self, node): # ParameterComment
@@ -672,10 +672,11 @@ class DCReader(EeDataReader):
 	def Read_2E04A208(self, node): # EntityWrapperNode
 		i = self.ReadHeaderEntityWrapperNode(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 5, 'a1')
+		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadUInt32A(i, 2, 'a2')
 		cnt, i = getUInt32(node.data, i)
-		i = node.ReadUInt32A(i, cnt, 'a2')
-		i = node.ReadUInt32A(i, 3, 'a3')
+		i = node.ReadUInt32A(i, cnt, 'a3')
+		i = node.ReadUInt32A(i, 3, 'a4')
 		return i
 
 	def Read_31D7A200(self, node): # EntityWrapperNode
@@ -1364,7 +1365,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'idx')
-		i = self.ReadTypedFloatsList(node, i, 'lst0')
+		i = self.ReadEdgeList(node, i)
 		i = node.ReadCrossRef(i, 'sketch')
 		i = node.ReadFloat64_3D(i, 'a1')
 		return i
@@ -4976,7 +4977,6 @@ class DCReader(EeDataReader):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
 		else:
 			node.set('lst1', [])
-
 		i = node.ReadCrossRef(i, 'anchor')
 		i = node.ReadUUID(i, 'id')
 		i = node.ReadUInt32(i, 'u32_0')
@@ -5451,8 +5451,8 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'owner')
-		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'edgeIdx')
+		i = node.ReadCrossRef(i, 'nameTable')
+		i = node.ReadUInt32(i, 'item')
 		return i
 
 	def Read_90874D55(self, node):
@@ -5472,8 +5472,8 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'face')
-		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'edgeIdx')
+		i = node.ReadCrossRef(i, 'nameTable')
+		i = node.ReadUInt32(i, 'item')
 		return i
 
 	def Read_90874D56(self, node):
@@ -6192,7 +6192,7 @@ class DCReader(EeDataReader):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'parameter')
 		i = node.ReadCrossRef(i, 'entity')
-		i = self.ReadTypedFloatsList(node, i, 'lst0')
+		i = self.ReadEdgeList(node, i)
 		i = node.ReadFloat64(i, 'dirX')
 		i = node.ReadFloat64(i, 'dirY')
 		i = node.ReadFloat64(i, 'dirZ')
@@ -6853,8 +6853,8 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadUInt32(i, 'edgeIdx')
+		i = node.ReadCrossRef(i, 'nameTable')
+		i = node.ReadUInt32(i, 'item')
 		return i
 
 	def Read_B8E19017(self, node): # SplitToolTypeEnum {F7304638-1AF5-4E5D-8704-D9DE52F1A8B4}
@@ -7303,9 +7303,10 @@ class DCReader(EeDataReader):
 		lst = {}
 		for j in range(cnt):
 			key, i = getUInt32(node.data, i)
-			val, i = self.ReadNodeRef(node, i, key, REF_CHILD, 'lst')
+			val, i = self.ReadNodeRef(node, i, key, REF_CHILD, 'items')
 			lst[key] = val
-		node.set('lst', lst)
+		node.set('items', lst)
+		self.addNameTable(node)
 		return i
 
 	def Read_CD1423D9(self, node):
@@ -8810,13 +8811,20 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_FC86960C(self, node):
-		n, i = getUInt32(node.data, 0)
-		for k in range(0, n):
+		cnt, i = getUInt32(node.data, 0)
+		lst    = []
+		for j in range(0, cnt):
 			t, i = getUInt16(node.data, i)
 			if (t == 0):
-				i = self.ReadTypedFloats(node, i, "a%d" % k)
+				i = self.ReadTypedFloats(node, i, 'tmp')
+				f = node.get('tmp')
+				lst.append(f)
 			elif (t == 1):
-				i = node.ReadUInt32A(i, 2, "a%d" % k)
+				f, i = getUInt32A(node.data, i, 2)
+				lst.append(f)
+		node.content += ' edges=[%s]' %(','.join(['(%s:[%s])' %(r[0], str(r[1])) for r in lst]))
+		node.set('edges', lst)
+		node.delete('tmp')
 		return i
 
 	def Read_FC9AAE10(self, node):

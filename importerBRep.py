@@ -279,9 +279,10 @@ class BRepReader(SegmentReader):
 		lst = {}
 		for j in range(cnt):
 			key, i = getUInt32(node.data, i)
-			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD, 'lst')
+			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD, 'items')
 			lst[key] = val
 		node.set('lst', lst)
+		self.addNameTable(node)
 		return i
 
 	def Read_D797B7B9(self, node):

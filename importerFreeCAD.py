@@ -823,14 +823,12 @@ class FreeCADImporter:
 		elif (isinstance(entity, Part.ArcOfCircle)):
 			edge = Part.Circle(entity.Center, entity.Axis, entity.Radius)
 			if (isSamePoint(p1, p2) == False):
+				alpha   = edge.parameter(p2v(p1))
+				beta    = edge.parameter(p2v(p2))
 				if (sketchEdge.get('posDir')):
-					alpha   = edge.parameter(p2v(p1))
-					beta    = edge.parameter(p2v(p2))
+					edge = Part.ArcOfCircle(edge, alpha, beta)
 				else:
-					alpha   = edge.parameter(p2v(p2))
-					beta    = edge.parameter(p2v(p1))
-				edge = Part.ArcOfCircle(edge, alpha, beta)
-				print (u"Circle r=%g, c=(%g,%g) from %g to %g" %(entity.Radius, entity.Center.x, entity.Center.y, alpha, beta))
+					edge = Part.ArcOfCircle(edge, beta, alpha)
 		elif (isinstance(entity, Part.ArcOfEllipse)):
 			edge = entity
 			if (isSamePoint(p1, p2) == False):
@@ -1028,7 +1026,7 @@ class FreeCADImporter:
 				creator    = edgeProxy.get('creator')
 				if (creator is not None):
 					idxCreator = creator.get('idxCreator')
-					edges.append(edgeProxy.get('edgeIdx'))
+					edges.append(edgeProxy.get('item'))
 					if (idxCreator not in idxCreators):
 						idxCreators.append(idxCreator)
 						baseNode = edgeRef.data.segment.indexNodes[idxCreator]
@@ -3397,7 +3395,7 @@ class FreeCADImporter:
 #		getProperty(properties, 5) # ParameterBoolean=True
 #		getProperty(properties, 6) # ParameterBoolean=False
 #		getProperty(properties, 7) # ParameterBoolean=True
-		getProperty(properties, 8) # SurfaceBodies 'Solid1'
+#		getProperty(properties, 8) # SurfaceBodies 'Solid1'
 #		getProperty(properties, 9) # FeatureDimensions
 
 		boundary = self.createBoundary(profile, False)

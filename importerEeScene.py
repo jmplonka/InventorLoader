@@ -71,8 +71,8 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadUInt32(i, 'key')
 		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt32(i, 'index')
 		return i
 
 	def ReadHeaderSurface(self, node, typeName  =None):
@@ -82,7 +82,7 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(0, 8)
 		i = node.ReadParentRef(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_SINT32_A_, 'lst0', 2)
+		i = node.ReadList2(i, importerSegNode._TYP_SINT32_A_, 'edges', 2) # [SingleFeatureOutline,SINT_32]*
 		node.surface = True
 		return i
 
@@ -424,8 +424,8 @@ class EeSceneReader(StyleReader):
 		i = self.ReadHeaderNumRef(node, 'RefByKey_2', 'key')
 		return i
 
-	def Read_5D916CE9(self, node): # key reference
-		i = self.ReadHeaderNumRef(node, 'RefByKey_3', 'key')
+	def Read_5D916CE9(self, node): # index definition
+		i = self.ReadHeaderNumRef(node, 'IndexDef_2', 'index')
 		return i
 
 	def Read_B9274CE3(self, node): # key reference

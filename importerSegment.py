@@ -263,6 +263,11 @@ class SegmentReader(object):
 		self.segment = segment
 		self.nodeCounter = 0
 		self.fmt_old = (getFileVersion() < 2011)
+		self.nameTables = {}
+
+	def addNameTable(self, node):
+		self.nameTables[node.index] = node
+		return
 
 	def postRead(self):
 		return
@@ -323,10 +328,13 @@ class SegmentReader(object):
 
 		if (t == 0x0B):   # 3D-Circle            # Center, normal, m, radius, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 12)
+			t = 'ArcOfCircle'
 		elif (t == 0x11): # 3D-Ellipse           # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle ???
 			a, i = getFloat64A(node.data, i, 13)
+			t = 'ArcOfEllipse'
 		elif (t == 0x17): # 3D-Line
 			a, i = getFloat64A(node.data, i, 6)  # Point1, Point2
+			t = 'Line'
 		elif (t == 0x2A): # 3D-BSpline
 			a0 = Struct(u"<LLLd").unpack_from(node.data, i)
 			i  += 20
@@ -336,23 +344,24 @@ class SegmentReader(object):
 			a4 = Struct(u"<dLLdd").unpack_from(node.data, i)
 			i  += 32
 			a = a0 + a1 + a2 + a3 + a4
+			t = 'BSpline'
 		else:
 			raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
 		node.set(name, (t, a))
 		return i
 
-	def ReadTypedFloatsList(self, node, offset, name):
+	def ReadEdgeList(self, node, offset, name='edges'):
 		cnt, i = getUInt32(node.data, offset)
 		lst    = []
 		for j in range(cnt):
 			i = self.ReadTypedFloats(node, i , 'tmp')
 			f = node.get('tmp')
 			lst.append(f)
-		node.content += ' %s=[%s]' %(name, ','.join(['(%02X:[%s])' %(r[0], str(r[1])) for r in lst]))
+		node.content += ' %s=[%s]' %(name, ','.join(['(%s:[%s])' %(r[0], str(r[1])) for r in lst]))
 		node.set(name, lst)
 		node.delete('tmp')
 		return i
-	
+
 	def ReadTransformation2D(self, node, offset):
 		'''
 		Read the 2D transformation matrix
