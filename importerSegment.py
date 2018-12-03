@@ -263,11 +263,6 @@ class SegmentReader(object):
 		self.segment = segment
 		self.nodeCounter = 0
 		self.fmt_old = (getFileVersion() < 2011)
-		self.nameTables = {}
-
-	def addNameTable(self, node):
-		self.nameTables[node.index] = node
-		return
 
 	def postRead(self):
 		return

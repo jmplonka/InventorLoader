@@ -128,7 +128,7 @@ class BRepReader(SegmentReader):
 
 	def Read_66085B35(self, node):
 		i = self.skipBlockSize(0)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'dcCreatorIdx') # the creator' index in 'DC' segment
 		if (getFileVersion() > 2009):
 			i = node.ReadUInt16(i, 'u16_0')
 		else:
@@ -279,10 +279,9 @@ class BRepReader(SegmentReader):
 		lst = {}
 		for j in range(cnt):
 			key, i = getUInt32(node.data, i)
-			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD, 'items')
+			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD, 'entries')
 			lst[key] = val
-		node.set('lst', lst)
-		self.addNameTable(node)
+		node.set('entries', lst)
 		return i
 
 	def Read_D797B7B9(self, node):

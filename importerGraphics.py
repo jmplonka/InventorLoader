@@ -262,7 +262,7 @@ class GraphicsReader(EeSceneReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt8A(i, 4, 'a5')
+		i = node.ReadUInt8A(i, 4, 'a2')
 		return i
 
 	def Read_424221E2(self, node): return 0

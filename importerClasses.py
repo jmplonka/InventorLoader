@@ -9,6 +9,7 @@ import sys
 from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
 from math          import degrees, radians, pi
 from FreeCAD       import ParamGet
+from pathlib       import Path
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -338,6 +339,10 @@ class Inventor():
 		self.iProperties        = {}
 		self.RSeMetaData        = {}
 
+	def __repr__(self):
+		p = Path(getInventorFile())
+		return u"[%d]: %s" %(p.name, getFileVersion())
+
 	def getDC(self):
 		'''
 		Returns the segment that contains the 3D-objects.
@@ -360,6 +365,54 @@ class Inventor():
 		'''
 		for seg in self.RSeMetaData.values():
 			if (seg.isGraphics()): return seg
+		return None
+
+	def getApp(self):
+		'''
+		Returns the segment that contains the application settings.
+		'''
+		for seg in self.RSeMetaData.values():
+			if (seg.isApp()): return seg
+		return None
+
+	def getBrowser(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isBrowser(self)): return seg
+		return None
+
+	def getDefault(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isDefault(self)): return seg
+		return None
+
+	def getResult(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isResult(self)): return seg
+		return None
+
+	def getDesignView(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isDesignView(self)): return seg
+		return None
+
+	def getEeData(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isEeData(self)): return seg
+		return None
+
+	def getEeScene(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isEeScene(self)): return seg
+		return None
+
+	def getFBAttribute(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isFBAttribute(self)): return seg
+		return None
+
+	def getNBNotebook(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isNBNotebook()): return seg
 		return None
 
 class DbInterface():

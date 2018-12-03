@@ -71,8 +71,8 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i, 8)
+		i = node.ReadUInt32(i, 'key')
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadUInt32(i, 'index')
 		return i
 
 	def ReadHeaderSurface(self, node, typeName  =None):
@@ -445,21 +445,21 @@ class EeSceneReader(StyleReader):
 	def Read_3D953EB2(self, node):
 		i = self.ReadHeaderParent(node, 'RefByIndexPoint')
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'index') # reference to a Work-Points's index
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Points's index
 		node.numref = True
 		return i
 
 	def Read_3EA856AC(self, node):
 		i = self.ReadHeaderParent(node, 'RefByIndexAxis')
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'index') # reference to a Work-Axis's index
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Axis's index
 		node.numref = True
 		return i
 
 	def Read_591E9565(self, node): # Index reference
 		i = self.ReadHeaderParent(node, 'RefByIndexPlane')
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'index') # reference to a Work-Plane's index
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Plane's index
 		node.numref = True
 		return i
 

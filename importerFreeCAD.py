@@ -481,6 +481,30 @@ def hide(geos):
 		__hide__(geos)
 	return
 
+def resolveNameTableItem(item, name):
+	vk  = item.get(name)
+	if (type(vk) is list):
+		nt  = item.segment.elementNodes[vk[0] & 0x7FFFFFFF]
+		vk = nt.get('entries')[vk[1]]
+		item.set(name, vk)
+	return
+
+def getNameTableEntry(node):
+	if (node.handled): return
+	node.handled = True
+	nameTable = node.get('nameTable')
+	entry     = nameTable.get('entries')[node.get('ntIdx')]
+	resolveNameTableItem(entry, 'val_key_1')
+	resolveNameTableItem(entry, 'val_key_2')
+	resolveNameTableItem(entry, 'val_key_3')
+	lst2 = entry.get('lst2')
+	for i, value in enumerate(lst2):
+		nt  = node.segment.elementNodes[value[0] & 0x7FFFFFFF]
+		nte = nt.get('entries')[value[1]]
+		lst2[i] = (nte, value[2])
+	graphics = getModel().getGraphics()
+	return entry
+
 class FreeCADImporter:
 	FX_EXTRUDE_NEW          = 0x0001
 	FX_EXTRUDE_CUT          = 0x0002
@@ -512,6 +536,15 @@ class FreeCADImporter:
 					if (node.valid):
 						importObject = getattr(self, 'Create_%s' %(node.typeName))
 						importObject(node)
+
+						# apply colors stored in graphics segment
+						entity = node.sketchEntity
+						if (entity is not None):
+							gr = getModel().getGraphics()
+							grNode = gr.indexNodes.get(node.get('index'), None)
+							if (grNode is not None):
+								color  = getBodyColor(grNode)
+								adjustColor(entity, color)
 			except Exception as e:
 				logError(u"Error in creating (%04X): %s - %s", node.index, node.typeName, e)
 				logError(traceback.format_exc())
@@ -828,7 +861,9 @@ class FreeCADImporter:
 				if (sketchEdge.get('posDir')):
 					edge = Part.ArcOfCircle(edge, alpha, beta)
 				else:
-					edge = Part.ArcOfCircle(edge, beta, alpha)
+					alpha   = edge.parameter(p2v(p2))
+					beta    = edge.parameter(p2v(p1))
+				edge = Part.ArcOfCircle(edge, alpha, beta)
 		elif (isinstance(entity, Part.ArcOfEllipse)):
 			edge = entity
 			if (isSamePoint(p1, p2) == False):
@@ -920,14 +955,29 @@ class FreeCADImporter:
 				logError(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
-	def getBasesEdgesFromProxy(self, proxy):
-		allBases = []
+	def getBasesAndEdges(self, matchedEdge):
+		edges       = []
+
+		for idxRef in matchedEdge.get('indexRefs'):
+			ref  = matchedEdge.data.segment.indexNodes[idxRef]
+			assert (ref.typeName == 'EdgeID'),  u"found '%s'!" %(ref.typeName)
+			creator = ref.get('creator')
+			if (creator is not None):
+				idxCreator = creator.get('idxCreator')
+				creator = matchedEdge.data.segment.indexNodes[idxCreator]
+				self.getEntity(creator) # ensure that the creator is already available!
+			ntEntry = getNameTableEntry(ref)
+			edges.append(ntEntry) # FIXME get GEOMETRY FOR name-table entry!!!
+		return edges
+
+	def getEdgesFromProxy(self, proxy):
 		allEdges = []
 		if (proxy is not None):
-			bases, edges = self.getBasesAndEdges(proxy.get('edges'))
-			allEdges += edges
-			allBases += bases
-		return allBases, allEdges
+			for matchedEdge in proxy.get('edges'):
+				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
+				edges = self.getBasesAndEdges(matchedEdge)
+				allEdges += edges
+		return allEdges
 
 	def collectSections(self, fxNode, action): #
 		participants = fxNode.getParticipants()
@@ -1014,25 +1064,6 @@ class FreeCADImporter:
 			if (not isEqual1D(dirY, 0)): ly = box.YLength
 			if (not isEqual1D(dirZ, 0)): lz = box.ZLength
 		return sqrt(lx*lx + ly*ly + lz*lz)
-
-	def getBasesAndEdges(self, edgeRefs):
-		bases       = []
-		edges       = []
-		idxCreators = []
-
-		for edgeRef in edgeRefs:
-			for idxRef in edgeRef.get('indexRefs'):
-				edgeProxy  = edgeRef.data.segment.indexNodes[idxRef]
-				creator    = edgeProxy.get('creator')
-				if (creator is not None):
-					idxCreator = creator.get('idxCreator')
-					edges.append(edgeProxy.get('item'))
-					if (idxCreator not in idxCreators):
-						idxCreators.append(idxCreator)
-						baseNode = edgeRef.data.segment.indexNodes[idxCreator]
-						base = self.getEntity(baseNode)
-						bases.append(base)
-		return bases, edges
 
 	def resolveParticiants(self, fxNode):
 		geos = []
@@ -2423,9 +2454,9 @@ class FreeCADImporter:
 
 		self.resolveParticiants(fxNode) # no further action necessary
 
-		boundary1    = self.createBoundary(proxy1, surface is None)
-		boundary2    = self.createBoundary(proxy2, surface is None)
-		bases, edges = self.getBasesEdgesFromProxy(edgeProxies)
+		boundary1 = self.createBoundary(proxy1, surface is None)
+		boundary2 = self.createBoundary(proxy2, surface is None)
+		edges     = self.getEdgesFromProxy(edgeProxies)
 
 		sections         = [boundary1, boundary2]
 		loftGeo          = self.createEntity(defNode, 'Part::Loft')
@@ -2639,27 +2670,11 @@ class FreeCADImporter:
 		mmDim1      = getMM(dim1)
 		mmDim2      = getMM(dim2)
 
-		bases, edges = self.getBasesAndEdges(edgeProxies.get('edges'))
-		if (len(bases) < 1):
-			logWarning("    .... Can't apply FxCamfer \'%s\' for no bases (using last active body)!", chamferNode.name)
-			bases.append(self.lastActiveBody.sketchEntity)
+		edges = self.getEdgesFromProxy(edgeProxies)
 		geos = []
 
-		for base in bases:
-			chamferGeo = self.createEntity(chamferNode, 'Part::Chamfer')
-			chamferGeo.Base = bases[0]
-			chamferGeo.Edges = [(edgeIdx, mmDim1, mmDim2) for edgeIdx in edges]
-			setDefaultViewObjectValues(chamferGeo)
-			geos.append(chamferGeo)
+		# self.addSolidBody(chamferNode, chamferGeo, body)
 
-		if (len(geos) > 1):
-			chamferGeo = geos[0].Shape.multiFuse([part.Shape for part in geos[1:]])
-			chamferGeo = newObject(self.doc, 'Part::Feature', '%s' %(chamferNode.name))
-		else:
-			chamferGeo = geos[0]
-
-		self.addSolidBody(chamferNode, chamferGeo, body)
-		hide(bases)
 		return
 
 	def Create_FxFillet(self, filletNode):
@@ -2748,7 +2763,7 @@ class FreeCADImporter:
 		# = getProperty(properties, 0x06) # bool
 		surf        = getProperty(properties, 0x07) # SurfaceBody 'Fläche2'
 
-		bases, edges = self.getBasesEdgesFromProxy(edgeProxies)
+		edges = self.getEdgesFromProxy(edgeProxies)
 
 		return notYetImplemented(extendNode)
 
@@ -2842,7 +2857,7 @@ class FreeCADImporter:
 #		getProperty(properties, 18) #  Boolean
 #		getProperty(properties, 20) #  Boolean
 
-		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+		edges = self.getEdgesFromProxy(edgesProxies)
 
 		return notYetImplemented(faceNode)
 
@@ -3101,7 +3116,7 @@ class FreeCADImporter:
 		bottom       = getProperty(properties, 11) # Boolean
 		bodies       = getProperty(properties, 12) # SurfaceBodies 'Solid63'
 
-		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+		edges = self.getEdgesFromProxy(edgesProxies)
 
 		return notYetImplemented(lipNode)
 
@@ -3177,8 +3192,8 @@ class FreeCADImporter:
 		edgesProxies2 = getProperty(properties, 7) # EdgeCollectionProxy
 #		getProperty(properties, 8) # FeatureDimensions
 
-		bases1, edges1 = self.getBasesEdgesFromProxy(edgesProxies1)
-		bases2, edges2 = self.getBasesEdgesFromProxy(edgesProxies2)
+		edges1 = self.getEdgesFromProxy(edgesProxies1)
+		edges2 = self.getEdgesFromProxy(edgesProxies2)
 
 		return notYetImplemented(trimNode)
 
@@ -3194,7 +3209,7 @@ class FreeCADImporter:
 #		getProperty(properties, 7) # BendTransition
 #		getProperty(properties, 8) # 90B64134
 
-		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+#		edges = self.getEdgesFromProxy(edgesProxies)	# for what is it good for??
 
 		return notYetImplemented(bendNode)
 
@@ -3308,7 +3323,7 @@ class FreeCADImporter:
 #		getProperty(properties, 8) # BendTransition
 #		getProperty(properties, 9) # 90B64134
 
-		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+		edges = self.getEdgesFromProxy(edgesProxies)
 
 		return notYetImplemented(hemNode)
 
@@ -3382,7 +3397,7 @@ class FreeCADImporter:
 #		getProperty(properties, 14) # 90B64134
 		edgesProxies = getProperty(properties, 15) # EdgeCollectionProxy
 
-		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+		edges = self.getEdgesFromProxy(edgesProxies)
 
 		return notYetImplemented(fxNode)
 
@@ -3415,7 +3430,7 @@ class FreeCADImporter:
 #		getProperty(properties, 7) # SurfaceBodies 'Solid1'
 #		getProperty(properties, 8) # FeatureDimensions
 
-		bases, edges = self.getBasesEdgesFromProxy(edgesProxies)
+		edges = self.getEdgesFromProxy(edgesProxies)
 
 		return unsupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
 
