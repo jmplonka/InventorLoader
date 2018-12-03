@@ -135,7 +135,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadFloat64A(i, 3, 'a2')
 		i = node.ReadFloat64A(i, 3, 'a3')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'index')
+		i = node.ReadUInt32(i, 'key')
 		i = node.ReadUInt32A(i, 2, 'a4')
 		self.faces.append(node)
 		return i

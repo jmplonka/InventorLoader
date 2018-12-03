@@ -960,7 +960,7 @@ class FreeCADImporter:
 
 		for idxRef in matchedEdge.get('indexRefs'):
 			ref  = matchedEdge.data.segment.indexNodes[idxRef]
-			assert (ref.typeName == 'EdgeID'),  u"found '%s'!" %(ref.typeName)
+			assert (ref.typeName == 'EdgeId'),  u"found '%s'!" %(ref.typeName)
 			creator = ref.get('creator')
 			if (creator is not None):
 				idxCreator = creator.get('idxCreator')
@@ -2763,7 +2763,7 @@ class FreeCADImporter:
 		# = getProperty(properties, 0x06) # bool
 		surf        = getProperty(properties, 0x07) # SurfaceBody 'Fläche2'
 
-		edges = self.getEdgesFromProxy(edgeProxies)
+		#edges = self.getEdgesFromProxy(edgeProxies)
 
 		return notYetImplemented(extendNode)
 

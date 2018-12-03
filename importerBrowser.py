@@ -60,7 +60,8 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt8(i, '664.u8_0')
 		i = node.ReadUInt16A(i, 6, '664.a1')
 		i = node.ReadUInt8(i, '664.u8_1')
-		i = node.ReadUInt32A(i, 2, '664.a2')
+		i = node.ReadUInt32(i, 'grIdx')
+		i = node.ReadUInt32(i, '664.a32_0')
 		i = node.ReadUInt8(i, '664.u8_2')
 		i = self.skipBlockSize(i)
 		return i
@@ -189,7 +190,7 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_240BF169(self, node): # Surfaces
-		i = self.ReadHeaderStr664(node, 'Surfaces')
+		i = self.ReadHeaderStr664(node, 'BodiesFolder')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -542,9 +543,10 @@ class BrowserReader(SegmentReader):
 	def Read_DCB9673A(self, node): return 0
 
 	def Read_DD1ADF96(self, node):
-		i = self.ReadHeaderStr664(node, 'Solid')
+		i = self.ReadHeaderStr664(node, 'Body')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 3, 'a5')
+		i = node.ReadUInt32(i, 'dcCreatorIdx')
+		i = node.ReadUInt32A(i, 2, 'a5')
 		return i
 
 	def Read_DDC7ED24(self, node): return 0

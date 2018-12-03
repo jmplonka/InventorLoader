@@ -795,12 +795,12 @@ class SecNode(AbstractData):
 		self.set(name, [])
 		return i
 
-	def ReadMetaData_04(self, name, offset, typ):
+	def ReadMetaData_04(self, name, offset, typ, arraySize = 1):
 		cnt, i = getUInt32(self.data, offset)
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
 			func = getattr(self, TYP_04_FUNC[typ])
-			return func(name, i, cnt, 1)
+			return func(name, i, cnt, arraySize)
 		self.set(name, [])
 		return i
 
@@ -1064,9 +1064,9 @@ class SecNode(AbstractData):
 		i = CheckList(self.data, offset, 0x0003)
 		return self.ReadMetaData_ARRAY(name, i, typ)
 
-	def ReadList4(self, offset, typ, name = 'lst4'):
+	def ReadList4(self, offset, typ, name = 'lst4', arraySize = 1):
 		i = CheckList(self.data, offset, 0x0004)
-		return self.ReadMetaData_04(name, i, typ)
+		return self.ReadMetaData_04(name, i, typ, arraySize)
 
 	def ReadList6(self, offset, typ, name = 'lst6'):
 		i = CheckList(self.data, offset, 0x0006)

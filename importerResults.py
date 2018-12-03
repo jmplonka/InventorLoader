@@ -41,10 +41,40 @@ class ResultReader(SegmentReader):
 
 	def Read_0E70AF5C(self, node):
 		i = self.Read_Header2(node)
+		i = node.ReadUInt32(i, 'dcBodyIdx')
 		return i
 
 	def Read_128AAF24(self, node):
-		i = 0
+		i = node.Read_Header0()
+		if (getFileVersion() > 2016):
+			i = node.ReadUInt32(i, 'u32_0')
+		else:
+			i = node.ReadUInt8(i, 'u32_0')
+#		i = node.ReadList4(i, importerSegNode._TYP_UINT32_, 'dcBodyIdcs')
+#		i = node.ReadList4(i, importerSegNode._TYP_UINT32_, 'dcCreatorIdcs')
+#		i = node.ReadUInt32A(i, 2, 'a0')
+#		i = node.ReadList4(i, importerSegNode._TYP_UINT32_, 'lst0')
+#		i = node.ReadFloat64_3D(i, 'min')
+#		i = node.ReadFloat64_3D(i, 'max')
+#		i = self.skipBlockSize(i)
+#		i = node.ReadList4(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)  # DC creator indices + value
+#		i = self.skipBlockSize(i)
+#		i = node.ReadList4(i, importerSegNode._TYP_UINT32_, 'lst2')
+#		i = self.skipBlockSize(i)
+#		if (getFileVersion() > 2011):
+#			i = node.ReadList4(i, importerSegNode._TYP_UINT32_, 'lst2')
+#		else:
+#			node.content += ' lst2=[]'
+#		if (getFileVersion() > 2016):
+#			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst3')
+#		else:
+#			node.content += ' lst3=[]'
+#			i += 1 # skip 01
+#		i = node.ReadList4(i, importerSegNode._TYP_UINT32_, 'lst4')
+#		i = node.ReadUInt8(i, 'u8_1')
+#		i = node.ReadList4(i, importerSegNode._TYP_UINT32_, 'lst4')
+#		i = node.ReadUInt8(i, 'u8_2')
+#		i = self.skipBlockSize(i)
 		return i
 
 	def Read_21830CED(self, node):
@@ -59,6 +89,8 @@ class ResultReader(SegmentReader):
 
 	def Read_3E0040FD(self, node):
 		i = self.Read_Header2(node)
+		i = node.ReadUInt32(i, 'dcBodyIdx')
+		i = node.ReadUInt32(i, 'dcCreatorIdx')
 		return i
 
 	def Read_69C3A76F(self, node):
@@ -68,6 +100,7 @@ class ResultReader(SegmentReader):
 
 	def Read_6B9A3C47(self, node):
 		i = self.Read_Header2(node)
+		i = node.ReadUInt32(i, 'dcBodyIdx')
 		return i
 
 	def Read_809BE56F(self, node):
@@ -80,6 +113,7 @@ class ResultReader(SegmentReader):
 
 	def Read_9147489A(self, node):
 		i = self.Read_Header2(node)
+		i = node.ReadUInt32(i, 'dcBodyIdx')
 		return i
 
 	def Read_A4645884(self, node):
@@ -88,6 +122,9 @@ class ResultReader(SegmentReader):
 
 	def Read_E065E15A(self, node):
 		i = self.Read_Header2(node)
+		i = node.ReadUInt32(i, 'dcBodyIdx')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'dcCreatorIdx')
 		return i
 
 	def Read_E9B04618(self, node):

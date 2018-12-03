@@ -38,7 +38,7 @@ class StyleReader(SegmentReader):
 		i = node.ReadFloat64_3D(i, 'vec_2')
 		i = node.ReadLen32Text16(i)
 		return i
-		
+
 	def Read_440D2B29(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_440D2B29')
 		i = node.ReadUInt32(i, 'u32_1')
@@ -55,7 +55,7 @@ class StyleReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
-	
+
 	def Read_6E176BB6(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_B32BF6A7')
 		i = node.ReadFloat64(i, 'f64_0')
@@ -63,7 +63,7 @@ class StyleReader(SegmentReader):
 		i = node.ReadFloat64(i, 'f64_1')
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
-	
+
 	def Read_7333F86D(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_7333F86D')
 		i = node.ReadUInt32(i, 'u32_1')
@@ -72,7 +72,7 @@ class StyleReader(SegmentReader):
 		i = node.ReadFloat64_2D(i, 'a1')
 		i = node.ReadUInt32(i, 'u32_2')
 		return i
-	
+
 	def Read_824D8FD9(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_824D8FD9')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
@@ -133,7 +133,7 @@ class StyleReader(SegmentReader):
 		i = self.ReadHeaderStyle(node, 'Style_B255D907')
 		i = node.ReadFloat64_3D(i, 'a0')
 		return i
-		
+
 	def Read_B32BF6A2(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_B32BF6A2')
 		i = node.ReadFloat32A(i, 4, 'a0')
@@ -159,8 +159,8 @@ class StyleReader(SegmentReader):
 		return i
 
 	def Read_B32BF6A6(self, node): # Object style ...
-		i = self.ReadHeaderStyle(node, 'Style_B32BF6A6')
-		i = node.ReadUInt8(i, 'u8_0')
+		i = self.ReadHeaderStyle(node, 'Style_Solid')
+		i = node.ReadBoolean(i, 'solid')
 		return i
 
 	def Read_B32BF6A7(self, node): # Object style ...
@@ -170,7 +170,7 @@ class StyleReader(SegmentReader):
 		i = node.ReadFloat64(i, 'f64_1')
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
-	
+
 	def Read_B32BF6A8(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_B32BF6A8')
 		i = node.ReadUInt32(i, 'u32_1')
@@ -205,7 +205,7 @@ class StyleReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 4, 'a3')
 		return i
-	
+
 	def Read_B32BF6AE(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_B32BF6AE')
 		i = node.ReadUInt32(i, 'u32_1')
