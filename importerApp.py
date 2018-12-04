@@ -118,9 +118,8 @@ class AppReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
 		i = node.ReadChildRef(i, 'cld_0')
-		if (vers > 2010):
-			i = node.ReadUInt32(i, 'u32_0')
-			if (vers > 2017): i += 8
+		if (vers > 2010): i += 4 # skip 01 00 00 00
+		if (vers > 2017): i += 8
 		return i
 
 	def Read_345EB9B1(self, node):

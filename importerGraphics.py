@@ -435,7 +435,11 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadFloat64_2D(i, 'a2')
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadList7(i, importerSegNode._TYP_MAP_U32_U32_, 'faces2edges') # mapping of face's key to mapping edge object's key
-		i = node.ReadUInt32A(i, 2, 'a3')
+		i = node.ReadSInt32A(i, 2, 'a3')
+		tst, j = getUInt32(node.data, i)
+		if (tst == 0x30000002):
+			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
+			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst2')
 		i = node.ReadChildRef(i, 'wire') # -> 6A6931DC with
 		return i
 

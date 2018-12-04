@@ -484,8 +484,11 @@ def hide(geos):
 def resolveNameTableItem(item, name):
 	vk  = item.get(name)
 	if (type(vk) is list):
-		nt  = item.segment.elementNodes[vk[0] & 0x7FFFFFFF]
-		vk = nt.get('entries')[vk[1]]
+		nt  = item.segment.elementNodes.get(vk[0] & 0x7FFFFFFF)
+		if (nt is None):
+			vk = None
+		else:
+			vk = nt.get('entries')[vk[1]]
 		item.set(name, vk)
 	return
 
@@ -499,9 +502,13 @@ def getNameTableEntry(node):
 	resolveNameTableItem(entry, 'val_key_3')
 	lst2 = entry.get('lst2')
 	for i, value in enumerate(lst2):
-		nt  = node.segment.elementNodes[value[0] & 0x7FFFFFFF]
-		nte = nt.get('entries')[value[1]]
-		lst2[i] = (nte, value[2])
+		if (type(value) is list):
+			nt  = node.segment.elementNodes.get(value[0] & 0x7FFFFFFF)
+			if (nt is None):
+				nte = None
+			else:
+				nte = nt.get('entries')[value[1]]
+			lst2[i] = (nte, value[2])
 	graphics = getModel().getGraphics()
 	return entry
 
@@ -864,6 +871,7 @@ class FreeCADImporter:
 					alpha   = edge.parameter(p2v(p2))
 					beta    = edge.parameter(p2v(p1))
 				edge = Part.ArcOfCircle(edge, alpha, beta)
+#				print (u"Circle r=%g, c=(%g,%g) from %g to %g" %(entity.Radius, entity.Center.x, entity.Center.y, alpha, beta))
 		elif (isinstance(entity, Part.ArcOfEllipse)):
 			edge = entity
 			if (isSamePoint(p1, p2) == False):
@@ -3192,8 +3200,8 @@ class FreeCADImporter:
 		edgesProxies2 = getProperty(properties, 7) # EdgeCollectionProxy
 #		getProperty(properties, 8) # FeatureDimensions
 
-		edges1 = self.getEdgesFromProxy(edgesProxies1)
-		edges2 = self.getEdgesFromProxy(edgesProxies2)
+#		edges1 = self.getEdgesFromProxy(edgesProxies1)
+#		edges2 = self.getEdgesFromProxy(edgesProxies2)
 
 		return notYetImplemented(trimNode)
 

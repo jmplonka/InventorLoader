@@ -155,11 +155,8 @@ class BrowserReader(SegmentReader):
 
 		i = node.ReadUInt16A(i, 3, 'a0')
 		if (vers < 2011):
-			if (node.get('a0')[0] == 0):
-				node.set('a1', [0, 0, 0])
-				node.content += u" a1=[00,00,00]"
-			else:
-				i = node.ReadUInt8A(i, 3, 'a1')
+			if (node.get('a0')[0] > 0):
+				i += 3
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadLen32Text16(i)
