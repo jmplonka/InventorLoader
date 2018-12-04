@@ -771,6 +771,11 @@ class DCReader(EeDataReader):
 
 	def Read_FF46726C(self, node): # RootEntityWrapperNode
 		i = self.ReadHeaderRootEntityWrapperNode(node)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
+		i = node.ReadUInt32A(i, 2, 'val_key_3')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_4')
+		i = node.ReadUInt16(i, 'u16_1')
 		return i
 
 	def Read_06262CC1(self, node):
@@ -6150,7 +6155,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_A4087E1F(self, node):
-		i = self.ReadChildHeader1(node, 'TappedHole')
+		i = self.ReadChildHeader1(node, 'TappedHole', ref2Name = 'label')
 		i = self.skipBlockSize(i)
 		i = node.ReadLen32Text16(i)
 		i = node.ReadLen32Text16(i, 'txt0')

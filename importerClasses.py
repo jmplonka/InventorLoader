@@ -714,10 +714,10 @@ class DataNode():
 			logError(u"    (%04X): %s - has no required label attribute!", self.index, self.typeName)
 			return []
 		while (label.typeName != 'Label'):
-			dummy = label
 			label = label.get('label')
 			if (label is None):
 				logError(u"    (%04X): %s - has no required label attribute!", dummy.index, dummy.typeName)
+				return []
 		return label.get('participants')
 
 class ParameterNode(DataNode):
