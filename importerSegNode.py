@@ -68,7 +68,6 @@ _TYP_U32_TXT_U32_LST2_      = 0x0045
 _TYP_APP_1_                 = 0x0046
 _TYP_F64_F64_U32_U8_U8_U16_ = 0x0047
 
-_TYP_LIST_GUESS_            = 0x8000
 _TYP_LIST_UINT16_A_         = 0x8001
 _TYP_LIST_SINT16_A_         = 0x8002
 _TYP_LIST_UINT32_A_         = 0x8003
@@ -94,9 +93,17 @@ _TYP_MAP_X_REF_LIST2_XREF_  = 0x700D
 _TYP_MAP_UUID_UINT32_       = 0x700E
 _TYP_MAP_UUID_X_REF         = 0x700F
 _TYP_MAP_U16_U16_           = 0x7010
+_TYP_MAP_KEY_APP_1_         = 0x7011
+_TYP_MAP_KEY_MAP_APP_1_     = 0x7012
 
 _TYP_MAP_MDL_TXN_MGR_1_     = 0x6001
 _TYP_MAP_MDL_TXN_MGR_2_     = 0x6002
+
+_TYP_RESULT_1_              = 0x5001
+_TYP_RESULT_2_              = 0x5002
+_TYP_RESULT_3_              = 0x5003
+_TYP_RESULT_4_              = 0x5004
+_TYP_RESULT_5_              = 0x5005
 
 TYP_LIST_FUNC = {
 	_TYP_CHAR_:                  'getListChars',
@@ -127,7 +134,6 @@ TYP_LIST_FUNC = {
 	_TYP_U32_TXT_U32_LST2_:      'getListApp3',
 	_TYP_APP_1_:                 'getListApp4',
 	_TYP_F64_F64_U32_U8_U8_U16_: 'getListApp5',
-	_TYP_LIST_GUESS_:            'getList2Guess',
 	_TYP_LIST_UINT16_A_:         'getListListUInt16sA',
 	_TYP_LIST_SINT16_A_:         'getListListSInt16sA',
 	_TYP_LIST_UINT32_A_:         'getListListUInt32sA',
@@ -141,12 +147,17 @@ TYP_LIST_FUNC = {
 TYP_04_FUNC = {
 	_TYP_NODE_REF_:              'getList2Childs',
 	_TYP_NODE_X_REF_:            'getListXRefs',
-	_TYP_RESULT_ITEM4_:          'getListReslts',
+	_TYP_RESULT_ITEM4_:          'getListResults',
 	_TYP_SINT32_A_:              'getListSInt32sA',
 	_TYP_STRING16_:              'getListString16s',
 	_TYP_STRING8_:               'getListString8s',
 	_TYP_UINT32_:                'getListUInt32s',
 	_TYP_UINT32_A_:              'getListUInt32sA',
+	_TYP_RESULT_1_:              'getListResult1',
+	_TYP_RESULT_2_:              'getListResult2',
+	_TYP_RESULT_3_:              'getListResult3',
+	_TYP_RESULT_4_:              'getListResult4',
+	_TYP_RESULT_5_:              'getListResult5',
 }
 
 TYP_ARRAY_FUNC = {
@@ -173,7 +184,9 @@ TYP_MAP_FUNC = {
 	_TYP_MAP_TEXT16_REF_:       'getMapT16Ref',
 	_TYP_MAP_TEXT16_X_REF_:     'getMapT16XRef',
 	_TYP_MAP_MDL_TXN_MGR_1_:    'getMapMdlTxnMgr1',
-	_TYP_MAP_MDL_TXN_MGR_2_:    'getMapMdlTxnMgr2'
+	_TYP_MAP_MDL_TXN_MGR_2_:    'getMapMdlTxnMgr2',
+	_TYP_MAP_KEY_APP_1_:        'getMapKeyApp1',
+	_TYP_MAP_KEY_MAP_APP_1_:    'getMapKeyMapApp1',
 }
 
 class SecNode(AbstractData):
@@ -624,7 +637,7 @@ class SecNode(AbstractData):
 	def getListApp2(self, name, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		skip = (getFileVersion() < 2011)
+		skip = 4 if (getFileVersion() < 2011) else 0
 		for j in range(cnt):
 			n1, i = getUInt32(self.data, i)
 			t1, i = getLen32Text16(self.data, i)
@@ -640,12 +653,12 @@ class SecNode(AbstractData):
 			l2, i = getFloat64A(self.data, i, m)
 			l3, i = getFloat32_2D(self.data, i)
 			n2, i = getUInt32(self.data, i)
-			if (skip): i += 4
+			i += skip
 			c1, i = getColorRGBA(self.data, i)
-			if (skip): i += 4
+			i += skip
 			n3, i = getUInt32(self.data, i)
 			n4, i = getUInt8(self.data, i)
-			if (skip): i += 8
+			i += (skip + skip)
 			self.content += u"\n\t%d,'%s','%s',[%s],[%s],[%s],%04X,%s,%d,%X" %(n1, t1, t2, IntArr2Str(l1, 4), IntArr2Str(a1, 2), FloatArr2Str(l2), n2, c1, n3, n4)
 			lst.append((n1, t1, t2, l1, a1, l2, l3, n2, c1, n3, n4))
 		self.set(name, lst)
@@ -655,7 +668,7 @@ class SecNode(AbstractData):
 		lst  = []
 		i    = offset
 		c    = self.content
-		skip = (getFileVersion() < 2011)
+		skip = 4 if (getFileVersion() < 2011) else 0
 		for j in range(cnt):
 			n1, i = getUInt32(self.data, i)
 			t1, i = getLen32Text16(self.data, i)
@@ -665,7 +678,7 @@ class SecNode(AbstractData):
 			l1 = self.get('tmp')
 			self.delete('_tmp')
 			n3, i = getUInt8(self.data, i)
-			if (skip): i += 4
+			i += skip
 			lst.append((n1, t1, n2, l1, n3))
 		self.content = c + u" %s={%s}" %(name, u",".join([u"(%d,'%s',%06X,%s,%02X)" %(a[0], a[1], a[2], FloatArr2Str(a[3]), a[4]) for a in lst]))
 		self.set(name, lst)
@@ -674,14 +687,14 @@ class SecNode(AbstractData):
 	def getListApp4(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip = (getFileVersion() < 2011)
+		skip = 8 if (getFileVersion() < 2011) else 0
 		for j in range(cnt):
 			n1, n2, n3, f1, f2 = APP_4_A(self.data, i)
 			i += 18
 			t1, i = getLen32Text16(self.data, i)
 			f3, f4, n4, n5 = APP_4_B(self.data, i)
 			i += 11
-			if (skip): i += 8
+			i += skip
 			lst.append((n1, n2,  n3,  f1, f2,  t1,  f3, f4, n4, n5))
 		self.content += u" %s={%s}" %(name, u",".join([u"(%d, %d, %04X, %g, %g, '%s', %g, %g, %03X, %02X)" %(a[0], a[1], a[2], a[3], a[4], a[5],  a[6], a[7], a[8], a[9]) for a in lst]))
 		self.set(name, lst)
@@ -690,16 +703,96 @@ class SecNode(AbstractData):
 	def getListApp5(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip = (getFileVersion() < 2011)
+		skip = 4 if (getFileVersion() < 2011) else 0
 		for j in range(cnt):
 			f1, f2, n1 = APP_5_A(self.data, i)
 			i += 20
-			if (skip): i += 4
+			i += skip
 			n2, n3, n4 = APP_5_B(self.data, i)
 			i += 4
-			if (skip): i += 4
+			i += skip
 			lst.append((f1, f2, n1, n2,  n3,  n4))
 		self.content += u" %s={%s}" %(name, u",".join([u"(%g, %g, %04X, %02X, %02X, %03X)" %(a[0], a[1], a[2], a[3], a[4], a[5])for a in lst]))
+		self.set(name, lst)
+		return i
+
+	def getListResult1(self, name, offset, cnt, arraysize):
+		lst  = []
+		i    = offset
+		c    = self.content
+		skip = 4 if (getFileVersion() < 2011) else 0
+		for j in range(cnt):
+			u1, i = getUInt32(self.data, i)
+			i = self.ReadList4(i, _TYP_UINT32_, name)
+			l1 = self.get(name)
+			u2, i = getUInt32(self.data, i)
+			u3, i = getUInt32(self.data, i)
+			i = self.ReadList4(i, _TYP_UINT32_, name)
+			l2 = self.get(name)
+			a1, i = getFloat64_3D(self.data, i)
+			a2, i = getFloat64_3D(self.data, i)
+			i += skip
+			lst.append((u1, l1, u2, u3, l2, a1, a2))
+		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s],%04X,%04X,[%s],(%s)-(%s))" %(a[0], IntArr2Str(a[1], 4), a[2], a[3], IntArr2Str(a[4], 4), FloatArr2Str(a[5]), FloatArr2Str(a[6])) for a in lst]))
+		self.set(name, lst)
+		return i
+
+	def getListResult2(self, name, offset, cnt, arraysize):
+		lst  = []
+		i    = offset
+		skip = 4 if (getFileVersion() < 2011) else 0
+		for j in range(cnt):
+			d, i = getUInt32A(self.data, i, 2)
+			i += skip
+			lst.append(d)
+		self.content += u" %s={%s}" %(name, u",".join([u"[%04X,%04X]" %(a[0], a[1]) for a in lst]))
+		self.set(name, lst)
+		return i
+
+	def getListResult3(self, name, offset, cnt, arraysize):
+		lst  = []
+		i    = offset
+		RESULT_3 = Struct('<LHBBdddddd').unpack_from
+		skip = 4 if (getFileVersion() < 2011) else 0
+		for j in range(cnt):
+			d = RESULT_3(self.data, i)
+			i += 56 + skip
+			lst.append(d)
+		self.content += u" %s={%s}" %(name, u",".join([u"(%04X,%03X,%02X,%02X,(%g,%g,%g)-(%g,%g,%g))" %(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9]) for a in lst]))
+		self.set(name, lst)
+		return i
+
+	def getListResult4(self, name, offset, cnt, arraysize):
+		lst  = []
+		i    = offset
+		skip1 = 4 if (getFileVersion() < 2011) else 0
+		skip2 = 1 if (getFileVersion() > 2017) else 0
+		c    = self.content
+		for j in range(cnt):
+			u1, i = getUInt32(self.data, i)
+			i += skip2 # skip 00
+			u2, i = getUInt16(self.data, i)
+			i = self.ReadList4(i, _TYP_UINT32_, name)
+			u3, i = getUInt32(self.data, i)
+			i += skip1
+			l = self.get(name)
+			lst.append((u1, u2, u3, l))
+		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,%03X,%04X,%s)" %(a[0], a[1], a[2], a[3]) for a in lst]))
+		self.set(name, lst)
+		return i
+
+	def getListResult5(self, name, offset, cnt, arraysize):
+		lst  = []
+		i    = offset
+		skip1 = 4 if (getFileVersion() < 2011) else 0
+		c    = self.content
+		for j in range(cnt):
+			u, i = getUInt32(self.data, i)
+			i = self.ReadList4(i, _TYP_UINT32_, name)
+			i += skip1
+			l = self.get(name)
+			lst.append((u, l))
+		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s])" %(a[0], IntArr2Str(a[1], 3)) for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -737,29 +830,29 @@ class SecNode(AbstractData):
 	def getListListXRefs(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip = (getFileVersion() < 2011)
+		skip = 4 if (getFileVersion() < 2011) else 0
 		for j in range(cnt):
-			if (skip): i += 4
+			i += skip
 			tmp0 = u"%s[%02X][0]" %(name, j)
 			i = self.ReadList2(i, _TYP_UINT32_, tmp0)
 			tmp1 = u"%s[%02X][1]" %(name, j)
 			i = self.ReadCrossRef(i, tmp1)
-			if (skip): i += 4
+			i += skip
 			lst.append((self.get(tmp0), self.get(tmp1)))
 			self.delete(tmp0)
 			self.delete(tmp1)
 		self.set(name, lst)
 		return i
 
-	def getListReslts(self, name, offset, cnt, arraysize):
+	def getListResults(self, name, offset, cnt, arraysize):
 		lst  = []
-		skip = (getFileVersion() < 2011)
+		skip = 4 if (getFileVersion() < 2011) else 0
 		for j in range(cnt):
 			r = ResultItem4()
 			r.a0, i = getUInt16A(self.data, i, 4)
 			r.a1, i = getFloat64_3D(self.data, i)
 			r.a2, i = getFloat64_3D(self.data, i)
-			if (skipBlockSize): i += 4
+			i += skip
 			lst.append(r)
 		self.set(name, list)
 		self.content += u" %s={%s}" %(name, u",".join([u"(%s)" %(r) for r in lst]))
@@ -788,30 +881,24 @@ class SecNode(AbstractData):
 
 	def ReadMetaData_LIST(self, offset, name, typ, arraySize = 1):
 		cnt, i = getUInt32(self.data, offset)
+		func = getattr(self, TYP_LIST_FUNC[typ])
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
-			func = getattr(self, TYP_LIST_FUNC[typ])
-			return func(name, i, cnt, arraySize)
-		self.set(name, [])
-		return i
+		return func(name, i, cnt, arraySize)
 
 	def ReadMetaData_04(self, name, offset, typ, arraySize = 1):
 		cnt, i = getUInt32(self.data, offset)
+		func = getattr(self, TYP_04_FUNC[typ])
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
-			func = getattr(self, TYP_04_FUNC[typ])
-			return func(name, i, cnt, arraySize)
-		self.set(name, [])
-		return i
+		return func(name, i, cnt, arraySize)
 
 	def ReadMetaData_ARRAY(self, name, offset, typ):
 		cnt, i = getUInt32(self.data, offset)
+		func = getattr(self, TYP_ARRAY_FUNC[typ])
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
-			func = getattr(self, TYP_ARRAY_FUNC[typ])
-			return func(name, i, cnt)
-		self.set(name, [])
-		return i
+		return func(name, i, cnt)
 
 	def	getMapU16U16(self, name, offset, cnt):
 		lst = {}
@@ -994,7 +1081,8 @@ class SecNode(AbstractData):
 		i   = offset
 		c = self.content
 		self.content = u""
-		skipBlockSize = (getFileVersion() < 2011)
+		skip1 = 4 if (getFileVersion() < 2011) else 0
+		skip2 = 1 if (getFileVersion() > 2018) else 0
 		for j in range(cnt):
 			key = len(lst)
 			tmp = u"%s[%02x]" %(name, key)
@@ -1006,15 +1094,11 @@ class SecNode(AbstractData):
 			i =  self.ReadList2(i, _TYP_UINT16_A_, tmp, 2)
 			val.lst = self.get(tmp)
 			val.u8_0, i  = getUInt8(self.data, i)
-			if (skipBlockSize): i += 4
-			if (getFileVersion() > 2018): i += 1
+			i += skip1 + skip2
 			val.u32_1, i  = getUInt32(self.data, i)
 			val.u8_1, i   = getUInt8(self.data, i)
 			val.s32_0, i  = getSInt32(self.data, i)
-			if (skipBlockSize):
-				i += 8
-			elif (getFileVersion() > 2018):
-				i += 1
+			i += skip1 + skip1 + skip2
 			self.delete(tmp)
 		self.content = c + u" %s=[%s]" % (name, u",".join([u"[\'%s\': (%s)]" %(key, lst[val]) for key in lst]))
 		self.set(name, lst)
@@ -1025,7 +1109,8 @@ class SecNode(AbstractData):
 		i   = offset
 		c = self.content
 		self.content = u""
-		skipBlockSize = (getFileVersion() < 2011)
+		skip1 = 8 if (getFileVersion() < 2011) else 0
+		skip2 = 1 if (getFileVersion() > 2018) else 0
 		for j in range(cnt):
 			key = len(lst)
 			val = ModelerTxnMgr()
@@ -1038,23 +1123,43 @@ class SecNode(AbstractData):
 			val.lst = self.get('tmp')
 			val.u8_0, i  = getUInt8(self.data, i)
 			val.s32_0, i  = getSInt32(self.data, i)
-			if (skipBlockSize):
-				i += 8
-			elif (getFileVersion() > 2018):
-				i += 1
+			i += skip1 + skip2
 		self.content += u" %s=[%s]" % (name, u",".join([u"[\'%s\': (%s)]" %(key, lst[val]) for key in lst]))
 		self.delete('tmp')
 		self.set(name, lst)
 		return i
 
+	def getMapKeyApp1(self, name, offset, cnt):
+		lst = {}
+		i   = offset
+		self.set(name, lst)
+		APP_1 = Struct('<BffffffffffffB').unpack_from
+		for j in range(cnt):
+			key, i = getUInt32(self.data, i)
+			val = APP_1(self.data, i)
+			i += 50
+			lst[key] = val
+		return i
+
+	def getMapKeyMapApp1(self, name, offset, cnt):
+		lst = {}
+		i   = offset
+		self.set(name, lst)
+		for j in range(cnt):
+			key, i = getUInt32(self.data, i)
+			u, i = getUInt8(self.data, i)
+			i = self.ReadList6(i, _TYP_MAP_KEY_APP_1_, name)
+			m = self.get(name)
+			lst[key] = (u, m)
+		self.content += u" %s={%s}" %(name, ",".join([u"(%04X:%r" %(key, val) for key, val in lst.items()]))
+		return i
+
 	def ReadMetaData_MAP(self, name, offset, typ):
 		cnt, i = getUInt32(self.data, offset)
+		func = getattr(self, TYP_MAP_FUNC[typ])
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
-			func = getattr(self, TYP_MAP_FUNC[typ])
-			return func(name, i, cnt)
-		self.set(name, {})
-		return i
+		return func(name, i, cnt)
 
 	def ReadList2(self, offset, typ, name, arraySize = 1):
 		i = CheckList(self.data, offset, 0x0002)
