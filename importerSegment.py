@@ -182,7 +182,7 @@ def resolveReferencNodes(nodes):
 			elif (ref.index > -1):
 				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", node.segment.name, node.index, node.typeName, ref.index, max(nodes))
 			if (isRadius2D and ((ref.typeName == 'Circle2D') or (ref.typeName == 'Ellipse2D') or (ref.typeName == '160915E2'))):
-				radius = SecNodeRef(ref.index or 0x80000000, SecNodeRef.TYPE_CROSS, 'refRadius')
+				radius = SecNodeRef(ref.index or 0x80000000, SecNodeRef.TYPE_CROSS, 'radius')
 				radius._data = node
 				ref._data.set(radius.name, radius)
 
@@ -379,7 +379,7 @@ class SegmentReader(object):
 
 	def Read_5F9D0021(self, node): # SystemOfUnitsCollection
 		i = node.Read_Header0('SystemOfUnitsCollection')
-		i = node.ReadCrossRef(i, 'refSelected')
+		i = node.ReadCrossRef(i, 'selected')
 		i = node.ReadList3(i, _TYP_NODE_REF_, 'customUnitSystems')
 		i = node.ReadList3(i, _TYP_NODE_REF_, 'predefinedUnitSystems')
 		return i

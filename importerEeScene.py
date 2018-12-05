@@ -67,12 +67,11 @@ class EeSceneReader(StyleReader):
 	def ReadHeaderDimensioning(self, node, typeName = None):
 		i = self.ReadHeader3dObject(node, typeName)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		b, i = getBoolean(node.data, i)
-		if (b):
-			i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i, 8)
+		if (getFileVersion() > 2017): i += 1
 		i = node.ReadUInt32(i, 'index')
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
@@ -371,13 +370,13 @@ class EeSceneReader(StyleReader):
 		return self.ReadHeaderDimensioning(node, 'DimensioningDistHorz')
 
 	def Read_9516E3A1(self, node): # Distance dimensioning dir=diagonal
-		return self.ReadHeaderDimensioning(node, 'DimensioningDistance')
+		return self.ReadHeaderDimensioning(node, 'DimensioningRadius')
 
 	def Read_B01025BF(self, node): # Vertical dimensioning
-		return self.ReadHeaderDimensioning(node, 'DimensioningVertical')
+		return self.ReadHeaderDimensioning(node, 'DimensioningHorizontal')
 
 	def Read_BCC1E889(self, node): # Horizontal dimensioning
-		return self.ReadHeaderDimensioning(node, 'DimensioningHorizontal')
+		return self.ReadHeaderDimensioning(node, 'DimensioningVertical')
 
 	def Read_FF084971(self, node): # Length dimensioning
 		return self.ReadHeaderDimensioning(node, 'DimensioningLength')

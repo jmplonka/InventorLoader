@@ -64,7 +64,7 @@ class GraphicsReader(EeSceneReader):
 
 	def ReadHeaderObject(self, node, typeName):
 		i = self.ReadHeaderU32RefU8List3(node, typeName)
-		i = node.ReadChildRef(i, 'ref3dObj')
+		i = node.ReadChildRef(i, 'obj')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt32(i, 'index')
@@ -236,7 +236,7 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_60FD1845(self, node): # Sketch2D
 		i = self.ReadHeaderU32RefU8List3(node, 'Sketch2D')
-		i = node.ReadChildRef(i, 'ref3dObj')
+		i = node.ReadChildRef(i, 'obj')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_1')
 		i = self.skipBlockSize(i)
@@ -421,7 +421,7 @@ class GraphicsReader(EeSceneReader):
 		i = self.ReadIndexDC(node, i) # SurfaceBody's index in DC-Segment
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt32(i, 'index')
-		i = node.ReadChildRef(i, 'ref3dObj')
+		i = node.ReadChildRef(i, 'obj')
 		i = node.ReadUInt32A(i , 3, 'a0')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadChildRef(i, 'faces')

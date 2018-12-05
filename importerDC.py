@@ -1011,9 +1011,9 @@ class DCReader(EeDataReader):
 
 	def Read_0C12CBF2(self, node):
 		i = self.ReadHeadersS32ss(node, 'LoftProfileCondition')
-		i = node.ReadCrossRef(i, 'refSection')
-		i = node.ReadCrossRef(i, 'refImpact')
-		i = node.ReadCrossRef(i, 'refAngle')
+		i = node.ReadCrossRef(i, 'section')
+		i = node.ReadCrossRef(i, 'impact')
+		i = node.ReadCrossRef(i, 'angle')
 		i = node.ReadCrossRef(i, 'plane')
 		return i
 
@@ -1306,7 +1306,7 @@ class DCReader(EeDataReader):
 	def Read_17B3E814(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'parameter')
-		i = node.ReadCrossRef(i, 'refRDxVar')
+		i = node.ReadCrossRef(i, 'varRDx')
 		return i
 
 	def Read_182D1C40(self, node):
@@ -1586,7 +1586,7 @@ class DCReader(EeDataReader):
 
 	def Read_20976662(self, node):
 		i = self.ReadCntHdr2SRef(node, 'SculptSurface', 'body')
-		i = node.ReadCrossRef(i, 'refOperation')
+		i = node.ReadCrossRef(i, 'operation')
 		return i
 
 	def Read_21004CF2(self, node):
@@ -1688,7 +1688,7 @@ class DCReader(EeDataReader):
 	def Read_2510347F(self, node): # TextBox {A907AE99-A78F-11D5-8DF8-0010B541CAA8}
 		i = self.ReadHeadersS32ss(node, 'Text2D')
 		i = node.ReadCrossRef(i, 'point')
-		i = node.ReadCrossRef(i, 'refText')
+		i = node.ReadCrossRef(i, 'text')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		return i
 
@@ -2135,7 +2135,7 @@ class DCReader(EeDataReader):
 			i = node.ReadUInt32(i, 'flags')
 			i = self.skipBlockSize(i)
 			i = node.ReadParentRef(i)
-			i = node.ReadCrossRef(i, 'refRoot')
+			i = node.ReadCrossRef(i, 'root')
 			i = node.ReadChildRef(i, 'ref_2')
 			i = self.skipBlockSize(i)
 			i = node.ReadUInt32(i, 'index')
@@ -2156,11 +2156,11 @@ class DCReader(EeDataReader):
 
 	def Read_2C1BCAEA(self, node): # Helical3D_Parameters
 		i = node.Read_Header0('Helical3D_Parameters')
-		i = node.ReadCrossRef(i, 'refParam0')
-		i = node.ReadCrossRef(i, 'refParam1')
-		i = node.ReadCrossRef(i, 'refParam2')
-		i = node.ReadCrossRef(i, 'refParam3')
-		i = node.ReadCrossRef(i, 'refParam4')
+		i = node.ReadCrossRef(i, 'param0')
+		i = node.ReadCrossRef(i, 'param1')
+		i = node.ReadCrossRef(i, 'param2')
+		i = node.ReadCrossRef(i, 'param3')
+		i = node.ReadCrossRef(i, 'param4')
 		return i
 
 	def Read_2CE86835(self, node):
@@ -2328,7 +2328,7 @@ class DCReader(EeDataReader):
 
 	def Read_31DBA503(self, node):
 		i = self.ReadHeadersS32ss(node)
-		i = node.ReadChildRef(i, 'refDoc')
+		i = node.ReadChildRef(i, 'document')
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 		i = node.ReadChildRef(i, 'fx')
@@ -2378,7 +2378,7 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadCrossRef(i, 'transformation')
-		i = node.ReadCrossRef(i, 'refPart')
+		i = node.ReadCrossRef(i, 'part')
 		i = node.ReadList4(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		i = node.ReadChildRef(i, 'ref_3')
 		if (getFileVersion() > 2016):
@@ -2626,7 +2626,7 @@ class DCReader(EeDataReader):
 	def Read_3AB895E9(self, node):
 		i = self.ReadHeaderContent(node)
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'refDoc')
+		i = node.ReadChildRef(i, 'document')
 		return i
 
 	def Read_3AE9D8DA(self, node): # Sketch3D {E4C09561-E779-4A00-A835-E8D43E08A290}
@@ -3232,10 +3232,10 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'planeXY')
 		i = node.ReadCrossRef(i, 'planeXZ')
 		i = node.ReadCrossRef(i, 'planeYZ')
-		i = node.ReadCrossRef(i, 'refAxisX')
-		i = node.ReadCrossRef(i, 'refAxisY')
-		i = node.ReadCrossRef(i, 'refAxisZ')
-		i = node.ReadCrossRef(i, 'refOrigin')
+		i = node.ReadCrossRef(i, 'axisX')
+		i = node.ReadCrossRef(i, 'axisY')
+		i = node.ReadCrossRef(i, 'axisZ')
+		i = node.ReadCrossRef(i, 'origin')
 		i = node.ReadCrossRef(i, 'ref_9')
 		return i
 
@@ -3244,10 +3244,10 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadCrossRef(i, 'refCondition')
-		i = node.ReadCrossRef(i, 'refImpact')
-		i = node.ReadCrossRef(i, 'refAngle')
-		i = node.ReadCrossRef(i, 'refTangentPlane')
+		i = node.ReadCrossRef(i, 'condition')
+		i = node.ReadCrossRef(i, 'impact')
+		i = node.ReadCrossRef(i, 'angle')
+		i = node.ReadCrossRef(i, 'tangentPlane')
 		i = node.ReadList7(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadCrossRef(i, 'directionReversed')
@@ -3480,7 +3480,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'refRoot')
+		i = node.ReadCrossRef(i, 'root')
 		i = node.ReadParentRef(i)
 		i = node.ReadChildRef(i, 'ref_1')
 		i = self.skipBlockSize(i)
@@ -3595,8 +3595,8 @@ class DCReader(EeDataReader):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'plane')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'refEnty1')
-		i = node.ReadCrossRef(i, 'refEnty2')
+		i = node.ReadCrossRef(i, 'enty1')
+		i = node.ReadCrossRef(i, 'enty2')
 		return i
 
 	def Read_5844C14D(self, node):
@@ -4009,7 +4009,7 @@ class DCReader(EeDataReader):
 	def Read_660DEE07(self, node): # ??? FilletSetback ???
 		i = self.ReadHeaderContent(node)
 		if (getFileVersion() > 2018): i += 4 # ???
-		i = node.ReadCrossRef(i, 'refEdgeProxies')
+		i = node.ReadCrossRef(i, 'edgeProxies')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'radii')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'booleans')
 		return i
@@ -4674,7 +4674,7 @@ class DCReader(EeDataReader):
 
 	def Read_7C6D149E(self, node): # SplineFitPointConstraint {8006A07A-ECC4-11D4-8DE9-0010B541CAA8}:
 		i = self.ReadHeaderConstraint2D(node, 'Geometric_SplineFitPoint2D')
-		i = node.ReadCrossRef(i, 'refSpline')
+		i = node.ReadCrossRef(i, 'spline')
 		i = node.ReadCrossRef(i, 'point')
 		return i
 
@@ -5733,8 +5733,8 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderContent(node, 'FilletIntermediateRadius')
 		if (getFileVersion() > 2017): i += 4 # skipp 0xFFFFFFFF (-1)
 		i = node.ReadCrossRef(i, 'point')
-		i = node.ReadCrossRef(i, 'refRadius')
-		i = node.ReadCrossRef(i, 'refEdgeProxy')
+		i = node.ReadCrossRef(i, 'radius')
+		i = node.ReadCrossRef(i, 'edgeProxy')
 		return i
 
 	def Read_92637D29(self, node):
@@ -5967,7 +5967,7 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderContent(node, 'UserCoordinateSystemValues')
 		i = self.skipBlockSize(i)
 		i = node.ReadSInt32(i, 's32_0')
-		i = node.ReadCrossRef(i, 'refUCS')
+		i = node.ReadCrossRef(i, 'ucs')
 		i = node.ReadCrossRef(i, 'point')
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadCrossRef(i, 'ref_2')
@@ -6730,10 +6730,10 @@ class DCReader(EeDataReader):
 		i = self.ReadRefList(node, i, 'lst2')
 		i = node.ReadCrossRef(i, 'center')
 		i = node.ReadSInt32(i, 's32_0')
-		i = node.ReadCrossRef(i, 'refAngle')
-		i = node.ReadCrossRef(i, 'refPolygonCenter')
+		i = node.ReadCrossRef(i, 'angle')
+		i = node.ReadCrossRef(i, 'polygonCenter')
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadCrossRef(i, 'refCount')
+		i = node.ReadCrossRef(i, 'count')
 		i = node.ReadFloat64(i, 'angle')
 		return i
 
@@ -7163,7 +7163,7 @@ class DCReader(EeDataReader):
 	def Read_CAB7E237(self, node): # General Surface Profile Tolerance
 		i = self.ReadHeaderContent(node, 'GenSurfProfTol')
 		if (getFileVersion() > 2017): i += 4 # skip FF FF FF FF
-		i = node.ReadCrossRef(i, 'refAnnoDim')
+		i = node.ReadCrossRef(i, 'annoDim')
 		i = node.ReadCrossRef(i, 'plane')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadCrossRef(i, 'ref2')
@@ -7501,7 +7501,7 @@ class DCReader(EeDataReader):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'parameter')
 		i = node.ReadCrossRef(i, 'point')
-		i = node.ReadCrossRef(i, 'refDocument')
+		i = node.ReadCrossRef(i, 'document')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt16(i, 'u16_0')
 
@@ -7892,7 +7892,7 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'faces')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadLen32Text16(i, 'clientId')
-		i = node.ReadCrossRef(i, 'refParentToleranceFeature')
+		i = node.ReadCrossRef(i, 'parentToleranceFeature')
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadUInt32(i, 'u32_0')
 		if (getFileVersion() > 2018): i += 4 # skip 02 00 00 00
@@ -8277,7 +8277,7 @@ class DCReader(EeDataReader):
 
 	def Read_ED7D8445(self, node):
 		i = self.ReadChildHeader1(node)
-		i = node.ReadCrossRef(i, 'refOwnedBy')
+		i = node.ReadCrossRef(i, 'owner')
 		return i
 
 	def Read_EDAEAC7B(self, node):
@@ -8811,8 +8811,8 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadCrossRef(i, 'center')
-		i = node.ReadCrossRef(i, 'refPolygonCenter1')
-		i = node.ReadCrossRef(i, 'refPolygonCenter2')
+		i = node.ReadCrossRef(i, 'polygonCenter1')
+		i = node.ReadCrossRef(i, 'polygonCenter2')
 		i = node.ReadUInt32A(i, 2, 'a1')
 		return i
 

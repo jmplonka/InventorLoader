@@ -491,7 +491,7 @@ class AppReader(SegmentReader):
 	def Read_A7A4FD41(self, node):
 		i = node.Read_Header0()
 		i = node.ReadLen32Text8(i)
-		i = node.ReadCrossRef(i, 'refDefault')
+		i = node.ReadCrossRef(i, 'default')
 		i = node.ReadParentRef(i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_TEXT16_REF_, 'lst0')
 		i = node.ReadUInt8A(i, 4, 'a0')
@@ -724,7 +724,7 @@ class AppReader(SegmentReader):
 	def Read_FDA6D020(self, node): # LeaderCollection
 		i = node.Read_Header0('LeaderCollection')
 		i = node.ReadLen32Text8(i)
-		i = node.ReadCrossRef(i, 'refDefault')
+		i = node.ReadCrossRef(i, 'default')
 		i = node.ReadParentRef(i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_TEXT16_REF_, 'lst0')
 		return i

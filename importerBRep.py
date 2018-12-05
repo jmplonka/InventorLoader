@@ -123,7 +123,7 @@ class BRepReader(SegmentReader):
 
 	def Read_632A4BBA(self, node):
 		i = self.skipBlockSize(0)
-		i = node.ReadCrossRef(i, 'refRoot')
+		i = node.ReadCrossRef(i, 'root')
 		i = node.ReadUInt16A(i, 4, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_0')
@@ -217,7 +217,7 @@ class BRepReader(SegmentReader):
 
 	def Read_BA0B8C23(self, node):
 		i = self.skipBlockSize(0)
-		i = node.ReadCrossRef(i, 'refRoot')
+		i = node.ReadCrossRef(i, 'root')
 		i = node.ReadUInt16A(i, 4, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_0')
