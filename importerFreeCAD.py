@@ -121,17 +121,17 @@ def ignoreBranch(node):
 
 def unsupportedNode(node):
 	if (node.typeName == 'Feature'):
-		logAlways(u"        ... %s '%s' not supported (yet?) - please use SAT or STEP instead!", node.typeName, node.getSubTypeName())
+		logWarning(u"        ... %s '%s' not supported (yet?) - please use SAT or STEP instead!", node.typeName, node.getSubTypeName())
 	else:
-		logAlways(u"        ... %s not supported (yet?) - please use SAT or STEP instead!", node.typeName)
+		logWarning(u"        ... %s not supported (yet?) - please use SAT or STEP instead!", node.typeName)
 	node.setSketchEntity(-1, None)
 	return None
 
 def notYetImplemented(node):
 	if (node.typeName == 'Feature'):
-		logWarning(u"        ... %s '%s' not implemented yet - sorry!", node.typeName, node.getSubTypeName())
+		logWarning(u"        ... %s '%s' not implemented yet - please use SAT or STEP instead!", node.typeName, node.getSubTypeName())
 	else:
-		logWarning(u"        ... %s not implemented yet - sorry!", node.typeName)
+		logWarning(u"        ... %s not implemented yet - please use SAT or STEP instead!", node.typeName)
 	node.setSketchEntity(-1, None)
 	return None
 

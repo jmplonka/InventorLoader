@@ -766,6 +766,21 @@ class SecNode(AbstractData):
 		lst  = []
 		i    = offset
 		skip1 = 4 if (getFileVersion() < 2011) else 0
+		c    = self.content
+		for j in range(cnt):
+			u, i = getUInt32(self.data, i)
+			i = self.ReadList4(i, _TYP_UINT32_, name)
+			i += skip1
+			l = self.get(name)
+			lst.append((u, l))
+		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s])" %(a[0], IntArr2Str(a[1], 3)) for a in lst]))
+		self.set(name, lst)
+		return i
+
+	def getListResult5(self, name, offset, cnt, arraysize):
+		lst  = []
+		i    = offset
+		skip1 = 4 if (getFileVersion() < 2011) else 0
 		skip2 = 1 if (getFileVersion() > 2017) else 0
 		c    = self.content
 		for j in range(cnt):
@@ -778,21 +793,6 @@ class SecNode(AbstractData):
 			l = self.get(name)
 			lst.append((u1, u2, u3, l))
 		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,%03X,%04X,%s)" %(a[0], a[1], a[2], a[3]) for a in lst]))
-		self.set(name, lst)
-		return i
-
-	def getListResult5(self, name, offset, cnt, arraysize):
-		lst  = []
-		i    = offset
-		skip1 = 4 if (getFileVersion() < 2011) else 0
-		c    = self.content
-		for j in range(cnt):
-			u, i = getUInt32(self.data, i)
-			i = self.ReadList4(i, _TYP_UINT32_, name)
-			i += skip1
-			l = self.get(name)
-			lst.append((u, l))
-		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s])" %(a[0], IntArr2Str(a[1], 3)) for a in lst]))
 		self.set(name, lst)
 		return i
 

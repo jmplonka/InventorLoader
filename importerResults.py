@@ -55,18 +55,19 @@ class ResultReader(SegmentReader):
 		i = node.ReadList4(i, importerSegNode._TYP_RESULT_3_, 'lst3')
 		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2011):
-			i = node.ReadList4(i, importerSegNode._TYP_UINT32_, 'lst4')
+			i = node.ReadList4(i, importerSegNode._TYP_RESULT_4_, 'lst4')
 			if (getFileVersion() > 2016):
 				i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_MAP_APP_1_, 'lst5')
 			else:
+				node.content += ' lst5={}'
 				i += 1
 		else:
-			node.content += ' lst4=[]'
+			node.content += ' lst4=[] lst5={}'
 			i += 1
-		i = node.ReadList4(i, importerSegNode._TYP_RESULT_4_, 'lst6')
-		i = node.ReadList4(i, importerSegNode._TYP_RESULT_5_, 'lst7')
+		i = node.ReadList4(i, importerSegNode._TYP_RESULT_5_, 'lst6')
+		i = node.ReadList4(i, importerSegNode._TYP_RESULT_4_, 'lst7')
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadList4(i, importerSegNode._TYP_RESULT_5_, 'lst8')
+		i = node.ReadList4(i, importerSegNode._TYP_RESULT_4_, 'lst8')
 		i = node.ReadUInt8(i, 'u8_2')
 		i = self.skipBlockSize(i)
 		return i

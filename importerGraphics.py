@@ -86,8 +86,7 @@ class GraphicsReader(EeSceneReader):
 		if (getFileVersion() >= 2015):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		else:
-			i = node.ReadUInt16A(i, 2, 'a1')
-
+			n, i = getUInt32(node.data, i)
 		i = node.ReadUInt16A(i, 3, 'a2')
 		i = self.Read_ColorAttr(i, node)
 		i = self.skipBlockSize(i)

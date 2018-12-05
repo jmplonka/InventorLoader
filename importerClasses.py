@@ -5,11 +5,9 @@ importerClasses.py:
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys
+import sys, os
 from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
 from math          import degrees, radians, pi
-from FreeCAD       import ParamGet
-from pathlib       import Path
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -340,8 +338,8 @@ class Inventor():
 		self.RSeMetaData        = {}
 
 	def __repr__(self):
-		p = Path(getInventorFile())
-		return u"[%d]: %s" %(p.name, getFileVersion())
+		if (getInventorFile() is None): return u"#NV#"
+		return u"[%d]: %s" %(getFileVersion(), os.path.split(os.path.abspath(getInventorFile()))[-1])
 
 	def getDC(self):
 		'''
