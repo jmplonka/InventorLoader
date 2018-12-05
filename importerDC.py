@@ -668,7 +668,9 @@ class DCReader(EeDataReader):
 		i = self.ReadRefU32List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
-		i = node.ReadUInt32A(i, 7, 'a2')
+		i = node.ReadUInt32A(i, 2, 'a2')
+		i = node.ReadUInt32A(i, 2, 'a3')
+		i = node.ReadUInt32A(i, 3, 'a4')
 		return i
 
 	def Read_0811C56E(self, node): # EntityWrapperNode
@@ -684,6 +686,7 @@ class DCReader(EeDataReader):
 	def Read_2E04A208(self, node): # EntityWrapperNode
 		i = self.ReadHeaderEntityWrapperNode(node)
 		i = self.skipBlockSize(i)
+		node.content += u" lst2=[]"
 		i = node.ReadUInt32A(i, 3, 'a1')
 		i = node.ReadUInt32A(i, 2, 'a2')
 		cnt, i = getUInt32(node.data, i)
@@ -727,7 +730,13 @@ class DCReader(EeDataReader):
 	def Read_90F4820A(self, node): # EntityWrapperNode
 		i = self.ReadHeaderEntityWrapperNode(node)
 		i = self.skipBlockSize(i)
+		node.content += u" lst2=[]"
 		i = node.ReadUInt32A(i, 3, 'a1')
+		node.content += u" a2=[0000,0000] a3=[] a4=[0000,0000,0000]"
+		node.set('lst2', [])
+		node.set('a2', [0,0])
+		node.set('a3', [])
+		node.set('a4', [0,0,0])
 		return i
 
 	def Read_9BB4281C(self, node): # RootEntityWrapperNode
@@ -735,13 +744,13 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
 		i = node.ReadUInt32A(i, 2, 'val_key_3')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 3, 'a2')
+		i = node.ReadUInt32A(i, 3, 'a1')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a2')
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'a3')
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'a4')
-		cnt, i = getUInt32(node.data, i)
-		i = node.ReadUInt32A(i, cnt, 'a5')
 		i = node.ReadUInt32A(i, 3, 'a5')
 		return i
 
@@ -756,6 +765,11 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, 2, 'val_key_3')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
+		node.content += u" a2=[] a3=[] a4=[] a5=[0000,0000,0000]"
+		node.set('a2', [])
+		node.set('a3', [])
+		node.set('a4', [])
+		node.set('a5', [0,0,0])
 		return i
 
 	def Read_6E2BCB60(self, node): # RootEntityWrapperNode

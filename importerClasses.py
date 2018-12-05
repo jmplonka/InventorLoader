@@ -74,7 +74,7 @@ class RSeSegment():
 		self.count2      = 0
 		self.type        = ''
 		self.metaData    = None
-		self.arr1        = []
+		self.arr1        = [] # ???, ???, ???, numSec1, ???
 		self.arr2        = []
 		self.objects     = []
 		self.nodes       = []
@@ -84,6 +84,9 @@ class RSeSegment():
 
 	def __repr__(self):
 		return self.__str__()
+
+	def __lt__(self, other):
+		return self.name < other.name
 
 class RSeStorageBlockSize():
 	'''

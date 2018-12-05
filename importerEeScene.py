@@ -67,11 +67,13 @@ class EeSceneReader(StyleReader):
 	def ReadHeaderDimensioning(self, node, typeName = None):
 		i = self.ReadHeader3dObject(node, typeName)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		i = node.ReadUInt8(i, 'u8_0')
+		b, i = getBoolean(node.data, i)
+		if (b):
+			i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadUInt32(i, 'key')
+		i = node.ReadUInt32(i, 'index')
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
@@ -220,10 +222,7 @@ class EeSceneReader(StyleReader):
 
 	def Read_A79EACCF(self, node): # 3D-Object
 		i = self.ReadHeader3dObject(node, '3dObject')
-		if (node.get('ref2') is None):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'objects')
-		else:
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'objects')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'objects')
 		i = self.ReadOptionalTransformation(node, i)
 		self.objects3D.append(node)
 		return i
@@ -365,33 +364,32 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt16A(i, 8, 'a0')
 		return i
 
-	def Read_B247B180(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
-		return i
+	def Read_B247B180(self, node): # Distance dimensioning dir=vertical
+		return self.ReadHeaderDimensioning(node, 'DimensioningDistVert')
 
-	def Read_23ADA14E(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_23ADA14E(self, node): # Distance dimensioning dir=horizontal
+		return self.ReadHeaderDimensioning(node, 'DimensioningDistHorz')
 
-	def Read_9516E3A1(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_9516E3A1(self, node): # Distance dimensioning dir=diagonal
+		return self.ReadHeaderDimensioning(node, 'DimensioningDistance')
 
-	def Read_B01025BF(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_B01025BF(self, node): # Vertical dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningVertical')
 
-	def Read_BCC1E889(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_BCC1E889(self, node): # Horizontal dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningHorizontal')
 
-	def Read_C2F1F8ED(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_FF084971(self, node): # Length dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningLength')
 
-	def Read_C46B45C9(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_C2F1F8ED(self, node): # Angle dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningAngle')
 
-	def Read_FF084971(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_C46B45C9(self, node): # Diameter dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningDiameter')
 
-	def Read_FFB5643C(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_FFB5643C(self, node): # Angle dimensioning (2nd)
+		return self.ReadHeaderDimensioning(node, 'DimensioningAngle2')
 
 	def Read_B91E695F(self, node): # MultiBodyNode
 		i = node.Read_Header0('MultiBodyNode')

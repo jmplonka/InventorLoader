@@ -85,8 +85,9 @@ def dumpRSeDBFile(db, log):
 	for n, txt in enumerate(db.segInfo.uidList2):
 		log.write(u"\t\t[%02X]: '%s'\n" %(n, txt))
 	log.write(u"\tSegments:\n")
-	for id in db.segInfo.segments:
-		log.write(u"\t\t%s: %s\n" %(id, db.segInfo.segments[id]))
+	segments = sorted(db.segInfo.segments.values())
+	for seg in segments:
+		log.write(u"\t\t%s\n" %(seg))
 
 def dumpRSeDB(db):
 	folder = getInventorFile()[0:-4]

@@ -209,13 +209,13 @@ class SecNode(AbstractData):
 	def ReadUInt16(self, offset, name):
 		x, i = getUInt16(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%04X' %(name, x)
+		self.content += ' %s=%03X' %(name, x)
 		return i
 
 	def ReadUInt16A(self, offset, n, name):
 		x, i = getUInt16A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, ",".join(["%04X" % h for h in x]))
+		self.content += ' %s=[%s]' %(name, ",".join(["%03X" % h for h in x]))
 		return i
 
 	def ReadSInt16(self, offset, name):
@@ -233,13 +233,13 @@ class SecNode(AbstractData):
 	def ReadUInt32(self, offset, name):
 		x, i = getUInt32(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%06X' %(name, x)
+		self.content += ' %s=%04X' %(name, x)
 		return i
 
 	def ReadUInt32A(self, offset, n, name):
 		x, i = getUInt32A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, ",".join(["%06X" % h for h in x]))
+		self.content += ' %s=[%s]' %(name, ",".join(["%04X" % h for h in x]))
 		return i
 
 	def ReadSInt32(self, offset, name):
@@ -1133,11 +1133,12 @@ class SecNode(AbstractData):
 		lst = {}
 		i   = offset
 		self.set(name, lst)
-		APP_1 = Struct('<BffffffffffffB').unpack_from
+		APP_1 = Struct('<Bffffffffffff').unpack_from
+		skip  = 50 if (getFileVersion() > 2018) else 49 # Really 2018???
 		for j in range(cnt):
 			key, i = getUInt32(self.data, i)
 			val = APP_1(self.data, i)
-			i += 50
+			i += skip
 			lst[key] = val
 		return i
 
