@@ -115,7 +115,8 @@ class StyleReader(SegmentReader):
 
 	def Read_9795E56A(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_9795E56A')
-		i = node.ReadFloat64_3D(i, 'a1')
+		i = node.ReadFloat64_3D(i, 'vec')
+		i = node.ReadFloat64_3D(i, 'dir')
 		return i
 
 	def Read_AF48560F(self, node): # Primary color attribute style
@@ -131,7 +132,7 @@ class StyleReader(SegmentReader):
 
 	def Read_B255D907(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_B255D907')
-		i = node.ReadFloat64_3D(i, 'a0')
+		i = node.ReadFloat64_3D(i, 'vec')
 		return i
 
 	def Read_B32BF6A2(self, node): # Object style ...

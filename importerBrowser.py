@@ -26,11 +26,11 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt32(i, 'flags')
 		b, i = getBoolean(node.data, i)
 		if (b):
-			i = node.ReadUInt16(i, 'Str53.u16_0')
+			i = node.ReadUInt16(i, 'u16_0')
 		else:
-			node.set('Str53.u16_0', 0)
-			node.content += u" Str53.u16_0=0000"
-		i = node.ReadUInt16A(i, 3, 'Str53.a1')
+			node.set('u16_0', 0)
+			node.content += u" u16_0=000"
+		i = node.ReadUInt16A(i, 3, 'a1')
 
 		i = self.skipBlockSize(i)
 		return i
@@ -39,16 +39,16 @@ class BrowserReader(SegmentReader):
 		if (typeName is not None):
 			node.typeName = typeName
 		i = node.ReadLen32Text16(offset)
-		i = node.ReadLen32Text16(i, 'Str01.str1')
-		i = node.ReadUInt8(i, 'Str01.u8_0')
+		i = node.ReadLen32Text16(i, 'txt_0')
+		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_Str23(self, offset, node, typeName = None):
 		if (typeName is not None):
 			node.typeName = typeName
-		i = node.ReadLen32Text16(offset, 'Str23.str0')
-		i = node.ReadLen32Text16(i, 'Str23.str1')
-		i = node.ReadSInt32A(i, 3, 'Str23.a0')
+		i = node.ReadLen32Text16(offset, 'txt_0')
+		i = node.ReadLen32Text16(i, 'txt_1')
+		i = node.ReadSInt32A(i, 3, 'a1')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -56,13 +56,13 @@ class BrowserReader(SegmentReader):
 		if (typeName is not None):
 			node.typeName = typeName
 		i = node.ReadUInt32(offset, 'index')
-		i = node.ReadUInt16A(i, 4, '664.a0')
-		i = node.ReadUInt8(i, '664.u8_0')
-		i = node.ReadUInt16A(i, 6, '664.a1')
-		i = node.ReadUInt8(i, '664.u8_1')
+		i = node.ReadUInt16A(i, 4, 'a2')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt16A(i, 6, 'a3')
+		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt32(i, 'grIdx')
-		i = node.ReadUInt32(i, '664.a32_0')
-		i = node.ReadUInt8(i, '664.u8_2')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt8(i, 'u8_2')
 		i = self.skipBlockSize(i)
 		return i
 

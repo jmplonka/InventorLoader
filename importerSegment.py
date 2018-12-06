@@ -606,7 +606,7 @@ class SegmentReader(object):
 		i = node.Read_Header0('ASM')
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'lenFooter')
+		i += 4
 		txt, i = getText8(node.data, i, 15)
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
@@ -621,8 +621,9 @@ class SegmentReader(object):
 		index = 0
 		clearEntities()
 		entities = {}
-		l = len(data)
-		e = (l - 17) if (getFileVersion() > 2010) else (l - 25)
+		e = len(node.data) - 12
+		if (getFileVersion() > 2018): e -= 1
+		if (getFileVersion() < 2011): e -= 4
 		while (i < e):
 			entity, i = readEntityBinary(data, i, e)
 			entity.index = index
@@ -633,12 +634,15 @@ class SegmentReader(object):
 			if (entity.name == "End-of-ACIS-data"):
 				entity.index = -2
 				break
-		i = len(node.data) - node.get('lenFooter') + 0x18
-		i = self.skipBlockSize(i)
 		resolveEntityReferences(entities, lst)
 		node.set('SAT', [header, lst])
 		self.segment.AcisList.append(node)
 		dumpSat(node)
+		i = node.ReadUInt32(e, 'selectedKey')
+		if (getFileVersion() > 2018): i += 1 # skip 00
+		if (getFileVersion() < 2011): i += 4  # skip block len
+		i = node.ReadChildRef(i, 'mappings')
+		i = node.ReadSInt32(i, 's32_0')
 		return i
 
 	def Read_F8A779F8(self, node):

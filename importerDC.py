@@ -7239,7 +7239,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadCrossRef(i, 'asm')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'lenFooter')
+		i += 4
 		return i
 
 	def Read_CC90BCDA(self, node):
@@ -8535,13 +8535,14 @@ class DCReader(EeDataReader):
 		i = node.Read_Header0('ASM')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'lenFooter')
+		i += 4
 		txt, i = getText8(node.data, i, 15)
 		index = 0
 		clearEntities()
 		entities = {}
 		lst = []
-		e = len(node.data) - node.get('lenFooter') + 0x17
+		e = len(node.data) - 12
+		if (getFileVersion() < 2011): e -=4
 
 		setVersion(7.0)
 		header = Header()
@@ -8567,11 +8568,13 @@ class DCReader(EeDataReader):
 			if (entity.name in ('End-of-ACIS-data')):
 				break
 		resolveEntityReferences(entities, lst)
-		i = self.skipBlockSize(i)
 		node.set('SAT', [header, lst])
 		self.segment.AcisList.append(node)
 		dumpSat(node)
-
+		i = node.ReadUInt32(e, 'selectedKey')
+		if (getFileVersion() < 2011): i += 4  # skip block len
+		i = node.ReadChildRef(i, 'mappings')
+		i = node.ReadSInt32(i, 's32_0')
 		return i
 
 	def Read_F67F0488(self, node):

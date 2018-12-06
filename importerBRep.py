@@ -239,8 +239,8 @@ class BRepReader(SegmentReader):
 	def Read_CADD6468(self, node): # BrepComponent
 		i = node.Read_Header0('BrepComponent')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
-		i = node.ReadLen32Text16(i)
-		i = node.ReadLen32Text16(i, 'txt_0')
+		i = node.ReadLen32Text16(i, 'length')
+		i = node.ReadLen32Text16(i, 'angle')
 		return i
 
 	def Read_CC0F7521(self, node): # AsmEntityWrapper
@@ -249,7 +249,7 @@ class BRepReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadChildRef(i, 'asm')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'lenFooter')
+		i += 4
 		return i
 
 	def Read_CCC5085A(self, node): # FaceMergeData
