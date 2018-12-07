@@ -22,6 +22,7 @@ class GraphicsReader(EeSceneReader):
 	def __init__(self, segment):
 		super(GraphicsReader, self).__init__(segment)
 		segment.meshes = {}
+		segment.featureOutlines = []
 
 	def ReadIndexDC(self, node, i):
 		i = node.ReadUInt32(i, 'indexDC')
@@ -357,8 +358,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadCrossRef(i, 'ref_0')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadUInt32(i, 'key')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'fxOutlines')
+		i = node.ReadUInt32(i, 'index')
 		return i
 
 	def Read_8DA49A23(self, node): # InstanceNode
@@ -488,6 +489,7 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadFloat64A(i, 3, 'a2')
 		i = self.ReadEdgeList(node, i)
 		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst0', 3)
+		self.segment.featureOutlines.append(node)
 		return i
 
 	def Read_A94779E2(self, node):

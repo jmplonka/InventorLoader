@@ -202,23 +202,28 @@ def resolveReferencNodes(nodes):
 			proxy.set('faceCollection', node)
 	return
 
+def isParent(ref, parent):
+	node = ref.get('parent')
+	if (node is None): return False
+	return node.index == parent.index
+
 def resolveParentNodes(nodes):
 	for parent in nodes.values():
 		for ref in parent.references:
-			if (ref.index > parent.index):
+			child = ref._data
+			if (isParent(ref, parent)):
+				ref.type = SecNodeRef.TYPE_CHILD
+				child.parent = parent
+			elif (ref.index > parent.index):
 				if (ref.type == SecNodeRef.TYPE_CHILD):
-					child = ref._data
-					if (child is not None):
-						if (child.parent is None):
-							child.parent = parent
-						else:
-							ref.type = SecNodeRef.TYPE_CROSS
-			else:
-				if (parent.parent is not None) and (parent.parent.index == ref.index):
-					ref.type = SecNodeRef.TYPE_PARENT
-				else:
-					if (ref.type == SecNodeRef.TYPE_PARENT):
+					if (child.parent is None):
+						child.parent = parent
+					else:
 						ref.type = SecNodeRef.TYPE_CROSS
+			elif (parent.parent is not None) and (parent.parent.index == ref.index):
+				ref.type = SecNodeRef.TYPE_PARENT
+			elif (ref.type == SecNodeRef.TYPE_PARENT):
+					ref.type = SecNodeRef.TYPE_CROSS
 	return
 
 def buildTree(file, nodes):
@@ -313,7 +318,7 @@ class SegmentReader(object):
 		node.set(name, lst)
 		return i
 
-	def ReadTypedFloats(self, node, offset, name):
+	def ReadEdge(self, node, offset, name):
 		n, i = getUInt16(node.data, offset)
 		if (n != 0):
 			i = offset
@@ -323,13 +328,13 @@ class SegmentReader(object):
 
 		if (t == 0x0B):   # 3D-Circle            # Center, normal, m, radius, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 12)
-			t = 'ArcOfCircle'
-		elif (t == 0x11): # 3D-Ellipse           # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle ???
+			v = ArcOfCircleEdge(a)
+		elif (t == 0x11): # 3D-Ellipse           # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 13)
-			t = 'ArcOfEllipse'
+			v = ArcOfEllipseEdge(a)
 		elif (t == 0x17): # 3D-Line
 			a, i = getFloat64A(node.data, i, 6)  # Point1, Point2
-			t = 'Line'
+			v = LineEdge(a)
 		elif (t == 0x2A): # 3D-BSpline
 			a0 = Struct(u"<LLLd").unpack_from(node.data, i)
 			i  += 20
@@ -338,21 +343,20 @@ class SegmentReader(object):
 			a3, i = readTypedFloatArr(node.data, i, 3)
 			a4 = Struct(u"<dLLdd").unpack_from(node.data, i)
 			i  += 32
-			a = a0 + a1 + a2 + a3 + a4
-			t = 'BSpline'
+			v = BSplineEdge(a0, a1, a2, a3, a4)
 		else:
 			raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
-		node.set(name, (t, a))
+		node.set(name, v)
 		return i
 
 	def ReadEdgeList(self, node, offset, name='edges'):
 		cnt, i = getUInt32(node.data, offset)
 		lst    = []
 		for j in range(cnt):
-			i = self.ReadTypedFloats(node, i , 'tmp')
+			i = self.ReadEdge(node, i , 'tmp')
 			f = node.get('tmp')
 			lst.append(f)
-		node.content += ' %s=[%s]' %(name, ','.join(['(%s:[%s])' %(r[0], str(r[1])) for r in lst]))
+		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(e) for e in lst]))
 		node.set(name, lst)
 		node.delete('tmp')
 		return i

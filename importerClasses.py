@@ -5,15 +5,20 @@ importerClasses.py:
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys, os
+import sys, os, Part
 from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
 from math          import degrees, radians, pi
+from FreeCAD       import Vector as VEC
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 model = None
+
+PART_LINE = Part.Line
+if (hasattr(Part, "LineSegment")):
+	PART_LINE = Part.LineSegment
 
 class RSeDatabase():
 	def __init__(self):
@@ -1318,6 +1323,107 @@ class SurfaceBodiesNode(DataNode):
 		bodies = self.get('bodies')
 		names = ','.join([u"'%s'" %(b.name) for b in bodies])
 		return u'(%04X): %s %s' %(self.index, self.typeName, names)
+
+class _AbstractEdge_(object):
+	def __init__(self):
+		return
+	def p2v(self, p, f = 1.0):
+		return VEC(p[0], p[1], p[2]) * f
+
+class LineEdge(_AbstractEdge_):
+	def __init__(self, a):
+		super(LineEdge, self).__init__()
+		self.p1 = a[0:3]
+		self.p2 = a[3:6]
+		self.p2[0] += self.p1[0]
+		self.p2[1] += self.p1[1]
+		self.p2[2] += self.p1[2]
+	def __str__(self):
+		return u"Line:(%g,%g,%g)-(%g,%g,%g)" %(self.p1[0], self.p1[1], self.p1[2], self.p2[0], self.p2[1], self.p2[2])
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		v1 = self.p2v(self.p1, 10.0)
+		v2 = self.p2v(self.p2, 10.0)
+		return PART_LINE(v1, v2)
+
+class ArcOfCircleEdge(_AbstractEdge_):
+	def __init__(self, a): # Center, dir, m, radius, startAngle, sweepAngle
+		super(ArcOfCircleEdge, self).__init__()
+		self.center = a[0:3]
+		self.dir    = a[3:6]
+		self.m      = a[6:9]
+		self.r      = a[9]
+		self.a      = a[10]
+		self.b      = a[11]
+	def __str__(self):
+		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center[0], self.center[1], self.center[2], self.dir[0], self.dir[1], self.dir[2], self.m[0], self.m[1], self.m[2], self.r, self.a, self.b)
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		c = self.p2v(self.center, 10.0)
+		d = self.p2v(self.dir)
+		r = self.r * 10.0
+		return Part.ArcOfCircle(Part.Circle(c, d, r), self.a, self.b)
+
+class ArcOfEllipseEdge(_AbstractEdge_):
+	def __init__(self, a): # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
+		super(ArcOfCircleEdge, self).__init__()
+		self.center = a[0:3]
+		self.dir1   = a[3:6]
+		self.dir2   = a[6:9]
+		self.r1     = a[9]
+		self.r2     = a[10]
+		self.a      = a[11]
+		self.b      = a[12]
+	def __str__(self):
+		return u"Ellipse:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g, %g" %(self.center[0], self.center[1], self.center[2], self.dir1[0], self.dir1[1], self.dir1[2], self.dir2[0], self.dir2[1], self.dir2[2], self.r1, self.r2, self.a, self.b)
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		c = self.p2v(self.center, 10.0)
+		d1 = self.p2v(self.d1)
+		d2 = self.p2v(self.d2)
+		r = self.r * 10.0
+		return Part.ArcOfEllipse(Part.Ellipse(c, d1, d2), self.a, self.b)
+
+class BSplineEdge(_AbstractEdge_):
+	def __init__(self, a0, a1, a2, a3, a4):
+		super(BSplineEdge, self).__init__()
+		self.a0 = a0 + a4 # LLLd + dLLdd
+		self.a1 = a1
+		self.a2 = a2
+		self.a3 = a3
+	def __str__(self):
+		return u"BSpline:(%s),[%s],[%s],[%s]" %(FloatArr2Str(self.a0), FloatArr2Str(self.a1), FloatArr2Str(self.a2), FloatArr2Str(self.a3))
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		bsc = Part.BSplineCurve()
+		d   = 3     # TODO get degrees from a0[]
+		p   = []    # TODO get poles from ??? 
+		m   = []    # TODO get mults from ??? 
+		k   = []    # TODO get knots from ??? 
+		w   = []    # TODO get weights from ??? 
+		rat = False # TODO get Rational from a0[]
+		if (rat):
+			bsc.buildFromPolesMultsKnots( \
+				poles         = p,        \
+				mults         = m,        \
+				knots         = k,        \
+				periodic      = False,    \
+				degree        = d,        \
+				weights       = w
+			)
+		else:
+			bsc.buildFromPolesMultsKnots( \
+				poles         = p,        \
+				mults         = m,        \
+				knots         = k,        \
+				periodic      = False,    \
+				degree        = d
+			)
+		return bsc
 
 class Header0():
 	def __init__(self, m, x):

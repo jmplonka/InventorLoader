@@ -134,10 +134,10 @@ class DCReader(EeDataReader):
 
 	def ReadHeaderPattern(self, node, patternName):
 		i = self.ReadHeaderFeature(node, patternName)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'outlineItem')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'properties')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'participants')
 		properties = node.get('properties')
@@ -5633,10 +5633,10 @@ class DCReader(EeDataReader):
 
 	def Read_90874D91(self, node): # Feature
 		i = self.ReadHeadersS32ss(node, 'Feature')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'outlineItem')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'properties')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_90874D94(self, node): # CoincidentConstraint {8006A074-ECC4-11D4-8DE9-0010B541CAA8}
@@ -7011,12 +7011,12 @@ class DCReader(EeDataReader):
 
 	def Read_C098D3CF(self, node): # PunchToolFeature {0DC3C610-F23D-44AD-B688-A47CAB5B04CB}
 		i = self.ReadHeaderFeature(node, 'PunchTool')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'outlineItem')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'properties')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def Read_C1887310(self, node):
@@ -7044,7 +7044,7 @@ class DCReader(EeDataReader):
 	def Read_C2EF1CC7(self, node):
 		i = self.ReadHeaderFeature(node, 'NonParametricBase')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'properties')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		return i
 
