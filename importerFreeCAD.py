@@ -977,7 +977,7 @@ class FreeCADImporter:
 				logError(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
-	def getEdges(self, matchedEdge):
+	def getIndexEdges(self, matchedEdge):
 		edges       = []
 
 		for idxRef in matchedEdge.get('indexRefs'):
@@ -1001,7 +1001,7 @@ class FreeCADImporter:
 		if (proxy is not None):
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-				edges = self.getEdges(matchedEdge)
+				edges = self.getIndexEdges(matchedEdge)
 				allEdges += edges
 
 		return allEdges
