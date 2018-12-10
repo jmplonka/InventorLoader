@@ -55,9 +55,11 @@ if (hasattr(Part, "LineSegment")):
 
 def printEdge(edge):
 	if (edge[0] == 'ArcOfCircle'):
-		return print(u"  Part.show(Part.ArcOfCircle(Part.Circle(V(%g,%g,%g), V(%g,%g,%g), %g), %g, %g).toShape())" %(edge[1][0],edge[1][1],edge[1][2],edge[1][3],edge[1][4],edge[1][5],edge[1][9],-edge[1][11],edge[1][10]))
+		print(u"  Part.show(Part.ArcOfCircle(Part.Circle(V(%g,%g,%g), V(%g,%g,%g), %g), %g, %g).toShape())" %(edge[1][0],edge[1][1],edge[1][2],edge[1][3],edge[1][4],edge[1][5],edge[1][9],-edge[1][11],edge[1][10]))
+		return
 	if (edge[0] == 'Line'):
-		return print(u"  Part.show(Part.LineSegment(V(%g,%g,%g), V(%g,%g,%g)).toShape())" %(edge[1][0],edge[1][1],edge[1][2],edge[1][3]+edge[1][0],edge[1][4]+edge[1][1],edge[1][5]+edge[1][2]))
+		print(u"  Part.show(Part.LineSegment(V(%g,%g,%g), V(%g,%g,%g)).toShape())" %(edge[1][0],edge[1][1],edge[1][2],edge[1][3]+edge[1][0],edge[1][4]+edge[1][1],edge[1][5]+edge[1][2]))
+		return
 	return
 
 def printOutlines(outlines):
@@ -882,9 +884,7 @@ class FreeCADImporter:
 				if (sketchEdge.get('posDir')):
 					edge = Part.ArcOfCircle(edge, alpha, beta)
 				else:
-					alpha   = edge.parameter(p2v(p2))
-					beta    = edge.parameter(p2v(p1))
-				edge = Part.ArcOfCircle(edge, alpha, beta)
+					edge = Part.ArcOfCircle(edge, beta, alpha)
 #				print (u"Circle r=%g, c=(%g,%g) from %g to %g" %(entity.Radius, entity.Center.x, entity.Center.y, alpha, beta))
 		elif (isinstance(entity, Part.ArcOfEllipse)):
 			edge = entity
@@ -955,7 +955,7 @@ class FreeCADImporter:
 			logError(u"    Error:  unknown boundaryPart (%04X): %s!", part.index, part.typeName)
 		return boundarySketch
 
-	def createBoundary(self, boundaryPatch, solid):
+	def createBoundary(self, boundaryPatch):
 		if (boundaryPatch is not None):
 			profile  = boundaryPatch.get('profile')
 			if (profile is not None):
@@ -1970,13 +1970,13 @@ class FreeCADImporter:
 					len1 = self.getLength(surface, dirX, dirY, dirZ)
 		if (len1 > 0):
 			baseName = sectionNode.name
-			base     = self.createBoundary(boundary, solid is not None)
+			base     = self.createBoundary(boundary)
 			if (midplane): len1 = len1 / 2.0
 
 			pad = newObject(self.doc, 'Part::Extrusion', name)
 			pad.Base = base
 			pad.Solid = solid is not None # FIXME!!
-			pad.TaperAngle = -getGRAD(dimAngle) # Taper angle is in FreeCAD inverted!
+			pad.TaperAngle = getGRAD(dimAngle)
 
 			setDefaultViewObjectValues(pad)
 
@@ -2037,6 +2037,7 @@ class FreeCADImporter:
 			direction  = getProperty(properties, 0x05) # PartFeatureExtentDirection
 			#= getProperty(properties, 0x06) # ???
 			#= getProperty(properties, 0x07) # FeatureDimensions
+			surface    = getProperty(properties, 0x08) # SurfaceBody
 			#= getProperty(properties, 0x09) # CEFD3973_Enum
 			#= getProperty(properties, 0x0A) # ParameterBoolean
 			#= getProperty(properties, 0x0B) # BoundaryPatch
@@ -2044,15 +2045,15 @@ class FreeCADImporter:
 			#= getProperty(properties, 0x0D) # ???
 			#= getProperty(properties, 0x0E) # ???
 			#= getProperty(properties, 0x0F) # ???
-			isSurface  = getProperty(properties, 0x10) # ParameterBoolean
+			#= getProperty(properties, 0x10) # ParameterBoolean
 			angle2     = getProperty(properties, 0x12) # Parameter
 			extend2    = getProperty(properties, 0x13) # ExtentType
 
-			boundary   = self.createBoundary(profile1, not isSurface.get('value'))
+			boundary   = self.createBoundary(profile1)
 
 			base       = p2v(lineAxis)
 			axis       = p2v(lineAxis, 'dirX', 'dirY', 'dirZ')
-			solid      = (isTrue(isSurface) == False)
+			solid      = (getProperty(properties, 0x08) is None)
 
 			if (boundary):
 				self.doc.recompute()
@@ -2482,8 +2483,8 @@ class FreeCADImporter:
 
 		self.resolveParticiants(fxNode) # no further action necessary
 
-		boundary1 = self.createBoundary(proxy1, surface is None)
-		boundary2 = self.createBoundary(proxy2, surface is None)
+		boundary1 = self.createBoundary(proxy1)
+		boundary2 = self.createBoundary(proxy2)
 		edges     = self.getEdgesFromProxy(fxNode, edgeProxies)
 
 		sections         = [boundary1, boundary2]
@@ -2520,14 +2521,14 @@ class FreeCADImporter:
 
 		self.resolveParticiants(sweepNode) # no further action necessary
 
-		path = self.createBoundary(proxy1, solid is not None)
+		path = self.createBoundary(proxy1)
 		if (path is None):
 			profile = sweepNode.getParticipants()[1]
 			path = self.getEntity(profile)
 
 		edges = self.getEdges(path)
 		if (len(edges) > 0):
-			sections          = [self.createBoundary(boundary, solid is not None)]
+			sections          = [self.createBoundary(boundary)]
 			sweepGeo          = self.createEntity(sweepNode, 'Part::Sweep')
 			sweepGeo.Sections = sections
 			sweepGeo.Spine    = (path, edges)
@@ -2629,7 +2630,7 @@ class FreeCADImporter:
 
 		self.resolveParticiants(coilNode) # no further action necessary
 
-		boundary = self.createBoundary(profile, solid is not None)
+		boundary = self.createBoundary(profile)
 		base    = p2v(axis)
 		dir     = p2v(axis, 'dirX', 'dirY', 'dirZ').normalize()
 		if (isTrue(negative)): dir = dir.negative()
@@ -2804,7 +2805,7 @@ class FreeCADImporter:
 		if (profile is None):
 			pass
 		else:
-			boundary   = self.createBoundary(profile, False)
+			boundary   = self.createBoundary(profile)
 
 		return notYetImplemented(boundaryPatchNode) # Sketches, Edges
 
@@ -2854,7 +2855,7 @@ class FreeCADImporter:
 #		getProperty(properties, 12) # Boolean
 		text       = getProperty(properties, 13) # RtfContent 'Default'
 
-		base     = self.createBoundary(profile, False)
+		base     = self.createBoundary(profile)
 
 		return notYetImplemented(embossNode)
 
@@ -2980,7 +2981,7 @@ class FreeCADImporter:
 #		getProperty(properties, 5) # SurfaceBody 'Srf29'
 #		getProperty(properties, 6) # F0677096
 
-		boundary = self.createBoundary(profile, False)
+		boundary = self.createBoundary(profile)
 
 		return notYetImplemented(trimNode)
 
@@ -3003,7 +3004,7 @@ class FreeCADImporter:
 #		getProperty(properties, 6) # RotateClockwise
 		solid      = getProperty(properties, 7) # SurfaceBodies 'Solid1'
 
-		base     = self.createBoundary(profile, solid is not None) if (profile.get('profile') is not None) else None
+		base     = self.createBoundary(profile) if (profile.get('profile') is not None) else None
 
 		return notYetImplemented(splitNode)
 
@@ -3075,8 +3076,8 @@ class FreeCADImporter:
 #		getProperty(properties, 12) # ParameterBoolean=False
 #		getProperty(properties, 17) # Transformation
 
-		boundary1 = self.createBoundary(profile1, True)
-		boundary2 = self.createBoundary(profile2, True)
+		boundary1 = self.createBoundary(profile1)
+		boundary2 = self.createBoundary(profile2)
 
 		return notYetImplemented(ribNode)
 
@@ -3118,12 +3119,12 @@ class FreeCADImporter:
 		bodies     = getProperty(properties, 19) # SurfaceBodies 'None'
 #		getProperty(properties, 20) # Parameter 'd148'=11.9994mm^2
 
-		boundary = self.createBoundary(prflBoundary, bodies is not None)
-		island   = self.createBoundary(prflIsland  , bodies is not None)
-		rib1     = self.createBoundary(prflRib1    , bodies is not None)
-		rib2     = self.createBoundary(prflRib2    , bodies is not None)
-		spare1   = self.createBoundary(prflSpare1  , bodies is not None)
-		spare2   = self.createBoundary(prflSpare2  , bodies is not None)
+		boundary = self.createBoundary(prflBoundary)
+		island   = self.createBoundary(prflIsland)
+		rib1     = self.createBoundary(prflRib1)
+		rib2     = self.createBoundary(prflRib2)
+		spare1   = self.createBoundary(prflSpare1)
+		spare2   = self.createBoundary(prflSpare2)
 
 		return notYetImplemented(grillNode)
 
@@ -3166,7 +3167,7 @@ class FreeCADImporter:
 		bodies         = getProperty(properties, 16) # SurfaceBodies 'None'
 		fxDim          = getProperty(properties, 17) # FeatureDimensions
 
-		boundary = self.createBoundary(profile, True)
+		boundary = self.createBoundary(profile)
 
 		return notYetImplemented(restNode)
 
@@ -3258,7 +3259,7 @@ class FreeCADImporter:
 #		getProperty(properties, 31) # ParameterBoolean=False
 #		getProperty(properties, 33) # ParameterBoolean=False
 
-		boundary = self.createBoundary(profile, solid is not None)
+		boundary = self.createBoundary(profile)
 
 		return notYetImplemented(cutNode)
 
@@ -3440,7 +3441,7 @@ class FreeCADImporter:
 #		getProperty(properties, 8) # SurfaceBodies 'Solid1'
 #		getProperty(properties, 9) # FeatureDimensions
 
-		boundary = self.createBoundary(profile, False)
+		boundary = self.createBoundary(profile)
 
 		return notYetImplemented(bendPartNode)
 
