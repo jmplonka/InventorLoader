@@ -318,7 +318,7 @@ class SegmentReader(object):
 		node.set(name, lst)
 		return i
 
-	def ReadEdge(self, node, offset, name):
+	def ReadEdge(self, node, offset):
 		n, i = getUInt16(node.data, offset)
 		if (n != 0):
 			i = offset
@@ -326,16 +326,16 @@ class SegmentReader(object):
 
 		if (t == 0x0203): t, i = getUInt32(node.data, i)
 
-		if (t == 0x0B):   # 3D-Circle            # Center, normal, m, radius, startAngle, sweepAngle
+		if (t == 0x0B): # 3D-Circle: Center, normal, m, radius, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 12)
-			v = ArcOfCircleEdge(a)
-		elif (t == 0x11): # 3D-Ellipse           # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
+			return ArcOfCircleEdge(a), i
+		if (t == 0x11): # 3D-Ellipse: Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 13)
-			v = ArcOfEllipseEdge(a)
-		elif (t == 0x17): # 3D-Line
-			a, i = getFloat64A(node.data, i, 6)  # Point1, Point2
-			v = LineEdge(a)
-		elif (t == 0x2A): # 3D-BSpline
+			return ArcOfEllipseEdge(a), i
+		if (t == 0x17): # 3D-Line: Point1, Point2
+			a, i = getFloat64A(node.data, i, 6)
+			return LineEdge(a), i
+		if (t == 0x2A): # 3D-BSpline
 			a0 = Struct(u"<LLLd").unpack_from(node.data, i)
 			i  += 20
 			a1, i = readTypedFloatArr(node.data, i)
@@ -343,19 +343,15 @@ class SegmentReader(object):
 			a3, i = readTypedFloatArr(node.data, i, 3)
 			a4 = Struct(u"<dLLdd").unpack_from(node.data, i)
 			i  += 32
-			v = BSplineEdge(a0, a1, a2, a3, a4)
-		else:
-			raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
-		node.set(name, v)
-		return i
+			return BSplineEdge(a0, a1, a2, a3, a4), i
+		raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
 
 	def ReadEdgeList(self, node, offset, name='edges'):
 		cnt, i = getUInt32(node.data, offset)
 		lst    = []
 		for j in range(cnt):
-			i = self.ReadEdge(node, i , 'tmp')
-			f = node.get('tmp')
-			lst.append(f)
+			edge, i = self.ReadEdge(node, i)
+			lst.append(edge)
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(e) for e in lst]))
 		node.set(name, lst)
 		node.delete('tmp')

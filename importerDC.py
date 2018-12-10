@@ -568,7 +568,7 @@ class DCReader(EeDataReader):
 	def Read_03CC1996(self, node):
 		i = self.ReadHeaderFeature(node, 'LoftedFlange')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'properties')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'outlineItem')
 		return i
 
 	def Read_03D6552D(self, node):
@@ -8825,15 +8825,13 @@ class DCReader(EeDataReader):
 		for j in range(0, cnt):
 			t, i = getUInt16(node.data, i)
 			if (t == 0):
-				i = self.ReadTypedFloats(node, i, 'tmp')
-				f = node.get('tmp')
+				f, i = self.ReadEdge(node, i)
 				lst.append(f)
 			elif (t == 1):
 				f, i = getUInt32A(node.data, i, 2)
 				lst.append(f)
-		node.content += ' edges=[%s]' %(','.join(['(%s:[%s])' %(r[0], str(r[1])) for r in lst]))
+		node.content += ' edges=[%s]' %(','.join(['(%s)' %(str(f)) for f in lst]))
 		node.set('edges', lst)
-		node.delete('tmp')
 		return i
 
 	def Read_FC9AAE10(self, node):

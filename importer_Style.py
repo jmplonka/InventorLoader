@@ -6,7 +6,7 @@ from importerSegment import SegmentReader
 from importerUtils   import *
 
 '''
-importer_Attribute.py:
+importer_Style.py:
 '''
 
 __author__     = 'Jens M. Plonka'
@@ -116,7 +116,8 @@ class StyleReader(SegmentReader):
 	def Read_9795E56A(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_9795E56A')
 		i = node.ReadFloat64_3D(i, 'vec')
-		i = node.ReadFloat64_3D(i, 'dir')
+		if (getFileVersion() > 2012):
+			i = node.ReadFloat64_3D(i, 'dir')
 		return i
 
 	def Read_AF48560F(self, node): # Primary color attribute style

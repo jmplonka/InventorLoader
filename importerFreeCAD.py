@@ -989,7 +989,8 @@ class FreeCADImporter:
 				creator = matchedEdge.data.segment.indexNodes[idxCreator]
 				self.getEntity(creator) # ensure that the creator is already available!
 			ntEntry = getNameTableEntry(ref)
-			edges.append(ntEntry) # FIXME get GEOMETRY FOR name-table entry!!!
+			if (ntEntry is not None):
+				edges.append(ntEntry) # FIXME get GEOMETRY FOR name-table entry!!!
 		return edges
 
 	def getEdgesFromProxy(self, fxNode, proxy):

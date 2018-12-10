@@ -1325,8 +1325,6 @@ class SurfaceBodiesNode(DataNode):
 		return u'(%04X): %s %s' %(self.index, self.typeName, names)
 
 class _AbstractEdge_(object):
-	def __init__(self):
-		return
 	def p2v(self, p, f = 1.0):
 		return VEC(p[0], p[1], p[2]) * f
 
@@ -1368,7 +1366,7 @@ class ArcOfCircleEdge(_AbstractEdge_):
 
 class ArcOfEllipseEdge(_AbstractEdge_):
 	def __init__(self, a): # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
-		super(ArcOfCircleEdge, self).__init__()
+		super(ArcOfEllipseEdge, self).__init__()
 		self.center = a[0:3]
 		self.dir1   = a[3:6]
 		self.dir2   = a[6:9]
@@ -1391,21 +1389,24 @@ class BSplineEdge(_AbstractEdge_):
 	def __init__(self, a0, a1, a2, a3, a4):
 		super(BSplineEdge, self).__init__()
 		self.a0 = a0 + a4 # LLLd + dLLdd
-		self.a1 = a1
-		self.a2 = a2
-		self.a3 = a3
+		self.a1 = a1[0]
+		self.a2 = a2[1]
+		self.a3 = a2[0]
+		self.a4 = a2[1]
+		self.a5 = a3[0]
+		self.a6 = a3[1]
 	def __str__(self):
-		return u"BSpline:(%s),[%s],[%s],[%s]" %(FloatArr2Str(self.a0), FloatArr2Str(self.a1), FloatArr2Str(self.a2), FloatArr2Str(self.a3))
+		return u"BSpline:(%s),[%s],[%s],[%s],[%s],[%s],[%s]" %(FloatArr2Str(self.a0), FloatArr2Str(self.a1), FloatArr2Str(self.a2), FloatArr2Str(self.a3), FloatArr2Str(self.a4), FloatArr2Str(self.a5), u",".join([u"(%g,%g,%g)"%(p[0], p[1], p[2]) for p in self.a6]))
 	def __repr__(self):
 		return self.__str__()
 	def getGeometry(self):
 		bsc = Part.BSplineCurve()
-		d   = 3     # TODO get degrees from a0[]
-		p   = []    # TODO get poles from ??? 
-		m   = []    # TODO get mults from ??? 
-		k   = []    # TODO get knots from ??? 
-		w   = []    # TODO get weights from ??? 
-		rat = False # TODO get Rational from a0[]
+		d   = self.a0[2] # TODO get degrees from a0[]
+		p   = self.a6    # TODO get poles from ???
+		m   = []         # TODO get mults from ???
+		k   = []         # TODO get knots from ???
+		w   = []         # TODO get weights from ???
+		rat = False      # TODO get Rational from a0[]
 		if (rat):
 			bsc.buildFromPolesMultsKnots( \
 				poles         = p,        \
