@@ -1401,8 +1401,8 @@ class BSplineEdge(_AbstractEdge_):
 		return self.__str__()
 	def getGeometry(self):
 		bsc = Part.BSplineCurve()
-		d   = self.a0[2] # TODO get degrees from a0[]
-		p   = self.a6    # TODO get poles from ???
+		d   = self.a0[2] # TODO get degrees from a0[2 ???]
+		p   = self.a6    #
 		m   = []         # TODO get mults from ???
 		k   = []         # TODO get knots from ???
 		w   = []         # TODO get weights from ???

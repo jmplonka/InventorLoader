@@ -180,7 +180,7 @@ class StyleReader(SegmentReader):
 
 	def Read_B32BF6A9(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_B32BF6A9')
-		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadUInt16(i, 'u16_1') # Enm???
 		return i
 
 	def Read_B32BF6AB(self, node): # Object style ...

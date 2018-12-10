@@ -245,7 +245,7 @@ class BRepReader(SegmentReader):
 
 	def Read_CC0F7521(self, node): # AsmEntityWrapper
 		i = node.Read_Header0('AsmEntityWrapper')
-		i = node.ReadUInt32(i, 'index')
+		i = node.ReadUInt32(i, 'indexDC')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadChildRef(i, 'asm')
 		i = node.ReadUInt32(i, 'u32_1')

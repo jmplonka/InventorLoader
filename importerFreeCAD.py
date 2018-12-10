@@ -54,12 +54,10 @@ if (hasattr(Part, "LineSegment")):
 	PART_LINE = Part.LineSegment
 
 def printEdge(edge):
-	if (edge[0] == 'ArcOfCircle'):
+	if (isinstance(edge, ArcOfCircleEdge)):
 		print(u"  Part.show(Part.ArcOfCircle(Part.Circle(V(%g,%g,%g), V(%g,%g,%g), %g), %g, %g).toShape())" %(edge[1][0],edge[1][1],edge[1][2],edge[1][3],edge[1][4],edge[1][5],edge[1][9],-edge[1][11],edge[1][10]))
-		return
-	if (edge[0] == 'Line'):
-		print(u"  Part.show(Part.LineSegment(V(%g,%g,%g), V(%g,%g,%g)).toShape())" %(edge[1][0],edge[1][1],edge[1][2],edge[1][3]+edge[1][0],edge[1][4]+edge[1][1],edge[1][5]+edge[1][2]))
-		return
+	if (isinstance(edge, LineEdge)):
+		print(u"  Part.show(%s.toShape())" %(edge.toFreeCAD()))
 	return
 
 def printOutlines(outlines):
@@ -397,6 +395,13 @@ def getGRAD(angle):
 	if (angle is None): return 0.0
 	val = angle.getValue()
 	if (isinstance(val, Angle)): return val.getGRAD()
+	if (isinstance(val, Scalar)): return val.x
+	return val
+
+def getRAD(angle):
+	if (angle is None): return 0.0
+	val = angle.getValue()
+	if (isinstance(val, Angle)): return val.getRAD()
 	if (isinstance(val, Scalar)): return val.x
 	return val
 
@@ -997,7 +1002,7 @@ class FreeCADImporter:
 		# this is only an assumption!!!
 		outlineItem = fxNode.get('outlineItem')
 		outline     = getModel().getGraphics().featureOutlines[outlineItem-1]
-		outline.get('edges')
+
 		allEdges = []
 		if (proxy is not None):
 			for matchedEdge in proxy.get('edges'):
@@ -2053,7 +2058,7 @@ class FreeCADImporter:
 
 			base       = p2v(lineAxis)
 			axis       = p2v(lineAxis, 'dirX', 'dirY', 'dirZ')
-			solid      = (getProperty(properties, 0x08) is None)
+			solid      = (surface is None)
 
 			if (boundary):
 				self.doc.recompute()
@@ -2695,6 +2700,7 @@ class FreeCADImporter:
 		preserve     = getProperty(properties, 0x09) # preserve all features
 		angle        = getProperty(properties, 0x0A) # Angle
 		body         = getProperty(properties, 0x0B) # SolidBody
+
 		mmDim1       = getMM(dim1)
 		mmDim2       = getMM(dim2)
 
