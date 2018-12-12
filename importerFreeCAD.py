@@ -974,7 +974,8 @@ class FreeCADImporter:
 						hide(sketch.sketchEntity)
 					# create all parts of the profile
 					for part in profile.get('parts'):
-						boundary = self.addBoundaryPart(boundary, part)
+						if (part.get('operation') & 0x08):
+							boundary = self.addBoundaryPart(boundary, part)
 					return boundary
 				else:
 					logError(u"        ... can't create boundary from (%04X): %s - expected next node type (%s) unknown!", boundaryPatch.index, boundaryPatch.typeName, profile.typeName)
@@ -1968,11 +1969,10 @@ class FreeCADImporter:
 		len1 = getMM(dimLength)
 		pad = None
 		if (extend == 5): # 'ALL'
-			if (isEqual1D(len1, 0)):
-				if (solid is not None):
-					len1 = self.getLength(solid, dirX, dirY, dirZ)
-				else:
-					len1 = self.getLength(surface, dirX, dirY, dirZ)
+			if (solid is not None):
+				len1 = self.getLength(solid, dirX, dirY, dirZ)
+			else:
+				len1 = self.getLength(surface, dirX, dirY, dirZ)
 		if (len1 > 0):
 			baseName = sectionNode.name
 			base     = self.createBoundary(boundary)
@@ -2144,7 +2144,7 @@ class FreeCADImporter:
 			count = getNominalValue(countRef)
 			angle = Angle(getNominalValue(angleRef), pi/180.0, u'\xb0')
 			center = p2v(axisData)
-			axis   = center - p2v(axisData, 'dirX', 'dirY', 'dirZ')
+			axis   = p2v(axisData, 'dirX', 'dirY', 'dirZ')
 			logInfo(u"        ... count=%d, angle=%s ...", count, angle)
 			namePart = name
 			if (len(participants) > 1):
@@ -2161,9 +2161,7 @@ class FreeCADImporter:
 						cutGeo = baseGeo
 						baseGeo = cutGeo.Tool
 					patternGeo = Draft.makeArray(baseGeo, center, angle.getGRAD(), count, None, namePart)
-
 					patternGeo.Axis = axis
-
 					setDefaultViewObjectValues(patternGeo)
 					geos.append(patternGeo)
 				namePart = '%s_%d' % (name, len(geos))
