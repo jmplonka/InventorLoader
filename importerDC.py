@@ -27,7 +27,7 @@ REF_CROSS = importerSegNode.SecNodeRef.TYPE_CROSS
 def _addEmpty(node, indexes, list):
 	for i in indexes:
 		name = 'lst%d' %(i)
-		node.content += ' %s={}' %(name)
+		node.content += ' %s=[]' %(name)
 		node.set(name, list)
 
 def addEmptyLists(node, indexes):

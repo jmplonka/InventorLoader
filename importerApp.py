@@ -555,11 +555,16 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 2, 'a1')
+		node.set('u32_1', 0x0E)
 		if (getFileVersion() > 2010):
 			i = node.ReadUInt32(i, 'u32_0')
+			if (getFileVersion() > 2011):
+				i = node.ReadUInt32(i, 'u32_1')
+			else:
+				node.content += u" u32_1=000E"
 			i = node.ReadFloat64_2D(i, 'a2')
 		else:
-			node.content += ' u32_0=000013 a2=(0.25, 0.1)'
+			node.content += ' u32_0=0013 u32_1=000E a2=(0.25, 0.1)'
 		i = node.ReadFloat64_2D(i, 'a3')
 		return i
 

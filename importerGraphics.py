@@ -374,6 +374,7 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_9215A162(self, node): # NoteGlyphGroup
 		i = self.ReadHeaderU32RefU8List3(node, 'NoteGlyphGroup')
+		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
