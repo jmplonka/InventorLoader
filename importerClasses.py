@@ -1392,7 +1392,7 @@ class ArcOfEllipseEdge(ArcOfConicEdge):
 		self.majorRadius = a[9]
 		self.minorRadius = a[10]
 	def __str__(self):
-		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center.x, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.majorRadius, self.minorRadius, self.a, self.b)
+		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g, %g" %(self.center.x, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.majorRadius, self.minorRadius, self.a, self.b)
 	def __repr__(self):
 		return self.__str__()
 	def getGeometry(self):
@@ -1412,7 +1412,7 @@ class ArcOfEllipseEdge(ArcOfConicEdge):
 
 class BSplineEdge(_AbstractEdge_):
 	def __init__(self, a0, a1, a2, a3, a4):
-		super(BSplineEdge, self).__init__([Part.BSplineCurve])
+		super(BSplineEdge, self).__init__()
 		self.a0 = a0 + a4 # LLLd + dLLdd
 		self.a1 = a1[0]
 		self.a2 = a2[1]

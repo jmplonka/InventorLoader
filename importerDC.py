@@ -668,9 +668,14 @@ class DCReader(EeDataReader):
 		i = self.ReadRefU32List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
-		i = node.ReadUInt32A(i, 2, 'a2')
-		i = node.ReadUInt32A(i, 2, 'a3')
-		i = node.ReadUInt32A(i, 3, 'a4')
+		i = node.ReadUInt32(i, 'u32_0')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a2')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a3')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a4')
+		i = node.ReadUInt32A(i, 3, 'a5')
 		return i
 
 	def Read_0811C56E(self, node): # EntityWrapperNode

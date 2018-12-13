@@ -55,7 +55,7 @@ if (hasattr(Part, "LineSegment")):
 
 def printEdge(edge):
 	if (isinstance(edge, ArcOfCircleEdge)):
-		print(u"  Part.show(Part.ArcOfCircle(Part.Circle(App.Vector(%g,%g,%g), App.Vector(%g,%g,%g), %g), %g, %g).toShape())" %(edge.center.x, edge.center.y, edge.center.z, edge.dir.x, edge.dir.y, edge.dir.z, edge.radius, edge.a*pi/180.0, edge.b*pi/180.0))
+		print(u"  Part.show(Part.ArcOfCircle(Part.Circle(App.Vector(%g,%g,%g), App.Vector(%g,%g,%g), %g), %g, %g).toShape())" %(edge.center.x, edge.center.y, edge.center.z, edge.dir.x, edge.dir.y, edge.dir.z, edge.radius, edge.a, edge.b))
 	if (isinstance(edge, LineEdge)):
 		print(u"  Part.show(Part.LineSegment(App.Vector(%g,%g,%g),App.Vector(%g,%g,%g)).toShape())" %(edge.p1.x, edge.p1.y, edge.p1.z, edge.p2.x, edge.p2.y, edge.p2.z))
 	return
