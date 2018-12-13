@@ -983,16 +983,8 @@ class FreeCADImporter:
 				logError(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
-	def findEdge(self, edgeNode):
-		for o in self.doc.Objects:
-			if (hasattr(o, 'Shape')):
-				for edge in o.Shape.Edges:
-					if (edgeNode.matches(edge)):
-						return edge
-		return None
-
-	def getIndexEdges(self, matchedEdge, outline):
-		edges       = []
+	def getIndexdEdges(self, matchedEdge, outline):
+		edges = []
 
 		for idxRef in matchedEdge.get('indexRefs'):
 			ref  = matchedEdge.data.segment.indexNodes[idxRef]
@@ -1006,9 +998,7 @@ class FreeCADImporter:
 			if (ntEntry is not None):
 				edgeItem = ntEntry.get('val_key_2').get('a1') # Is a1[1] the item index of
 				edgeNode = outline.get('edges')[edgeItem[1]]
-				edge = self.findEdge(edgeNode)
-				if (edge is not None):
-					edges.append(edgeItem)
+				edges.append(edgeNode)
 		return edges
 
 	def getEdgesFromProxy(self, fxNode, proxy):
@@ -1020,10 +1010,26 @@ class FreeCADImporter:
 		if (proxy is not None):
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-				edges = self.getIndexEdges(matchedEdge, outline)
+				edges = self.getIndexdEdges(matchedEdge, outline)
 				allEdges += edges
 
 		return allEdges
+
+	def getCreatorsFromProxy(self, proxy):
+		creators = {}
+		if (proxy is not None):
+			for matchedEdge in proxy.get('edges'):
+				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
+				for idxRef in matchedEdge.get('indexRefs'):
+					ref  = matchedEdge.data.segment.indexNodes[idxRef]
+					creator = ref.get('creator')
+					if (creator is not None):
+						idxCreator = creator.get('idxCreator')
+						if (idxCreator not in creators):
+							creator = matchedEdge.data.segment.indexNodes[idxCreator]
+							self.getEntity(creator) # ensure that the creator is already available!
+							creators[idxCreator] = creator
+		return creators
 
 	def collectSections(self, fxNode, action): #
 		participants = fxNode.getParticipants()
@@ -2711,11 +2717,27 @@ class FreeCADImporter:
 		angle        = getProperty(properties, 0x0A) # Angle
 		body         = getProperty(properties, 0x0B) # SolidBody
 
-		mmDim1       = getMM(dim1)
-		mmDim2       = getMM(dim2)
+		radius1       = getMM(dim1)
+		radius2       = getMM(dim2)
+		edges    = self.getEdgesFromProxy(chamferNode, edgesProxies)
+		creators = self.getCreatorsFromProxy(edgesProxies)
+		name     = chamferNode.name
+		if (len(creators) > 1): name = u"%s_0" %(name)
 
-		edges = self.getEdgesFromProxy(chamferNode, edgesProxies)
-		geos = []
+
+		for i, creator in enumerate(creators):
+			fx = creators[creator].sketchEntity
+			fillets = []
+			for edgeNode in edges:
+				for j, edge in enumerate(fx.Shape.Edges):
+					if (edgeNode.matches(edge)):
+						fillets.append((j+1, radius1, radius2))
+
+			chamfer = newObject(self.doc, 'Part::Chamfer', name)
+			chamfer.Base  = fx
+			chamfer.Edges = fillets
+			name = u"%s_%d" %(name, i + 1)
+			hide(fx)
 
 		# self.addSolidBody(chamferNode, chamferGeo, body)
 
@@ -3787,6 +3809,6 @@ class FreeCADImporter:
 						grNode = gr.indexNodes[indexDC]
 						color  = getBodyColor(grNode)
 						adjustColor(entity, color)
-			printOutlines(gr.featureOutlines)
+#			printOutlines(gr.featureOutlines)
 		else:
 			logWarning(u">>>No content to be displayed for DC<<<")

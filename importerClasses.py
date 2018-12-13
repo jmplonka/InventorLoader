@@ -1350,8 +1350,8 @@ class LineEdge(_AbstractEdge_):
 		return False
 
 class ArcOfConicEdge(_AbstractEdge_):
-	def __init__(self, a): # Center, dir, m, radius, startAngle, sweepAngle
-		super(ArcOfCircleEdge, self).__init__(center, dir, major, a, b)
+	def __init__(self, center, dir, major, a, b): # Center, dir, m, radius, startAngle, sweepAngle
+		super(ArcOfConicEdge, self).__init__()
 		self.center = self.p2v(center, 10.0)
 		self.dir    = self.p2v(dir, 1.0)
 		self.major  = self.p2v(major, 10.0)
@@ -1364,10 +1364,10 @@ class ArcOfConicEdge(_AbstractEdge_):
 
 class ArcOfCircleEdge(ArcOfConicEdge):
 	def __init__(self, a): # Center, dir, m, radius, startAngle, sweepAngle
-		super(ArcOfCircleEdge, self).__init__(a[0:3], a[3:6], a[10], a[11])
+		super(ArcOfCircleEdge, self).__init__(a[0:3], a[3:6], a[6:9], a[10], a[11])
 		self.radius = a[9] * 10.0
 	def __str__(self):
-		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center.X, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.radius, self.a, self.b)
+		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center.x, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.radius, self.a, self.b)
 	def __repr__(self):
 		return self.__str__()
 	def getGeometry(self):
