@@ -551,7 +551,7 @@ class BrowserReader(SegmentReader):
 	def Read_DF9CA7B0(self, node):
 		i = node.Read_Header0()
 		i = node.ReadParentRef(i)
-		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadCrossRef(i, 'ref_0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadList4(i, importerSegNode._TYP_STRING8_, 'lst0')
 		i = node.ReadUInt16(i, 'u16')

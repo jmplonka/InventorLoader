@@ -55,9 +55,9 @@ if (hasattr(Part, "LineSegment")):
 
 def printEdge(edge):
 	if (isinstance(edge, ArcOfCircleEdge)):
-		print(u"  Part.show(Part.ArcOfCircle(Part.Circle(V(%g,%g,%g), V(%g,%g,%g), %g), %g, %g).toShape())" %(edge[1][0],edge[1][1],edge[1][2],edge[1][3],edge[1][4],edge[1][5],edge[1][9],-edge[1][11],edge[1][10]))
+		print(u"  Part.show(Part.ArcOfCircle(Part.Circle(App.Vector(%g,%g,%g), App.Vector(%g,%g,%g), %g), %g, %g).toShape())" %(edge.center.x, edge.center.y, edge.center.z, edge.dir.x, edge.dir.y, edge.dir.z, edge.radius, edge.a*pi/180.0, edge.b*pi/180.0))
 	if (isinstance(edge, LineEdge)):
-		print(u"  Part.show(%s.toShape())" %(edge.toFreeCAD()))
+		print(u"  Part.show(Part.LineSegment(App.Vector(%g,%g,%g),App.Vector(%g,%g,%g)).toShape())" %(edge.p1.x, edge.p1.y, edge.p1.z, edge.p2.x, edge.p2.y, edge.p2.z))
 	return
 
 def printOutlines(outlines):
@@ -983,7 +983,15 @@ class FreeCADImporter:
 				logError(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
-	def getIndexEdges(self, matchedEdge):
+	def findEdge(self, edgeNode):
+		for o in self.doc.Objects:
+			if (hasattr(o, 'Shape')):
+				for edge in o.Shape.Edges:
+					if (edgeNode.matches(edge)):
+						return edge
+		return None
+
+	def getIndexEdges(self, matchedEdge, outline):
 		edges       = []
 
 		for idxRef in matchedEdge.get('indexRefs'):
@@ -996,7 +1004,11 @@ class FreeCADImporter:
 				self.getEntity(creator) # ensure that the creator is already available!
 			ntEntry = getNameTableEntry(ref)
 			if (ntEntry is not None):
-				edges.append(ntEntry) # FIXME get GEOMETRY FOR name-table entry!!!
+				edgeItem = ntEntry.get('val_key_2').get('a1') # Is a1[1] the item index of
+				edgeNode = outline.get('edges')[edgeItem[1]]
+				edge = self.findEdge(edgeNode)
+				if (edge is not None):
+					edges.append(edgeItem)
 		return edges
 
 	def getEdgesFromProxy(self, fxNode, proxy):
@@ -1008,7 +1020,7 @@ class FreeCADImporter:
 		if (proxy is not None):
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-				edges = self.getIndexEdges(matchedEdge)
+				edges = self.getIndexEdges(matchedEdge, outline)
 				allEdges += edges
 
 		return allEdges
@@ -3775,6 +3787,6 @@ class FreeCADImporter:
 						grNode = gr.indexNodes[indexDC]
 						color  = getBodyColor(grNode)
 						adjustColor(entity, color)
-#			printOutlines(gr.featureOutlines)
+			printOutlines(gr.featureOutlines)
 		else:
 			logWarning(u">>>No content to be displayed for DC<<<")

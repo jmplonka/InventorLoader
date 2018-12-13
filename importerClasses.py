@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import sys, os, Part
-from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
+from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion, isEqual, isEqual1D
 from math          import degrees, radians, pi
 from FreeCAD       import Vector as VEC
 
@@ -1331,63 +1331,88 @@ class _AbstractEdge_(object):
 class LineEdge(_AbstractEdge_):
 	def __init__(self, a):
 		super(LineEdge, self).__init__()
-		self.p1 = a[0:3]
-		self.p2 = a[3:6]
-		self.p2[0] += self.p1[0]
-		self.p2[1] += self.p1[1]
-		self.p2[2] += self.p1[2]
+		self.p1 = self.p2v(a[0:3], 10.0)
+		self.p2 = self.p2v(a[3:6], 10.0) + self.p1
 	def __str__(self):
-		return u"Line:(%g,%g,%g)-(%g,%g,%g)" %(self.p1[0], self.p1[1], self.p1[2], self.p2[0], self.p2[1], self.p2[2])
+		return u"Line:(%g,%g,%g)-(%g,%g,%g)" %(self.p1.x, self.p1.y, self.p1.z, self.p2.x, self.p2.y, self.p2.z)
 	def __repr__(self):
 		return self.__str__()
 	def getGeometry(self):
-		v1 = self.p2v(self.p1, 10.0)
-		v2 = self.p2v(self.p2, 10.0)
-		return PART_LINE(v1, v2)
+		return PART_LINE(self.p1, self.p2)
+	def matches(self, edge):
+		if (isinstance(edge.Curve, Part.Line)):
+			p1 = edge.Vertexes[0].Point
+			p2 = edge.Vertexes[-1].Point
+			if (isEqual(p1, self.p1) and isEqual(p2, self.p2)):
+				return True
+			if (isEqual(p2, self.p1) and isEqual(p1, self.p2)):
+				return True
+		return False
 
-class ArcOfCircleEdge(_AbstractEdge_):
+class ArcOfConicEdge(_AbstractEdge_):
 	def __init__(self, a): # Center, dir, m, radius, startAngle, sweepAngle
-		super(ArcOfCircleEdge, self).__init__()
-		self.center = a[0:3]
-		self.dir    = a[3:6]
-		self.m      = a[6:9]
-		self.r      = a[9]
-		self.a      = a[10]
-		self.b      = a[11]
-	def __str__(self):
-		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center[0], self.center[1], self.center[2], self.dir[0], self.dir[1], self.dir[2], self.m[0], self.m[1], self.m[2], self.r, self.a, self.b)
-	def __repr__(self):
-		return self.__str__()
-	def getGeometry(self):
-		c = self.p2v(self.center, 10.0)
-		d = self.p2v(self.dir)
-		r = self.r * 10.0
-		return Part.ArcOfCircle(Part.Circle(c, d, r), self.a, self.b)
+		super(ArcOfCircleEdge, self).__init__(center, dir, major, a, b)
+		self.center = self.p2v(center, 10.0)
+		self.dir    = self.p2v(dir, 1.0)
+		self.major  = self.p2v(major, 10.0)
+		self.a      = a
+		self.b      = b
+	def isArc(self):
+		if (isEqual1D(abs(self.a), pi) == False):
+			return True
+		return (isEqual1D(abs(self.b), pi) == False)
 
-class ArcOfEllipseEdge(_AbstractEdge_):
-	def __init__(self, a): # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
-		super(ArcOfEllipseEdge, self).__init__()
-		self.center = a[0:3]
-		self.dir1   = a[3:6]
-		self.dir2   = a[6:9]
-		self.r1     = a[9]
-		self.r2     = a[10]
-		self.a      = a[11]
-		self.b      = a[12]
+class ArcOfCircleEdge(ArcOfConicEdge):
+	def __init__(self, a): # Center, dir, m, radius, startAngle, sweepAngle
+		super(ArcOfCircleEdge, self).__init__(a[0:3], a[3:6], a[10], a[11])
+		self.radius = a[9] * 10.0
 	def __str__(self):
-		return u"Ellipse:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g, %g" %(self.center[0], self.center[1], self.center[2], self.dir1[0], self.dir1[1], self.dir1[2], self.dir2[0], self.dir2[1], self.dir2[2], self.r1, self.r2, self.a, self.b)
+		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center.X, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.radius, self.a, self.b)
 	def __repr__(self):
 		return self.__str__()
 	def getGeometry(self):
-		c = self.p2v(self.center, 10.0)
-		d1 = self.p2v(self.d1)
-		d2 = self.p2v(self.d2)
-		r = self.r * 10.0
-		return Part.ArcOfEllipse(Part.Ellipse(c, d1, d2), self.a, self.b)
+		if (self.isArc()):
+			return Part.ArcOfCircle(Part.Circle(self.center, self.dir, self.radius), self.a, self.b)
+		return Part.Circle(self.center, self.dir, self.radius)
+	def matches(self, edge):
+		curve = edge.Curve
+		if (self.isArc()):
+			if (isinstance(curve, Part.Circle)):
+				return  (isEqual(curve.Center, self.center) and isEqual1D(curve.Radius, self.radius))
+		else:
+			if (isinstance(curve, Part.ArcOfCircle)):
+				if (isEqual(curve.Center, self.center)):
+					if (isEqual1D(curve.Radius, self.radius)):
+						return  (isEqual1(edge.FirstParmeter, self.a) and isEqual1(edge.LastParameter, self.b))
+		return False
+
+class ArcOfEllipseEdge(ArcOfConicEdge):
+	def __init__(self, a): # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
+		super(ArcOfEllipseEdge, self).__init__(a[0:3], a[3:6], a[6:9], a[11], a[12])
+		self.majorRadius = a[9]
+		self.minorRadius = a[10]
+	def __str__(self):
+		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center.x, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.majorRadius, self.minorRadius, self.a, self.b)
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		if (self.isArc()):
+			return Part.ArcOfEllipse(Part.Ellipse(self.center, self.majorRadius, self.minorRadius), self.a, self.b)
+		return Part.Ellipse(self.center, self.majorRadius, self.minorRadius)
+	def matches(self, edge):
+		curve = edge.Curve
+		if (self.isArc()):
+			if (isinstance(curve, Part.Ellipse)):
+				return  (isEqual(curve.Center, self.center) and isEqual1D(curve.MajorRadius, self.majorRadius) and isEqual1D(curve.MinorRadius, self.minorRadius))
+		else:
+			if (isinstance(curve, Part.ArcOfEllipse)):
+				if (isEqual(curve.Center, self.center) and isEqual1D(curve.MajorRadius, self.majorRadius) and isEqual1D(curve.MinorRadius, self.minorRadius)):
+					return  (isEqual1(edge.FirstParmeter, self.a) and isEqual1(edge.LastParameter, self.b))
+		return False
 
 class BSplineEdge(_AbstractEdge_):
 	def __init__(self, a0, a1, a2, a3, a4):
-		super(BSplineEdge, self).__init__()
+		super(BSplineEdge, self).__init__([Part.BSplineCurve])
 		self.a0 = a0 + a4 # LLLd + dLLdd
 		self.a1 = a1[0]
 		self.a2 = a2[1]
