@@ -63,7 +63,7 @@ class BRepReader(SegmentReader):
 	def Read_09780457(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadParentRef(i)
-		i = node.ReadSInt32(i, 'key')
+		i = node.ReadUInt32(i, 'key')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 

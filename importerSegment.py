@@ -141,6 +141,8 @@ def __dumpBranch(file, ref, branch, level, prefix):
 				file.write(u"%s%s['%s'] = %s\n" %(indent, ref.attrName, ref.number, branch))
 			elif (type(ref.number) is UUID):
 				file.write(u"%s%s[{%s}] = %s\n" %(indent, ref.attrName, str(ref.number).upper(), branch))
+			elif (type(ref.number) is int):
+				file.write(u"%s%s[%04X] = %s\n" %(indent, ref.attrName, ref.number, branch))
 			else:
 				file.write(u"%s%s[%s] = %s\n" %(indent, ref.attrName, ref.number, branch))
 		else:

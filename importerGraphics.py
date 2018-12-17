@@ -656,7 +656,7 @@ class GraphicsReader(EeSceneReader):
 	def Read_CA7163A3(self, node): # PartNode
 		i = self.ReadHeaderU32RefU8List3(node, 'PartNode')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1') # list of feature outlines key = DC-Index!
 		i = self.skipBlockSize(i)
 		i = node.ReadColorRGBA(i, 'c0')
 		i = node.ReadColorRGBA(i, 'c1')
