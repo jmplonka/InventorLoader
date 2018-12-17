@@ -518,9 +518,9 @@ def getNameTableEntry(node):
 	node.handled = True
 	nameTable = node.get('nameTable')
 	entry     = nameTable.get('entries')[node.get('ntIdx')]
-	resolveNameTableItem(entry, 'val_key_1')
-	resolveNameTableItem(entry, 'val_key_2')
-	resolveNameTableItem(entry, 'val_key_3')
+	resolveNameTableItem(entry, 'from')
+	resolveNameTableItem(entry, 'to')
+	resolveNameTableItem(entry, 'edge')
 	lst2 = entry.get('lst2')
 	for i, value in enumerate(lst2):
 		if (type(value) is list):
@@ -996,7 +996,7 @@ class FreeCADImporter:
 				self.getEntity(creator) # ensure that the creator is already available!
 			ntEntry = getNameTableEntry(ref)
 			if (ntEntry is not None):
-				edgeItem = ntEntry.get('val_key_2').get('a1') # Is a1[1] the item index of
+				edgeItem = ntEntry.get('edge').get('a1') # Is a1[1] the item index of
 				edgeNode = outline.get('edges')[edgeItem[1]]
 				edges.append(edgeNode)
 		return edges
