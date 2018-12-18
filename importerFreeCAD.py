@@ -1006,14 +1006,14 @@ class FreeCADImporter:
 		outlineItem = fxNode.get('outlineItem')
 		outline     = getModel().getGraphics().featureOutlines[outlineItem-1]
 
-		allEdges = []
+		all_edges = []
 		if (proxy is not None):
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
 				edges = self.getIndexdEdges(matchedEdge, outline)
-				allEdges += edges
+				all_edges += edges
 
-		return allEdges
+		return all_edges
 
 	def getCreatorsFromProxy(self, proxy):
 		creators = {}
@@ -2522,8 +2522,8 @@ class FreeCADImporter:
 
 	def Create_FxSweep(self, sweepNode):
 		properties = sweepNode.get('properties')
-		defintion  = sweepNode.get('label')
-		solid      = (defintion.typeName == 'Label')
+		definition  = sweepNode.get('label')
+		solid      = (definition.typeName == 'Label')
 		boundary   = getProperty(properties, 0x00)
 		proxy1     = getProperty(properties, 0x01) # FaceBoundProxy or FaceBoundOuterProxy
 		#= getProperty(properties, 0x02) # PartFeatureOperation or 90874D63
@@ -3619,7 +3619,7 @@ class FreeCADImporter:
 		self.resolveParticiants(blocksNode)
 		return
 
-	# Nothin to do for the following nodes:
+	# Nothing to do for the following nodes:
 	def Create_BodiesFolder(self, node):             return ignoreBranch(node)
 	def Create_Circle3D(self, node):                 return ignoreBranch(node)
 	def Create_Dimension(self, node):                return ignoreBranch(node)
@@ -3628,7 +3628,7 @@ class FreeCADImporter:
 	def Create_Group2D(self, node):                  return ignoreBranch(node)
 	def Create_Group3D(self, node):                  return ignoreBranch(node)
 	def Create_Label(self, node):                    return ignoreBranch(node)
-	def Create_Line3D(self, lineNode):               return ignoreBranch(lineNode)
+	def Create_Line3D(self, node):                   return ignoreBranch(node)
 	def Create_MatchedEdge(self, node):              return ignoreBranch(node)
 	def Create_ModelAnnotations(self, node):         return ignoreBranch(node)
 	def Create_ParameterBoolean(self, node):         return ignoreBranch(node)

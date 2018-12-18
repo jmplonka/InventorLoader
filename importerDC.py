@@ -2242,7 +2242,7 @@ class DCReader(EeDataReader):
 	def Read_30892938(self, node): # Bend extent type 'Width'
 		i = self.ReadHeaderBendExtent(node, 'Width')
 		i = node.ReadCrossRef(i, 'point')       # reference point for offset
-		i = node.ReadCrossRef(i, 'offset1')     # length for hte offset
+		i = node.ReadCrossRef(i, 'offset1')     # length for the offset
 		i = node.ReadCrossRef(i, 'extentWidth') # extent witdth
 		i = node.ReadCrossRef(i, 'ref_3')       # bool
 		i = node.ReadCrossRef(i, 'ref_4')       # bool
@@ -5685,7 +5685,7 @@ class DCReader(EeDataReader):
 
 	def Read_91B99A2C(self, node): # FilletIntermediateRadius
 		i = self.ReadHeaderContent(node, 'FilletIntermediateRadius')
-		if (getFileVersion() > 2017): i += 4 # skipp 0xFFFFFFFF (-1)
+		if (getFileVersion() > 2017): i += 4 # skip 0xFFFFFFFF (-1)
 		i = node.ReadCrossRef(i, 'point')
 		i = node.ReadCrossRef(i, 'radius')
 		i = node.ReadCrossRef(i, 'edgeProxy')
@@ -6789,7 +6789,7 @@ class DCReader(EeDataReader):
 
 	def Read_B799E9B2(self, node): # FilletVariableRadiusEdgeSet
 		i = self.ReadHeaderContent(node, 'FilletVariableRadiusEdgeSet')
-		if (getFileVersion() > 2017): i += 4 # skipp 0xFFFFFFFF (-1)
+		if (getFileVersion() > 2017): i += 4 # skip 0xFFFFFFFF (-1)
 		i = node.ReadCrossRef(i, 'edges')
 		i = node.ReadCrossRef(i, 'radii')
 		i = node.ReadCrossRef(i, 'value')
@@ -7246,7 +7246,7 @@ class DCReader(EeDataReader):
 	def Read_CCD87CBA(self, node):
 		i = self.ReadHeaderContent(node)
 		i = self.skipBlockSize(i, 8)
-		if (getFileVersion() > 2018): i += 4 # skipp FF FF FF FF
+		if (getFileVersion() > 2018): i += 4 # skip FF FF FF FF
 		i = node.ReadFloat64(i, 'f64_0')
 		i = node.ReadFloat64(i, 'f64_1')
 		return i

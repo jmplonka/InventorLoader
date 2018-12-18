@@ -1277,7 +1277,7 @@ class Helix():
 		steps = [a, a + startSegment]
 
 		d = (b - a)
-		step = d / int(ceil(numSegments * d / 2 / pi)) # number of segements per turn
+		step = d / int(ceil(numSegments * d / 2 / pi)) # number of segments per turn
 		c = a
 		while c < (b - startSegment):
 			c += step
