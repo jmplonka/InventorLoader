@@ -996,22 +996,27 @@ class FreeCADImporter:
 				self.getEntity(creator) # ensure that the creator is already available!
 			ntEntry = getNameTableEntry(ref)
 			if (ntEntry is not None):
-				edgeItem = ntEntry.get('edge').get('a1') # Is a1[1] the item index of
-				edgeNode = outline.get('edges')[edgeItem[1]]
-				edges.append(edgeNode)
+				try:
+					edgeItem = ntEntry.get('edge').get('a1') # Is a1[1] the item index of
+					edgeNode = outline.get('edges')[edgeItem[1]]
+					edges.append(edgeNode)
+				except:
+					pass
 		return edges
 
 	def getEdgesFromProxy(self, fxNode, proxy):
 		# this is only an assumption!!!
 		outlineItem = fxNode.get('outlineItem')
-		outline     = getModel().getGraphics().featureOutlines[outlineItem-1]
+		all_edges   = []
+		outlines    = getModel().getGraphics().featureOutlines
+		if (outlineItem < len(outlines)):
+			outline     = outlines[outlineItem-1]
 
-		all_edges = []
-		if (proxy is not None):
-			for matchedEdge in proxy.get('edges'):
-				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-				edges = self.getIndexdEdges(matchedEdge, outline)
-				all_edges += edges
+			if (proxy is not None):
+				for matchedEdge in proxy.get('edges'):
+					assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
+					edges = self.getIndexdEdges(matchedEdge, outline)
+					all_edges += edges
 
 		return all_edges
 
@@ -2727,17 +2732,18 @@ class FreeCADImporter:
 
 		for i, creator in enumerate(creators):
 			fx = creators[creator].sketchEntity
-			fillets = []
-			for edgeNode in edges:
-				for j, edge in enumerate(fx.Shape.Edges):
-					if (edgeNode.matches(edge)):
-						fillets.append((j+1, radius1, radius2))
+			if (fx is not None):
+				fillets = []
+				for edgeNode in edges:
+					for j, edge in enumerate(fx.Shape.Edges):
+						if (edgeNode.matches(edge)):
+							fillets.append((j+1, radius1, radius2))
 
-			chamfer = newObject(self.doc, 'Part::Chamfer', name)
-			chamfer.Base  = fx
-			chamfer.Edges = fillets
-			name = u"%s_%d" %(name, i + 1)
-			hide(fx)
+				chamfer = newObject(self.doc, 'Part::Chamfer', name)
+				chamfer.Base  = fx
+				chamfer.Edges = fillets
+				name = u"%s_%d" %(name, i + 1)
+				hide(fx)
 
 		# self.addSolidBody(chamferNode, chamferGeo, body)
 

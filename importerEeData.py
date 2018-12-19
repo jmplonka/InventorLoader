@@ -6,15 +6,16 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerSegment import SegmentReader, checkReadAll
-from importerUtils   import *
+from importerSegment    import checkReadAll
+from importer_NameTable import NameTableReader
+from importerUtils      import *
 import importerSegNode
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-class EeDataReader(SegmentReader):
+class EeDataReader(NameTableReader):
 	def __init__(self, segment):
 		super(EeDataReader, self).__init__(segment)
 

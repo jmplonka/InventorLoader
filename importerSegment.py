@@ -301,16 +301,6 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		return i
 
-	def ReadHeaderEntityWrapperNode(self, node, typeName = None):
-		i = node.Read_Header0(typeName)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
-		i = node.ReadUInt32A(i, 7, 'a0')
-		i = self.skipBlockSize(i, 8)
-		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
-		return i
-
 	def ReadFloat64A(self, node, i, cnt, name, size):
 		lst = []
 		for j in range(cnt):

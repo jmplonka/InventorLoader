@@ -791,7 +791,7 @@ def logInfo(msg, *args):
 def logWarning(msg, *args):
 	if (__prmPrefOW__.GetBool("checkWarning", False)): _log("logWarning", Console.PrintWarning, msg, args)
 def logError(msg, *args):
-	if (__prmPrefOW__.GetBool("checkError", False)):   _log("logError",   Console.PrintError,   msg, args)
+	if (__prmPrefOW__.GetBool("checkError", True)):    _log("logError",   Console.PrintError,   msg, args)
 
 def logAlways(msg, *args):
 	_log("logAlways", Console.PrintMessage, msg, args)
