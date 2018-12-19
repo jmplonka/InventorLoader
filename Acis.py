@@ -8,7 +8,7 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 import traceback, FreeCAD, Part, Draft, os
 from importerUtils              import *
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
-from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil
+from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
 from BOPTools.GeneralFuseResult import GeneralFuseResult
 
 __author__     = 'Jens M. Plonka'
@@ -161,6 +161,81 @@ invSubtypeTableSurfaces = {}
 references = {}
 
 _currentEntityId = -2
+
+def COS(x):        return (cos(x))
+def COSH(x):       return (cosh(x))
+def COT(x):        return (cos(x)/sin(x))
+def COTH(x):       return (cosh(x)/sinh(x))
+def CSC(x):        return (1/sin(x))
+def CSCH(x):       return (1/sinh(x))
+def SEC(x):        return (1/cos(x))
+def SECH(x):       return (1/cosh(x))
+def SIN(x):        return (sin(x))
+def SINH(x):       return (sinh(x))
+def TAN(x):        return (tan(x))
+def TANH(x):       return (tanh(x))
+def ARCCOS(x):     return (acos(x))
+def ARCCOSH(x):    return (acosh(x))
+def ARCOT(x):      return (pi/2 - atan(x))
+def ARCOTH(x):     return (0.5*log((x+1)/(x-1)))
+def ARCCSC(x):     return (asin(1/x))
+def ARCCSCH(x):    return (log((1+sqrt(1+x**2))/x))
+def ARCSEC(x):     return (acos(1/x))
+def ARCSECH(x):    return (log((1+sqrt(1-x**2))/x))
+def ARCSIN(x):     return (asin(x))
+def ARCSINH(x):    return (asinh(x))
+def ARCTAN(x):     return (atan(x))
+def ARCTANH(x):    return (atanh(x))
+def ABS(x):        return (abs(x))
+def EXP(x):        return (exp(x))
+def LN(x):         return (log(x))
+def LOG(x):        return (log10(x))
+def NORM(value):   return VEC(value.x, value.y, value.z).normalize()
+def ROTATE(v, t):  return t.rotate(v)
+def CROSS(v1, v2): return v1.cross(v2)
+def DOT(v1, v2):   return v1.dot(v2)
+def SET(x):
+	if (x > 0.0): return 1
+	return -1 if (x < 0.0) else 0
+def SIGN(x):       return SET(x)
+def SIZE(v):       return v.Length()
+#def STEP(l1, n1, l2, n2, ...) ... will throw an error if found in evaluation
+def TERM(v, n):    return v.__getitem__(n)
+def TRANS(v, t):
+	return t.transpose(v)
+def MIN(*x):       return min(x)
+def MAX(*x):       return max(x)
+#def NOT(x) ... will throw an error if found in evaluation
+def DCUR(c, x):     return c.parameter(x)
+def DSURF(c, u, v): return c.parameter(u, v)
+
+class Law(object):
+	# Laws:
+	#	trigonometric:
+	#		cos(x), cosh(x), cot(x) = cos(x)/sin(x), coth(x)
+	#		csc(x) = 1/sin(x), csch(x), sec(x) = 1/cos(x), sech(x)
+	#		sin(x), sinh(x), tan(x), tanh(x)
+	#		arccos(x), arccosh(x), arcot(x), arcoth(x)
+	#		arccsc(x), arccsch(x), arcsec(x), arcsech(x)
+	#		arcsin(x), arcsinh(x), arctan(x), arctanh(x)
+	#	functions:
+	#		vec(x,y,z), norm(X)
+	#		abs(x), exp(x), ln(x), log(x), sqrt(x)
+	#		rotate(x,y), set(x) = sign(x), size(x), step(...)
+	#		term(X,n), trans(X,y)
+	#		min(x), max(x), not(x)
+	#	operators:
+	#		+,-,*,/,x,^,<,>,<=,>=
+	#	constants
+	#		e = 2.718
+	#		pi= 3.141
+	def __init__(self, eq):
+		#FIXME: how to handle cross operator???
+		self.eq = eq
+		# convert ^ into **
+		self.eq = self.eq.replace('^', ' ** ')
+	def evaluate(self, X):
+		return eval(self.eq)
 
 def init():
 	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces
@@ -598,43 +673,23 @@ def readBlend(chunks, index):
 	return None, index
 
 def readLaw(chunks, index):
-	# Laws:
-	#	trigonometric:
-	#		cos(x), cosh(x), cot(x) = cos(x)/sin(x), coth(x)
-	#		csc(x) = 1/sin(x), csch(x), sec(x) = 1/cos(x), sech(x)
-	#		sin(x), sinh(x), tan(x), tanh(x)
-	#		arccos(x), arccosh(x), arcot(x), arcoth(x)
-	#		arccsc(x), arccsch(x), arcsec(x), arcsech(x)
-	#		arcsin(x), arcsinh(x), arctan(x), arctanh(x)
-	#	functions:
-	#		vec(x,y,z)
-	#		abs(x), exp(x), ln(x), log(x), norm(X), sqrt(x)
-	#		rotate(x,y), set(x) = sign(x), size(x), step(...)
-	#		term(X,n), trans(X,y)
-	#		min(x), max(x), not(x)
-	#	operators:
-	#		+,-,*,/,x,^,<,>,<=,>=
-	#	constants
-	#		e = 2.718
-	#		pi= 3.141
 	n, i = getText(chunks, index)
 	if (n == 'TRANS'):
-		v = Transform()
 		i = v.setBulk(chunks, i)
-	elif (n == 'EDGE'):
+		return (n, Transform())
+	if (n == 'EDGE'):
 		c, i = readCurve(chunks, i)
 		f, i = getFloats(chunks, i, 2)
-		v = (c, f)
-	elif (n == 'SPLINE_LAW'):
+		return (n, c, f)
+	if (n == 'SPLINE_LAW'):
 		a, i = getInteger(chunks, i)
 		b, i = getFloatArray(chunks, i)
 		c, i = getFloatArray(chunks, i)
 		d, i = getPoint(chunks, i)
-		v = (a, b, c, d)
-	else:
-		v = None
-
-	return (n, v), i
+		return (n, a, b, c, d)
+	l = Law(n)
+	l.evaluate(0.5)
+	return l, i
 
 def newInstance(CLASSES, key):
 	cls = CLASSES[key]
