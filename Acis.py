@@ -3251,7 +3251,7 @@ class SurfaceSpline(Surface):
 		# int
 		return i
 	def setVertexBlend(self, chunks, index, inventor):
-		n, i = getInteger(chunks, index)      # vertexblendsur”
+		n, i = getInteger(chunks, index)      # vertexblendsur
 		self.boundaries = []
 		for j in range(0, n):
 			vbl, i = self._readBoundaryGeometry(chunks, i, inventor)

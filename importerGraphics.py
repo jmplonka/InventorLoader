@@ -26,7 +26,6 @@ class GraphicsReader(EeSceneReader):
 
 	def postRead(self):
 		grp = self.segment.elementNodes[1] # get the group node
-		assert len(grp.get('parts'))==1
 		return super(GraphicsReader, self).postRead()
 
 	def ReadIndexDC(self, node, i):

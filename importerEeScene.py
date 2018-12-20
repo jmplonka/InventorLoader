@@ -71,7 +71,7 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(0, 8)
 		i = node.ReadParentRef(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_SINT32_A_, 'edges', 2) # [SingleFeatureOutline,SINT_32]*
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'outlines', 2) # [SingleFeatureOutline, SINT_32]*
 		node.surface = True
 		return i
 
@@ -170,6 +170,8 @@ class EeSceneReader(StyleReader):
 
 	def Read_37DB9D1E(self, node): # Plane surface
 		i = self.ReadHeaderSurface(node, 'SurfacePlane')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_03E3D90B(self, node):

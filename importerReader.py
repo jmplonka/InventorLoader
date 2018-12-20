@@ -211,9 +211,9 @@ def ReadProtein(data):
 	zip = data[4: size]
 
 	folder = getInventorFile()[0:-4]
-	protein = open ('%s\\Protein.zip' %(folder), 'wb')
-	protein.write(zip)
-	protein.close()
+	with open ('%s\\Protein.zip' %(folder), 'wb') as protein:
+		protein.write(zip)
+
 	return size + 4
 
 def ReadWorkbook(doc, data, name, stream):
@@ -740,18 +740,15 @@ def ReadRSeMetaDataB(dataB, seg):
 		folder = getInventorFile()[0:-4]
 
 		filename = '%s\\%sB.log' %(folder, seg.name)
-		newFile = codecs.open(filename, 'wb', 'utf8')
+		with codecs.open(filename, 'wb', 'utf8') as newFile:
+			newFile.write('[%s]\n' %(getFileVersion()))
+			i = 0
+			uid, i = getUUID(dataB, i)
+			n, i = getUInt16(dataB, i)
+			z = zlib.decompressobj()
+			data = z.decompress(dataB[i:])
 
-		newFile.write('[%s]\n' %(getFileVersion()))
-		i = 0
-		uid, i = getUUID(dataB, i)
-		n, i = getUInt16(dataB, i)
-		z = zlib.decompressobj()
-		data = z.decompress(dataB[i:])
-
-		reader.ReadSegmentData(newFile, data)
-
-		newFile.close()
+			reader.ReadSegmentData(newFile, data)
 
 	return len(dataB)
 

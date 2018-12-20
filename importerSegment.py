@@ -541,7 +541,8 @@ class SegmentReader(object):
 				else:
 					s = " ".join(["%02X" % c for c in node.data[i:]])
 				node.content += u"\taX=[%s]" %(s)
-				s = len(node.data)
+			else:
+				node.data = None
 		except:
 			logError(u"ERROR in %s.Read_%s: %s", self.__class__.__name__, node.typeName, traceback.format_exc())
 
