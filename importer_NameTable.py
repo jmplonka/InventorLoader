@@ -20,15 +20,6 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 class NameTableReader(SegmentReader): # for BRep and DC
 	def __init__(self, segment):
 		super(NameTableReader, self).__init__(segment)
-		self.nameTables = []
-
-	def postRead(self):
-		for nameTable in self.nameTables:
-			lst = nameTable.get('entries')
-			for key in lst:
-				entry = lst[key]
-				if (not hasattr(entry.data, "ntEntry")):
-					logError(u"    %s is a name table entry", entry.typeName)
 
 	def ReadHeaderNameTableRootNode(self, node, typeName = None):
 		if (typeName is not None):
@@ -101,12 +92,11 @@ class NameTableReader(SegmentReader): # for BRep and DC
 			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD, 'entries')
 			lst[key] = val
 		node.set('entries', lst)
-		self.nameTables.append(node)
 		return i
 
 	# Root name table entries
 
-	def Read_00E41C0E(self, node):
+	def Read_00E41C0E(self, node): # Name table root node
 		i = self.ReadHeaderNameTableRootNode(node)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
 		i = node.ReadCrossRef(i, 'ref_3')
@@ -116,6 +106,13 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadUInt8(i, 'u8_2')
 		i = node.ReadUInt32A(i, 5, 'a2')
 		i = node.ReadFloat64_3D(i, 'a3')
+		return i
+
+	def Read_14340ADB(self, node): # Name table root node
+		i = self.ReadHeaderNameTableRootNode(node)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst2', 2)
+		i = node.ReadUInt32A(i, 2, 'edge') # or is it face 1?
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 7)
 		return i
 
 	def Read_22178C64(self, node): # Name table root node
@@ -272,6 +269,11 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = self.ReadHeaderNameTableChild2Node(node)
 		return i
 
+	def Read_896A9790(self, node): # Name table child node
+		i = self.ReadHeaderNameTableChild2Node(node)
+		i = node.ReadUInt32(i, 'u32_1')
+		return i
+
 	def Read_8E5D4198(self, node): # Name table child node
 		i = self.ReadHeaderNameTableChild2Node(node)
 		i = node.ReadUInt32(i, 'u32_1')
@@ -303,9 +305,15 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		node.set('a4', [0,0,0])
 		return i
 
-	def Read_896A9790(self, node):
-		i = self.ReadHeaderNameTableChild2Node(node)
-		i = node.ReadUInt32(i, 'u32_1')
+	def Read_B1ED010F(self, node): # Name table child node
+		i = self.ReadHeaderNameTableChild1Node(node)
+		i = node.ReadUInt32A(i, 7, 'a0')
+		i = node.ReadUInt32A(i, 2, 'from') # or is it face 1?
+		i = self.ReadU32U32List(node, i, 'a1')
+		return i
+
+	def Read_BDE13180(self, node): # Name table child node
+		i = self.ReadHeaderNameTableChild1Node(node)
 		return i
 
 	# unknown name table entries

@@ -16,7 +16,6 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 class StyleReader(SegmentReader):
 	def __init__(self, segment):
 		super(StyleReader, self).__init__(segment)
-		self.styles = []
 
 	def ReadHeaderStyle(self, node, typeName=None):
 		if (typeName is not None): node.typeName = typeName
@@ -29,7 +28,6 @@ class StyleReader(SegmentReader):
 		node.typeName = "ObjctStyles"
 		i = self.skipBlockSize(0)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'styles')
-		self.styles.append(node)
 		return i
 
 	def Read_0AE12F04(self, node): # Object style ...
@@ -253,10 +251,3 @@ class StyleReader(SegmentReader):
 		i = self.ReadHeaderStyle(node, 'Style_C29D5C11')
 		i = node.ReadFloat64_3D(i, 'a0')
 		return i
-
-	def postRead(self):
-		for styles in self.styles:
-			for style in styles.get('styles'):
-				if (style is not None):
-					if (style.typeName.startswith('Style_') == False):
-						logError(u"    Read_%s", style.typeName)

@@ -22,7 +22,12 @@ class GraphicsReader(EeSceneReader):
 	def __init__(self, segment):
 		super(GraphicsReader, self).__init__(segment)
 		segment.meshes = {}
-		segment.featureOutlines = []
+		segment.featureOutlines = {}
+
+	def postRead(self):
+		grp = self.segment.elementNodes[1] # get the group node
+		assert len(grp.get('parts'))==1
+		return super(GraphicsReader, self).postRead()
 
 	def ReadIndexDC(self, node, i):
 		i = node.ReadUInt32(i, 'indexDC')
@@ -352,16 +357,6 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_76986821(self, node): return 0
 
-	def Read_7DFC2448(self, node): # CompositeFeatureOutline
-		node.typeName = 'CompositeFeatureOutline'
-		i = self.skipBlockSize(0)
-		i = node.ReadCrossRef(i, 'ref_0')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'fxOutlines')
-		i = node.ReadUInt32(i, 'index')
-		return i
-
 	def Read_8DA49A23(self, node): # InstanceNode
 		i = node.Read_Header0( 'InstanceNode')
 		i = node.ReadUInt16A(i, 4, 'a0')
@@ -468,17 +463,6 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
-#	def Read_A79EACD2(self, node):
-#		i = 0
-#		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst0', 3)
-#		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_,  'lst1', 2)
-#		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst2', 3)
-#		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst3', 2)
-#		i = node.ReadUInt16A(i, 2, 'a0')
-#		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst4')
-#		i = node.ReadFloat32_2D(i, 'a1')
-# 		return i
-
 	def Read_A94779E0(self, node):
 		node.typeName = 'SingleFeatureOutline'
 		i = self.skipBlockSize(0)
@@ -490,19 +474,31 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadFloat64A(i, 3, 'a2')
 		i = self.ReadEdgeList(node, i)
 		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst0', 3)
-		self.segment.featureOutlines.append(node)
+		return i
+
+	def Read_7DFC2448(self, node): # CompositeFeatureOutline
+		node.typeName = 'CompositeFeatureOutline'
+		i = self.skipBlockSize(0)
+		i = node.ReadParentRef(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'outlines')
+		i = node.ReadUInt32(i, 'index')
 		return i
 
 	def Read_A94779E2(self, node):
+		node.typeName = 'PatternFeatureOutline'
 		i = self.skipBlockSize(0)
 		i = node.ReadParentRef(i)
-		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'outlines')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'index')
+		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt16A(i, 4, 'a2')
-		i = node.ReadFloat64A(i, 3, 'a3')
-		i = node.ReadFloat64A(i, 3, 'a4')
+		i = node.ReadFloat64_3D(i, 'a3')
+		i = node.ReadFloat64_3D(i, 'a4')
 		return i
 
 	def Read_A94779E3(self, node):
@@ -656,7 +652,7 @@ class GraphicsReader(EeSceneReader):
 	def Read_CA7163A3(self, node): # PartNode
 		i = self.ReadHeaderU32RefU8List3(node, 'PartNode')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1') # list of feature outlines key = DC-Index!
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'outlines') # list of outlines: key <=> DC-Index!
 		i = self.skipBlockSize(i)
 		i = node.ReadColorRGBA(i, 'c0')
 		i = node.ReadColorRGBA(i, 'c1')
@@ -664,6 +660,9 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadColorRGBA(i, 'c3')
 		i = node.ReadFloat32(i, 'f32_0')
 		i = self.skipBlockSize(i)
+		outlines = node.get('outlines')
+		if (len(outlines) > 0):
+			node.segment.outlines = outlines
 		return i
 
 	def Read_D28CA9B4(self, node): return 0

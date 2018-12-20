@@ -53,20 +53,6 @@ PART_LINE = Part.Line
 if (hasattr(Part, "LineSegment")):
 	PART_LINE = Part.LineSegment
 
-def printEdge(edge):
-	if (isinstance(edge, ArcOfCircleEdge)):
-		print(u"  Part.show(Part.ArcOfCircle(Part.Circle(App.Vector(%g,%g,%g), App.Vector(%g,%g,%g), %g), %g, %g).toShape())" %(edge.center.x, edge.center.y, edge.center.z, edge.dir.x, edge.dir.y, edge.dir.z, edge.radius, edge.a, edge.b))
-	if (isinstance(edge, LineEdge)):
-		print(u"  Part.show(Part.LineSegment(App.Vector(%g,%g,%g),App.Vector(%g,%g,%g)).toShape())" %(edge.p1.x, edge.p1.y, edge.p1.z, edge.p2.x, edge.p2.y, edge.p2.z))
-	return
-
-def printOutlines(outlines):
-	for outline in outlines:
-		print(u"%04X:" %(outline.get('index')))
-		for edge in outline.get('edges'):
-			printEdge(edge)
-	return
-
 def _enableConstraint(name, bit, preset):
 	global SKIP_CONSTRAINTS
 	SKIP_CONSTRAINTS &= ~bit        # clear the bit if already set.
@@ -530,7 +516,6 @@ def getNameTableEntry(node):
 			else:
 				nte = nt.get('entries')[value[1]]
 			lst2[i] = (nte, value[2])
-	graphics = getModel().getGraphics()
 	return entry
 
 class FreeCADImporter:
@@ -1005,19 +990,13 @@ class FreeCADImporter:
 		return edges
 
 	def getEdgesFromProxy(self, fxNode, proxy):
-		# this is only an assumption!!!
-		outlineItem = fxNode.get('outlineItem')
 		all_edges   = []
-		outlines    = getModel().getGraphics().featureOutlines
-		if (outlineItem < len(outlines)):
-			outline     = outlines[outlineItem-1]
-
-			if (proxy is not None):
-				for matchedEdge in proxy.get('edges'):
-					assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-					edges = self.getIndexdEdges(matchedEdge, outline)
-					all_edges += edges
-
+		outline = getModel().getGraphics().outlines[fxNode.get('index')] # ref. importerGraphics.Read_CA7163A3
+#		if (proxy is not None):
+#			for matchedEdge in proxy.get('edges'):
+#				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
+#				edges = self.getIndexdEdges(matchedEdge, outline)
+#				all_edges += edges
 		return all_edges
 
 	def getCreatorsFromProxy(self, proxy):
@@ -3516,14 +3495,14 @@ class FreeCADImporter:
 		logWarning(u"    Can't process unknown Feature '%s' - probably an unsupported iFeature!", unknownNode.name)
 		return
 
-	def Create_Feature(self, featureNode):
-		name  = featureNode.getSubTypeName()
-		index = featureNode.index
-		logInfo(u"    adding Fx%s '%s' ...", name, featureNode.name)
+	def Create_Feature(self, fxNode):
+		name  = fxNode.getSubTypeName()
+		index = fxNode.index
+		logInfo(u"    adding Fx%s '%s' ...", name, fxNode.name)
 		createFxObj = getattr(self, 'Create_Fx%s' %(name))
-		createFxObj(featureNode)
+		createFxObj(fxNode)
 
-		adjustFxColor(featureNode.sketchEntity, featureNode.get('fxColor'))
+		adjustFxColor(fxNode.sketchEntity, fxNode.get('fxColor'))
 
 		self.doc.recompute()
 		return
@@ -3815,6 +3794,5 @@ class FreeCADImporter:
 						grNode = gr.indexNodes[indexDC]
 						color  = getBodyColor(grNode)
 						adjustColor(entity, color)
-#			printOutlines(gr.featureOutlines)
 		else:
 			logWarning(u">>>No content to be displayed for DC<<<")

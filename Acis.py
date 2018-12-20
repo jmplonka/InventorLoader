@@ -1,4 +1,5 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+from __future__                 import unicode_literals
 
 '''
 Acis.py:
@@ -3846,50 +3847,50 @@ class AcisChunk():
 		self.tag = key
 		self.val = val
 	def __str__(self):
-		if (self.tag == TAG_CHAR         ): return "%s "     %(self.val)
-		if (self.tag == TAG_SHORT        ): return "%d "     %(self.val)
-		if (self.tag == TAG_LONG         ): return "%d "     %(self.val)
-		if (self.tag == TAG_FLOAT        ): return "%g "     %(self.val)
-		if (self.tag == TAG_DOUBLE       ): return "%g "     %(self.val)
-		if (self.tag == TAG_UTF8_U8      ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_UTF8_U16     ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_UTF8_U32_A   ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_TRUE         ): return "%s "     %(self.val)
-		if (self.tag == TAG_FALSE        ): return "%s "     %(self.val)
-		if (self.tag == TAG_ENTITY_REF   ): return "%s "     %(self.val)
-		if (self.tag == TAG_IDENT        ): return "%s "     %(self.val)
-		if (self.tag == TAG_SUBIDENT     ): return "%s-"     %(self.val)
-		if (self.tag == TAG_SUBTYPE_OPEN ): return "%s "     %(self.val)
-		if (self.tag == TAG_SUBTYPE_CLOSE): return "%s "     %(self.val)
-		if (self.tag == TAG_TERMINATOR   ): return "%s\n"    %(self.val)
-		if (self.tag == TAG_UTF8_U32_B   ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_POSITION     ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_VECTOR_3D    ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_ENUM_VALUE   ): return "%d "     %(self.val)
-		if (self.tag == TAG_VECTOR_2D    ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		return ''
+		if (self.tag == TAG_CHAR         ): return u"%s "     %(self.val)
+		if (self.tag == TAG_SHORT        ): return u"%d "     %(self.val)
+		if (self.tag == TAG_LONG         ): return u"%d "     %(self.val)
+		if (self.tag == TAG_FLOAT        ): return u"%g "     %(self.val)
+		if (self.tag == TAG_DOUBLE       ): return u"%g "     %(self.val)
+		if (self.tag == TAG_UTF8_U8      ): return u"@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U16     ): return u"@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U32_A   ): return u"@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U32_B   ): return u"@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_TRUE         ): return u"0x0A "
+		if (self.tag == TAG_FALSE        ): return u"0x0B "
+		if (self.tag == TAG_ENTITY_REF   ): return u"%s "     %(self.val)
+		if (self.tag == TAG_IDENT        ): return u"%s "     %(self.val)
+		if (self.tag == TAG_SUBIDENT     ): return u"%s-"     %(self.val)
+		if (self.tag == TAG_SUBTYPE_OPEN ): return u"{ "
+		if (self.tag == TAG_SUBTYPE_CLOSE): return u"} "
+		if (self.tag == TAG_TERMINATOR   ): return u"#\n"
+		if (self.tag == TAG_POSITION     ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_VECTOR_3D    ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_ENUM_VALUE   ): return u"%d "     %(self.val)
+		if (self.tag == TAG_VECTOR_2D    ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		return "%s " %(self.val)
 	def __repr__(self):
-		if (self.tag == TAG_CHAR         ): return "%s "   %(self.val)
-		if (self.tag == TAG_SHORT        ): return "%d "   %(self.val)
-		if (self.tag == TAG_LONG         ): return "%d "   %(self.val)
-		if (self.tag == TAG_FLOAT        ): return "%g "   %(self.val)
-		if (self.tag == TAG_DOUBLE       ): return "%g "   %(self.val)
-		if (self.tag == TAG_UTF8_U8      ): return "'%s' " %(self.val)
-		if (self.tag == TAG_UTF8_U16     ): return "'%s' " %(self.val)
-		if (self.tag == TAG_UTF8_U32_A   ): return "'%s' " %(self.val)
-		if (self.tag == TAG_TRUE         ): return '0x0A '
-		if (self.tag == TAG_FALSE        ): return '0x0B '
-		if (self.tag == TAG_ENTITY_REF   ): return "%s "   %(self.val)
-		if (self.tag == TAG_IDENT        ): return "%s "   %(self.val)
-		if (self.tag == TAG_SUBIDENT     ): return "%s-"   %(self.val)
-		if (self.tag == TAG_SUBTYPE_OPEN ): return '{ '
-		if (self.tag == TAG_SUBTYPE_CLOSE): return '} '
-		if (self.tag == TAG_TERMINATOR   ): return '#'
-		if (self.tag == TAG_UTF8_U32_B   ): return "'%s' " %(self.val)
-		if (self.tag == TAG_POSITION     ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_VECTOR_3D    ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_ENUM_VALUE   ): return "%d "   %(self.val)
-		if (self.tag == TAG_VECTOR_2D    ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_CHAR         ): return u"%s "   %(self.val)
+		if (self.tag == TAG_SHORT        ): return u"%d "   %(self.val)
+		if (self.tag == TAG_LONG         ): return u"%d "   %(self.val)
+		if (self.tag == TAG_FLOAT        ): return u"%g "   %(self.val)
+		if (self.tag == TAG_DOUBLE       ): return u"%g "   %(self.val)
+		if (self.tag == TAG_UTF8_U8      ): return u"'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U16     ): return u"'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U32_A   ): return u"'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U32_B   ): return u"'%s' " %(self.val)
+		if (self.tag == TAG_TRUE         ): return u"0x0A "
+		if (self.tag == TAG_FALSE        ): return u"0x0B "
+		if (self.tag == TAG_ENTITY_REF   ): return u"%s "   %(self.val)
+		if (self.tag == TAG_IDENT        ): return u"%s "   %(self.val)
+		if (self.tag == TAG_SUBIDENT     ): return u"%s-"   %(self.val)
+		if (self.tag == TAG_SUBTYPE_OPEN ): return u"{ "
+		if (self.tag == TAG_SUBTYPE_CLOSE): return u"} "
+		if (self.tag == TAG_TERMINATOR   ): return u"#"
+		if (self.tag == TAG_POSITION     ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_VECTOR_3D    ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_ENUM_VALUE   ): return u"%d "   %(self.val)
+		if (self.tag == TAG_VECTOR_2D    ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
 		return "%s " %(self.val)
 
 class AcisEntity():
@@ -3902,18 +3903,15 @@ class AcisEntity():
 	def add(self, key, val):
 		self.chunks.append(AcisChunk(key, val))
 
-	def getStr(self):
-		return "-%d %s %s" %(self.index, self.name, ''.join('%s' %(str(c)) for c in self.chunks))
-
 	def __repr__(self):
-		return "%s %s" %(self.name, ''.join('%r' %c for c in self.chunks))
+		return "%s %s" %(self.name, ''.join(c.__repr__() for c in self.chunks))
 
 	def __str__(self):
 		if (self.index < 0):
 			if (self.index == -2):
-				return "%s %s" %(self.name,''.join('%s' %c for c in self.chunks))
+				return "%s %s" %(self.name,''.join(c.__str__() for c in self.chunks))
 			return ""
-		return self.getStr()
+		return "-%d %s %s" %(self.index, self.name, ''.join(u"%s" %(c) for c in self.chunks))
 
 class AcisRef():
 	def __init__(self, index):

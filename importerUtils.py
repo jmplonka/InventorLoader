@@ -353,7 +353,7 @@ def writeThumbnail(data):
 	global _thumbnail
 	_thumbnail = Thumbnail(data)
 
-	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', False)):
+	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
 		filename = "%s/_.%s" %(getInventorFile()[0:-4], _thumbnail.type.lower())
 		with open(filename, 'wb') as thumbnail:
 			thumbnail.write(_thumbnail.getData())

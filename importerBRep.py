@@ -59,6 +59,10 @@ class BRepReader(NameTableReader):
 		i = self.ReadHeaderNameTableChild1Node(node)
 		return i
 
+	def Read_537799E0(self, node):
+		i = self.ReadHeaderNameTableChild1Node(node)
+		return i
+
 	def Read_56A95F20(self, node):
 		i = self.ReadHeaderNameTableChild1Node(node)
 		return i
@@ -73,7 +77,6 @@ class BRepReader(NameTableReader):
 
 	def Read_77D10C74(self, node):
 		i = self.ReadHeaderNameTableChild1Node(node)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_7E5D2868(self, node):
@@ -106,7 +109,6 @@ class BRepReader(NameTableReader):
 
 	def Read_B292F94A(self, node):
 		i = self.ReadHeaderNameTableChild1Node(node)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_E9132E94(self, node):
@@ -146,10 +148,6 @@ class BRepReader(NameTableReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadUInt32A(i, 2, 'a1')
-		return i
-
-	def Read_537799E0(self, node):
-		i = self.ReadHeaderNameTableChild1Node(node)
 		return i
 
 	def Read_632A4BBA(self, node):

@@ -14,18 +14,6 @@ __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-def __checkRef__(ref, attrName):
-	if ((ref is not None) and (hasattr(ref.data, attrName) == False)):
-		logError(u"    Read_%s should be an %s!", ref.typeName, attrName)
-
-def __checkList__(node, lstName, attrName):
-	lst = node.get(lstName)
-	if (lst is not None):
-		for ref in lst:
-			__checkRef__(ref, attrName)
-	else:
-		logError("Read_%s hat no '%s' property!", node.typeName, lstName)
-
 class EeSceneReader(StyleReader):
 	def __init__(self, segment):
 		super(EeSceneReader, self).__init__(segment)
@@ -209,7 +197,7 @@ class EeSceneReader(StyleReader):
 		return i
 
 	def Read_A529D1E2(self, node): # GroupNode
-		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode')
+		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
 		return i
 
 	def Read_41305114(self, node):
@@ -466,12 +454,3 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt32(i, 'index') # reference to a Work-Plane's index
 		node.numref = True
 		return i
-
-	def postRead(self):
-		for face in self.faces:
-			__checkRef__(face.get('surface'), 'surface')
-			__checkList__(face, 'edges', 'edge')
-		for obj in self.objects3D:
-			__checkRef__(obj.get('numRef'), 'numref')
-			__checkList__(obj, 'objects', 'object3D')
-		return super(EeSceneReader, self).postRead()

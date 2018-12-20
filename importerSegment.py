@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__                 import unicode_literals
 
 '''
 importerSegment.py:
@@ -66,10 +67,13 @@ def dumpSat(node):
 	folder = getInventorFile()[0:-4]
 	filename = "%s\%04X.sat" %(folder, node.index)
 	header, entities = node.get('SAT')
-	content = '%s' %(header)
-	content += ''.join(['%s' %(ntt.getStr()) for ntt in entities if ntt.index >= 0])
-	with open(filename, 'w') as sat:
-		sat.write(content)
+	with open(filename, 'wb') as sat:
+		sat.write(header.__str__())
+		for ntt in entities:
+			if ntt.index >= 0:
+				sat.write(u"-%d %s " %(ntt.index, ntt.name))
+				for c in ntt.chunks:
+					sat.write(c.__str__().encode('utf8'))
 		sat.write("End-of-ACIS-data\n")
 
 def checkReadAll(node, i, l):
