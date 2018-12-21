@@ -469,10 +469,9 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'index')
-		i = node.ReadFloat64A(i, 3, 'a1')
-		i = node.ReadFloat64A(i, 3, 'a2')
+		i = node.ReadFloat64A(i, 6, 'box') # bounding box
 		i = self.ReadEdgeList(node, i)
-		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst0', 3)
+		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'splines', 3)
 		return i
 
 	def Read_7DFC2448(self, node): # CompositeFeatureOutline

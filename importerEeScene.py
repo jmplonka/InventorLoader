@@ -71,7 +71,7 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(0, 8)
 		i = node.ReadParentRef(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'outlines', 2) # [SingleFeatureOutline, SINT_32]*
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'dcIndices', 2) # [dcIndex, SINT_32]*
 		node.surface = True
 		return i
 
@@ -121,12 +121,16 @@ class EeSceneReader(StyleReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'edges')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadFloat64A(i, 3, 'a2')
-		i = node.ReadFloat64A(i, 3, 'a3')
+		i = node.ReadFloat64A(i, 6, 'box') # bounding box
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'key')
 		i = node.ReadUInt32A(i, 2, 'a4')
 		self.faces.append(node)
+		return i
+
+	def Read_A79EACCB(self, node): # Edge ...
+		i = self.ReadHeaderEdge(node)
+		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_6266D8CD(self, node): # Edge ...
@@ -139,33 +143,22 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(i)
 		return i
 
+	def Read_A79EACD2(self, node, typeName = None): # Edge ...
+		i = self.ReadHeaderEdge(node, typeName)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_,    'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'n', 3)  # vertex normals
+		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'uv', 2) # U-V values of the vertex
+		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_,  'lst4')
+		i = node.ReadFloat32_2D(i, 'a1')
+		return i
+
 	def Read_D79AD3F3(self, node): # Edge ...
-		i = self.ReadHeaderEdge(node)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_,  'lst1', 2)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst2', 3)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst3', 2)
-		i = node.ReadUInt16A(i, 2, 'a0')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst4')
-		i = node.ReadFloat32_2D(i, 'a1')
+		i = self.Read_A79EACD2(node, None)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst5')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst6')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst7')
-		return i
-
-	def Read_A79EACCB(self, node): # Edge ...
-		i = self.ReadHeaderEdge(node)
-		i = node.ReadUInt8(i, 'u8_0')
-		return i
-
-	def Read_A79EACD2(self, node): # Edge ...
-		i = self.ReadHeaderEdge(node)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_,  'lst1', 2)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst2', 3)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst3', 2)
-		i = node.ReadUInt16A(i, 2, 'a0')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst4')
-		i = node.ReadFloat32_2D(i, 'a1')
+		i = node.ReadList2(i, importerSegNode._TYP_SINT16_A_,  'lst5', 2)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_,    'lst6')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_,    'lst7')
 		return i
 
 	def Read_37DB9D1E(self, node): # Plane surface

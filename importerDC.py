@@ -291,18 +291,6 @@ class DCReader(EeDataReader):
 		node.set(name, lst)
 		return i
 
-	def ReadU32U32U8List(self, node, offset, name):
-		cnt, i = getUInt32(node.data, offset)
-		lst = []
-		for j in range(cnt):
-			ref, i = getUInt32(node.data, i)
-			val, i = getUInt32(node.data, i)
-			u8, i  = getUInt8(node.data, i)
-			lst.append([ref, val, u8])
-		node.content += ' %s=[%s]' %(name, ','.join(['(%04X,%04X,%02X)' %(r[0], r[1], r[2]) for r in lst]))
-		node.set(name, lst)
-		return i
-
 	def ReadRefU32U8List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
 		lst = []

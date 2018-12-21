@@ -3653,6 +3653,12 @@ class AttribMixOrganizationUnfoldInfo(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationUnfoldInfo, self).__init__()
 class AttribNamingMatching(Attrib):
 	def __init__(self): super(AttribNamingMatching, self).__init__()
+	def set(self, entity):
+		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
+		n, j = getInteger(entity.chunks, i)
+		if (n > 30): # since ASM 216 (Inventor 2011) there is an identifyer added!
+			return j
+		return i
 class AttribNamingMatchingNMxMatchedEntity(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxMatchedEntity, self).__init__()
 class AttribNamingMatchingNMxEdgeCurve(AttribNamingMatching):
@@ -3710,9 +3716,7 @@ class AttribNamingMatchingNMxBrepTag(AttribNamingMatching):
 	def set(self, entity):
 		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
 		n, i = getInteger(entity.chunks, i)
-		if (n > 30): # since Inventor 2011 there is an identifyer added!
-			n, i = getInteger(entity.chunks, i)
-		self.mapping, i = getIntegerMap(entity.chunks, i, n, 2)
+		self.mapping, i = getIntegerMap(entity.chunks, i, n, 2) # (DC-index, mask){n}
 		return i
 class AttribNamingMatchingNMxBrepTagFeature(AttribNamingMatchingNMxBrepTag):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagFeature, self).__init__()
@@ -4176,7 +4180,7 @@ ENTITY_TYPES = {
 	"mix_UnfoldInfo-mix_Organizaion-attrib":                                                       AttribMixOrganizationUnfoldInfo,
 	"NamingMatching-attrib":                                                                       AttribNamingMatching,
 	"NMx_Brep_tag-NamingMatching-attrib":                                                          AttribNamingMatchingNMxBrepTag,
-	"NMx_Brep_Feature_tag-NMx_Brep_tag-NamingMatching-attrib":                                     AttribNamingMatchingNMxBrepTagFeature,
+	"NMx_Brep_Feature_tag-NMx_Brep_tag-NamingMatching-attrib":                                     AttribNamingMatchingNMxBrepTagFeature, # (n > 2010) 1 m -1
 	"NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                                        AttribNamingMatchingNMxBrepTagName,
 	"NMx_BPatch_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                         AttribNamingMatchingNMxBrepTagNameBPatch,
 	"NMx_bend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                           AttribNamingMatchingNMxBrepTagNameBend,

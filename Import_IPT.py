@@ -219,8 +219,21 @@ def read(doc, filename, readProperties):
 
 	return True
 
+def resolveLinks():
+	gr = getModel().getGraphics()
+	dc = getModel().getDC()
+	parts = gr.elementNodes[0x0001].get('parts')
+	for part in parts:
+		outlines = part.get('outlines')
+		for dcIndex in  outlines:
+			outline = outlines[dcIndex]
+			creator = dc.indexNodes[dcIndex]
+			creator.outline = outline
+	return
+
 def create3dModel(root, doc):
 	strategy = getStrategy()
+	resolveLinks()
 	if (strategy == STRATEGY_NATIVE):
 		creator = FreeCADImporter()
 		creator.importModel(root, doc)

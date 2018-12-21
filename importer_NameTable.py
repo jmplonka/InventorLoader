@@ -21,6 +21,18 @@ class NameTableReader(SegmentReader): # for BRep and DC
 	def __init__(self, segment):
 		super(NameTableReader, self).__init__(segment)
 
+	def ReadU32U32U8List(self, node, offset, name):
+		cnt, i = getUInt32(node.data, offset)
+		lst = []
+		for j in range(cnt):
+			ref, i = getUInt32(node.data, i)
+			val, i = getUInt32(node.data, i)
+			key, i  = getUInt8(node.data, i)
+			lst.append([ref, val, key])
+		node.content += ' %s={%s}' %(name, ','.join(['(%04X,%04X,%02X)' %(e[0], e[1], e[2]) for e in lst]))
+		node.set(name, lst)
+		return i
+
 	def ReadHeaderNameTableRootNode(self, node, typeName = None):
 		if (typeName is not None):
 			node.typeName = typeName
@@ -62,7 +74,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadUInt8(i, 'u8_2')
 		i = self.ReadU32U32List(node, i, 'a1')
 		i = node.ReadUInt32A(i, 2, 'val_key_3')
-		i = self.ReadU32U32U8List(node, i, 'a2')
+		i = self.ReadU32U32U8List(node, i, 'lst2')
 		i = self.ReadU32U32D64List(node, i, 'a3')
 		i = self.ReadU32U32D64List(node, i, 'a4')
 		if (getFileVersion() > 2010): i += 16
@@ -160,12 +172,12 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
-	def Read_9BB4281C(self, node): # Name table root node
+	def Read_9BB4281C(self, node): # Name table root node for Fillet-Chamfer
 		i = self.ReadHeaderNameTableRootNode(node)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
 		i = node.ReadUInt32A(i, 2, 'edge')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadUInt32A(i, 3, 'a1') # index 1: edge index
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'a2')
 		cnt, i = getUInt32(node.data, i)
@@ -224,7 +236,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = self.ReadRefU32List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'a2')
 		cnt, i = getUInt32(node.data, i)

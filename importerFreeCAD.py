@@ -989,13 +989,12 @@ class FreeCADImporter:
 					pass
 		return edges
 
-	def getEdgesFromProxy(self, fxNode, proxy):
+	def getEdgesFromProxy(self, fxCreator, proxy):
 		all_edges   = []
-		outline = getModel().getGraphics().outlines[fxNode.get('index')] # ref. importerGraphics.Read_CA7163A3
-#		if (proxy is not None):
-#			for matchedEdge in proxy.get('edges'):
-#				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-#				edges = self.getIndexdEdges(matchedEdge, outline)
+		if (proxy is not None):
+			for matchedEdge in proxy.get('edges'):
+				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
+#				edges = self.getIndexdEdges(matchedEdge, fxCreator.outline)
 #				all_edges += edges
 		return all_edges
 
@@ -2701,28 +2700,25 @@ class FreeCADImporter:
 		angle        = getProperty(properties, 0x0A) # Angle
 		body         = getProperty(properties, 0x0B) # SolidBody
 
-		radius1       = getMM(dim1)
-		radius2       = getMM(dim2)
-		edges    = self.getEdgesFromProxy(chamferNode, edgesProxies)
+		radius1  = getMM(dim1)
+		radius2  = getMM(dim2)
 		creators = self.getCreatorsFromProxy(edgesProxies)
 		name     = chamferNode.name
 		if (len(creators) > 1): name = u"%s_0" %(name)
 
-
 		for i, creator in enumerate(creators):
-			fx = creators[creator].sketchEntity
-			if (fx is not None):
-				fillets = []
-				for edgeNode in edges:
-					for j, edge in enumerate(fx.Shape.Edges):
-						if (edgeNode.matches(edge)):
-							fillets.append((j+1, radius1, radius2))
-
-				chamfer = newObject(self.doc, 'Part::Chamfer', name)
-				chamfer.Base  = fx
-				chamfer.Edges = fillets
-				name = u"%s_%d" %(name, i + 1)
-				hide(fx)
+			fx = creators[creator]
+			edges = self.getEdgesFromProxy(fx, edgesProxies)
+			fillets = []
+			for edgeNode in edges:
+				for j, edge in enumerate(fx.Shape.Edges):
+					if (edgeNode.matches(edge)):
+						fillets.append((j+1, radius1, radius2))
+			chamfer = newObject(self.doc, 'Part::Chamfer', name)
+			chamfer.Base  = fx.sketchEntity
+			chamfer.Edges = fillets
+			name = u"%s_%d" %(name, i + 1)
+			hide(fx.sketchEntity)
 
 		# self.addSolidBody(chamferNode, chamferGeo, body)
 
