@@ -3,7 +3,7 @@
 '''
 importerFreeCAD.py
 '''
-import sys, Draft, Part, Sketcher, traceback, re, Mesh
+import sys, Draft, Part, Sketcher, traceback, re, Mesh, InventorViewProviders
 
 from importerUtils   import *
 from importerClasses import *
@@ -136,16 +136,9 @@ def notYetImplemented(node):
 	return None
 
 def newObject(doc, className, name):
-	v = name
-	if (sys.version_info.major < 3):
-		v = v.encode('utf8')
-		v = v.strip()
-	if (INVALID_NAME.match(name)):
-		obj = doc.addObject(className, u"_%s" %(v))
-	else:
-		obj = doc.addObject(className, v)
-	if (obj):
-		obj.Label = v
+	obj = doc.addObject(className, InventorViewProviders.getObjectName(name))
+	if (obj is not None):
+		obj.Label = name
 	return obj
 
 def createGroup(doc, name):
@@ -926,7 +919,11 @@ class FreeCADImporter:
 		else:
 			logWarning(u"    ... Don't know how to create edge from %s.%s" %(edge.__class__.__module__, edge.__class__.__name__))
 		if (edge is not None):
-			boundarySketch.addGeometry(edge)
+			if (isinstance(boundarySketch, Part.Feature)):
+				sketchEdge.setSketchEntity(-1, edge)
+				boundarySketch.Shape = Part.Shape(boundarySketch.Shape.Edges + [edge])
+			else:
+				boundarySketch.addGeometry(edge)
 
 		return
 
@@ -937,10 +934,15 @@ class FreeCADImporter:
 				self.getEntity(sketchNode) # ensure that the sketch is already created!
 				if (boundarySketch is None):
 					if (sketchNode is not None):
-						boundarySketch = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketchNode.name))
-						boundarySketch.Placement = sketchNode.sketchEntity.Placement
-
-				self.addGeometryFromNode(boundarySketch, sketchEdge)
+						if (sketchNode.typeName == 'Sketch2D'):
+							boundarySketch = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketchNode.name))
+							boundarySketch.Placement = sketchNode.sketchEntity.Placement
+						elif (sketchNode.typeName == 'Sketch3D'):
+							boundarySketch = newObject(self.doc, 'Part::Feature', u"%s_bp" %(sketchNode.name))
+							boundarySketch.Shape = Part.Shape()
+							boundarySketch.Placement = sketchNode.sketchEntity.Placement
+				if (boundarySketch is not None):
+					self.addGeometryFromNode(boundarySketch, sketchEdge)
 		else:
 			logError(u"    Error:  unknown boundaryPart (%04X): %s!", part.index, part.typeName)
 		return boundarySketch
@@ -958,9 +960,13 @@ class FreeCADImporter:
 						boundary.Placement = sketch.sketchEntity.Placement
 						hide(sketch.sketchEntity)
 					# create all parts of the profile
-					for part in profile.get('parts'):
-						if (part.get('operation') & 0x08):
-							boundary = self.addBoundaryPart(boundary, part)
+					parts = profile.get('parts')
+					if (len(parts) == 1):
+						boundary = self.addBoundaryPart(boundary, parts[0])
+					else:
+						for part in parts:
+							if (part.get('operation') & 0x08):
+								boundary = self.addBoundaryPart(boundary, part)
 					return boundary
 				else:
 					logError(u"        ... can't create boundary from (%04X): %s - expected next node type (%s) unknown!", boundaryPatch.index, boundaryPatch.typeName, profile.typeName)
@@ -2814,19 +2820,26 @@ class FreeCADImporter:
 
 		return notYetImplemented(extendNode)
 
-	def Create_FxBoundaryPatch(self, boundaryPatchNode):
-		properties = boundaryPatchNode.get('properties')
-		profile    = getProperty(properties, 0) # BoundaryPatch
-		bound      = getProperty(properties, 1) # 8B2B8D96
+	def Create_FxBoundaryPatch(self, fxNode):
+		properties = fxNode.get('properties')
+		path       = getProperty(properties, 0) # BoundaryPatch
+		profiles    = getProperty(properties, 1) # 8B2B8D96
 		value      = getProperty(properties, 3) # Parameter
 		surface    = getProperty(properties, 4) # SurfaceBody 'Fläche4'
 
-		if (profile is None):
-			pass
-		else:
-			boundary   = self.createBoundary(profile)
-
-		return notYetImplemented(boundaryPatchNode) # Sketches, Edges
+		features = []
+		for a in profiles.get('lst0'):
+			for b in a.get('lst0'):
+				for c in b.get('lst0'):
+					fx = self.createBoundary(c.get('ref_1'))
+					features.append(fx)
+		edges = []
+		for fx in features:
+			edges += fx.Shape.Edges
+			self.doc.removeObject(fx.Name)
+		boundaryPatch = InventorViewProviders.makeBoundaryPath(self.doc, edges, fxNode.name)
+		fxNode.setSketchEntity(-1, boundaryPatch.Shape)
+		self.addSurfaceBody(fxNode, boundaryPatch.Shape, surface)
 
 	def Create_FxCoreCavity(self, coreCavityNode):
 		properties = coreCavityNode.get('properties')

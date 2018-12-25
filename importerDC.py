@@ -698,7 +698,8 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadUInt32A(i, 5, 'a1')
+		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadUInt32A(i, 2, 'a2')
 		return i
 
 	def Read_DD64FF02(self, node):

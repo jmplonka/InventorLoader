@@ -19,7 +19,7 @@ from importerSAT       import readEntities, importModel, convertModel
 from uuid              import UUID
 
 def ReadIgnorable(fname, data):
-	logInfo(u'    IGNORED!')
+	logInfo(u"    IGNORED: '%s'" %(fname[-1]))
 
 def skip(data):
 	return
@@ -198,8 +198,9 @@ def read(doc, filename, readProperties):
 				break;
 
 	for fname in elements:
-		if (not fname[-1].startswith('B')):
-			list.append(fname)
+		if (handled.get(PrintableName(fname), False) == False):
+			if (not fname[-1].startswith('B')):
+				list.append(fname)
 
 	dumpRSeDB(getModel().RSeDb)
 	dumpiProperties(getModel().iProperties)

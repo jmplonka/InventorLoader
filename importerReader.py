@@ -730,7 +730,7 @@ def getReader(seg):
 	elif (seg.isNBNotebook()):
 		reader = NotebookReader(seg)
 	if (reader is None):
-		logInfo(u"    IGNORED!")
+		logInfo(u"    IGNORED '%s'" %(seg.name))
 		#reader = SegmentReader()
 	return reader
 
