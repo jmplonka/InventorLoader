@@ -5850,7 +5850,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_1E3A132C(self, node):
-		i = node.Read_Header0()
+		i = node.Read_Header0('Loop3D')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'operation') # 8 = Fuse, 0 = Cut
 		i = self.skipBlockSize(i)

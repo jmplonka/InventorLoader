@@ -3,7 +3,7 @@
 '''
 importerFreeCAD.py
 '''
-import sys, Draft, Part, Sketcher, traceback, re, Mesh, InventorViewProviders
+import sys, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders
 
 from importerUtils   import *
 from importerClasses import *
@@ -38,8 +38,6 @@ BIT_DIM_RADIUS              = 1 << 19
 BIT_DIM_DIAMETER            = 1 << 20 # Workaround required: radius constraint
 BIT_DIM_DISTANCE            = 1 << 21
 BIT_DIM_OFFSET_SPLINE       = 1 << 22 # not supported
-
-INVALID_NAME = re.compile('^[0-9].*')
 
 DIR_Z = VEC(0, 0, 1)
 
@@ -928,7 +926,7 @@ class FreeCADImporter:
 		return
 
 	def addBoundaryPart(self, boundarySketch, part):
-		if (part.typeName in ['1E3A132C', 'Loop']):
+		if (part.typeName in ['Loop', 'Loop3D']):
 			for sketchEdge in part.get('edges'): # should be SketchEntityRef
 				sketchNode = sketchEdge.get('sketch')
 				self.getEntity(sketchNode) # ensure that the sketch is already created!
@@ -1935,7 +1933,7 @@ class FreeCADImporter:
 #			# need to recompute otherwise FreeCAD messes up directions for other constraints!
 #			if (self.doc): self.doc.recompute()
 
-		sketch3D.Shape = Part.Shape(edges.values())
+		sketch3D.Shape = Part.Shape(list(edges.values()))
 		sketch3D.ViewObject.LineColor  = (0.0, 1.0, 0.0)
 		sketch3D.ViewObject.LineWidth  = 1.0
 		sketch3D.ViewObject.PointColor = (0.0, 1.0, 0.0)
@@ -2416,14 +2414,11 @@ class FreeCADImporter:
 
 	def Create_FxClient(self, clientNode):
 		# create a subfolder
-		name = clientNode.name
+		name = InventorViewProviders.getObjectName(clientNode.name)
 		if (len(name) == 0):
 			name = node.typeName
 
-		if (INVALID_NAME.match(name)):
-			fx = createGroup(self.doc, '_' + name)
-		else:
-			fx = createGroup(self.doc, name)
+		fx = createGroup(self.doc, name)
 		# add/move all objects to this folder
 		for geo in self.resolveParticiants(clientNode):
 			fx.addObject(geo)
@@ -2822,22 +2817,26 @@ class FreeCADImporter:
 
 	def Create_FxBoundaryPatch(self, fxNode):
 		properties = fxNode.get('properties')
-		path       = getProperty(properties, 0) # BoundaryPatch
-		profiles    = getProperty(properties, 1) # 8B2B8D96
+		profile    = getProperty(properties, 0) # BoundaryPatch
+		profiles   = getProperty(properties, 1) # 8B2B8D96
 		value      = getProperty(properties, 3) # Parameter
 		surface    = getProperty(properties, 4) # SurfaceBody 'Fläche4'
 
 		features = []
-		for a in profiles.get('lst0'):
-			for b in a.get('lst0'):
-				for c in b.get('lst0'):
-					fx = self.createBoundary(c.get('ref_1'))
-					features.append(fx)
-		edges = []
-		for fx in features:
-			edges += fx.Shape.Edges
-			self.doc.removeObject(fx.Name)
-		boundaryPatch = InventorViewProviders.makeBoundaryPath(self.doc, edges, fxNode.name)
+		if (profiles is not None):
+			for profile in profiles.get('lst0'):
+				for loop in profile.get('lst0'):
+					for edge in loop.get('lst0'):
+						fx = self.createBoundary(edge.get('ref_1'))
+						features.append(fx)
+			edges = []
+			for fx in features:
+				edges += fx.Shape.Edges
+				self.doc.removeObject(fx.Name)
+		else:
+			boundary = self.createBoundary(profile)
+			edges = boundary.Shape.Edges
+		boundaryPatch = InventorViewProviders.makeBoundaryPatch(self.doc, edges, fxNode.name)
 		fxNode.setSketchEntity(-1, boundaryPatch.Shape)
 		self.addSurfaceBody(fxNode, boundaryPatch.Shape, surface)
 
@@ -2956,6 +2955,9 @@ class FreeCADImporter:
 
 	def Create_FxMove(self, moveNode):
 		properties = moveNode.get('properties')
+		sources    = getProperty(properties, 0) # ObjectCollection
+		trans      = getProperty(properties, 1) # 0800FE29
+		dim        = getProperty(properties, 2) # FeatureDimensions
 		return notYetImplemented(moveNode)
 
 	def Create_FxNonParametricBase(self, nonParametricBaseNode):
@@ -3387,17 +3389,25 @@ class FreeCADImporter:
 
 		return notYetImplemented(hemNode)
 
-	def Create_FxKnit(self, knitNode):
-		properties = knitNode.get('properties')
-#		getProperty(properties, 0) # ObjectCollection 'Srf1'
-#		getProperty(properties, 1) # SurfaceBodies 'Solid1'
-#		getProperty(properties, 3) # ParameterBoolean=False
-#		getProperty(properties, 4) # Parameter 'd317'=0.0254
+	def Create_FxKnit(self, fxNode):
+		properties   = fxNode.get('properties')
+#		getProperty(properties, 0) # ObjectCollection 'Srf1', 'Srf2', ...
+		surface      = getProperty(properties, 1) # SurfaceBodies 'Solid1'
+		noSolid		 = getProperty(properties, 3) # ParameterBoolean=False
+		maxTolerance = getProperty(properties, 4) # Parameter 'd317'=0.0254
 #		getProperty(properties, 5) # ParameterBoolean=False
 
-		self.resolveParticiants(knitNode)
-
-		return notYetImplemented(knitNode)
+		self.resolveParticiants(fxNode)
+		faces = []
+		for participant in fxNode.getParticipants():
+			face = self.doc.getObject(InventorViewProviders.getObjectName(participant.name))
+			if (face): faces.append(face)
+		knit = InventorViewProviders.makeKnit(self.doc, faces, fxNode.name, not noSolid)
+		fxNode.setSketchEntity(-1, knit.Shape)
+		if (noSolid):
+			self.addSurfaceBody(fxNode, knit.Shape, surface)
+		else:
+			self.addSolidBody(fxNode, knit.Shape, surface)
 
 	def Create_FxRip(self, ripNode):
 		properties = ripNode.get('properties')

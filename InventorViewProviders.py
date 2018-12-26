@@ -10,42 +10,29 @@ from importerUtils import logInfo
 
 INVALID_NAME = re.compile('^[0-9].*')
 
-class BoundaryPatch:
-	def __init__(self, obj, edges):
-		obj.addProperty("Part::PropertyPartShape", "Shape", "BoundaryPatch", "Shape of the boundary patch")
-		obj.Proxy = self
-		obj.Shape = self.__createFace__(edges)
+def getObjectName(name):
+	if (sys.version_info.major < 3):
+		v = re.sub(r'[^\x00-\x7f]', r'_', name)
+	else:
+		v = re.sub(b'[^\x00-\x7f]', b'_', name.encode('utf8')).decode('utf8')
+	if (INVALID_NAME.match(name)):
+		return "_%s" %(v)
+	return v
 
-	def __createFace__(self, edges):
-		wire = Part.Wire(edges)
-		return Part.Face(wire)
+class _ViewProviderBoundaryPatch:
+	def __init__(self, vp):
+		self.attach(vp)
 
-	def execute(self, fp):
-		fp.Shape = self.__createFace__(fp.Shape.Edges)
+	def attach(self, vp):
+		vp.Proxy = self
 
-class ViewProviderBoundaryPatch:
-	def __init__(self, obj):
-		''' Set this object to the proxy object of the actual view provider '''
-		obj.Proxy = self
-
-	def attach(self, obj):
-		''' Setup the scene sub-graph of the view provider.'''
-		return
-
-	def getDisplayModes(self,obj):
-		'''Return a list of display modes.'''
+	def getDisplayModes(self, vp):
 		return ["Shaded", "Wireframe"]
 
 	def getDefaultDisplayMode(self):
-		'''Return the name of the default display mode. It must be defined in getDisplayModes.'''
 		return "Shaded"
 
-	def onChanged(self, vp, prop):
-		'''Here we can do something when a single property got changed'''
-		logInfo("Change property: %s" %(prop))
-
 	def getIcon(self):
-		'''Return the icon in XPM format which will appear in the tree view.'''
 		return """
 		    /* XPM */
 			static const char * ViewProviderBox_xpm[] = {
@@ -73,29 +60,103 @@ class ViewProviderBoundaryPatch:
 			"                "};
 			"""
 
-	def __getstate__(self):
-		'''When saving the document this object gets stored using Python's cPickle module.
-		Since we have some un-pickable here -- the Coin stuff -- we must define this method
-		to return a tuple of all pickable objects or None.'''
-		return None
+	def onChanged(self, vp, prop): return
 
-	def __setstate__(self,state):
-		'''When restoring the pickled object from document we have the chance to set some
-		internals here. Since no data were pickled nothing needs to be done here.'''
-		return None
+	def setEdit(self, vp, mode):   return False
 
-def getObjectName(name):
-	v = name
-	if (sys.version_info.major < 3):
-		v = v.encode('utf8')
-		v = v.strip()
-	if (INVALID_NAME.match(name)):
-		return u"_%s" %(v)
-	return v
+	def unsetEdit(self, vp, mode): return
 
-def makeBoundaryPath(doc, edges, name):
-	a = doc.addObject("Part::FeaturePython", getObjectName(name))
-	a.Label = name
-	boundaryPatch = BoundaryPatch(a, edges)
-	ViewProviderBoundaryPatch(a.ViewObject)
-	return a
+	def __getstate__(self):        return None
+
+	def __setstate__(self, state): return
+
+def makeBoundaryPatch(doc, edges, name):
+	fp = doc.addObject("Part::FeaturePython", getObjectName(name))
+	fp.Label = name
+	fp.Shape = Part.Face(Part.Wire(edges))
+	_ViewProviderBoundaryPatch(fp.ViewObject)
+	return fp
+
+class _Knit:
+	def __init__(self, fp):
+		fp.addProperty("App::PropertyLinkList", "Faces", "Knit", "List of faces to knit together")
+		fp.addProperty("App::PropertyBool", "Solid", "Knit", "Create a solid if possible")
+		fp.Proxy = self
+
+	def execute(self, fp):
+		faces = [f.Shape for f in fp.Faces]
+		fp.Shape = Part.Shell(faces)
+		if (fp.Solid):
+			if (fp.Shape.isClosed()):
+				fp.Shape = Part.Solid(fp.Shape)
+
+class _ViewProviderKnit:
+	def __init__(self, vp):
+		self.attach(vp)
+
+	def attach(self, vp):
+		vp.Proxy = self
+		self.fp   = vp.Object
+
+	def getDisplayModes(self, vp):
+		return ["Shaded", "Wireframe", "Flat Lines"]
+
+	def getDefaultDisplayMode(self):
+		return "Shaded"
+
+	def onChanged(self, vp, prop): return
+
+	def setEdit(self, vp, mode):   return False
+
+	def unsetEdit(self, vp, mode): return
+
+	def claimChildren(self):
+		return self.fp.Faces
+
+	def getIcon(self):
+		return """
+		    /* XPM */
+			static const char * ViewProviderBox_xpm[] = {
+			"16 16 9 1",
+			"   c None",
+			".  c #3333FF",
+			"+  c #ffa552",
+			"@  c #ffcea5",
+			"#  c #ffb573",
+			"~  c #ffffff",
+			",  c #9999ff",
+			";  c #de5200",
+			":  c #ffd652",
+			"................",
+			".~~~~~~~.~~~~~~.",
+			".~+++,.....,#@#.",
+			".~+++++;.:~#@##.",
+			".~+++,.....,##+.",
+			".~+++++;.:~##++.",
+			".~+++,.....,#++.",
+			".~+++++;.:~#+++.",
+			".~+++,.....,+++.",
+			".~++##@;.:~++++.",
+			".~+##,.....,+++.",
+			".~##@##;.:~++++.",
+			".~#@#,.....,+++.",
+			".~@##++;.:~++++.",
+			"................",
+			"               .",
+			};
+			"""
+
+	def __getstate__(self): return None
+
+	def __setstate__(self,state): return None
+
+def makeKnit(doc, faces, name, solid):
+	fp = doc.addObject("Part::FeaturePython", getObjectName(name))
+	fp.Label = name
+	knit = _Knit(fp)
+	fp.Solid = solid
+	fp.Faces = faces
+	_ViewProviderKnit(fp.ViewObject)
+	for face in faces:
+		face.ViewObject.Visibility = False
+	return fp

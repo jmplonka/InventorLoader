@@ -68,13 +68,13 @@ def dumpSat(node):
 	filename = "%s\%04X.sat" %(folder, node.index)
 	header, entities = node.get('SAT')
 	with open(filename, 'wb') as sat:
-		sat.write(header.__str__())
+		sat.write(header.__str__().encode('utf8'))
 		for ntt in entities:
 			if ntt.index >= 0:
-				sat.write(u"-%d %s " %(ntt.index, ntt.name))
+				sat.write((u"-%d %s " %(ntt.index, ntt.name)).encode('utf8'))
 				for c in ntt.chunks:
 					sat.write(c.__str__().encode('utf8'))
-		sat.write("End-of-ACIS-data\n")
+		sat.write(b"End-of-ACIS-data\n")
 
 def checkReadAll(node, i, l):
 	assert (i == l), '%s: Have not read all data (%d <> %d)' %(node.uid, i, l)

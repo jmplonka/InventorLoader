@@ -420,8 +420,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadChildRef(i, 'obj')
 		i = node.ReadUInt32A(i , 3, 'a0')
 		i = node.ReadUInt16(i, 'u16_0')
-		i = node.ReadChildRef(i, 'faces')
-		i = node.ReadChildRef(i, 'edges')
+		i = node.ReadChildRef(i, 'shell')
+		i = node.ReadChildRef(i, 'wire')
 		i = node.ReadChildRef(i, 'ref4')
 		i = node.ReadChildRef(i, 'ref5')
 		i = node.ReadChildRef(i, 'ref6')
@@ -435,7 +435,7 @@ class GraphicsReader(EeSceneReader):
 		if (tst == 0x30000002):
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst2')
-		i = node.ReadChildRef(i, 'wire') # -> 6A6931DC with
+		i = node.ReadChildRef(i, 'ref7') # -> 6A6931DC with
 		return i
 
 	def Read_9E2FB889(self, node): return 0
@@ -648,7 +648,7 @@ class GraphicsReader(EeSceneReader):
 		return i
 
 	def Read_CA7163A3(self, node): # PartNode
-		i = self.ReadHeaderU32RefU8List3(node, 'PartNode')
+		i = self.ReadHeaderU32RefU8List3(node, 'PartNode', lstName = 'items')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'outlines') # list of outlines: key <=> DC-Index!
 		i = self.skipBlockSize(i)

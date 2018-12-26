@@ -1138,7 +1138,10 @@ class FeatureNode(DataNode):
 		elif (p0 == 'FaceBoundOuterProxy'):
 			if (p4 == 'EdgeCollectionProxy'):       return 'Hem'
 			return 'Plate'
-		elif (p0 == 'ObjectCollection'):            return 'Knit'
+		elif (p0 == 'ObjectCollection'):
+			p2 = self._getPropertyName(2)
+			if (p2 == 'FeatureDimensions'):         return 'Move'
+			if (p2 == 'SurfaceBody'):               return 'Knit'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'TrimType'):                    return 'Trim'
 		elif (p0 == 'SurfaceBody'):

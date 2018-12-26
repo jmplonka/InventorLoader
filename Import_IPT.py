@@ -226,10 +226,11 @@ def resolveLinks():
 	parts = gr.elementNodes[0x0001].get('parts')
 	for part in parts:
 		outlines = part.get('outlines')
-		for dcIndex in  outlines:
-			outline = outlines[dcIndex]
-			creator = dc.indexNodes[dcIndex]
-			creator.outline = outline
+		if (outlines is not None):
+			for dcIndex in  outlines:
+				outline = outlines[dcIndex]
+				creator = dc.indexNodes[dcIndex]
+				creator.outline = outline
 	return
 
 def create3dModel(root, doc):
