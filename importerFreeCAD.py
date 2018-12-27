@@ -800,7 +800,7 @@ class FreeCADImporter:
 
 	def profile2Section(self, participant):
 		face      = participant.get('face')
-		surface   = participant.data.segment.indexNodes[face.get('indexRefs')[0]]
+		surface   = participant.segment.indexNodes[face.get('indexRefs')[0]]
 		wireIndex = participant.get('number')
 		body      = surface.get('body')
 		node      = None
@@ -810,8 +810,8 @@ class FreeCADImporter:
 		else:
 			label   = surface.get('label')
 			creator = label.get('idxCreator')
-			if (creator in participant.data.segment.indexNodes):
-				entity = participant.data.segment.indexNodes[creator]
+			if (creator in participant.segment.indexNodes):
+				entity = participant.segment.indexNodes[creator]
 				node   = self.getEntity(entity)
 			else:
 				logError(u"        ... can't create profile for creator (%04X): %s - creator = %04X", label.index, label.typeName, creator)
@@ -830,10 +830,30 @@ class FreeCADImporter:
 			return section
 		return None
 
+	def matchedEdge2Section(self, participant):
+		indexRefs = participant.get('indexRefs')
+		edges = []
+		if ((indexRefs is not None) and (len(indexRefs) > 0)):
+			for index in indexRefs:
+				edgeId = participant.segment.indexNodes[index]
+				wireIndex = edgeId.get('wireIndex')
+				creatorIdx = edgeId.get('creator').get('idxCreator')
+				creator = participant.segment.indexNodes[creatorIdx]
+				node   = self.getEntity(creator)
+				if (node is not None):
+					if (wireIndex < len(node.Shape.Wires)):
+						edges.appe(node.Shape.Wires[wireIndex])
+		if (len(edges) > 0):
+			section = newObject(self.doc, 'Part::Feature', participant.name)
+			section.Shape = Part.Wire(edges)
+			return section
+		return None
+
 	def collectSection(self, participant):
 		if (participant.typeName   == 'Sketch2D'):         return self.getEntity(participant)
 		elif (participant.typeName == 'Sketch3D'):         return self.getEntity(participant)
 		elif (participant.typeName == 'ProfileSelection'): return self.profile2Section(participant)
+		elif (participant.typeName == 'MatchedEdge'):      return self.matchedEdge2Section(participant)
 		self.getEntity(participant) # Not part fo the section!
 		return None
 
@@ -976,12 +996,12 @@ class FreeCADImporter:
 		edges = []
 
 		for idxRef in matchedEdge.get('indexRefs'):
-			ref  = matchedEdge.data.segment.indexNodes[idxRef]
+			ref  = matchedEdge.segment.indexNodes[idxRef]
 			assert (ref.typeName == 'EdgeId'),  u"found '%s'!" %(ref.typeName)
 			creator = ref.get('creator')
 			if (creator is not None):
 				idxCreator = creator.get('idxCreator')
-				creator = matchedEdge.data.segment.indexNodes[idxCreator]
+				creator = matchedEdge.segment.indexNodes[idxCreator]
 				self.getEntity(creator) # ensure that the creator is already available!
 			ntEntry = getNameTableEntry(ref)
 			if (ntEntry is not None):
@@ -1008,12 +1028,12 @@ class FreeCADImporter:
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
 				for idxRef in matchedEdge.get('indexRefs'):
-					ref  = matchedEdge.data.segment.indexNodes[idxRef]
+					ref  = matchedEdge.segment.indexNodes[idxRef]
 					creator = ref.get('creator')
 					if (creator is not None):
 						idxCreator = creator.get('idxCreator')
 						if (idxCreator not in creators):
-							creator = matchedEdge.data.segment.indexNodes[idxCreator]
+							creator = matchedEdge.segment.indexNodes[idxCreator]
 							self.getEntity(creator) # ensure that the creator is already available!
 							creators[idxCreator] = creator
 		return creators
@@ -2822,23 +2842,26 @@ class FreeCADImporter:
 		value      = getProperty(properties, 3) # Parameter
 		surface    = getProperty(properties, 4) # SurfaceBody 'Fläche4'
 
-		features = []
-		if (profiles is not None):
-			for profile in profiles.get('lst0'):
+		edges = []
+		if ((profiles is not None) and (profiles.typeName == "8B2B8D96")):
+			features = []
+			lst = profiles.get('lst0')
+			for profile in lst:
 				for loop in profile.get('lst0'):
 					for edge in loop.get('lst0'):
 						fx = self.createBoundary(edge.get('ref_1'))
-						features.append(fx)
-			edges = []
+						if (fx is not None): features.append(fx)
 			for fx in features:
 				edges += fx.Shape.Edges
 				self.doc.removeObject(fx.Name)
 		else:
 			boundary = self.createBoundary(profile)
-			edges = boundary.Shape.Edges
-		boundaryPatch = InventorViewProviders.makeBoundaryPatch(self.doc, edges, fxNode.name)
-		fxNode.setSketchEntity(-1, boundaryPatch.Shape)
-		self.addSurfaceBody(fxNode, boundaryPatch.Shape, surface)
+			if (boundary is not None):
+				edges += boundary.Shape.Edges
+		if (len(edges) > 0):
+			boundaryPatch = InventorViewProviders.makeBoundaryPatch(self.doc, edges, fxNode.name)
+			fxNode.setSketchEntity(-1, boundaryPatch.Shape)
+			self.addSurfaceBody(fxNode, boundaryPatch.Shape, surface)
 
 	def Create_FxCoreCavity(self, coreCavityNode):
 		properties = coreCavityNode.get('properties')
@@ -3786,12 +3809,12 @@ class FreeCADImporter:
 
 	def importModel(self, root, fcDoc):
 		dc = getModel().getDC()
-		if (dc is not None):
+		doc = dc.tree.getFirstChild('Document')
+		if (doc is not None):
 			self.root           = root
 			self.doc            = fcDoc
 			self.mapConstraints = {}
 
-			doc = dc.tree.getFirstChild('Document')
 
 			elements = doc.get('elements')
 			self.createParameterTable(elements.node)
@@ -3805,13 +3828,12 @@ class FreeCADImporter:
 
 			# apply colors stored in graphics segment
 			gr = getModel().getGraphics()
-			if (gr is not None):
-				for indexDC in gr.indexNodes:
-					dcNode = dc.indexNodes[indexDC]
-					entity = dcNode.sketchEntity
-					if (entity is not None):
-						grNode = gr.indexNodes[indexDC]
-						color  = getBodyColor(grNode)
-						adjustColor(entity, color)
+			for indexDC in gr.indexNodes:
+				dcNode = dc.indexNodes[indexDC]
+				entity = dcNode.sketchEntity
+				if (entity is not None):
+					grNode = gr.indexNodes[indexDC]
+					color  = getBodyColor(grNode)
+					adjustColor(entity, color)
 		else:
 			logWarning(u">>>No content to be displayed for DC<<<")

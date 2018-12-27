@@ -681,6 +681,17 @@ class AppReader(SegmentReader):
 		i = node.ReadLen32Text16(i)
 		return i
 
+	def Read_F645595C(self, node):
+		# Spatial's (A)CIS (S)olid (M)odeling
+		# 3 Line Header:
+		# [1]	[VERSION_NUMBER] [ENTIY_RECORDS] 4 [FLAGS]
+		# [2]	[STR_LEN] [STRING:PRODUCT] [STR_LEN] [STRING:PRODUCER] [STR_LEN] [STRING:DATE]
+		# [3]	[UNIT_LENGTH] [FAC_RES_ABS] [FAC_RES_NOR]
+		i = node.Read_Header0('ASM')
+		i = node.ReadUInt16A(i, 2, 'a0')
+		i = self.skipBlockSize(i)
+		return i
+
 	def Read_F8A779F9(self, node):
 		i = node.Read_Header0()
 		i = node.ReadChildRef(i, 'ref1')

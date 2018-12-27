@@ -264,8 +264,22 @@ class BrowserReader(SegmentReader):
 
 	def Read_52879851(self, node): return 0
 
+	def Read_09CB9719(self, node):
+		i = node.ReadUInt32A(0, 2, 'a0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
+		i = node.ReadSInt32A(i, 2, 'a1')
+		return i
+
 	def Read_58B90125(self, node):
 		i = node.ReadUInt32A(0, 2, 'a0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
+		i = node.ReadSInt32A(i, 2, 'a1')
+		return i
+
+	def Read_75839EBD(self, node):
+		i = node.ReadUInt32A(0, 2, 'a0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 		i = node.ReadSInt32A(i, 2, 'a1')
 		return i
@@ -494,9 +508,15 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUUID(i, 'ui')
 		return i
 
+	def Read_3683CE33(self, node):
+		i = node.ReadParentRef(0)
+		i = node.ReadUInt32A(i, 3, 'a0')
+		return i
+
 	def Read_CBBCFA51(self, node):
 		i = node.ReadParentRef(0)
-		i = node.ReadUInt16A(i, 8, 'a0')
+		i = node.ReadUInt32A(i, 3, 'a0')
+		i = node.ReadUInt32(i, 'mask')
 		return i
 
 	def Read_CF604E8B(self, node):

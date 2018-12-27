@@ -223,14 +223,20 @@ def read(doc, filename, readProperties):
 def resolveLinks():
 	gr = getModel().getGraphics()
 	dc = getModel().getDC()
-	parts = gr.elementNodes[0x0001].get('parts')
-	for part in parts:
-		outlines = part.get('outlines')
-		if (outlines is not None):
-			for dcIndex in  outlines:
-				outline = outlines[dcIndex]
-				creator = dc.indexNodes[dcIndex]
-				creator.outline = outline
+	grp = gr.elementNodes.get(0x0001)
+	if (grp is not None):
+		parts = grp.get('parts')
+		if (parts is not None):
+			for part in parts:
+				outlines = part.get('outlines')
+				if (outlines is not None):
+					for dcIndex in  outlines:
+						outline = outlines[dcIndex]
+						creator = dc.indexNodes.get(dcIndex, None)
+						if (creator is not None):
+							creator.outline = outline
+						else:
+							logWarning(u"    No outline-creator found for index=%04X!" %(dcIndex))
 	return
 
 def create3dModel(root, doc):
@@ -242,11 +248,10 @@ def create3dModel(root, doc):
 	else:
 		brep = getModel().getBRep()
 		importerSAT._fileName = getInventorFile()
-		if (brep is not None):
-			for asm in brep.AcisList:
-				readEntities(asm)
-				if (strategy == STRATEGY_SAT):
-					importModel(root, doc)
-				elif (strategy == STRATEGY_STEP):
-					convertModel(root, doc)
+		for asm in brep.AcisList:
+			readEntities(asm)
+			if (strategy == STRATEGY_SAT):
+				importModel(root, doc)
+			elif (strategy == STRATEGY_STEP):
+				convertModel(root, doc)
 	return

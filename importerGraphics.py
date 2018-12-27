@@ -25,7 +25,7 @@ class GraphicsReader(EeSceneReader):
 		segment.featureOutlines = {}
 
 	def postRead(self):
-		grp = self.segment.elementNodes[1] # get the group node
+		grp = self.segment.elementNodes.get(1, None) # get the group node
 		return super(GraphicsReader, self).postRead()
 
 	def ReadIndexDC(self, node, i):

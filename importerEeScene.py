@@ -155,10 +155,6 @@ class EeSceneReader(StyleReader):
 
 	def Read_D79AD3F3(self, node): # Edge ...
 		i = self.Read_A79EACD2(node, None)
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_SINT16_A_,  'lst5', 2)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_,    'lst6')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_,    'lst7')
 		return i
 
 	def Read_37DB9D1E(self, node): # Plane surface

@@ -236,101 +236,6 @@ class RSeStorageSectionB():
 	def __str__(self):
 		return '[%s]' %(IntArr2Str(self.arr, 4))
 
-class RSeMetaData():
-	SEG_APP_ASSEMBLY      = 'AmAppSegment'
-	SEG_APP_PART          = 'PmAppSegment'
-	SEG_APP_DL            = 'DlAppSegment'
-	SEG_B_REP_ASSEMBLY    = 'AmBREPSegment'
-	SEG_B_REP_MB          = 'MbBrepSegment'
-	SEG_B_REP_PART        = 'PmBRepSegment'
-	SEG_BROWSER_ASSEMBLY  = 'AmBrowserSegment'
-	SEG_BROWSER_PART      = 'PmBrowserSegment'
-	SEG_BROWSER_DL        = 'DlBrowserSegment'
-	SEG_D_C_ASSEMBLY      = 'AmDcSegment'
-	SEG_D_C_PART          = 'PmDCSegment'
-	SEG_DIR_DL            = 'DlDirectorySegment'
-	SEG_DOC_DL            = 'DlDocDCSegment'
-	SEG_GRAPHICS_ASSEMBLY = 'AmGraphicsSegment'
-	SEG_GRAPHICS_MB       = 'MbGraphicsSegment'
-	SEG_GRAPHICS_PART     = 'PmGraphicsSegment'
-	SEG_RESULT_ASSEMBLY   = 'AmRxSegment'
-	SEG_RESULT_PART       = 'PmResultSegment'
-	SEG_DESIGN_VIEW       = 'DesignViewSegment'
-	SEG_DATA_EE           = 'EeDataSegment'
-	SEG_SCENE_EE          = 'EeSceneSegment'
-	SEG_SHT14_DC_DL       = 'DLSheet14DCSegment'
-	SEG_SHT14_DL_DL       = 'DLSheet14DLSegment'
-	SEG_SHT14_SM_DL       = 'DLSheet14SMSegment'
-	SEG_ATTR_FB           = 'FBAttributeSegment'
-	SEG_NOTEBOOK_NB       = 'NBNotebookSegment'
-	SEG_DEFAULT           = 'Default'
-
-	def __init__(self):
-		self.txt1        = ''
-		self.ver         = 0
-		self.name        = ''
-		self.dat1        = ''
-		self.val1        = 0
-		self.dat2        = ''
-		self.arr1        = []
-		self.arr2        = []
-		self.segRef      = None
-		self.arr3        = []
-		self.sec1        = []
-		self.sec2        = []
-		self.sec3        = []
-		self.secBlkTyps  = {}
-		self.sec5        = []
-		self.sec6        = []
-		self.sec7        = []
-		self.sec8        = []
-		self.sec9        = []
-		self.secA        = []
-		self.secB        = []
-		self.uid2        = None # should always be '9744e6a4-11d1-8dd8-0008-2998bedddc09'
-		self.nodes       = None
-		self.elementNodes = {}
-		self.indexNodes  = {}
-		self.tree        = DataNode(None, False)
-	def __repr__(self):
-		return self.name
-
-	def isApp(self): # Application settings/options
-		return (self.name in [RSeMetaData.SEG_APP_PART, RSeMetaData.SEG_APP_ASSEMBLY, RSeMetaData.SEG_APP_DL])
-
-	def isBRep(self): # ACIS representation
-		return (self.name in [RSeMetaData.SEG_B_REP_PART, RSeMetaData.SEG_B_REP_ASSEMBLY, RSeMetaData.SEG_B_REP_MB])
-
-	def isBrowser(self): # Model broweser settings
-		return (self.name in [RSeMetaData.SEG_BROWSER_PART, RSeMetaData.SEG_BROWSER_ASSEMBLY, RSeMetaData.SEG_BROWSER_DL])
-
-	def isDefault(self):
-		return (self.name == RSeMetaData.SEG_DEFAULT)
-
-	def isDC(self): # Model definition
-		return (self.name in [RSeMetaData.SEG_D_C_PART, RSeMetaData.SEG_D_C_ASSEMBLY, RSeMetaData.SEG_SHT14_DC_DL])
-
-	def isGraphics(self): # Model graphics definition
-		return (self.name in [RSeMetaData.SEG_GRAPHICS_PART, RSeMetaData.SEG_GRAPHICS_ASSEMBLY, RSeMetaData.SEG_GRAPHICS_MB])
-
-	def isResult(self):
-		return (self.name in [RSeMetaData.SEG_RESULT_PART, RSeMetaData.SEG_RESULT_ASSEMBLY])
-
-	def isDesignView(self):
-		return (self.name == RSeMetaData.SEG_DESIGN_VIEW)
-
-	def isEeData(self):
-		return (self.name == RSeMetaData.SEG_DATA_EE)
-
-	def isEeScene(self):
-		return (self.name == RSeMetaData.SEG_SCENE_EE)
-
-	def isFBAttribute(self):
-		return (self.name == RSeMetaData.SEG_ATTR_FB)
-
-	def isNBNotebook(self):
-		return (self.name == RSeMetaData.SEG_NOTEBOOK_NB)
-
 class RSeRevisions():
 	def __init__(self, *args, **kwargs):
 		self.mapping = {}
@@ -355,7 +260,7 @@ class Inventor():
 		'''
 		for seg in self.RSeMetaData.values():
 			if (seg.isDC()): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getBRep(self):
 		'''
@@ -363,7 +268,7 @@ class Inventor():
 		'''
 		for seg in self.RSeMetaData.values():
 			if (seg.isBRep()): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getGraphics(self):
 		'''
@@ -371,7 +276,7 @@ class Inventor():
 		'''
 		for seg in self.RSeMetaData.values():
 			if (seg.isGraphics()): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getApp(self):
 		'''
@@ -379,47 +284,47 @@ class Inventor():
 		'''
 		for seg in self.RSeMetaData.values():
 			if (seg.isApp()): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getBrowser(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isBrowser(self)): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getDefault(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isDefault(self)): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getResult(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isResult(self)): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getDesignView(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isDesignView(self)): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getEeData(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isEeData(self)): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getEeScene(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isEeScene(self)): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getFBAttribute(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isFBAttribute(self)): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getNBNotebook(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isNBNotebook()): return seg
-		return None
+		return EMPTY_SEGMENT
 
 class DbInterface():
 	TYPE_MAPPING = {
@@ -1326,6 +1231,103 @@ class SurfaceBodiesNode(DataNode):
 		bodies = self.get('bodies')
 		names = ','.join([u"'%s'" %(b.name) for b in bodies])
 		return u'(%04X): %s %s' %(self.index, self.typeName, names)
+
+class RSeMetaData():
+	SEG_APP_ASSEMBLY      = 'AmAppSegment'
+	SEG_APP_PART          = 'PmAppSegment'
+	SEG_APP_DL            = 'DlAppSegment'
+	SEG_B_REP_ASSEMBLY    = 'AmBREPSegment'
+	SEG_B_REP_MB          = 'MbBrepSegment'
+	SEG_B_REP_PART        = 'PmBRepSegment'
+	SEG_BROWSER_ASSEMBLY  = 'AmBrowserSegment'
+	SEG_BROWSER_PART      = 'PmBrowserSegment'
+	SEG_BROWSER_DL        = 'DlBrowserSegment'
+	SEG_D_C_ASSEMBLY      = 'AmDcSegment'
+	SEG_D_C_PART          = 'PmDCSegment'
+	SEG_DIR_DL            = 'DlDirectorySegment'
+	SEG_DOC_DL            = 'DlDocDCSegment'
+	SEG_GRAPHICS_ASSEMBLY = 'AmGraphicsSegment'
+	SEG_GRAPHICS_MB       = 'MbGraphicsSegment'
+	SEG_GRAPHICS_PART     = 'PmGraphicsSegment'
+	SEG_RESULT_ASSEMBLY   = 'AmRxSegment'
+	SEG_RESULT_PART       = 'PmResultSegment'
+	SEG_DESIGN_VIEW       = 'DesignViewSegment'
+	SEG_DATA_EE           = 'EeDataSegment'
+	SEG_SCENE_EE          = 'EeSceneSegment'
+	SEG_SHT14_DC_DL       = 'DLSheet14DCSegment'
+	SEG_SHT14_DL_DL       = 'DLSheet14DLSegment'
+	SEG_SHT14_SM_DL       = 'DLSheet14SMSegment'
+	SEG_ATTR_FB           = 'FBAttributeSegment'
+	SEG_NOTEBOOK_NB       = 'NBNotebookSegment'
+	SEG_DEFAULT           = 'Default'
+
+	def __init__(self):
+		self.txt1        = ''
+		self.ver         = 0
+		self.name        = ''
+		self.dat1        = ''
+		self.val1        = 0
+		self.dat2        = ''
+		self.arr1        = []
+		self.arr2        = []
+		self.segRef      = None
+		self.arr3        = []
+		self.sec1        = []
+		self.sec2        = []
+		self.sec3        = []
+		self.secBlkTyps  = {}
+		self.sec5        = []
+		self.sec6        = []
+		self.sec7        = []
+		self.sec8        = []
+		self.sec9        = []
+		self.secA        = []
+		self.secB        = []
+		self.uid2        = None # should always be '9744e6a4-11d1-8dd8-0008-2998bedddc09'
+		self.nodes       = None
+		self.elementNodes = {}
+		self.indexNodes  = {}
+		self.tree        = DataNode(None, False)
+	def __repr__(self):
+		return self.name
+
+	def isApp(self): # Application settings/options
+		return (self.name in [RSeMetaData.SEG_APP_PART, RSeMetaData.SEG_APP_ASSEMBLY, RSeMetaData.SEG_APP_DL])
+
+	def isBRep(self): # ACIS representation
+		return (self.name in [RSeMetaData.SEG_B_REP_PART, RSeMetaData.SEG_B_REP_ASSEMBLY, RSeMetaData.SEG_B_REP_MB])
+
+	def isBrowser(self): # Model broweser settings
+		return (self.name in [RSeMetaData.SEG_BROWSER_PART, RSeMetaData.SEG_BROWSER_ASSEMBLY, RSeMetaData.SEG_BROWSER_DL])
+
+	def isDefault(self):
+		return (self.name == RSeMetaData.SEG_DEFAULT)
+
+	def isDC(self): # Model definition
+		return (self.name in [RSeMetaData.SEG_D_C_PART, RSeMetaData.SEG_D_C_ASSEMBLY, RSeMetaData.SEG_SHT14_DC_DL])
+
+	def isGraphics(self): # Model graphics definition
+		return (self.name in [RSeMetaData.SEG_GRAPHICS_PART, RSeMetaData.SEG_GRAPHICS_ASSEMBLY, RSeMetaData.SEG_GRAPHICS_MB])
+
+	def isResult(self):
+		return (self.name in [RSeMetaData.SEG_RESULT_PART, RSeMetaData.SEG_RESULT_ASSEMBLY])
+
+	def isDesignView(self):
+		return (self.name == RSeMetaData.SEG_DESIGN_VIEW)
+
+	def isEeData(self):
+		return (self.name == RSeMetaData.SEG_DATA_EE)
+
+	def isEeScene(self):
+		return (self.name == RSeMetaData.SEG_SCENE_EE)
+
+	def isFBAttribute(self):
+		return (self.name == RSeMetaData.SEG_ATTR_FB)
+
+	def isNBNotebook(self):
+		return (self.name == RSeMetaData.SEG_NOTEBOOK_NB)
+
+EMPTY_SEGMENT = RSeMetaData()
 
 class _AbstractEdge_(object):
 	def p2v(self, p, f = 1.0):
