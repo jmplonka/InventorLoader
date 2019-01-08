@@ -163,10 +163,7 @@ class BRepReader(NameTableReader):
 	def Read_66085B35(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'dcCreatorIdx') # the creator' index in 'DC' segment
-		if (getFileVersion() > 2009):
-			i = node.ReadUInt16(i, 'u16_0')
-		else:
-			i = node.ReadUInt8(i, 'u16_0')
+		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
 		return i
 

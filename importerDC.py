@@ -265,7 +265,6 @@ class DCReader(EeDataReader):
 			ref1, i = self.ReadNodeRef(node, i, [j,0], type1, name)
 			ref2, i = self.ReadNodeRef(node, i, [j,1], type2, name)
 			lst.append([ref1, ref2])
-		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%s)' %(r[0], r[1]) for r in lst]))
 		node.set(name, lst)
 		return i
 
@@ -1536,14 +1535,10 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadChildRef(i, 'ref_2')
-		if (len(node.name) == 0):
-			i = node.ReadUInt8(i, 'u8_1')
-		else:
-			node.content += ' u8_1=0'
-			node.set('u8_1', 0)
-#		if (getFileVersion() >  2017):
-#			i += 4
-#		i = self.Read2RefList(node, i, 'a1')
+		i = node.ReadUInt8(i, 'u8_1')
+		if (getFileVersion() >  2017):
+			i += 4
+		i = self.Read2RefList(node, i, 'a1', REF_CHILD, REF_CHILD)
 		return i
 
 	def Read_1DEE2CF3(self, node):
@@ -3845,8 +3840,7 @@ class DCReader(EeDataReader):
 	def Read_66085B35(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_X_REF_, 'lst0')
 		return i
 

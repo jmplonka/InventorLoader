@@ -3654,10 +3654,10 @@ class AttribMixOrganizationUnfoldInfo(AttribMixOrganization):
 class AttribNamingMatching(Attrib):
 	def __init__(self): super(AttribNamingMatching, self).__init__()
 	def set(self, entity):
-		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
-		n, j = getInteger(entity.chunks, i)
-		if (n > 30): # since ASM 216 (Inventor 2011) there is an identifyer added!
-			return j
+		i = super(AttribNamingMatching, self).set(entity)
+		n = entity.chunks[i].val
+		if ((type(n) == int) and (n > 30)):
+			return i + 1 # since ASM 216 (Inventor 2011) there is an identifyer added!
 		return i
 class AttribNamingMatchingNMxMatchedEntity(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxMatchedEntity, self).__init__()

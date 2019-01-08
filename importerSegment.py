@@ -615,12 +615,13 @@ class SegmentReader(object):
 		lst = []
 		header = Header()
 		i = header.readBinary(data)
+		node.data = data
 		index = 0
 		clearEntities()
 		entities = {}
 		e = len(node.data) - 12
-		if (getFileVersion() > 2018): e -= 1
-		if (getFileVersion() < 2011): e -= 4
+		if (getFileVersion() > 2018): e -= 6
+#		if (getFileVersion() < 2011): e -= 4
 		while (i < e):
 			entity, i = readEntityBinary(data, i, e)
 			entity.index = index
@@ -635,11 +636,13 @@ class SegmentReader(object):
 		node.set('SAT', [header, lst])
 		self.segment.AcisList.append(node)
 		dumpSat(node)
-		i = node.ReadUInt32(e, 'selectedKey')
+		i = e
+		i = node.ReadUInt32(i, 'selectedKey')
 		if (getFileVersion() > 2018): i += 1 # skip 00
-		if (getFileVersion() < 2011): i += 4  # skip block len
-		i = node.ReadChildRef(i, 'mappings')
 		i = node.ReadSInt32(i, 's32_0')
+		if (getFileVersion() > 2018): i += 1 # skip 00
+		i = node.ReadChildRef(i, 'mappings')
+		if (getFileVersion() > 2018): i += 4 # skip FF FF FF FF
 		return i
 
 	def Read_F8A779F8(self, node):
