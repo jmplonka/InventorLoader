@@ -80,6 +80,9 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
+- 0.12.0 (2019-01-08): Added support for Surface Features "BoundaryPatch" and "Knit". Both
+         features will be displayed with their own icon in the model browser.
+
 - 0.11.0 (2018-11-06): Added support for Meshes
 
 - 0.10.0 Added table for iParts.
