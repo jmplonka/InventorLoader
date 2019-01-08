@@ -5,29 +5,47 @@ importerClasses.py:
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys
-from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion
+import sys, os, Part
+from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion, isEqual, isEqual1D
 from math          import degrees, radians, pi
-from FreeCAD       import ParamGet
+from FreeCAD       import Vector as VEC
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
+model = None
+
+PART_LINE = Part.Line
+if (hasattr(Part, "LineSegment")):
+	PART_LINE = Part.LineSegment
+
 class RSeDatabase():
 	def __init__(self):
-		self.uid         = None # Internal-Name of the object
-		self.version     = -1
-		self.arr1        = []   # UInt16A[4]
-		self.dat1        = None # datetime
-		self.arr2        = []   # UInt16A[4]
-		self.dat2        = None # datetime
-		self.arr3        = []   # UInt16A[4]
-		self.dat3        = None # datetime
-		self.arr4        = []   # UInt16A[4]
-		self.arr5        = []   # UInt16A[8]
-		self.txt         = ''
-		self.comment     = ''
+		self.segInfo = RSeSegInformation()
+		self.uid     = None # Internal-Name of the object
+		self.schema  = -1
+		self.arr1    = []
+		self.dat1    = None
+		self.arr2    = []
+		self.dat2    = None
+		self.txt     = u""
+
+class RSeSegInformation():
+	def __init__(self):
+		self.text     = u""
+		self.arr1     = []
+		self.date     = None
+		self.uid      = None
+		self.arr2     = []
+		self.arr3     = []
+		self.u16      = 0
+		self.text2    = u""
+		self.arr4     = []
+		self.segments = {}
+		self.val      = []      # UInt16[2]
+		self.uidList1 = []
+		self.uidList2 = []
 
 class RSeSegmentObject():
 	def __init__(self):
@@ -61,20 +79,19 @@ class RSeSegment():
 		self.count2      = 0
 		self.type        = ''
 		self.metaData    = None
-		self.arr1        = []
+		self.arr1        = [] # ???, ???, ???, numSec1, ???
 		self.arr2        = []
 		self.objects     = []
 		self.nodes       = []
 
 	def __str__(self):
-		return '{0:<24}: count=({1}/{2}) {4} - [{5}]'.format(self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.values, 4))
+		return u"%s, count=(%d/%d), ID={%s}, value1=%04X, arr1=[%s], arr2=[%s]" %(self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.arr1, 4), IntArr2Str(self.arr2, 4))
 
-class RSeSegInformation():
-	def __init__(self):
-		self.segments    = {}
-		self.val         = []      # UInt16[2]
-		self.uidList1    = []
-		self.uidList2    = []
+	def __repr__(self):
+		return self.__str__()
+
+	def __lt__(self, other):
+		return self.name < other.name
 
 class RSeStorageBlockSize():
 	'''
@@ -219,138 +236,95 @@ class RSeStorageSectionB():
 	def __str__(self):
 		return '[%s]' %(IntArr2Str(self.arr, 4))
 
-class RSeMetaData():
-	SEG_APP_ASSEMBLY      = 'AmAppSegment'
-	SEG_APP_PART          = 'PmAppSegment'
-	SEG_APP_DL            = 'DlAppSegment'
-	SEG_B_REP_ASSEMBLY    = 'AmBREPSegment'
-	SEG_B_REP_MB          = 'MbBrepSegment'
-	SEG_B_REP_PART        = 'PmBRepSegment'
-	SEG_BROWSER_ASSEMBLY  = 'AmBrowserSegment'
-	SEG_BROWSER_PART      = 'PmBrowserSegment'
-	SEG_BROWSER_DL        = 'DlBrowserSegment'
-	SEG_D_C_ASSEMBLY      = 'AmDcSegment'
-	SEG_D_C_PART          = 'PmDCSegment'
-	SEG_DIR_DL            = 'DlDirectorySegment'
-	SEG_DOC_DL            = 'DlDocDCSegment'
-	SEG_GRAPHICS_ASSEMBLY = 'AmGraphicsSegment'
-	SEG_GRAPHICS_MB       = 'MbGraphicsSegment'
-	SEG_GRAPHICS_PART     = 'PmGraphicsSegment'
-	SEG_RESULT_ASSEMBLY   = 'AmRxSegment'
-	SEG_RESULT_PART       = 'PmResultSegment'
-	SEG_DESIGN_VIEW       = 'DesignViewSegment'
-	SEG_DATA_EE           = 'EeDataSegment'
-	SEG_SCENE_EE          = 'EeSceneSegment'
-	SEG_SHT14_DC_DL       = 'DLSheet14DCSegment'
-	SEG_SHT14_DL_DL       = 'DLSheet14DLSegment'
-	SEG_SHT14_SM_DL       = 'DLSheet14SMSegment'
-	SEG_ATTR_FB           = 'FBAttributeSegment'
-	SEG_NOTEBOOK_NB       = 'NBNotebookSegment'
-	SEG_DEFAULT           = 'Default'
-
-	def __init__(self):
-		self.txt1        = ''
-		self.ver         = 0
-		self.name        = ''
-		self.dat1        = ''
-		self.val1        = 0
-		self.dat2        = ''
-		self.arr1        = []
-		self.arr2        = []
-		self.segRef      = None
-		self.arr3        = []
-		self.sec1        = []
-		self.sec2        = []
-		self.sec3        = []
-		self.secBlkTyps  = {}
-		self.sec5        = []
-		self.sec6        = []
-		self.sec7        = []
-		self.sec8        = []
-		self.sec9        = []
-		self.secA        = []
-		self.secB        = []
-		self.uid2        = None # should always be '9744e6a4-11d1-8dd8-0008-2998bedddc09'
-		self.nodes       = None
-		self.elementNodes = {}
-		self.indexNodes  = {}
-		self.tree        = DataNode(None, False)
-	def __repr__(self):
-		return self.name
-
-	def isApp(self): # Application settings/options
-		return (self.name in [RSeMetaData.SEG_APP_PART, RSeMetaData.SEG_APP_ASSEMBLY, RSeMetaData.SEG_APP_DL])
-
-	def isBRep(self): # ACIS representation
-		return (self.name in [RSeMetaData.SEG_B_REP_PART, RSeMetaData.SEG_B_REP_ASSEMBLY, RSeMetaData.SEG_B_REP_MB])
-
-	def isBrowser(self): # Model broweser settings
-		return (self.name in [RSeMetaData.SEG_BROWSER_PART, RSeMetaData.SEG_BROWSER_ASSEMBLY, RSeMetaData.SEG_BROWSER_DL])
-
-	def isDefault(self):
-		return (self.name == RSeMetaData.SEG_DEFAULT)
-
-	def isDC(self): # Model definition
-		return (self.name in [RSeMetaData.SEG_D_C_PART, RSeMetaData.SEG_D_C_ASSEMBLY, RSeMetaData.SEG_SHT14_DC_DL])
-
-	def isGraphics(self): # Model graphics definition
-		return (self.name in [RSeMetaData.SEG_GRAPHICS_PART, RSeMetaData.SEG_GRAPHICS_ASSEMBLY, RSeMetaData.SEG_GRAPHICS_MB])
-
-	def isResult(self):
-		return (self.name in [RSeMetaData.SEG_RESULT_PART, RSeMetaData.SEG_RESULT_ASSEMBLY])
-
-	def isDesignView(self):
-		return (self.name == RSeMetaData.SEG_DESIGN_VIEW)
-
-	def isEeData(self):
-		return (self.name == RSeMetaData.SEG_DATA_EE)
-
-	def isEeScene(self):
-		return (self.name == RSeMetaData.SEG_SCENE_EE)
-
-	def isFBAttribute(self):
-		return (self.name == RSeMetaData.SEG_ATTR_FB)
-
-	def isNBNotebook(self):
-		return (self.name == RSeMetaData.SEG_NOTEBOOK_NB)
+class RSeRevisions():
+	def __init__(self, *args, **kwargs):
+		self.mapping = {}
+		self.infos   = []
 
 class Inventor():
 	def __init__(self):
-		self.UFRxDoc               = None
-		self.RSeDb                 = None
-		self.RSeSegInfo            = None
-		self.RSeDbRevisionInfoMap  = None
-		self.RSeDbRevisionInfoList = None
-		self.DatabaseInterfaces    = None
-		self.iProperties           = {}
-		self.RSeStorageData        = {}
+		self.UFRxDoc            = None
+		self.RSeDb              = RSeDatabase()
+		self.RSeRevisions       = RSeRevisions()
+		self.DatabaseInterfaces = None
+		self.iProperties        = {}
+		self.RSeMetaData        = {}
+
+	def __repr__(self):
+		if (getInventorFile() is None): return u"#NV#"
+		return u"[%d]: %s" %(getFileVersion(), os.path.split(os.path.abspath(getInventorFile()))[-1])
 
 	def getDC(self):
 		'''
-		storage The map of defined RSeStorageDatas
 		Returns the segment that contains the 3D-objects.
 		'''
-		for seg in self.RSeStorageData.values():
+		for seg in self.RSeMetaData.values():
 			if (seg.isDC()): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getBRep(self):
 		'''
-		storage The map of defined RSeStorageDatas
 		Returns the segment that contains the boundary representation.
 		'''
-		for seg in self.RSeStorageData.values():
+		for seg in self.RSeMetaData.values():
 			if (seg.isBRep()): return seg
-		return None
+		return EMPTY_SEGMENT
 
 	def getGraphics(self):
 		'''
-		storage The map of defined RSeStorageDatas
 		Returns the segment that contains the graphic objects.
 		'''
-		for seg in self.RSeStorageData.values():
+		for seg in self.RSeMetaData.values():
 			if (seg.isGraphics()): return seg
-		return None
+		return EMPTY_SEGMENT
+
+	def getApp(self):
+		'''
+		Returns the segment that contains the application settings.
+		'''
+		for seg in self.RSeMetaData.values():
+			if (seg.isApp()): return seg
+		return EMPTY_SEGMENT
+
+	def getBrowser(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isBrowser(self)): return seg
+		return EMPTY_SEGMENT
+
+	def getDefault(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isDefault(self)): return seg
+		return EMPTY_SEGMENT
+
+	def getResult(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isResult(self)): return seg
+		return EMPTY_SEGMENT
+
+	def getDesignView(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isDesignView(self)): return seg
+		return EMPTY_SEGMENT
+
+	def getEeData(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isEeData(self)): return seg
+		return EMPTY_SEGMENT
+
+	def getEeScene(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isEeScene(self)): return seg
+		return EMPTY_SEGMENT
+
+	def getFBAttribute(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isFBAttribute(self)): return seg
+		return EMPTY_SEGMENT
+
+	def getNBNotebook(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isNBNotebook()): return seg
+		return EMPTY_SEGMENT
 
 class DbInterface():
 	TYPE_MAPPING = {
@@ -373,25 +347,21 @@ class DbInterface():
 
 class RSeDbRevisionInfo():
 	def __init__(self):
-		self.ID     = ''      # UUID
-		self.value1 = 0       # UINT16
-		self.value2 = 0       # UINT16
-		self.type   = -1
-		# If type = 0xFFFF:
-		#	BYTE + [UInt16]{8 <=> BYTE=0, 4 <=> BYTE==0}
-		self.data   = []
+		self.ID     = ''
+		self.flags  = 0
+		self.type   = 0
+		self.b      = 0
+		self.a      = []
 	def __repr__(self):
 		return "%s" %(self.ID)
 
 	def __str__(self):
-		if (self.value3 is None):
-			v = '(%04X/%04X)' %(self.value1, self.value2)
-		else:
-			v = '(%04X/%04X/%04)' %(self.value1, self.value2, self.value3)
-		if (len(self.data) > 0):
-			return '%s,%s,[%s]' % (self.ID, v, IntArr2Str(self.data, 8))
-		else:
-			return '%s,%s)' % (self.ID, v)
+		if len(self.a) == 2: return u"{%s},%06X,%04X,%02X,[%g,%08X]" %(str(self.ID).upper(), self.flags, self.type, self.b, self.a[0], self.a[1])
+		if len(self.a) == 4: return u"{%s},%06X,%04X,%02X,[%g,%08X]" %(str(self.ID).upper(), self.flags, self.type, self.b, self.a[0], self.a[1])
+		return u"{%s},%06X,%04X,%02X,%s" %(str(self.ID).upper(), self.flags, self.type, self.b, self.a)
+
+	def __repr__(self):
+		return self.__str__()
 
 class ResultItem4():
 	a0 = None
@@ -522,11 +492,6 @@ class DataNode():
 		self.data = data
 		self.isRef = isRef
 		self.children = []
-		self._map = {}
-		self.parent = None
-		self.first = None
-		self.previous = None
-		self.next = None
 
 	@property
 	def typeName(self):
@@ -570,10 +535,6 @@ class DataNode():
 	def isLeaf(self):
 		return self.size() == 0
 
-	def getRef(self, ref):
-		if (ref): return self.getChild(ref.index)
-		return None
-
 	@property
 	def name(self):
 		if (self.data): return self.data.getName()
@@ -590,40 +551,25 @@ class DataNode():
 			self.data.sketchEntity = entity
 
 	def append(self, node):
-		if (self.size() > 0):
-			previous = self.children[len(self.children) -1]
-			previous.next = node
-			node.previous = previous
-		else:
-			self.first = node
-			node.previous = None
 		self.children.append(node)
-		self._map[node.index] = node
-		node.next = None
 		node.parent = self
-
 		return node
 
-	def getChild(self, index):
-		try:
-			return self._map[index]
-		except:
+	@property
+	def next(self):
+		p = self.parent
+		if (p is None):
 			return None
-
-	def getFirstChild(self, key):
-		child = self.first
-		while (child):
-			if (child.typeName == key): return child
-			child = child.next
+		for i, e in enumerate(p.children):
+			if (e.index == self.index):
+				if (i < p.size()-1):
+					return p.children[i+1]
 		return None
 
-	def getChildren(self, key):
-		lst = []
-		child = self.first
-		while (child):
-			if (child.typeName == key): lst.append(child)
-			child = child.next
-		return lst
+	def getFirstChild(self, key):
+		for child in self.children:
+			if (child.typeName == key): return child
+		return None
 
 	def get(self, name):
 		if (self.data): return self.data.get(name)
@@ -673,6 +619,18 @@ class DataNode():
 			return node.typeName
 		return None
 
+	def getParticipants(self):
+		label = self.get('label')
+		if (label is None):
+			logError(u"    (%04X): %s - has no required label attribute!", self.index, self.typeName)
+			return []
+		while (label.typeName != 'Label'):
+			label = label.get('label')
+			if (label is None):
+				logError(u"    (%04X): %s - has no required label attribute!", dummy.index, dummy.typeName)
+				return []
+		return label.get('participants')
+
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
 		DataNode.__init__(self, data, isRef)
@@ -711,7 +669,7 @@ class ParameterNode(DataNode):
 				else: # floating point value!
 					subFormula = '%g%s' %((value / factor) - offset, unitName)
 		elif (typeName == 'ParameterUnaryMinus'):
-			subFormula = '-' + self.getParameterFormula(parameterData.get('refValue'), withUnits)
+			subFormula = '-' + self.getParameterFormula(parameterData.get('value'), withUnits)
 		elif (typeName == 'ParameterConstant'):
 			unitName = ''
 			if (self.asText or withUnits):
@@ -719,10 +677,11 @@ class ParameterNode(DataNode):
 				if (len(unitName) > 0): unitName = ' ' + unitName
 			subFormula = '%s%s' %(parameterData.name, unitName)
 		elif (typeName == 'ParameterRef'):
+			target = parameterData.get('target')
 			if (self.asText):
-				subFormula = parameterData.get('refParameter').name
+				subFormula = target.name
 			else:
-				subFormula = '%s_' %(parameterData.get('refParameter').name)
+				subFormula = '%s_' %(target.name)
 		elif (typeName == 'ParameterFunction'):
 			function          = parameterData.name
 			functionSupported = (function not in FunctionsNotSupported)
@@ -737,13 +696,13 @@ class ParameterNode(DataNode):
 				# Modulo operation not supported by FreeCAD
 				raise UserWarning('Function \'%s\' not supported' %function)
 		elif (typeName == 'ParameterOperationPowerIdent'):
-			operand1 = self.getParameterFormula(parameterData.get('refOperand1'), withUnits)
+			operand1 = self.getParameterFormula(parameterData.get('operand1'), withUnits)
 			subFormula = operand1
 		elif (typeName.startswith('ParameterOperation')):
 			operation = parameterData.name
 			if (self.asText or (operation != '%')):
-				operand1 = self.getParameterFormula(parameterData.get('refOperand1'), withUnits)
-				operand2 = self.getParameterFormula(parameterData.get('refOperand2'), withUnits)
+				operand1 = self.getParameterFormula(parameterData.get('operand1'), withUnits)
+				operand2 = self.getParameterFormula(parameterData.get('operand2'), withUnits)
 				subFormula = '(%s %s %s)' %(operand1, operation, operand2)
 			else:
 				# Modulo operation not supported by FreeCAD
@@ -757,7 +716,7 @@ class ParameterNode(DataNode):
 		data = self.data
 		self.asText = asText
 		if (data):
-			refValue = data.get('refValue')
+			refValue = data.get('value')
 			if (refValue):
 				if (asText):
 					return u'\'' + self.getParameterFormula(refValue, True)
@@ -778,7 +737,7 @@ class ParameterNode(DataNode):
 
 	def getValue(self):
 		x = self.getValueRaw()
-		#unitRef = self.get('refUnit')
+		#unitRef = self.get('unit')
 		#type = unitRef.get('type')
 
 		type = self.getUnitName()
@@ -918,11 +877,15 @@ class EnumNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getValueText(self):
-		values = self.get('Values')
-		i = self.get('value')
-		value = '%d' %(i)
-		if ((values) and (i < len(values))):
-			value = values[i]
+		enum = self.get('Values')
+		value = self.get('value')
+		if (type(enum) is list):
+			if (value < len(enum)):
+				return u"'%s'" % enum[value]
+			return value
+		assert (type(enum) is dict), "Expected %s to contain dict or list as enum values!"
+		if (value in enum.keys()):
+			return u"'%s'" % enum[value]
 		return value
 
 	def getRefText(self): # return unicode
@@ -939,6 +902,38 @@ class DirectionNode(DataNode):
 
 	def getRefText(self): # return unicode
 		return u'(%04X): %s - (%g,%g,%g)' %(self.index, self.typeName, self.get('dirX'), self.get('dirY'), self.get('dirZ'))
+
+class BendEdgeNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self): # return unicode
+		p1 = self.get('from')
+		p2 = self.get('to')
+		return u'(%04X): %s - (%g,%g,%g)-(%g,%g,%g)' %(self.index, self.typeName, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
+
+class SketchNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+		data.sketchEdges = {}
+		data.associativeIDs = {}
+		return
+
+class BlockPointNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		p = self.get('point')
+		return u"(%04X): %s - (%s)" %(self.index, self.typeName, p.typeName)
+
+class Block2DNode(DataNode):
+	def __init__(self, data, isRef):
+		DataNode.__init__(self, data, isRef)
+
+	def getRefText(self):
+		sketch = self.get('source')
+		return u"(%04X): %s '%s'" %(self.index, self.typeName, sketch.name)
 
 class FeatureNode(DataNode):
 	def __init__(self, data, isRef):
@@ -980,9 +975,14 @@ class FeatureNode(DataNode):
 			if (p1 == 'FxExtend'):                  return 'Extend'
 			if (p1 is None):                        return 'CornerChamfer'
 		elif (p0 == 'SurfaceBodies'):
-			if (p1 == 'SolidBody'):                 return 'Combine'
+			if (p1 == 'ObjectCollection'):          return 'Combine'
 			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'
 			if (p1 == 'SurfaceBodies'):             return 'CoreCavity'
+			if (p1 == 'Face'):
+				p7 = self._getPropertyEnumName(7)
+				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
+				if (p7 == '4688EBA3_Enum'):         return 'Unfold'
+		elif (p0 == 'SurfaceBody'):
 			if (p1 == 'Face'):
 				p7 = self._getPropertyEnumName(7)
 				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
@@ -990,16 +990,18 @@ class FeatureNode(DataNode):
 		elif (p0 == 'Enum'):
 			p2 = self._getPropertyName(2)
 			p3 = self._getPropertyName(3)
-			if (p1 == 'FxBoundaryPatch'):
+			if (p1 == 'BoundaryPatch'):
 				p6 = self._getPropertyName(6)
 				if (p2 == 'Line3D'):
 					if (p6 is None):                return 'Revolve'
-					if (p6 == 'ExtentType'):        return 'Extrude' #Map cut feature to extrusion!
+					if (p6 == 'ExtentType'):        return 'Cut'
 					return 'Coil'
 				elif (p2 == 'Direction'):
-					p10 = self._getPropertyName(0x10)
 					if (p6 == 'Parameter'):         return 'Emboss'
+					p10 = self._getPropertyName(0x10)
 					if (p10 == 'ParameterBoolean'): return 'Cut'
+					p21 = self._getPropertyName(0x21)
+					if (p21 == 'ParameterBoolean'): return 'Cut'
 					return 'Extrude'
 				return 'Coil'
 			if (p1 == 'FaceCollection'):            return 'Shell'
@@ -1020,15 +1022,17 @@ class FeatureNode(DataNode):
 				p3 = self._getPropertyName(3)
 				if (p3 == 'SurfaceBodies'):         return 'FaceDelete'
 				if (p3 == 'Parameter'):             return 'Thread'
-		elif (p0 == 'FxBoundaryPatch'):
+		elif (p0 == 'BoundaryPatch'):
 			p2 = self._getPropertyName(2)
-			if (p2 == 'FxBoundaryPatch'):           return 'Grill'
-			if (p1 == 'FC203F47'):                  return 'Sweep'
-			if (p1 == 'A477243B'):                  return 'Sweep'
+			if (p2 == 'BoundaryPatch'):             return 'Grill'
+			if (p1 == 'FaceBoundOuterProxy'):       return 'Sweep'
+			if (p1 == 'FaceBoundProxy'):            return 'Sweep'
 			if (p1 == 'Direction'):                 return 'Extrude'
-			if (p1 == 'FxBoundaryPatch'):           return 'Rib'
+			if (p1 == 'BoundaryPatch'):             return 'Rib'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
-			if (p1 == 'Parameter'):                 return 'Rest'
+			if (p1 == 'Parameter'):
+				if (p2 == 'ShellDirection'):        return 'Rest'
+				return 'BendPart'
 			p4 = self._getPropertyName(4)
 			if (p4 == 'SurfaceBody'):               return 'BoundaryPatch'
 		elif (p0 == 'Direction'):
@@ -1036,14 +1040,19 @@ class FeatureNode(DataNode):
 			if (p1 == 'FaceCollection'):            return 'FaceDraft'
 		elif (p0 == 'CA02411F'):                    return 'NonParametricBase'
 		elif (p0 == 'EB9E49B0'):                    return 'Freeform'
-		elif (p0 == 'FC203F47'):                    return 'Hem'
-		elif (p0 == 'SolidBody'):                   return 'Knit'
+		elif (p0 == 'FaceBoundOuterProxy'):
+			if (p4 == 'EdgeCollectionProxy'):       return 'Hem'
+			return 'Plate'
+		elif (p0 == 'ObjectCollection'):
+			p2 = self._getPropertyName(2)
+			if (p2 == 'FeatureDimensions'):         return 'Move'
+			if (p2 == 'SurfaceBody'):               return 'Knit'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
-		elif (p0 == 'EA680672'):                    return 'Trim'
+		elif (p0 == 'TrimType'):                    return 'Trim'
 		elif (p0 == 'SurfaceBody'):
-			if (p1 == 'A477243B'):                  return 'LoftedFlangeDefinition'
+			if (p1 == 'FaceBoundProxy'):            return 'LoftedFlangeDefinition'
 			if (p1 == 'SurfaceBody'):               return 'Reference'
-		elif (p0 == '8677CE83'):                    return 'Corner'
+		elif (p0 == 'CornerSeam'):                  return 'Corner'
 		elif (p0 == 'AFD8A8E0'):                    return 'Corner'
 		elif (p0 == 'LoftSections'):                return 'Loft'
 #		elif (p0 == 'Parameter'):                   return 'Loft'
@@ -1058,11 +1067,11 @@ class FeatureNode(DataNode):
 			if (p1 == '671CE131'):                  return 'RuledSurface'
 			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
 			if (p1 == 'EdgeCollectionProxy'):       return 'Lip'
-			if (p1 == 'FC203F47'):                  return 'ContourRoll'
+			if (p1 == 'FaceBoundOuterProxy'):       return 'ContourRoll'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p10 == 'FilletFullRoundSet'):       return 'Fillet'
-		elif (p0 == 'D70E9DDA'):                    return 'Boss'
-		elif (p0 == 'ParameterBoolean'):            return 'FilletRule'
+		elif (p0 == 'D70E9DDA'):                    return 'FilletRule'
+		elif (p0 == 'ParameterBoolean'):            return 'Boss'
 
 		# Missing Features:
 		# - (Cosmetic-)Weld - only IAM files???
@@ -1076,25 +1085,8 @@ class FeatureNode(DataNode):
 	def getRefText(self): # return unicode
 		return u'(%04X): Fx%s \'%s\'' %(self.data.index, self.getSubTypeName(), self.name)
 
-	def getParticipants(self):
-		label = self.get('label')
-		if (label is None):
-			logError(u"    (%04X): %s - has no required label attribute!", self.index, self.typeName)
-			return []
-		while (label.typeName != 'Label'):
-			dummy = label
-			label = label.get('label')
-			if (label is None):
-				logError(u"    (%04X): %s - has no required label attribute!", dummy.index, dummy.typeName)
-		return label.get('lst0')
-
 	def __str__(self):
-		data = self.data
-		list = data.get('properties')
-		if (list is not None):
-			return '(%04X): %s\t%s\t\'%s\'\tpropererties=%d\t%s' %(data.index, data.typeName, self.getSubTypeName(), self.name, len(list), data.content)
-		return '(%04X): %s\t%s\t\'%s\'\tpropererties=None\t%s' %(data.index, data.typeName, self.getSubTypeName(), self.name, data.content)
-
+		return u"(%04X): Fx%s '%s'%s" %(self.data.index, self.getSubTypeName(), self.name, self.data.content)
 
 class ValueNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1174,7 +1166,7 @@ class CircleNode(DataNode):
 				else:
 					points += ', (%g,%g,%g)' %(i.get('x'), i.get('y'), i.get('z'))
 		if (self.typeName[-2:] == '2D'):
-			c = self.get('refCenter')
+			c = self.get('center')
 			return u'(%04X): %s - (%g,%g), r=%g%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points)
 		return u'(%04X): %s - (%g,%g,%g), r=%g%s' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'), r, points)
 
@@ -1183,8 +1175,8 @@ class GeometricRadius2DNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		o = self.get('refObject')
-		c = self.get('refCenter')
+		o = self.get('entity')
+		c = self.get('center')
 		return u'(%04X): %s - o=(%04X): %s, c=(%04X)' %(self.index, self.typeName, o.index, o.typeName, c.index)
 
 class GeometricCoincident2DNode(DataNode):
@@ -1192,8 +1184,8 @@ class GeometricCoincident2DNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		e1 = self.get('refEntity1')
-		e2 = self.get('refEntity2')
+		e1 = self.get('entity1')
+		e2 = self.get('entity2')
 		if (e1.typeName == 'Point2D'):
 			return u'(%04X): %s - (%g,%g)\t(%04X): %s' %(self.index, self.typeName, e1.get('x'), e1.get('y'), e2.index, e2.typeName)
 		if (e2.typeName == 'Point2D'):
@@ -1205,14 +1197,14 @@ class DimensionAngleNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		d = self.get('refParameter')
+		d = self.get('parameter')
 		if (self.typeName == 'Dimension_Angle2Line2D'):
-			l1 = self.get('refLine1')
-			l2 = self.get('refLine2')
+			l1 = self.get('line1')
+			l2 = self.get('line2')
 			return u'(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name, l1.index, l1.typeName, l2.index, l2.typeName)
-		p1 = self.get('refPoint1')
-		p2 = self.get('refPoint2')
-		p3 = self.get('refPoint3')
+		p1 = self.get('point1')
+		p2 = self.get('point2')
+		p3 = self.get('point3')
 		return u'(%04X): %s - d=\'%s\', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s' %(self.index, self.typeName, d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
 
 class DimensionDistance2DNode(DataNode):
@@ -1220,9 +1212,9 @@ class DimensionDistance2DNode(DataNode):
 		DataNode.__init__(self, data, isRef)
 
 	def getRefText(self): # return unicode
-		d = self.get('refParameter')
-		e1 = self.get('refEntity1')
-		e2 = self.get('refEntity2')
+		d = self.get('parameter')
+		e1 = self.get('entity1')
+		e2 = self.get('entity2')
 		if (e1.typeName == 'Point2D'):
 			if (e2.typeName == 'Point2D'):
 				return u'(%04X): %s - d=\'%s\', (%g,%g), (%g,%g)' %(self.index, self.typeName, d.name, e1.get('x'), e1.get('y'), e2.get('x'), e2.get('y'))
@@ -1239,6 +1231,230 @@ class SurfaceBodiesNode(DataNode):
 		bodies = self.get('bodies')
 		names = ','.join([u"'%s'" %(b.name) for b in bodies])
 		return u'(%04X): %s %s' %(self.index, self.typeName, names)
+
+class RSeMetaData():
+	SEG_APP_ASSEMBLY      = 'AmAppSegment'
+	SEG_APP_PART          = 'PmAppSegment'
+	SEG_APP_DL            = 'DlAppSegment'
+	SEG_B_REP_ASSEMBLY    = 'AmBREPSegment'
+	SEG_B_REP_MB          = 'MbBrepSegment'
+	SEG_B_REP_PART        = 'PmBRepSegment'
+	SEG_BROWSER_ASSEMBLY  = 'AmBrowserSegment'
+	SEG_BROWSER_PART      = 'PmBrowserSegment'
+	SEG_BROWSER_DL        = 'DlBrowserSegment'
+	SEG_D_C_ASSEMBLY      = 'AmDcSegment'
+	SEG_D_C_PART          = 'PmDCSegment'
+	SEG_DIR_DL            = 'DlDirectorySegment'
+	SEG_DOC_DL            = 'DlDocDCSegment'
+	SEG_GRAPHICS_ASSEMBLY = 'AmGraphicsSegment'
+	SEG_GRAPHICS_MB       = 'MbGraphicsSegment'
+	SEG_GRAPHICS_PART     = 'PmGraphicsSegment'
+	SEG_RESULT_ASSEMBLY   = 'AmRxSegment'
+	SEG_RESULT_PART       = 'PmResultSegment'
+	SEG_DESIGN_VIEW       = 'DesignViewSegment'
+	SEG_DATA_EE           = 'EeDataSegment'
+	SEG_SCENE_EE          = 'EeSceneSegment'
+	SEG_SHT14_DC_DL       = 'DLSheet14DCSegment'
+	SEG_SHT14_DL_DL       = 'DLSheet14DLSegment'
+	SEG_SHT14_SM_DL       = 'DLSheet14SMSegment'
+	SEG_ATTR_FB           = 'FBAttributeSegment'
+	SEG_NOTEBOOK_NB       = 'NBNotebookSegment'
+	SEG_DEFAULT           = 'Default'
+
+	def __init__(self):
+		self.txt1        = ''
+		self.ver         = 0
+		self.name        = ''
+		self.dat1        = ''
+		self.val1        = 0
+		self.dat2        = ''
+		self.arr1        = []
+		self.arr2        = []
+		self.segRef      = None
+		self.arr3        = []
+		self.sec1        = []
+		self.sec2        = []
+		self.sec3        = []
+		self.secBlkTyps  = {}
+		self.sec5        = []
+		self.sec6        = []
+		self.sec7        = []
+		self.sec8        = []
+		self.sec9        = []
+		self.secA        = []
+		self.secB        = []
+		self.uid2        = None # should always be '9744e6a4-11d1-8dd8-0008-2998bedddc09'
+		self.nodes       = None
+		self.elementNodes = {}
+		self.indexNodes  = {}
+		self.tree        = DataNode(None, False)
+	def __repr__(self):
+		return self.name
+
+	def isApp(self): # Application settings/options
+		return (self.name in [RSeMetaData.SEG_APP_PART, RSeMetaData.SEG_APP_ASSEMBLY, RSeMetaData.SEG_APP_DL])
+
+	def isBRep(self): # ACIS representation
+		return (self.name in [RSeMetaData.SEG_B_REP_PART, RSeMetaData.SEG_B_REP_ASSEMBLY, RSeMetaData.SEG_B_REP_MB])
+
+	def isBrowser(self): # Model broweser settings
+		return (self.name in [RSeMetaData.SEG_BROWSER_PART, RSeMetaData.SEG_BROWSER_ASSEMBLY, RSeMetaData.SEG_BROWSER_DL])
+
+	def isDefault(self):
+		return (self.name == RSeMetaData.SEG_DEFAULT)
+
+	def isDC(self): # Model definition
+		return (self.name in [RSeMetaData.SEG_D_C_PART, RSeMetaData.SEG_D_C_ASSEMBLY, RSeMetaData.SEG_SHT14_DC_DL])
+
+	def isGraphics(self): # Model graphics definition
+		return (self.name in [RSeMetaData.SEG_GRAPHICS_PART, RSeMetaData.SEG_GRAPHICS_ASSEMBLY, RSeMetaData.SEG_GRAPHICS_MB])
+
+	def isResult(self):
+		return (self.name in [RSeMetaData.SEG_RESULT_PART, RSeMetaData.SEG_RESULT_ASSEMBLY])
+
+	def isDesignView(self):
+		return (self.name == RSeMetaData.SEG_DESIGN_VIEW)
+
+	def isEeData(self):
+		return (self.name == RSeMetaData.SEG_DATA_EE)
+
+	def isEeScene(self):
+		return (self.name == RSeMetaData.SEG_SCENE_EE)
+
+	def isFBAttribute(self):
+		return (self.name == RSeMetaData.SEG_ATTR_FB)
+
+	def isNBNotebook(self):
+		return (self.name == RSeMetaData.SEG_NOTEBOOK_NB)
+
+EMPTY_SEGMENT = RSeMetaData()
+
+class _AbstractEdge_(object):
+	def p2v(self, p, f = 1.0):
+		return VEC(p[0], p[1], p[2]) * f
+
+class LineEdge(_AbstractEdge_):
+	def __init__(self, a):
+		super(LineEdge, self).__init__()
+		self.p1 = self.p2v(a[0:3], 10.0)
+		self.p2 = self.p2v(a[3:6], 10.0) + self.p1
+	def __str__(self):
+		return u"Line:(%g,%g,%g)-(%g,%g,%g)" %(self.p1.x, self.p1.y, self.p1.z, self.p2.x, self.p2.y, self.p2.z)
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		return PART_LINE(self.p1, self.p2)
+	def matches(self, edge):
+		if (isinstance(edge.Curve, Part.Line)):
+			p1 = edge.Vertexes[0].Point
+			p2 = edge.Vertexes[-1].Point
+			if (isEqual(p1, self.p1) and isEqual(p2, self.p2)):
+				return True
+			if (isEqual(p2, self.p1) and isEqual(p1, self.p2)):
+				return True
+		return False
+
+class ArcOfConicEdge(_AbstractEdge_):
+	def __init__(self, center, dir, major, a, b): # Center, dir, m, radius, startAngle, sweepAngle
+		super(ArcOfConicEdge, self).__init__()
+		self.center = self.p2v(center, 10.0)
+		self.dir    = self.p2v(dir, 1.0)
+		self.major  = self.p2v(major, 10.0)
+		self.a      = a
+		self.b      = b
+	def isArc(self):
+		if (isEqual1D(abs(self.a), pi) == False):
+			return True
+		return (isEqual1D(abs(self.b), pi) == False)
+
+class ArcOfCircleEdge(ArcOfConicEdge):
+	def __init__(self, a): # Center, dir, m, radius, startAngle, sweepAngle
+		super(ArcOfCircleEdge, self).__init__(a[0:3], a[3:6], a[6:9], a[10], a[11])
+		self.radius = a[9] * 10.0
+	def __str__(self):
+		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center.x, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.radius, self.a, self.b)
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		if (self.isArc()):
+			return Part.ArcOfCircle(Part.Circle(self.center, self.dir, self.radius), self.a, self.b)
+		return Part.Circle(self.center, self.dir, self.radius)
+	def matches(self, edge):
+		curve = edge.Curve
+		if (self.isArc()):
+			if (isinstance(curve, Part.Circle)):
+				return  (isEqual(curve.Center, self.center) and isEqual1D(curve.Radius, self.radius))
+		else:
+			if (isinstance(curve, Part.ArcOfCircle)):
+				if (isEqual(curve.Center, self.center)):
+					if (isEqual1D(curve.Radius, self.radius)):
+						return  (isEqual1(edge.FirstParmeter, self.a) and isEqual1(edge.LastParameter, self.b))
+		return False
+
+class ArcOfEllipseEdge(ArcOfConicEdge):
+	def __init__(self, a): # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
+		super(ArcOfEllipseEdge, self).__init__(a[0:3], a[3:6], a[6:9], a[11], a[12])
+		self.majorRadius = a[9]
+		self.minorRadius = a[10]
+	def __str__(self):
+		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g, %g" %(self.center.x, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.majorRadius, self.minorRadius, self.a, self.b)
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		if (self.isArc()):
+			return Part.ArcOfEllipse(Part.Ellipse(self.center, self.majorRadius, self.minorRadius), self.a, self.b)
+		return Part.Ellipse(self.center, self.majorRadius, self.minorRadius)
+	def matches(self, edge):
+		curve = edge.Curve
+		if (self.isArc()):
+			if (isinstance(curve, Part.Ellipse)):
+				return  (isEqual(curve.Center, self.center) and isEqual1D(curve.MajorRadius, self.majorRadius) and isEqual1D(curve.MinorRadius, self.minorRadius))
+		else:
+			if (isinstance(curve, Part.ArcOfEllipse)):
+				if (isEqual(curve.Center, self.center) and isEqual1D(curve.MajorRadius, self.majorRadius) and isEqual1D(curve.MinorRadius, self.minorRadius)):
+					return  (isEqual1(edge.FirstParmeter, self.a) and isEqual1(edge.LastParameter, self.b))
+		return False
+
+class BSplineEdge(_AbstractEdge_):
+	def __init__(self, a0, a1, a2, a3, a4):
+		super(BSplineEdge, self).__init__()
+		self.a0 = a0 + a4 # LLLd + dLLdd
+		self.a1 = a1[0]
+		self.a2 = a2[1]
+		self.a3 = a2[0]
+		self.a4 = a2[1]
+		self.a5 = a3[0]
+		self.a6 = a3[1]
+	def __str__(self):
+		return u"BSpline:(%s),[%s],[%s],[%s],[%s],[%s],[%s]" %(FloatArr2Str(self.a0), FloatArr2Str(self.a1), FloatArr2Str(self.a2), FloatArr2Str(self.a3), FloatArr2Str(self.a4), FloatArr2Str(self.a5), u",".join([u"(%g,%g,%g)"%(p[0], p[1], p[2]) for p in self.a6]))
+	def __repr__(self):
+		return self.__str__()
+	def getGeometry(self):
+		bsc = Part.BSplineCurve()
+		d   = self.a0[2] # TODO get degrees from a0[2 ???]
+		p   = self.a6    #
+		m   = []         # TODO get mults from ???
+		k   = []         # TODO get knots from ???
+		w   = []         # TODO get weights from ???
+		rat = False      # TODO get Rational from a0[]
+		if (rat):
+			bsc.buildFromPolesMultsKnots( \
+				poles         = p,        \
+				mults         = m,        \
+				knots         = k,        \
+				periodic      = False,    \
+				degree        = d,        \
+				weights       = w
+			)
+		else:
+			bsc.buildFromPolesMultsKnots( \
+				poles         = p,        \
+				mults         = m,        \
+				knots         = k,        \
+				periodic      = False,    \
+				degree        = d
+			)
+		return bsc
 
 class Header0():
 	def __init__(self, m, x):
@@ -1281,6 +1497,7 @@ class AbstractData():
 		self.sketchPos    = None
 		self.valid        = True
 		self.handled      = False
+		self.node         = None
 
 	def set(self, name, value):
 		'''
@@ -1320,9 +1537,11 @@ class AbstractData():
 		return u"(%04X): %s '%s'%s" %(self.index, self.uid, self.name, self.content.encode(sys.getdefaultencoding()))
 
 	def __repr__(self):
-		if (self.name is None):
-			return u"(%04X): %s" %(self.index, self.uid)
-		return u"(%04X): %s '%s'" %(self.index, self.uid, self.name)
+		if (self.node is None):
+			if (self.name is None):
+				return u"(%04X): %s" %(self.index, self.uid)
+			return u"(%04X): %s '%s'" %(self.index, self.uid, self.name)
+		return self.node.getRefText()
 
 class Enum(tuple): __getattr__ = tuple.index
 
@@ -1357,3 +1576,11 @@ Functions  = Enum([''        , \
                    'isolate'])
 
 FunctionsNotSupported = ['sign', 'random', 'acosh', 'asinh', 'atanh', 'isolate']
+
+def createNewModel():
+	global model
+	model = Inventor()
+
+def getModel():
+	global model
+	return model

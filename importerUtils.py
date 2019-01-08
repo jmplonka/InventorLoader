@@ -11,55 +11,140 @@ from PySide.QtGui  import *
 from uuid          import UUID
 from struct        import Struct, unpack_from, pack
 from FreeCAD       import Vector as VEC, Console, GuiUp, ParamGet
+from olefile       import OleFileIO
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 UUID_NAMES = {
+	'3c7f67aa4dd7848a040c58894ab06552': '_BodiesFolder',
+	'328fc2ea44d13ec5f05abeb87d4aabca': '_ViewDirectionCollection',
+	'8da49a2311d60c3210005aab87ae3483': 'AGxInstanceNode',
+	'b91e695f11d52794100011ab87ae3483': 'AGxMultiBodyNode',
 	'21e870bb11d0d2d000d8ccbc0663dc09': 'BRxEntry',
+	'cb0adcaf11d50e7860009ba6c588fbb0': 'EExCollector',
 	'6759d86f11d27838600094b70b02ecb0': 'FWxRenderingStyle',
+	'a3ebe1984b705d656174d7969e5ae726': 'MBxBodyNode',
+	'a03874b011d41238600018aa9dccefb0': 'MBxContourFlangeFeature',
+	'c4c14b9011d328ff60004da99dccefb0': 'MBxFaceFeature',
+	'c3dddc0811d397d06000a7a99dccefb0': 'MBxFlangeFeature',
+	'10d6c06b46086923c73c0faca268550f': 'MBxSheetMetalRuleStyle',
+	'c098d3cf11d5345310003697ab9f0ab5': 'MBRDxPunchToolFeature',
+	'6045231311d30d7a6000ecb21d6eefb0': 'MBxUserSettingsAttribute',
+	'cadd6468467ce6ee8e1494884110a2da': 'MIxBrepComponent',
 	'f645595c11d51333100060a6bba647b5': 'MIxTransactablePartition',
 	'd81cde4711d265f760005dbead9287b0': 'NBxEntry',
+	'74e3441311d25aeb60005bbead9287b0': 'NBxFolder',
+	'd8705bc711d15553000825a5b17adc09': 'NBxGraphicsArea',
 	'dbbad87b11d228b0600052bead9287b0': 'NBxItem',
+	'4c41596411d12e13000824a5fd7adc09': 'NBxNote',
 	'3c95b7ce11d13388000820a5b17adc09': 'NBxNotebook',
+	'9215a16211d19776600055bd861c3cb0': 'NBxNoteGlyphGroup',
+	'fb96d24a11d18877600046bd861c3cb0': 'NBxNoteGlyphNode',
+	'cc253bb711d15553000825a5b17adc09': 'NBxTextArea',
+	'ccc5085a11d1aa4c0008c8ba32a3dc09': 'NMxFaceMergeData',
+	'cce9204211d171c50008a7ba32a3dc09': 'NMxNameTable',
+	'dd4c4d3a4fbbf55e16b785853b52d4dc': 'PMxASMFlatPatternPartRepresentation',
 	'9a676a5011d45da66000e3b81269f1b0': 'PMxBodyNode',
 	'af48560f11d48dc71000d58dc04a0ab5': 'PMxColorStylePrimAttr',
+	'7dfc244811d461a01000c895bba647b5': 'PMxCompositeFeatureOutline',
 	'b251bfc011d24761a0001580d694c7c9': 'PMxEntryManager',
+	'c0014c894bd6a537fa9444be54ebc63d': 'PMxImage2D',
 	'022ac1b511d20d356000f99ac5361ab0': 'PMxPartDrawAttr',
+	'ca7163a311d0d3b20008bfbb21eddc09': 'PMxPartNode',
+	'5e382456497725cff44fdeafccace65e': 'PMxPartRepresentation',
 	'a94779e111d438066000b1b7b035f1b0': 'PMxPatternOutline',
 	'a94779e011d438066000b1b7b035f1b0': 'PMxSingleFeatureOutline',
+	'f7676ab011d23618a0001280d694c7c9': 'PMxSketchEntry',
 	'590d0a1011d1e6ca80006fb1e13554c7': 'RDxAngle2',
+	'bf3b5c8411d2e92a60004bb38932edb0': 'RDxAngle3Points2',
+	'6d8a4ac711d4490f6000e6ab3a39fbb0': 'RDxAngleInterfaceDef',
 	'ce52df3b11d0d2d00008ccbc0663dc09': 'RDxArc2',
+	'bee90c4111d43c8280005a9a88fdf9c6': 'RDxAtomicInterfaceDef',
+	'de818cc011d452d9c000ba967a14684f': 'RDxBendConstraint',
 	'90874d4711d0d1f80008cabc0663dc09': 'RDxBody',
+	'90874d4811d0d1f80008cabc0663dc09': 'RDxBodySet',
 	'2b24130911d272cc60007bb79b49ebb0': 'RDxBrowserFolder',
+	'9e43716a11d20fa5600084b7b035c3b0': 'RDxCircle3',
+	'4ef32ef04cf83c27f0b185a66f245b22': 'RDxClientFeature',
+	'90874d5911d0d1f80008cabc0663dc09': 'RDxComponent',
+	'81afc10f11d514051000569772d147b5': 'RDxCompositeInterfaceDef',
+	'778752c64a5426253aab58b51014c910': 'RDxCurveToSurfaceProjection',
+	'7f936baa4aef3859f4b80e8c548a4a11': 'RDxDecalFeature',
+	'27ecb60f11d430c3c0001985e89c6b4f': 'RDxDerivedAssembly',
+	'cd7c1c534dd0d3096a46e89e3ba9d923': 'RDxDerivedOccDataCollector',
+	'bfb5eb9311d443e8c0001c85e89c6b4f': 'RDxDerivedOccFeature',
+	'255d7ed711d3b5f2c0000385e89c6b4f': 'RDxDerivedPart',
 	'26287e9611d490bd1000e2962dba09b5': 'RDxDeselTableNode',
+	'89b87c6f11d2e0d26000f1b26c74fcb0': 'RDxDiagProfileInvalidLoop',
 	'74df96e011d1e069800066b1e13554c7': 'RDxDiameter2',
 	'1105855811d295e360000cb38932edb0': 'RDxDistanceDimension2',
+	'10b6adef45f57b24911db28d8c498f80': 'RDxDistanceDimension3',
+	'90874d5311d0d1f80008cabc0663dc09': 'RDxEdgeId',
+	'9e43716b11d20fa5600084b7b035c3b0': 'RDxEllipse3',
+	'4507d46011d1e6be80006fb1e13554c7': 'RDxEllipticArc2',
+	'748fbd6411d1c41f6000b3b801f31bb0': 'RDxFaceSurfaceId',
 	'90874d9111d0d1f80008cabc0663dc09': 'RDxFeature',
+	'fd1f3f2111d449d88000679a88fdf9c6': 'RDxFlushInterfaceDef',
+	'b71cbec94d8922eaa66f24ad3b81c470': 'RDxHelixConstraint3',
 	'00acc00011d1e05f800066b1e13554c7': 'RDxHorizontalDistance2',
+	'1b16984a11d28fce6000bdb72508ebb0': 'RDxHospital',
+	'6d8a4ac911d4490f6000e6ab3a39fbb0': 'RDxInsertInterfaceDef',
+	'dfb2586a11d60a0a10002fbd891e89b5': 'RDxIntersectionCurve',
 	'ce52df3a11d0d2d00008ccbc0663dc09': 'RDxLine2',
 	'8ef06c8911d1043c60007cb801f31bb0': 'RDxLine3',
+	'a327786911d19690000826bd0663dc09': 'RDxLoop',
+	'a789eeb011d1e6c080006fb1e13554c7': 'RDxMajorRadius2',
+ 	'375c698211d16b510008a1ba32a3dc09': 'RDxMatchedEdge',
+	'b382a87c45f4ffb9fe4a7486104813a4': 'RDxMatchedLoop',
+	'5523121311d4490d6000e6ab3a39fbb0': 'RDxMateInterfaceDef',
+	'b4964e9011d1e6c080006fb1e13554c7': 'RDxMinorRadius2',
 	'fad9a9b511d2330560002cab01f31bb0': 'RDxMirrorPattern',
 	'452121b611d514d6100061a6bba647b5': 'RDxModelerTxnMgr',
+	'3e55d947407dffd912db059ae9d0ed1f': 'RDxOffsetCurve2', # OffsetSpline2D
 	'90874d1611d0d1f80008cabc0663dc09': 'RDxPart',
 	'90874d1111d0d1f80008cabc0663dc09': 'RDxPlanarSketch',
 	'ce52df4211d0d2d00008ccbc0663dc09': 'RDxPlane',
 	'ce52df3511d0d2d00008ccbc0663dc09': 'RDxPoint2',
 	'ce52df3e11d0d2d00008ccbc0663dc09': 'RDxPoint3',
+	'0697713111d2323260002cab01f31bb0': 'RDxPolarPattern',
+	'f9884c4311d1983d000826bd0663dc09': 'RDxProfile',
+	'2d06cad349986fa71ead34b67e52cd7b': 'RDxProjectCutEdges',
 	'671bb70011d1e068800066b1e13554c7': 'RDxRadius2',
+	'90874d2611d0d1f80008cabc0663dc09': 'RDxReal',
 	'2067324411d21dc560002aab01f31bb0': 'RDxRectangularPattern',
 	'2d86fc2642dfe34030c08ab05ef9bfc5': 'RDxReferenceEdgeLoopId',
+	'317b734611d37a7c60001cb3d1c1fbb0': 'RDxRefSpline',
+	'0b86ad43421c4a69e0e0deaab16e7154': 'RDxRefSpline3',
+	'3ae9d8da11d42c3ac000ad967a14684f': 'RDxSketch3d',
+	'ffd270b811d52d1410000897994909b5': 'RDxSketchFragment',
+	'f9372fd411d1d315000847b00524dc09': 'RDxSpline2',
+	'7c44abde11d2257a60008cb7b035c3b0': 'RDxSpline3',
 	'8f41fd2411d26eac00082aab32a3dc09': 'RDxStopNode',
 	'1fbb3c0111d2684da0009e9a3c3aa076': 'RDxString',
+	'9a94e34711d36b7fc000d49545df724f': 'RDxToolBodyCacheAttribute',
+	'ce52df4011d0d2d00008ccbc0663dc09': 'RDxVector3',
 	'3683ff4011d1e05f800066b1e13554c7': 'RDxVerticalDistance2',
+	'ea7da98811d447a26000d0b81269f1b0': 'RSeAcisEntityContainer',
 	'cc0f752111d18027e38619962259017a': 'RSeAcisEntityWrapper',
-	'60fd184511d0d79d0008bfbb21eddc09': 'SCx2dSketchNode',
-	'da58aa0e11d43cb1c000ae967a14684f': 'SCx3dSketchNode',
+	'60fd184511d0d79d0008bfbb21eddc09': 'SCxSketchNode',
+	'da58aa0e11d43cb1c000ae967a14684f': 'S3xSketch3dNode',
+	'fd1e899d11d635491000568ec04a0ab5': 'SMxAnalysisSetup',
+	'a529d1e211d0d0900008bcbb21eddc09': 'SMxGroupNode',
+	'022ac1b111d20d356000f99ac5361ab0': 'SMxPersistentScenePath',
+	'716b5cd148299bd2474ec788e5ab0c74': 'UCxATEntry',
+	'd48240694eb51a34aec9d789df4f97a4': 'UCxClientFeatureNode',
+	'dbe41d9111d4414c8000609a88fdf9c6': 'UCxCompInterfaceNode',
 	'ca7163a111d0d3b20008bfbb21eddc09': 'UCxComponentNode',
+	'd1071d574d61a7c4f2e352bf50116935': 'UCxConstraint3DimensionItem',
+	'7dfcc81711d6419710006eab87ae3483': 'UCxConstructionFolderEntry',
+	'475e786111d296dba0004a803603c8c9': 'UCxFeatureDimensionStateAttr',
 	'2c7020f611d1b3c06000b1b801f31bb0': 'UCxWorkaxisNode',
 	'14533d8211d1087100085ba406e5dc09': 'UCxWorkplaneNode',
 	'2c7020f811d1b3c06000b1b801f31bb0': 'UCxWorkpointNode',
+	'd31891c248bf14c3aa42ea872a846b2a': 'UFRxRef',
+
 }
 
 TRANSLATIONS = {
@@ -200,7 +285,7 @@ def chooseImportStrategy():
 
 	QApplication.setOverrideCursor(Qt.ArrowCursor)
 	result = msgBox.exec_()
-	QApplication.setOverrideCursor(Qt.WaitCursor)
+	QApplication.restoreOverrideCursor()
 
 	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE}
 	strategy = resultMapping[result]
@@ -256,6 +341,8 @@ class Thumbnail(object):
 		return len(self.data)
 	def __str__(self):
 		return '%s: %d x %d' % (self.type, self.width, self.height)
+	def __repr__(self):
+		return self.__str__()
 	def getIcon(self):
 		icon = QPixmap()
 		icon.loadFromData(QByteArray(self.getData()))
@@ -266,7 +353,7 @@ def writeThumbnail(data):
 	global _thumbnail
 	_thumbnail = Thumbnail(data)
 
-	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', False)):
+	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
 		filename = "%s/_.%s" %(getInventorFile()[0:-4], _thumbnail.type.lower())
 		with open(filename, 'wb') as thumbnail:
 			thumbnail.write(_thumbnail.getData())
@@ -276,11 +363,6 @@ def writeThumbnail(data):
 def getThumbnailImage():
 	global _thumbnail
 	return _thumbnail
-
-def setThumbnail(ole):
-	t = getProperty(ole, '\x05Zrxrt4arFafyu34gYa3l3ohgHg', 0x11)
-	if (t is not None):
-		writeThumbnail(t)
 
 UINT8      = Struct('<B').unpack_from
 UINT16     = Struct('<H').unpack_from
@@ -709,7 +791,7 @@ def logInfo(msg, *args):
 def logWarning(msg, *args):
 	if (__prmPrefOW__.GetBool("checkWarning", False)): _log("logWarning", Console.PrintWarning, msg, args)
 def logError(msg, *args):
-	if (__prmPrefOW__.GetBool("checkError", False)):   _log("logError",   Console.PrintError,   msg, args)
+	if (__prmPrefOW__.GetBool("checkError", True)):    _log("logError",   Console.PrintError,   msg, args)
 
 def logAlways(msg, *args):
 	_log("logAlways", Console.PrintMessage, msg, args)
@@ -758,6 +840,7 @@ def setInventorFile(file):
 	folder   = _inventor_file[0:-4]
 	if (not os.path.exists(os.path.abspath(folder))):
 		os.mkdir(folder)
+	return OleFileIO(file)
 
 def translate(str):
 	res = str

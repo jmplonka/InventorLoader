@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__                 import unicode_literals
 
 '''
 importerSegment.py:
@@ -7,11 +8,12 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 
 import re, traceback,  numpy as np
 from importerClasses        import *
-from importerTransformation import Transformation
-from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_
+from importerTransformation import Transformation2D, Transformation3D
+from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
 from importerUtils          import *
 from Acis                   import clearEntities
 from importerSAT            import readEntityBinary, Header
+from uuid                   import UUID
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -65,11 +67,14 @@ def dumpSat(node):
 	folder = getInventorFile()[0:-4]
 	filename = "%s\%04X.sat" %(folder, node.index)
 	header, entities = node.get('SAT')
-	content = '%s' %(header)
-	content += ''.join(['%s' %(ntt.getStr()) for ntt in entities if ntt.index >= 0])
-	with open(filename, 'w') as sat:
-		sat.write(content)
-		sat.write("End-of-ACIS-data\n")
+	with open(filename, 'wb') as sat:
+		sat.write(header.__str__().encode('utf8'))
+		for ntt in entities:
+			if ntt.index >= 0:
+				sat.write((u"-%d %s " %(ntt.index, ntt.name)).encode('utf8'))
+				for c in ntt.chunks:
+					sat.write(c.__str__().encode('utf8'))
+		sat.write(b"End-of-ACIS-data\n")
 
 def checkReadAll(node, i, l):
 	assert (i == l), '%s: Have not read all data (%d <> %d)' %(node.uid, i, l)
@@ -100,7 +105,6 @@ BRANCH_NODES = {
 	'Enum':                            EnumNode,
 	'Feature':                         FeatureNode,
 	'Point2D':                         PointNode,
-	'BlockPoint2D':                    PointNode,
 	'Point3D':                         PointNode,
 	'Line2D':                          LineNode,
 	'Line3D':                          LineNode,
@@ -115,43 +119,46 @@ BRANCH_NODES = {
 	'Dimension_Angle2Line2D':          DimensionAngleNode,
 	'Dimension_Angle3Point2D':         DimensionAngleNode,
 	'SurfaceBodies':                   SurfaceBodiesNode,
-	'SolidBody':                       SurfaceBodiesNode,
+	'ObjectCollection':                SurfaceBodiesNode,
 	'Direction':                       DirectionNode,
-	'A244457B':                        DirectionNode
+	'A244457B':                        DirectionNode,
+	'BendEdge':                        BendEdgeNode,
+	'SketchBlock':                     SketchNode,
+	'Sketch2D':                        SketchNode,
+	'Sketch3D':                        SketchNode,
+	'BlockPoint2D':                    BlockPointNode,
+	'Block2D':                         Block2DNode,
 }
 
 def getBranchNode(data, isRef):
 	nodeCls = BRANCH_NODES.get(data.typeName, DataNode)
 	return nodeCls(data, isRef)
 
-def buildBranchRef(parent, file, ref, level):
-	branch = getBranchNode(ref.data, True)
-	parent.append(branch)
-
-	if (type(ref.number) is int):
-		if (ref.number >= 0):
-			file.write('%s-> [%02X] %s\n' %(level * '\t', ref.number, branch.getRefText()))
+def __dumpBranch(file, ref, branch, level, prefix):
+	# branch can be either an branch node or an text representation!
+	indent = u"%s%s" %('\t' * level, prefix)
+	if (ref is not None):
+		if (ref.number is not None):
+			if (type(ref.number) in [list, dict]):
+				file.write(u"%s%s%s = %s\n" %(indent, ref.attrName, ref.number, branch))
+			elif (type(ref.number) is str):
+				file.write(u"%s%s['%s'] = %s\n" %(indent, ref.attrName, ref.number, branch))
+			elif (type(ref.number) is UUID):
+				file.write(u"%s%s[{%s}] = %s\n" %(indent, ref.attrName, str(ref.number).upper(), branch))
+			elif (type(ref.number) is int):
+				file.write(u"%s%s[%04X] = %s\n" %(indent, ref.attrName, ref.number, branch))
+			else:
+				file.write(u"%s%s[%s] = %s\n" %(indent, ref.attrName, ref.number, branch))
 		else:
-			file.write('%s-> %s\n' %(level * '\t', branch.getRefText()))
+			file.write(u"%s%s = %s\n" %(indent, ref.attrName, branch))
 	else:
-		file.write('%s-> [%s] %s\n' %(level * '\t', ref.number, branch.getRefText()))
-
+		file.write(u"%s%s\n" %(indent, branch))
 	return
 
 def buildBranch(parent, file, data, level, ref):
-	branch = getBranchNode(data, False)
-	parent.append(branch)
+	parent.append(data.node)
 
-	if (ref is not None):
-		if (type(ref.number) is int):
-			if (ref.number >= 0):
-				file.write('%s[%02X] %s\n' %(level * '\t', ref.number, branch))
-			else:
-				file.write('%s%s\n' %(level * '\t', branch))
-		else:
-			file.write('%s[%s] %s\n' %(level * '\t', ref.number, branch))
-	else:
-		file.write('%s%s\n' %(level * '\t', branch))
+	__dumpBranch(file, ref, data.node.__str__(), level, '')
 
 	for childRef in data.references:
 		if (not childRef.analysed):
@@ -159,13 +166,17 @@ def buildBranch(parent, file, data, level, ref):
 			child = childRef._data
 			if (child is not None):
 				if (childRef.type == SecNodeRef.TYPE_CHILD):
-					buildBranch(branch, file, child, level + 1, childRef)
+					buildBranch(data.node, file, child, level + 1, childRef)
 				elif (childRef.type == SecNodeRef.TYPE_CROSS):
-					buildBranchRef(branch, file, childRef, level + 1)
+					node = childRef.node
+					if (node is not None):
+						parent.append(childRef.node)
+						__dumpBranch(file, childRef, node.getRefText(), level + 1, '*')
 	return
 
 def resolveReferencNodes(nodes):
 	for node in nodes.values():
+		getBranchNode(node, False)
 		node.handled = False
 		node.sketchIndex = None
 		node.parent = None
@@ -177,40 +188,48 @@ def resolveReferencNodes(nodes):
 			elif (ref.index > -1):
 				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", node.segment.name, node.index, node.typeName, ref.index, max(nodes))
 			if (isRadius2D and ((ref.typeName == 'Circle2D') or (ref.typeName == 'Ellipse2D') or (ref.typeName == '160915E2'))):
-				radius = SecNodeRef(ref.index or 0x80000000, SecNodeRef.TYPE_CROSS)
+				radius = SecNodeRef(ref.index or 0x80000000, SecNodeRef.TYPE_CROSS, 'radius')
 				radius._data = node
-				ref._data.set('refRadius', radius)
+				ref._data.set(radius.name, radius)
 
-		if (node.typeName in ['424EB7D7', '603428AE', 'F9884C43']):
-			refFx = node.get('refFX')
-			refFx.set('refProfile', node)
-		elif (node.typeName in ['D61732C1']):
-			refFx = node.get('refPatch1')
-			refFx.set('refProfile', node)
-			refFx = node.get('refPatch2')
-			refFx.set('refProfile', node)
+		if (node.typeName in ['FaceBound', '603428AE', '79D4DD11', 'FaceBoundOuter']):
+			refFx = node.get('proxy')
+			refFx.set('profile', node)
+		elif (node.typeName in ['FaceBounds']):
+			refFx = node.get('proxy1')
+			refFx.set('profile', node)
+			refFx = node.get('proxy2')
+			refFx.set('profile', node)
 		elif (node.typeName == 'NMx_FFColor_Entity'):
-			refFx = node.get('refFX')
+			refFx = node.get('fx')
 			refFx.set('fxColor', node)
+		elif (node.typeName == 'FaceCollectionProxy'):
+			proxy = node.get('proxyDef')
+			proxy.set('faceCollection', node)
 	return
+
+def isParent(ref, parent):
+	node = ref.get('parent')
+	if (node is None): return False
+	return node.index == parent.index
 
 def resolveParentNodes(nodes):
 	for parent in nodes.values():
 		for ref in parent.references:
-			if (ref.index > parent.index):
+			child = ref._data
+			if (isParent(ref, parent)):
+				ref.type = SecNodeRef.TYPE_CHILD
+				child.parent = parent
+			elif (ref.index > parent.index):
 				if (ref.type == SecNodeRef.TYPE_CHILD):
-					child = ref._data
-					if (child is not None):
-						if (child.parent is None):
-							child.parent = parent
-						else:
-							ref.type = SecNodeRef.TYPE_CROSS
-			else:
-				if (parent.parent is not None) and (parent.parent.index == ref.index):
-					ref.type = SecNodeRef.TYPE_PARENT
-				else:
-					if (ref.type == SecNodeRef.TYPE_PARENT):
+					if (child.parent is None):
+						child.parent = parent
+					else:
 						ref.type = SecNodeRef.TYPE_CROSS
+			elif (parent.parent is not None) and (parent.parent.index == ref.index):
+				ref.type = SecNodeRef.TYPE_PARENT
+			elif (ref.type == SecNodeRef.TYPE_PARENT):
+					ref.type = SecNodeRef.TYPE_CROSS
 	return
 
 def buildTree(file, nodes):
@@ -259,9 +278,9 @@ class SegmentReader(object):
 	def postRead(self):
 		return
 
-	def ReadNodeRef(self, node, offset, number, type):
-		n, i = getUInt32(node.data, offset)
-		ref = SecNodeRef(n, type)
+	def ReadNodeRef(self, node, offset, number, type, name):
+		m, i = getUInt32(node.data, offset)
+		ref = SecNodeRef(m, type, name)
 		if (ref.index > 0):
 			ref.number = number
 			node.references.append(ref)
@@ -295,7 +314,7 @@ class SegmentReader(object):
 		node.set(name, lst)
 		return i
 
-	def ReadTypedFloats(self, node, offset, name):
+	def ReadEdge(self, node, offset):
 		n, i = getUInt16(node.data, offset)
 		if (n != 0):
 			i = offset
@@ -303,13 +322,16 @@ class SegmentReader(object):
 
 		if (t == 0x0203): t, i = getUInt32(node.data, i)
 
-		if (t == 0x0B):   # 3D-Circle            # Center, normal, m, radius, startAngle, sweepAngle
+		if (t == 0x0B): # 3D-Circle: Center, normal, m, radius, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 12)
-		elif (t == 0x11): # 3D-Ellipse           # Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle ???
+			return ArcOfCircleEdge(a), i
+		if (t == 0x11): # 3D-Ellipse: Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 13)
-		elif (t == 0x17): # 3D-Line
-			a, i = getFloat64A(node.data, i, 6)  # Point1, Point2
-		elif (t == 0x2A): # 3D-BSpline
+			return ArcOfEllipseEdge(a), i
+		if (t == 0x17): # 3D-Line: Point1, Point2
+			a, i = getFloat64A(node.data, i, 6)
+			return LineEdge(a), i
+		if (t == 0x2A): # 3D-BSpline
 			a0 = Struct(u"<LLLd").unpack_from(node.data, i)
 			i  += 20
 			a1, i = readTypedFloatArr(node.data, i)
@@ -317,37 +339,43 @@ class SegmentReader(object):
 			a3, i = readTypedFloatArr(node.data, i, 3)
 			a4 = Struct(u"<dLLdd").unpack_from(node.data, i)
 			i  += 32
-			a = a0 + a1 + a2 + a3 + a4
-		else:
-			raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
-		node.set(name, (t, a))
-		return i
+			return BSplineEdge(a0, a1, a2, a3, a4), i
+		raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
 
-	def ReadTypedFloatsList(self, node, offset, name):
+	def ReadEdgeList(self, node, offset, name='edges'):
 		cnt, i = getUInt32(node.data, offset)
 		lst    = []
 		for j in range(cnt):
-			i = self.ReadTypedFloats(node, i , 'tmp')
-			f = node.get('tmp')
-			lst.append(f)
-		node.content += ' %s=[%s]' %(name, ','.join(['(%02X:[%s])' %(r[0], str(r[1])) for r in lst]))
+			edge, i = self.ReadEdge(node, i)
+			lst.append(edge)
+		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(e) for e in lst]))
 		node.set(name, lst)
 		node.delete('tmp')
 		return i
 
-	def ReadTransformation(self, node, offset):
+	def ReadTransformation2D(self, node, offset):
 		'''
-		Read the transformation matrix
+		Read the 2D transformation matrix
 		'''
-		val = Transformation()
-		node.set('transformation', val)
+		val = Transformation2D()
 		i = val.read(node.data, offset)
+		node.set('transformation', val)
+		node.content += u" transformation=%r" %(val)
+		return i
+
+	def ReadTransformation3D(self, node, offset):
+		'''
+		Read the 3D transformation matrix
+		'''
+		val = Transformation3D()
+		i = val.read(node.data, offset)
+		node.set('transformation', val)
 		node.content += u" transformation=%r" %(val)
 		return i
 
 	def Read_5F9D0021(self, node): # SystemOfUnitsCollection
 		i = node.Read_Header0('SystemOfUnitsCollection')
-		i = node.ReadCrossRef(i, 'refSelected')
+		i = node.ReadCrossRef(i, 'selected')
 		i = node.ReadList3(i, _TYP_NODE_REF_, 'customUnitSystems')
 		i = node.ReadList3(i, _TYP_NODE_REF_, 'predefinedUnitSystems')
 		return i
@@ -513,7 +541,8 @@ class SegmentReader(object):
 				else:
 					s = " ".join(["%02X" % c for c in node.data[i:]])
 				node.content += u"\taX=[%s]" %(s)
-				s = len(node.data)
+			else:
+				node.data = None
 		except:
 			logError(u"ERROR in %s.Read_%s: %s", self.__class__.__name__, node.typeName, traceback.format_exc())
 
@@ -545,7 +574,7 @@ class SegmentReader(object):
 		cnt, i = getUInt32(node.data, offset)
 		lst = []
 		for j in range(cnt):
-			ref, i = self.ReadNodeRef(node, i, j, type)
+			ref, i = self.ReadNodeRef(node, i, j, type, name)
 			a, i = getUInt32A(node.data, i, size)
 			lst.append([ref, a])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%s)' %(r[0], IntArr2Str(r[1], 4)) for r in lst]))
@@ -556,9 +585,9 @@ class SegmentReader(object):
 		cnt, i = getUInt32(node.data, offset)
 		lst = []
 		for j in range(cnt):
-			ref1, i = self.ReadNodeRef(node, i, j, SecNodeRef.TYPE_CROSS)
+			ref1, i = self.ReadNodeRef(node, i, [j, 0], SecNodeRef.TYPE_CROSS, name)
 			u32, i = getUInt32(node.data, i)
-			ref2, i = self.ReadNodeRef(node, i, j, SecNodeRef.TYPE_CROSS)
+			ref2, i = self.ReadNodeRef(node, i, [j, 2], SecNodeRef.TYPE_CROSS, name)
 			a, i = getUInt32A(node.data, i, size)
 			lst.append([ref1, a, ref2, u32])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s,[%s],%s,%s)' %(r[0], IntArr2Str(r[1],4), r[2], r[3]) for r in lst]))
@@ -574,7 +603,7 @@ class SegmentReader(object):
 		i = node.Read_Header0('ASM')
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'lenFooter')
+		i += 4
 		txt, i = getText8(node.data, i, 15)
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
@@ -586,11 +615,13 @@ class SegmentReader(object):
 		lst = []
 		header = Header()
 		i = header.readBinary(data)
+		node.data = data
 		index = 0
 		clearEntities()
 		entities = {}
-		l = len(data)
-		e = (l - 17) if (getFileVersion() > 2010) else (l - 25)
+		e = len(node.data) - 12
+		if (getFileVersion() > 2018): e -= 6
+#		if (getFileVersion() < 2011): e -= 4
 		while (i < e):
 			entity, i = readEntityBinary(data, i, e)
 			entity.index = index
@@ -601,12 +632,17 @@ class SegmentReader(object):
 			if (entity.name == "End-of-ACIS-data"):
 				entity.index = -2
 				break
-		i = len(node.data) - node.get('lenFooter') + 0x18
-		i = self.skipBlockSize(i)
 		resolveEntityReferences(entities, lst)
 		node.set('SAT', [header, lst])
 		self.segment.AcisList.append(node)
 		dumpSat(node)
+		i = e
+		i = node.ReadUInt32(i, 'selectedKey')
+		if (getFileVersion() > 2018): i += 1 # skip 00
+		i = node.ReadSInt32(i, 's32_0')
+		if (getFileVersion() > 2018): i += 1 # skip 00
+		i = node.ReadChildRef(i, 'mappings')
+		if (getFileVersion() > 2018): i += 4 # skip FF FF FF FF
 		return i
 
 	def Read_F8A779F8(self, node):
@@ -630,7 +666,7 @@ class SegmentReader(object):
 		i = node.ReadList3(i, _TYP_NODE_REF_, 'numerators')
 		i = node.ReadList3(i, _TYP_NODE_REF_, 'denominators')
 		i = node.ReadBoolean(i, 'visible')
-		i = node.ReadChildRef(i, 'refDerived')
+		i = node.ReadChildRef(i, 'derived')
 		return i
 
 	def ReadTrailer(self, buffer, offset):
@@ -669,8 +705,8 @@ class SegmentReader(object):
 						for j in range(cnt):
 							txt, i = getLen32Text8(buffer, i)
 							m, i = getUInt32(buffer, i)
-							ref = SecNodeRef(m, SecNodeRef.TYPE_CROSS)
-							values.append([txt, ref])
+							ref = SecNodeRef(m, SecNodeRef.TYPE_CROSS, txt)
+							values.append(ref)
 		return i
 
 	def ReadSegmentData(self, file, buffer):

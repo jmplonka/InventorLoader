@@ -1,4 +1,5 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+from __future__                 import unicode_literals
 
 '''
 Acis.py:
@@ -8,7 +9,7 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 import traceback, FreeCAD, Part, Draft, os
 from importerUtils              import *
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
-from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil
+from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
 from BOPTools.GeneralFuseResult import GeneralFuseResult
 
 __author__     = 'Jens M. Plonka'
@@ -161,6 +162,81 @@ invSubtypeTableSurfaces = {}
 references = {}
 
 _currentEntityId = -2
+
+def COS(x):        return (cos(x))
+def COSH(x):       return (cosh(x))
+def COT(x):        return (cos(x)/sin(x))
+def COTH(x):       return (cosh(x)/sinh(x))
+def CSC(x):        return (1/sin(x))
+def CSCH(x):       return (1/sinh(x))
+def SEC(x):        return (1/cos(x))
+def SECH(x):       return (1/cosh(x))
+def SIN(x):        return (sin(x))
+def SINH(x):       return (sinh(x))
+def TAN(x):        return (tan(x))
+def TANH(x):       return (tanh(x))
+def ARCCOS(x):     return (acos(x))
+def ARCCOSH(x):    return (acosh(x))
+def ARCOT(x):      return (pi/2 - atan(x))
+def ARCOTH(x):     return (0.5*log((x+1)/(x-1)))
+def ARCCSC(x):     return (asin(1/x))
+def ARCCSCH(x):    return (log((1+sqrt(1+x**2))/x))
+def ARCSEC(x):     return (acos(1/x))
+def ARCSECH(x):    return (log((1+sqrt(1-x**2))/x))
+def ARCSIN(x):     return (asin(x))
+def ARCSINH(x):    return (asinh(x))
+def ARCTAN(x):     return (atan(x))
+def ARCTANH(x):    return (atanh(x))
+def ABS(x):        return (abs(x))
+def EXP(x):        return (exp(x))
+def LN(x):         return (log(x))
+def LOG(x):        return (log10(x))
+def NORM(value):   return VEC(value.x, value.y, value.z).normalize()
+def ROTATE(v, t):  return t.rotate(v)
+def CROSS(v1, v2): return v1.cross(v2)
+def DOT(v1, v2):   return v1.dot(v2)
+def SET(x):
+	if (x > 0.0): return 1
+	return -1 if (x < 0.0) else 0
+def SIGN(x):       return SET(x)
+def SIZE(v):       return v.Length()
+#def STEP(l1, n1, l2, n2, ...) ... will throw an error if found in evaluation
+def TERM(v, n):    return v.__getitem__(n)
+def TRANS(v, t):
+	return t.transpose(v)
+def MIN(*x):       return min(x)
+def MAX(*x):       return max(x)
+#def NOT(x) ... will throw an error if found in evaluation
+def DCUR(c, x):     return c.parameter(x)
+def DSURF(c, u, v): return c.parameter(u, v)
+
+class Law(object):
+	# Laws:
+	#	trigonometric:
+	#		cos(x), cosh(x), cot(x) = cos(x)/sin(x), coth(x)
+	#		csc(x) = 1/sin(x), csch(x), sec(x) = 1/cos(x), sech(x)
+	#		sin(x), sinh(x), tan(x), tanh(x)
+	#		arccos(x), arccosh(x), arcot(x), arcoth(x)
+	#		arccsc(x), arccsch(x), arcsec(x), arcsech(x)
+	#		arcsin(x), arcsinh(x), arctan(x), arctanh(x)
+	#	functions:
+	#		vec(x,y,z), norm(X)
+	#		abs(x), exp(x), ln(x), log(x), sqrt(x)
+	#		rotate(x,y), set(x) = sign(x), size(x), step(...)
+	#		term(X,n), trans(X,y)
+	#		min(x), max(x), not(x)
+	#	operators:
+	#		+,-,*,/,x,^,<,>,<=,>=
+	#	constants
+	#		e = 2.718
+	#		pi= 3.141
+	def __init__(self, eq):
+		#FIXME: how to handle cross operator???
+		self.eq = eq
+		# convert ^ into **
+		self.eq = self.eq.replace('^', ' ** ')
+	def evaluate(self, X):
+		return eval(self.eq)
 
 def init():
 	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces
@@ -598,43 +674,23 @@ def readBlend(chunks, index):
 	return None, index
 
 def readLaw(chunks, index):
-	# Laws:
-	#	trigonometric:
-	#		cos(x), cosh(x), cot(x) = cos(x)/sin(x), coth(x)
-	#		csc(x) = 1/sin(x), csch(x), sec(x) = 1/cos(x), sech(x)
-	#		sin(x), sinh(x), tan(x), tanh(x)
-	#		arccos(x), arccosh(x), arcot(x), arcoth(x)
-	#		arccsc(x), arccsch(x), arcsec(x), arcsech(x)
-	#		arcsin(x), arcsinh(x), arctan(x), arctanh(x)
-	#	functions:
-	#		vec(x,y,z)
-	#		abs(x), exp(x), ln(x), log(x), norm(X), sqrt(x)
-	#		rotate(x,y), set(x) = sign(x), size(x), step(...)
-	#		term(X,n), trans(X,y)
-	#		min(x), max(x), not(x)
-	#	operators:
-	#		+,-,*,/,x,^,<,>,<=,>=
-	#	constants
-	#		e = 2.718
-	#		pi= 3.141
 	n, i = getText(chunks, index)
 	if (n == 'TRANS'):
-		v = Transform()
 		i = v.setBulk(chunks, i)
-	elif (n == 'EDGE'):
+		return (n, Transform())
+	if (n == 'EDGE'):
 		c, i = readCurve(chunks, i)
 		f, i = getFloats(chunks, i, 2)
-		v = (c, f)
-	elif (n == 'SPLINE_LAW'):
+		return (n, c, f)
+	if (n == 'SPLINE_LAW'):
 		a, i = getInteger(chunks, i)
 		b, i = getFloatArray(chunks, i)
 		c, i = getFloatArray(chunks, i)
 		d, i = getPoint(chunks, i)
-		v = (a, b, c, d)
-	else:
-		v = None
-
-	return (n, v), i
+		return (n, a, b, c, d)
+	l = Law(n)
+	l.evaluate(0.5)
+	return l, i
 
 def newInstance(CLASSES, key):
 	cls = CLASSES[key]
@@ -1277,7 +1333,7 @@ class Helix():
 		steps = [a, a + startSegment]
 
 		d = (b - a)
-		step = d / int(ceil(numSegments * d / 2 / pi)) # number of segements per turn
+		step = d / int(ceil(numSegments * d / 2 / pi)) # number of segments per turn
 		c = a
 		while c < (b - startSegment):
 			c += step
@@ -3195,7 +3251,7 @@ class SurfaceSpline(Surface):
 		# int
 		return i
 	def setVertexBlend(self, chunks, index, inventor):
-		n, i = getInteger(chunks, index)      # vertexblendsur”
+		n, i = getInteger(chunks, index)      # vertexblendsur
 		self.boundaries = []
 		for j in range(0, n):
 			vbl, i = self._readBoundaryGeometry(chunks, i, inventor)
@@ -3597,6 +3653,12 @@ class AttribMixOrganizationUnfoldInfo(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationUnfoldInfo, self).__init__()
 class AttribNamingMatching(Attrib):
 	def __init__(self): super(AttribNamingMatching, self).__init__()
+	def set(self, entity):
+		i = super(AttribNamingMatching, self).set(entity)
+		n = entity.chunks[i].val
+		if ((type(n) == int) and (n > 30)):
+			return i + 1 # since ASM 216 (Inventor 2011) there is an identifyer added!
+		return i
 class AttribNamingMatchingNMxMatchedEntity(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxMatchedEntity, self).__init__()
 class AttribNamingMatchingNMxEdgeCurve(AttribNamingMatching):
@@ -3654,9 +3716,7 @@ class AttribNamingMatchingNMxBrepTag(AttribNamingMatching):
 	def set(self, entity):
 		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
 		n, i = getInteger(entity.chunks, i)
-		if (n > 30): # since Inventor 2011 there is an identifyer added!
-			n, i = getInteger(entity.chunks, i)
-		self.mapping, i = getIntegerMap(entity.chunks, i, n, 2)
+		self.mapping, i = getIntegerMap(entity.chunks, i, n, 2) # (DC-index, mask){n}
 		return i
 class AttribNamingMatchingNMxBrepTagFeature(AttribNamingMatchingNMxBrepTag):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagFeature, self).__init__()
@@ -3791,50 +3851,50 @@ class AcisChunk():
 		self.tag = key
 		self.val = val
 	def __str__(self):
-		if (self.tag == TAG_CHAR         ): return "%s "     %(self.val)
-		if (self.tag == TAG_SHORT        ): return "%d "     %(self.val)
-		if (self.tag == TAG_LONG         ): return "%d "     %(self.val)
-		if (self.tag == TAG_FLOAT        ): return "%g "     %(self.val)
-		if (self.tag == TAG_DOUBLE       ): return "%g "     %(self.val)
-		if (self.tag == TAG_UTF8_U8      ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_UTF8_U16     ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_UTF8_U32_A   ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_TRUE         ): return "%s "     %(self.val)
-		if (self.tag == TAG_FALSE        ): return "%s "     %(self.val)
-		if (self.tag == TAG_ENTITY_REF   ): return "%s "     %(self.val)
-		if (self.tag == TAG_IDENT        ): return "%s "     %(self.val)
-		if (self.tag == TAG_SUBIDENT     ): return "%s-"     %(self.val)
-		if (self.tag == TAG_SUBTYPE_OPEN ): return "%s "     %(self.val)
-		if (self.tag == TAG_SUBTYPE_CLOSE): return "%s "     %(self.val)
-		if (self.tag == TAG_TERMINATOR   ): return "%s\n"    %(self.val)
-		if (self.tag == TAG_UTF8_U32_B   ): return "@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_POSITION     ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_VECTOR_3D    ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_ENUM_VALUE   ): return "%d "     %(self.val)
-		if (self.tag == TAG_VECTOR_2D    ): return "(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		return ''
+		if (self.tag == TAG_CHAR         ): return u"%s "     %(self.val)
+		if (self.tag == TAG_SHORT        ): return u"%d "     %(self.val)
+		if (self.tag == TAG_LONG         ): return u"%d "     %(self.val)
+		if (self.tag == TAG_FLOAT        ): return u"%g "     %(self.val)
+		if (self.tag == TAG_DOUBLE       ): return u"%g "     %(self.val)
+		if (self.tag == TAG_UTF8_U8      ): return u"@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U16     ): return u"@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U32_A   ): return u"@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_UTF8_U32_B   ): return u"@%d %s " %(len(self.val), self.val)
+		if (self.tag == TAG_TRUE         ): return u"0x0A "
+		if (self.tag == TAG_FALSE        ): return u"0x0B "
+		if (self.tag == TAG_ENTITY_REF   ): return u"%s "     %(self.val)
+		if (self.tag == TAG_IDENT        ): return u"%s "     %(self.val)
+		if (self.tag == TAG_SUBIDENT     ): return u"%s-"     %(self.val)
+		if (self.tag == TAG_SUBTYPE_OPEN ): return u"{ "
+		if (self.tag == TAG_SUBTYPE_CLOSE): return u"} "
+		if (self.tag == TAG_TERMINATOR   ): return u"#\n"
+		if (self.tag == TAG_POSITION     ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_VECTOR_3D    ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_ENUM_VALUE   ): return u"%d "     %(self.val)
+		if (self.tag == TAG_VECTOR_2D    ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
+		return "%s " %(self.val)
 	def __repr__(self):
-		if (self.tag == TAG_CHAR         ): return "%s "   %(self.val)
-		if (self.tag == TAG_SHORT        ): return "%d "   %(self.val)
-		if (self.tag == TAG_LONG         ): return "%d "   %(self.val)
-		if (self.tag == TAG_FLOAT        ): return "%g "   %(self.val)
-		if (self.tag == TAG_DOUBLE       ): return "%g "   %(self.val)
-		if (self.tag == TAG_UTF8_U8      ): return "'%s' " %(self.val)
-		if (self.tag == TAG_UTF8_U16     ): return "'%s' " %(self.val)
-		if (self.tag == TAG_UTF8_U32_A   ): return "'%s' " %(self.val)
-		if (self.tag == TAG_TRUE         ): return '0x0A '
-		if (self.tag == TAG_FALSE        ): return '0x0B '
-		if (self.tag == TAG_ENTITY_REF   ): return "%s "   %(self.val)
-		if (self.tag == TAG_IDENT        ): return "%s "   %(self.val)
-		if (self.tag == TAG_SUBIDENT     ): return "%s-"   %(self.val)
-		if (self.tag == TAG_SUBTYPE_OPEN ): return '{ '
-		if (self.tag == TAG_SUBTYPE_CLOSE): return '} '
-		if (self.tag == TAG_TERMINATOR   ): return '#'
-		if (self.tag == TAG_UTF8_U32_B   ): return "'%s' " %(self.val)
-		if (self.tag == TAG_POSITION     ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_VECTOR_3D    ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_ENUM_VALUE   ): return "%d "   %(self.val)
-		if (self.tag == TAG_VECTOR_2D    ): return "(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_CHAR         ): return u"%s "   %(self.val)
+		if (self.tag == TAG_SHORT        ): return u"%d "   %(self.val)
+		if (self.tag == TAG_LONG         ): return u"%d "   %(self.val)
+		if (self.tag == TAG_FLOAT        ): return u"%g "   %(self.val)
+		if (self.tag == TAG_DOUBLE       ): return u"%g "   %(self.val)
+		if (self.tag == TAG_UTF8_U8      ): return u"'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U16     ): return u"'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U32_A   ): return u"'%s' " %(self.val)
+		if (self.tag == TAG_UTF8_U32_B   ): return u"'%s' " %(self.val)
+		if (self.tag == TAG_TRUE         ): return u"0x0A "
+		if (self.tag == TAG_FALSE        ): return u"0x0B "
+		if (self.tag == TAG_ENTITY_REF   ): return u"%s "   %(self.val)
+		if (self.tag == TAG_IDENT        ): return u"%s "   %(self.val)
+		if (self.tag == TAG_SUBIDENT     ): return u"%s-"   %(self.val)
+		if (self.tag == TAG_SUBTYPE_OPEN ): return u"{ "
+		if (self.tag == TAG_SUBTYPE_CLOSE): return u"} "
+		if (self.tag == TAG_TERMINATOR   ): return u"#"
+		if (self.tag == TAG_POSITION     ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_VECTOR_3D    ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+		if (self.tag == TAG_ENUM_VALUE   ): return u"%d "   %(self.val)
+		if (self.tag == TAG_VECTOR_2D    ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
 		return "%s " %(self.val)
 
 class AcisEntity():
@@ -3847,18 +3907,15 @@ class AcisEntity():
 	def add(self, key, val):
 		self.chunks.append(AcisChunk(key, val))
 
-	def getStr(self):
-		return "-%d %s %s" %(self.index, self.name, ''.join('%s' %(str(c)) for c in self.chunks))
-
 	def __repr__(self):
-		return "%s %s" %(self.name, ''.join('%r' %c for c in self.chunks))
+		return "%s %s" %(self.name, ''.join(c.__repr__() for c in self.chunks))
 
 	def __str__(self):
 		if (self.index < 0):
 			if (self.index == -2):
-				return "%s %s" %(self.name,''.join('%s' %c for c in self.chunks))
+				return "%s %s" %(self.name,''.join(c.__str__() for c in self.chunks))
 			return ""
-		return self.getStr()
+		return "-%d %s %s" %(self.index, self.name, ''.join(u"%s" %(c) for c in self.chunks))
 
 class AcisRef():
 	def __init__(self, index):
@@ -4123,7 +4180,7 @@ ENTITY_TYPES = {
 	"mix_UnfoldInfo-mix_Organizaion-attrib":                                                       AttribMixOrganizationUnfoldInfo,
 	"NamingMatching-attrib":                                                                       AttribNamingMatching,
 	"NMx_Brep_tag-NamingMatching-attrib":                                                          AttribNamingMatchingNMxBrepTag,
-	"NMx_Brep_Feature_tag-NMx_Brep_tag-NamingMatching-attrib":                                     AttribNamingMatchingNMxBrepTagFeature,
+	"NMx_Brep_Feature_tag-NMx_Brep_tag-NamingMatching-attrib":                                     AttribNamingMatchingNMxBrepTagFeature, # (n > 2010) 1 m -1
 	"NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                                        AttribNamingMatchingNMxBrepTagName,
 	"NMx_BPatch_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                         AttribNamingMatchingNMxBrepTagNameBPatch,
 	"NMx_bend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                           AttribNamingMatchingNMxBrepTagNameBend,

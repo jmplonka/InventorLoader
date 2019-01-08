@@ -68,7 +68,7 @@ class DesignViewReader(SegmentReader):
 
 	def Read_E3684E1C(self, node):
 		i = node.Read_Header0()
-		i = self.ReadTransformation(node, i)
+		i = self.ReadTransformation3D(node, i)
 		return i
 
 	def Read_EBA31E2E(self, node):

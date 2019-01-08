@@ -14,14 +14,6 @@ __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-def __checkRef__(ref, attrName):
-	if ((ref is not None) and (hasattr(ref.data, attrName) == False)):
-		logError(u"    Read_%s should be an %s!", ref.typeName, attrName)
-
-def __checkList__(lst, attrName):
-	for ref in lst:
-		__checkRef__(ref, attrName)
-
 class EeSceneReader(StyleReader):
 	def __init__(self, segment):
 		super(EeSceneReader, self).__init__(segment)
@@ -54,7 +46,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt32(i, 'flags')
 		i = node.ReadChildRef(i, 'styles')
 		i = node.ReadChildRef(i, ref1Name)
-		i = node.ReadCrossRef(i, 'ref2')
+		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		node.object3D = True
@@ -67,18 +59,19 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadUInt32(i, 'key')
+		if (getFileVersion() > 2017): i += 1
+		i = node.ReadUInt32(i, 'index')
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
 	def ReadHeaderSurface(self, node, typeName  =None):
 		if (typeName is None):
-			typeName = 'Edge_%s' %(node.typeName)
+			typeName = 'Surface_%s' %(node.typeName)
 		node.typeName = typeName
 		i = self.skipBlockSize(0, 8)
 		i = node.ReadParentRef(i)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_SINT32_A_, 'lst0', 2)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'dcIndices', 2) # [dcIndex, SINT_32]*
 		node.surface = True
 		return i
 
@@ -106,7 +99,7 @@ class EeSceneReader(StyleReader):
 	def ReadOptionalTransformation(self, node, offset):
 		b, i = getBoolean(node.data, offset)
 		if (b):
-			i = self.ReadTransformation(node, i)
+			i = self.ReadTransformation3D(node, i)
 		return i
 
 	def Read_120284EF(self, node):
@@ -128,12 +121,16 @@ class EeSceneReader(StyleReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'edges')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadFloat64A(i, 3, 'a2')
-		i = node.ReadFloat64A(i, 3, 'a3')
+		i = node.ReadFloat64A(i, 6, 'box') # bounding box
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'index')
+		i = node.ReadUInt32(i, 'key')
 		i = node.ReadUInt32A(i, 2, 'a4')
 		self.faces.append(node)
+		return i
+
+	def Read_A79EACCB(self, node): # Edge ...
+		i = self.ReadHeaderEdge(node)
+		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_6266D8CD(self, node): # Edge ...
@@ -146,37 +143,24 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(i)
 		return i
 
+	def Read_A79EACD2(self, node, typeName = None): # Edge ...
+		i = self.ReadHeaderEdge(node, typeName)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_,    'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'n', 3)  # vertex normals
+		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'uv', 2) # U-V values of the vertex
+		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_,  'lst4')
+		i = node.ReadFloat32_2D(i, 'a1')
+		return i
+
 	def Read_D79AD3F3(self, node): # Edge ...
-		i = self.ReadHeaderEdge(node)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_,  'lst1', 2)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst2', 3)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst3', 2)
-		i = node.ReadUInt16A(i, 2, 'a0')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst4')
-		i = node.ReadFloat32_2D(i, 'a1')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst5')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst6')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst7')
-		return i
-
-	def Read_A79EACCB(self, node): # Edge ...
-		i = self.ReadHeaderEdge(node)
-		i = node.ReadUInt8(i, 'u8_0')
-		return i
-
-	def Read_A79EACD2(self, node): # Edge ...
-		i = self.ReadHeaderEdge(node)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT16_A_,  'lst1', 2)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst2', 3)
-		i = node.ReadList2(i, importerSegNode._TYP_FLOAT32_A_, 'lst3', 2)
-		i = node.ReadUInt16A(i, 2, 'a0')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst4')
-		i = node.ReadFloat32_2D(i, 'a1')
+		i = self.Read_A79EACD2(node, None)
 		return i
 
 	def Read_37DB9D1E(self, node): # Plane surface
 		i = self.ReadHeaderSurface(node, 'SurfacePlane')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_03E3D90B(self, node):
@@ -203,8 +187,8 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt32A(0, 3, 'a0')
 		return i
 
-	def Read_A529D1E2(self, node):
-		i = self.ReadHeaderU32RefU8List3(node)
+	def Read_A529D1E2(self, node): # GroupNode
+		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
 		return i
 
 	def Read_41305114(self, node):
@@ -216,10 +200,7 @@ class EeSceneReader(StyleReader):
 
 	def Read_A79EACCF(self, node): # 3D-Object
 		i = self.ReadHeader3dObject(node, '3dObject')
-		if (node.get('ref2') is None):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'objects')
-		else:
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'objects')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'objects')
 		i = self.ReadOptionalTransformation(node, i)
 		self.objects3D.append(node)
 		return i
@@ -328,16 +309,16 @@ class EeSceneReader(StyleReader):
 		i = node.ReadChildRef(i, 'normals')
 		i = node.ReadChildRef(i, 'normalIndices')
 		i = node.ReadUInt32A(i, 5, 'a0')
-		i = node.ReadList2(i, importerSegNode._TYP_GUESS_, 'lst0')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = node.ReadUInt32A(i, 2, 'a1')
 		return i
 
-	def Read_D1071D57(self, node): # ??? 3D-Object
-		i = self.ReadHeader3dObject(node)
+	def Read_D1071D57(self, node): # Constraint 3D imension Item
+		i = self.ReadHeader3dObject(node, 'Constraint3DimensionItem')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		a3, i = getUInt16A(node.data, i, 2)
-#		i = self.ReadTransformation(node, i)
+#		i = self.ReadTransformation3D(node, i)
 		return i
 
 	def Read_3A5FA872(self, node): # ??? 3D-Object
@@ -361,42 +342,43 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt16A(i, 8, 'a0')
 		return i
 
-	def Read_B247B180(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
-		return i
+	def Read_B247B180(self, node): # Distance dimensioning dir=vertical
+		return self.ReadHeaderDimensioning(node, 'DimensioningDistVert')
 
-	def Read_23ADA14E(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_23ADA14E(self, node): # Distance dimensioning dir=horizontal
+		return self.ReadHeaderDimensioning(node, 'DimensioningDistHorz')
 
-	def Read_9516E3A1(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_9516E3A1(self, node): # Distance dimensioning dir=diagonal
+		return self.ReadHeaderDimensioning(node, 'DimensioningRadius')
 
-	def Read_B01025BF(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_B01025BF(self, node): # Vertical dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningHorizontal')
 
-	def Read_BCC1E889(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_BCC1E889(self, node): # Horizontal dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningVertical')
 
-	def Read_C2F1F8ED(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_FF084971(self, node): # Length dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningLength')
 
-	def Read_C46B45C9(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_C2F1F8ED(self, node): # Angle dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningAngle')
 
-	def Read_FF084971(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_C46B45C9(self, node): # Diameter dimensioning
+		return self.ReadHeaderDimensioning(node, 'DimensioningDiameter')
 
-	def Read_FFB5643C(self, node): # ??? 3D-Object
-		return self.ReadHeaderDimensioning(node)
+	def Read_FFB5643C(self, node): # Angle dimensioning (2nd)
+		return self.ReadHeaderDimensioning(node, 'DimensioningAngle2')
 
-	def Read_B91E695F(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt32A(i, 2, 'a0')
+	def Read_B91E695F(self, node): # MultiBodyNode
+		i = node.Read_Header0('MultiBodyNode')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'attrs')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
 		i = node.ReadUInt8(i, 'u8_1')
-		i = node.ReadUInt32A(i, 4, 'a2')
+		i = node.ReadChildRef(i, 'body')
+		i = node.ReadUInt32A(i, 3, 'a2')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32A(i, 5, 'a3')
 		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
@@ -404,6 +386,10 @@ class EeSceneReader(StyleReader):
 		i = node.ReadFloat64_2D(i, 'a4')
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadUInt32(i, 'u32_0')
+		b = node.get('u32_0')
+		if (b == 1):
+			i = node.ReadUInt32(i, 'u32_1')
+			i = node.ReadChildRef(i, 'ref_2')
 		return i
 
 	def Read_0BC8EA6D(self, node): # key reference
@@ -414,8 +400,8 @@ class EeSceneReader(StyleReader):
 		i = self.ReadHeaderNumRef(node, 'RefByKey_2', 'key')
 		return i
 
-	def Read_5D916CE9(self, node): # key reference
-		i = self.ReadHeaderNumRef(node, 'RefByKey_3', 'key')
+	def Read_5D916CE9(self, node): # index definition
+		i = self.ReadHeaderNumRef(node, 'IndexDef_2', 'index')
 		return i
 
 	def Read_B9274CE3(self, node): # key reference
@@ -435,21 +421,21 @@ class EeSceneReader(StyleReader):
 	def Read_3D953EB2(self, node):
 		i = self.ReadHeaderParent(node, 'RefByIndexPoint')
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'index') # reference to a Work-Points's index
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Points's index
 		node.numref = True
 		return i
 
 	def Read_3EA856AC(self, node):
 		i = self.ReadHeaderParent(node, 'RefByIndexAxis')
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'index') # reference to a Work-Axis's index
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Axis's index
 		node.numref = True
 		return i
 
 	def Read_591E9565(self, node): # Index reference
 		i = self.ReadHeaderParent(node, 'RefByIndexPlane')
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'index') # reference to a Work-Plane's index
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Plane's index
 		node.numref = True
 		return i
 
@@ -459,12 +445,3 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt32(i, 'index') # reference to a Work-Plane's index
 		node.numref = True
 		return i
-
-	def postRead(self):
-		for face in self.faces:
-			__checkRef__(face.get('surface'), 'surface')
-			__checkList__(face.get('edges'), 'edge')
-		for obj in self.objects3D:
-			__checkRef__(obj.get('numRef'), 'numref')
-			__checkList__(obj.get('objects'), 'object3D')
-		return super(EeSceneReader, self).postRead()
