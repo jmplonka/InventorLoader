@@ -64,10 +64,8 @@ def resolveEntityReferences(entities, lst):
 		idx += 1
 
 def dumpSat(node):
-	folder = getInventorFile()[0:-4]
-	filename = "%s\%04X.sat" %(folder, node.index)
 	header, entities = node.get('SAT')
-	with open(filename, 'wb') as sat:
+	with open(u"%s/%04X.sat" %(getDumpFolder(), node.index), 'wb') as sat:
 		sat.write(header.__str__().encode('utf8'))
 		for ntt in entities:
 			if ntt.index >= 0:

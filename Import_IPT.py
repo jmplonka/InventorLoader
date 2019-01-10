@@ -56,7 +56,6 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 				ReadIgnorable(fname, stream)
 		else:
 			ReadIgnorable(fname, stream)
-
 	return
 
 def dumpRSeDBFile(db, log):
@@ -88,19 +87,15 @@ def dumpRSeDBFile(db, log):
 	segments = sorted(db.segInfo.segments.values())
 	for seg in segments:
 		log.write(u"\t\t%s\n" %(seg))
+	return
 
 def dumpRSeDB(db):
-	folder = getInventorFile()[0:-4]
-	filename = u"%s/RSeDb.log" %(folder)
-	with io.open(filename, mode='w', encoding='utf-8') as log:
+	with io.open(u"%s/RSeDb.log" %(getDumpFolder()), mode='w', encoding='utf-8') as log:
 		dumpRSeDBFile(db, log)
-
 	return
 
 def dumpiProperties(iProps):
-	folder = getInventorFile()[0:-4]
-	filename = '%s\\iProperties.log' %(folder)
-	with io.open(filename, mode='w', encoding="utf-8") as file:
+	with io.open(u"%s/iProperties.log" %(getDumpFolder()), mode='w', encoding="utf-8") as file:
 		setNames = sorted(iProps.keys())
 		for setName in setNames:
 			file.write(u"%s:\n" %(setName))
@@ -119,9 +114,7 @@ def dumpiProperties(iProps):
 	return
 
 def dumpRevisionInfo(revisions):
-	folder = getInventorFile()[0:-4]
-	filename = '%s\\RSeDbRevisionInfo.log' %(folder)
-	with io.open(filename, mode='w', encoding="utf-8") as file:
+	with io.open(u"%s/RSeDbRevisionInfo.log" %(getDumpFolder()), mode='w', encoding="utf-8") as file:
 		for rev in revisions.infos:
 			file.write(u"%s\n" %(rev))
 	return

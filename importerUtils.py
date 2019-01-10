@@ -354,8 +354,7 @@ def writeThumbnail(data):
 	_thumbnail = Thumbnail(data)
 
 	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
-		filename = "%s/_.%s" %(getInventorFile()[0:-4], _thumbnail.type.lower())
-		with open(filename, 'wb') as thumbnail:
+		with open(u"%s/_.%s" %(getDumpFolder(), _thumbnail.type.lower()), 'wb') as thumbnail:
 			thumbnail.write(_thumbnail.getData())
 
 	return _thumbnail
@@ -833,6 +832,11 @@ def setFileVersion(ole):
 def getInventorFile():
 	global _inventor_file
 	return _inventor_file
+
+def getDumpFolder():
+	invFile = getInventorFile()
+	dumpFolder = invFile[0:-4].strip()
+	return dumpFolder
 
 def setInventorFile(file):
 	global _inventor_file

@@ -1412,8 +1412,7 @@ class DCReader(EeDataReader):
 		if (size > 0):
 			i += 8
 			buffer = node.data[i:i+size]
-			folder = getInventorFile()[0:-4]
-			filename = '%s\\%s_%04X.xls' %(folder, node.typeName, node.index)
+			filename = u"%s/%s_%04X.xls" %(getDumpFolder(), node.typeName, node.index)
 			with open(filename, 'wb') as xls:
 				xls.write(buffer)
 				node.set('filename', filename)

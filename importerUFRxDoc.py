@@ -614,7 +614,7 @@ def read(data):
 	global schema
 
 	ufrx = UFRxDocument()
-	with io.open(getInventorFile()[0:-4] + "/UFRxDoc.log", 'w', encoding='utf8') as log:
+	with io.open(u"%s/UFRxDoc.log" %(getDumpFolder()), 'w', encoding='utf8') as log:
 		try:
 			ufrx.schema, i  = readUInt16(data,   0, log, 'schema')
 			schema = ufrx.schema

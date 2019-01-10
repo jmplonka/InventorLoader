@@ -210,17 +210,13 @@ def ReadProtein(data):
 	size, i = getSInt32(data, 0)
 	zip = data[4: size]
 
-	folder = getInventorFile()[0:-4]
-	with open ('%s\\Protein.zip' %(folder), 'wb') as protein:
+	with open (u"%s/Protein.zip" %(getDumpFolder()), 'wb') as protein:
 		protein.write(zip)
 
 	return size + 4
 
 def ReadWorkbook(doc, data, name, stream):
 	##create a new Spreadsheet in new document
-	folder = getInventorFile()[0:-4]
-	filename = '%s\\%s.xls' %(folder, name)
-
 	wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
 	for name in wbk.name_obj_list:
 		r = name.area2d()
@@ -239,7 +235,7 @@ def ReadWorkbook(doc, data, name, stream):
 		idx += 1
 
 	xls = copy(wbk)
-	xls.save(filename)
+	xls.save(u"%s/%s.xls" %(getDumpFolder(), name))
 	# logInfo(u">>>INFO - found workook: stored as %r!", filename)
 	return len(data)
 
@@ -737,10 +733,7 @@ def getReader(seg):
 def ReadRSeMetaDataB(dataB, seg):
 	reader = getReader(seg)
 	if (reader):
-		folder = getInventorFile()[0:-4]
-
-		filename = '%s\\%sB.log' %(folder, seg.name)
-		with codecs.open(filename, 'wb', 'utf8') as newFile:
+		with codecs.open(u"%s/%s.log" %(getDumpFolder(), seg.name), 'wb', 'utf8') as newFile:
 			newFile.write('[%s]\n' %(getFileVersion()))
 			i = 0
 			uid, i = getUUID(dataB, i)
@@ -754,8 +747,6 @@ def ReadRSeMetaDataB(dataB, seg):
 
 def ReadRSeMetaDataM(dataM, name):
 	i = 0
-	folder = getInventorFile()[0:-4]
-
 	value = RSeMetaData()
 	value.txt1, i = getLen32Text8(dataM, i)
 	value.ver, i = getUInt16(dataM, i)

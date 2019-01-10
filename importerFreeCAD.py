@@ -3815,7 +3815,6 @@ class FreeCADImporter:
 			self.doc            = fcDoc
 			self.mapConstraints = {}
 
-
 			elements = doc.get('elements')
 			self.createParameterTable(elements.node)
 
