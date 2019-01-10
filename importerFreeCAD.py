@@ -937,12 +937,11 @@ class FreeCADImporter:
 		else:
 			logWarning(u"    ... Don't know how to create edge from %s.%s" %(edge.__class__.__module__, edge.__class__.__name__))
 		if (edge is not None):
-			if (isinstance(boundarySketch, Part.Feature)):
+			if (hasattr(boundarySketch, 'addGeometry')):
+				boundarySketch.addGeometry(edge)
+			else:
 				sketchEdge.setSketchEntity(-1, edge)
 				boundarySketch.Shape = Part.Shape(boundarySketch.Shape.Edges + [edge])
-			else:
-				boundarySketch.addGeometry(edge)
-
 		return
 
 	def addBoundaryPart(self, boundarySketch, part):

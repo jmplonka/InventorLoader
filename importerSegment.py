@@ -606,7 +606,7 @@ class SegmentReader(object):
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
 		vrs, i = getUInt32(node.data, i)
-		data = b'\x04\xBC\x02\x00\x00'       # ACIS-Version
+		data = b'\x04\xBC\x02\x00\x00'       # ACIS-Version 0x4 (=int) 0x000002BC = 7.0
 		data += b'\x04' + node.data[i:i+4]   # Number of records
 		data += b'\x04' + node.data[i+4:i+8] # Number of bodies
 		data += b'\x04' + node.data[i+8:]    # Flags + entities
@@ -617,30 +617,33 @@ class SegmentReader(object):
 		index = 0
 		clearEntities()
 		entities = {}
-		e = len(node.data) - 12
-		if (getFileVersion() > 2018): e -= 6
-#		if (getFileVersion() < 2011): e -= 4
+		e = len(node.data) - 16
+		vers = getFileVersion()
+		if (vers > 2018): e -=1
+		if (vers > 2017): e -=1
+
+		add = True
 		while (i < e):
 			entity, i = readEntityBinary(data, i, e)
 			entity.index = index
 			entities[index] = entity
-			lst.append(entity)
+			if (add):
+				lst.append(entity)
 			convert2Version7(entity)
-			index += 1
 			if (entity.name == "End-of-ACIS-data"):
 				entity.index = -2
-				break
+				add = False
+			index += 1
 		resolveEntityReferences(entities, lst)
 		node.set('SAT', [header, lst])
 		self.segment.AcisList.append(node)
 		dumpSat(node)
-		i = e
 		i = node.ReadUInt32(i, 'selectedKey')
-		if (getFileVersion() > 2018): i += 1 # skip 00
+		if (getFileVersion() > 2017): i += 1 # skip 00
 		i = node.ReadSInt32(i, 's32_0')
 		if (getFileVersion() > 2018): i += 1 # skip 00
 		i = node.ReadChildRef(i, 'mappings')
-		if (getFileVersion() > 2018): i += 4 # skip FF FF FF FF
+		if (getFileVersion() > 2017): i += 4 # skip FF FF FF FF
 		return i
 
 	def Read_F8A779F8(self, node):
