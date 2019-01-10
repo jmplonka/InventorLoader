@@ -3779,7 +3779,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_637B1CC1(self, node):
-		i = self.ReadHeaderEnum(node)
+		i = self.ReadHeaderEnum(node, 'ApproximationOptimized', {0: True, 1: False})
 		return i
 
 	def Read_63D9BDC4(self, node):
@@ -8144,7 +8144,7 @@ class DCReader(EeDataReader):
 		i = node.Read_Header0('ASM')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i += 4
+		i = node.ReadUInt32(i, 'u32_1')
 		txt, i = getText8(node.data, i, 15)
 		index = 0
 		clearEntities()

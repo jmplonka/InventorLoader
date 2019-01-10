@@ -688,7 +688,7 @@ class AppReader(SegmentReader):
 		# [2]	[STR_LEN] [STRING:PRODUCT] [STR_LEN] [STRING:PRODUCER] [STR_LEN] [STRING:DATE]
 		# [3]	[UNIT_LENGTH] [FAC_RES_ABS] [FAC_RES_NOR]
 		i = node.Read_Header0('ASM')
-		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		return i
 

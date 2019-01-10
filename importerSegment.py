@@ -599,9 +599,9 @@ class SegmentReader(object):
 		# [2]	[STR_LEN] [STRING:PRODUCT] [STR_LEN] [STRING:PRODUCER] [STR_LEN] [STRING:DATE]
 		# [3]	[UNIT_LENGTH] [FAC_RES_ABS] [FAC_RES_NOR]
 		i = node.Read_Header0('ASM')
-		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i += 4
+		i = node.ReadUInt32(i, 'u32_1')
 		txt, i = getText8(node.data, i, 15)
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
@@ -617,11 +617,11 @@ class SegmentReader(object):
 		index = 0
 		clearEntities()
 		entities = {}
-		e = len(node.data) - 16
+		e = len(node.data) - 17
 		vers = getFileVersion()
+		if (vers > 2010): e -=1
 		if (vers > 2018): e -=1
-		if (vers > 2017): e -=1
-
+		if (vers < 2011): e -=8
 		add = True
 		while (i < e):
 			entity, i = readEntityBinary(data, i, e)
@@ -638,12 +638,14 @@ class SegmentReader(object):
 		node.set('SAT', [header, lst])
 		self.segment.AcisList.append(node)
 		dumpSat(node)
+		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'selectedKey')
-		if (getFileVersion() > 2017): i += 1 # skip 00
+		i += 1 # skip 00
 		i = node.ReadSInt32(i, 's32_0')
+		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2018): i += 1 # skip 00
 		i = node.ReadChildRef(i, 'mappings')
-		if (getFileVersion() > 2017): i += 4 # skip FF FF FF FF
+		i += 4 # skip FF FF FF FF
 		return i
 
 	def Read_F8A779F8(self, node):

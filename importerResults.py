@@ -133,11 +133,11 @@ class ResultReader(SegmentReader):
 
 	def Read_F645595C(self, node):
 		i = node.Read_Header0()
-		i = node.ReadUInt16A(i, 2, 'a0')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 2, 'a1')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 2, 'a2')
+		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)

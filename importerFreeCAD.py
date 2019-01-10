@@ -2577,7 +2577,7 @@ class FreeCADImporter:
 		verticalSurface = getProperty(properties, 0x0A) # boolean parameter
 		aprxTol         = getProperty(properties, 0x0C) # approximation tolerance
 		aprxType        = getProperty(properties, 0x0D) # approximation type
-		#= getProperty(properties, 0x0E) # Enum_637B1CC1
+		aprxOptimize    = getProperty(properties, 0x0E) # Enum_637B1CC1
 		solid           = getProperty(properties, 0x0F) # solid
 		blending        = getProperty(properties, 0x10) # boolean parameter
 		#= getProperty(properties, 0x11) # boolean parameter

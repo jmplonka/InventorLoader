@@ -5,7 +5,7 @@ importerUtils.py:
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import os, sys, datetime, FreeCADGui, numpy, json
+import os, sys, datetime, FreeCADGui, numpy, json, shutil
 from PySide.QtCore import *
 from PySide.QtGui  import *
 from uuid          import UUID
@@ -840,10 +840,17 @@ def getDumpFolder():
 
 def setInventorFile(file):
 	global _inventor_file
-	_inventor_file = file
-	folder   = _inventor_file[0:-4]
-	if (not os.path.exists(os.path.abspath(folder))):
+	_inventor_file = os.path.abspath(file)
+	folder   = getDumpFolder()
+	if (not os.path.exists(folder)):
 		os.mkdir(folder)
+	else:
+		for f in os.listdir(folder):
+			p = os.path.join(folder, f)
+			if os.path.isfile(p):
+				os.unlink(p)
+			else:
+				shutil.rmtree(p)
 	return OleFileIO(file)
 
 def translate(str):
