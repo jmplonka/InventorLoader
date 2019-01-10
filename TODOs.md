@@ -6,14 +6,13 @@
 
 ## Missing Features
 	* SheetMetal
-		* add (Cosmetic-)Bend, (Re-)Fold, Hem, Knit, Face (Delete, Draft, Move, Replace), Corner (Chamfer, Round), (Contour-, Lofted-)Flange
-		* add PunchTool, CounterRoll, Rip
+		* add (Cosmetic-)Bend, (Re-)Fold, Hem, Face (Delete, Draft, Move, Replace), Corner (Chamfer, Round), (Contour-, Lofted-)Flange
+		* add CounterRoll, Rip
 
 	* Solids modeling
 		* add Shell, Split, (Presentation-)Mesh
 
 	* Surfaces
-		* add BoundaryPatch
 		* add Trim, Sculpt, Extend
 		* add RuledSurface
 		* add Decal, Emboss
@@ -28,7 +27,7 @@
 	* Access to feature properties
 
 ## Unsupported
-	* NonParametricBase, CoreCavity, (Alias-)Freeform, Reference, DirectEdit, iFeature
+	* NonParametricBase, CoreCavity, (Alias-)Freeform, Reference, DirectEdit, PunchTool, iFeature
 
 # SAT files
 ## Incomplete Features
@@ -36,7 +35,6 @@
 	* references - sometime references can't be resolved :(
 
 ## missing Features
-	* mesh-surfaces
 	* compu-, int-int-curves
 
 ## unsupported
