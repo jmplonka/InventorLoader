@@ -218,8 +218,8 @@ def ReadProtein(data):
 def ReadWorkbook(doc, data, name, stream):
 	##create a new Spreadsheet in new document
 	wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
-	for name in wbk.name_obj_list:
-		r = name.area2d()
+	for nameValues in wbk.name_obj_list:
+		rng = nameValues.area2d()
 
 	for idx in range(0, wbk.nsheets):
 		sht = wbk.sheet_by_index(idx)
@@ -236,7 +236,6 @@ def ReadWorkbook(doc, data, name, stream):
 
 	xls = copy(wbk)
 	xls.save(u"%s/%s.xls" %(getDumpFolder(), name))
-	# logInfo(u">>>INFO - found workook: stored as %r!", filename)
 	return len(data)
 
 def ReadRSeSegment(data, offset, idx, count):
