@@ -8140,52 +8140,6 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_0b')
 		return i
 
-	def Read_F645595C(self, node): # ASM
-		i = node.Read_Header0('ASM')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
-		txt, i = getText8(node.data, i, 15)
-		index = 0
-		clearEntities()
-		entities = {}
-		lst = []
-		e = len(node.data) - 12
-		if (getFileVersion() < 2011): e -=4
-
-		setVersion(7.0)
-		header = Header()
-		header.version, i = getUInt32(node.data, i)
-		header.records, i = getUInt32(node.data, i)
-		header.bodies , i = getUInt32(node.data, i)
-		header.flags  , i = getUInt32(node.data, i)
-		tag, header.prodId, i   = readNextSabChunk(node.data, i)
-		tag, header.prodVers, i = readNextSabChunk(node.data, i)
-		tag, header.date, i     = readNextSabChunk(node.data, i)
-		tag, header.scale, i    = readNextSabChunk(node.data, i)
-		tag, header.resabs, i   = readNextSabChunk(node.data, i)
-		tag, header.resnor, i   = readNextSabChunk(node.data, i)
-		node.content += "\n%s" %(header)
-		header.version = 7.0
-		while (i < e):
-			entity, i = readEntityBinary(node.data, i, e)
-			entity.index = index
-			entities[index] = entity
-			lst.append(entity)
-			convert2Version7(entity)
-			index += 1
-			if (entity.name in ('End-of-ACIS-data')):
-				break
-		resolveEntityReferences(entities, lst)
-		node.set('SAT', [header, lst])
-		self.segment.AcisList.append(node)
-		dumpSat(node)
-		i = node.ReadUInt32(e, 'selectedKey')
-		if (getFileVersion() < 2011): i += 4  # skip block len
-		i = node.ReadChildRef(i, 'mappings')
-		i = node.ReadSInt32(i, 's32_0')
-		return i
-
 	def Read_F67F0488(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'ref_1')
