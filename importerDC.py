@@ -1534,9 +1534,10 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadChildRef(i, 'ref_2')
-		i = node.ReadUInt8(i, 'u8_1')
-		if (getFileVersion() >  2017):
-			i += 4
+		if (getFileVersion() >  2013):
+			i += 1 # skip 00
+			if (getFileVersion() >  2017):
+				i += 4
 		i = self.Read2RefList(node, i, 'a1', REF_CHILD, REF_CHILD)
 		return i
 

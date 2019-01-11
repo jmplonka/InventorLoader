@@ -23,6 +23,11 @@ _listPattern = re.compile('[^\x00]\x00\x00\x30')
 
 _fmt_new = False
 
+if (sys.version_info.major < 3):
+	_unicode_ = unicode
+else:
+	_unicode_ = str
+
 def resolveEntityReferences(entities, lst):
 	skip = False
 	for entity in lst:
@@ -134,23 +139,27 @@ def getBranchNode(data, isRef):
 
 def __dumpBranch(file, ref, branch, level, prefix):
 	# branch can be either an branch node or an text representation!
-	indent = u"%s%s" %('\t' * level, prefix)
+	file.write('\t' * level)
+	file.write(prefix)
 	if (ref is not None):
+		file.write(ref.attrName)
 		if (ref.number is not None):
-			if (type(ref.number) in [list, dict]):
-				file.write(u"%s%s%s = %s\n" %(indent, ref.attrName, ref.number, branch))
-			elif (type(ref.number) is str):
-				file.write(u"%s%s['%s'] = %s\n" %(indent, ref.attrName, ref.number, branch))
-			elif (type(ref.number) is UUID):
-				file.write(u"%s%s[{%s}] = %s\n" %(indent, ref.attrName, str(ref.number).upper(), branch))
-			elif (type(ref.number) is int):
-				file.write(u"%s%s[%04X] = %s\n" %(indent, ref.attrName, ref.number, branch))
+			t = type(ref.number)
+			if ((t is list) or (t is dict)):
+				file.write(u"%s = " %(ref.number))
+			elif ((t is str) or (t is _unicode_)):
+				file.write(u"['%s'] = " %(ref.number))
+			elif (t is UUID):
+				file.write(u"[{%s}] = " %(str(ref.number).upper()))
+			elif (t is int):
+				file.write(u"[%04X] = " %(ref.number))
 			else:
-				file.write(u"%s%s[%s] = %s\n" %(indent, ref.attrName, ref.number, branch))
+				file.write(u"[%s] = " %(ref.number))
 		else:
-			file.write(u"%s%s = %s\n" %(indent, ref.attrName, branch))
-	else:
-		file.write(u"%s%s\n" %(indent, branch))
+			file.write(u" = ")
+
+	file.write(branch)
+	file.write(u"\n")
 	return
 
 def buildBranch(parent, file, data, level, ref):
