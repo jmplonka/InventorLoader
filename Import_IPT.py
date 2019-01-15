@@ -39,6 +39,8 @@ def ReadElement(ole, fname, doc, counter, readProperties):
 			if (isEmbeddings(fname)):
 				if (name == 'Workbook'):
 					ReadWorkbook(doc, stream, fname[-2], name)
+				elif (name.endswith('Ole10Native')):
+					ReadOle10Native(doc, stream, fname)
 				else:
 					skip(stream)
 			elif (name.startswith('M')):

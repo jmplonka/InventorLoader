@@ -11,8 +11,8 @@ from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
 from importerUtils          import *
-from Acis                   import clearEntities
-from importerSAT            import readEntityBinary, Header
+from Acis                   import clearEntities, readNextSabChunk, setVersion
+from importerSAT            import readEntityBinary, int2version, Header
 from uuid                   import UUID
 
 __author__     = 'Jens M. Plonka'
@@ -603,29 +603,32 @@ class SegmentReader(object):
 
 	def Read_F645595C(self, node):
 		# Spatial's (A)CIS (S)olid (M)odeling
-		# 3 Line Header:
-		# [1]	[VERSION_NUMBER] [ENTIY_RECORDS] 4 [FLAGS]
-		# [2]	[STR_LEN] [STRING:PRODUCT] [STR_LEN] [STRING:PRODUCER] [STR_LEN] [STRING:DATE]
-		# [3]	[UNIT_LENGTH] [FAC_RES_ABS] [FAC_RES_NOR]
 		i = node.Read_Header0('ASM')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
-		txt, i = getText8(node.data, i, 15)
+		txt, i = getText8(node.data, i, 15) # 'ASM BinaryFile4'
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
-		vrs, i = getUInt32(node.data, i)
-		data = b'\x04\xBC\x02\x00\x00'       # ACIS-Version 0x4 (=int) 0x000002BC = 7.0
-		data += b'\x04' + node.data[i:i+4]   # Number of records
-		data += b'\x04' + node.data[i+4:i+8] # Number of bodies
-		data += b'\x04' + node.data[i+8:]    # Flags + entities
-		lst = []
+
 		header = Header()
-		i = header.readBinary(data)
-		node.data = data
+		header.version, i = getUInt32(node.data, i)
+		header.records, i = getUInt32(node.data, i)
+		header.bodies, i  = getUInt32(node.data, i)
+		header.flags, i   = getUInt32(node.data, i)
+		tag, header.prodId, i  = readNextSabChunk(node.data, i)
+		tag, header.prodVer, i = readNextSabChunk(node.data, i)
+		tag, header.date, i    = readNextSabChunk(node.data, i)
+		tag, header.scale, i   = readNextSabChunk(node.data, i)
+		tag, header.resabs, i  = readNextSabChunk(node.data, i)
+		tag, header.resnor, i  = readNextSabChunk(node.data, i)
+		self.version = int2version(header.version)
+		setVersion(7.0)
+
 		index = 0
 		clearEntities()
 		entities = {}
+		lst = []
 		e = len(node.data) - 17
 		vers = getFileVersion()
 		if (vers > 2010): e -=1
@@ -633,7 +636,7 @@ class SegmentReader(object):
 		if (vers < 2011): e -=8
 		add = True
 		while (i < e):
-			entity, i = readEntityBinary(data, i, e)
+			entity, i = readEntityBinary(node.data, i, e)
 			entity.index = index
 			entities[index] = entity
 			if (add):

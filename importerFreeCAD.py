@@ -306,15 +306,11 @@ def getCountDir(length, count, direction, fitted):
 
 	distance = getMM(length)
 
-	if (direction.typeName == 'A244457B'):
-		midplane = direction.get('parameter')
-	elif (direction.typeName == 'A5977BAA'):
-		pass
-	elif (direction.typeName == 'D2D440C0'):
+	if (direction.typeName == 'D2D440C0'):
 		logWarning(u"    ... don't know how to apply pattern along curve - ignored!")
 		# have to calculate the normal vector for each point of the curve!
 		return 1, VEC() # 1: no pattern copy!
-	elif (direction.typeName != 'Direction'):
+	if (direction.typeName not in ['Direction', 'A244457B', 'A5977BAA']):
 		logWarning(u"    ... don't know how to get direction from (%04X) %s (pattern along curves are not supported) - ignoring pattern!", direction.index, direction.typeName)
 		return 1, VEC() # 1 means: no pattern copy.
 
@@ -2200,9 +2196,7 @@ class FreeCADImporter:
 		return
 
 	def adjustMidplane(self, pattern, direction, distance, fitted, count):
-		d = getMM(distance) / 2.0
-		if (isTrue(fitted) == False):
-			d *= getNominalValue(count) - 1
+		d = getNominalValue(distance)
 		base = p2v(direction, 'dirX', 'dirY', 'dirZ') * d
 		pattern.Placement.Base = pattern.Placement.Base - base
 		return

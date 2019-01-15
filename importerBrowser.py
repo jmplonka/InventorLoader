@@ -167,8 +167,8 @@ class BrowserReader(SegmentReader):
 		i = self.ReadHeaderStr664(node)
 		return i
 
-	def Read_19910142(self, node):
-		i = self.ReadHeader0_664(node)
+	def Read_19910142(self, node): # 3rdParty
+		i = self.ReadHeader0_664(node, '3rdParty')
 		i = self.Read_Str01(i, node)
 		i = self.skipBlockSize(i)
 		return i
@@ -547,8 +547,8 @@ class BrowserReader(SegmentReader):
 
 	def Read_D9389A04(self, node): return 0
 
-	def Read_D95A2DF2(self, node):
-		i = self.ReadHeader0_664(node)
+	def Read_D95A2DF2(self, node): # TranslationReport
+		i = self.ReadHeader0_664(node, 'TranslationReport')
 		i = self.Read_Str01(i, node)
 		i = self.skipBlockSize(i)
 		i = node.ReadSInt32(i, 's32_0')

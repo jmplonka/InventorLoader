@@ -465,7 +465,7 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
 		i = self.ReadRefU32U8List(node, i, 'lst2')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadUInt32A(i, 2, 'a1')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
@@ -538,7 +538,7 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
 		i = self.ReadRefU32List(node, i, 'a1')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 4, 'a1')
+		i = node.ReadUInt32A(i, 4, 'a2')
 		return i
 
 	def Read_6250D222(self, node):
@@ -820,9 +820,8 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		if (getFileVersion() < 2011):
 			i = node.ReadCrossRef(i, 'face')
-		i = node.ReadUInt32(i, 'u32_2a')
-		i = node.ReadUInt32(i, 'u32_2b')
-		i = self.ReadU32U32List(node, i, 'edges')
+		i = node.ReadUInt32A(i, 2, 'namTabRoot')
+		i = self.ReadU32U32List(node, i, 'namTabEdges')
 		if (getFileVersion() > 2010):
 			i = node.ReadCrossRef(i, 'face')
 		return i

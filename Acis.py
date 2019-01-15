@@ -210,6 +210,14 @@ def MAX(*x):       return max(x)
 def DCUR(c, x):     return c.parameter(x)
 def DSURF(c, u, v): return c.parameter(u, v)
 
+_header = None
+def getHeader():
+	global _header
+	return _header
+def setHeader(header):
+	global _header
+	_header = header
+
 class Law(object):
 	# Laws:
 	#	trigonometric:
@@ -3655,8 +3663,7 @@ class AttribNamingMatching(Attrib):
 	def __init__(self): super(AttribNamingMatching, self).__init__()
 	def set(self, entity):
 		i = super(AttribNamingMatching, self).set(entity)
-		n = entity.chunks[i].val
-		if ((type(n) == int) and (n > 30)):
+		if (getHeader().version >= 21600):
 			return i + 1 # since ASM 216 (Inventor 2011) there is an identifyer added!
 		return i
 class AttribNamingMatchingNMxMatchedEntity(AttribNamingMatching):

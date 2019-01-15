@@ -7,7 +7,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 
 import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime, ImportGui
 from importerUtils import logInfo, logWarning, logError, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
-from Acis          import AcisRef, AcisEntity, readNextSabChunk
+from Acis          import AcisRef, AcisEntity, readNextSabChunk, setHeader, getHeader
 from Acis2Step     import export
 from math          import fabs
 
@@ -119,14 +119,6 @@ def setEntities(entities):
 		Acis.clearEntities()
 	_entities = entities
 
-_header = None
-def getHeader():
-	global _header
-	return _header
-def setHeader(header):
-	global _header
-	_header = header
-
 class Header():
 	def __init__(self):
 		self.version = 7.0
@@ -169,7 +161,10 @@ class Header():
 			logInfo(u"    product: '%s'", self.prodId)
 			logInfo(u"    version: '%s'", self.prodVer)
 			logInfo(u"    date:    %s",   self.date)
-		Acis.setVersion(self.version)
+		if (self.prodId == 'Inventor'):
+			Acis.setVersion(7.0)
+		else:
+			Acis.setVersion(self.version)
 		return
 	def readBinary(self, data):
 		tag, self.version, i = readNextSabChunk(data, 0)

@@ -987,6 +987,8 @@ class FeatureNode(DataNode):
 				p7 = self._getPropertyEnumName(7)
 				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
 				if (p7 == '4688EBA3_Enum'):         return 'Unfold'
+			if (p1 == 'FaceBoundProxy'):            return 'LoftedFlangeDefinition'
+			if (p1 == 'SurfaceBody'):               return 'Reference'
 		elif (p0 == 'Enum'):
 			p2 = self._getPropertyName(2)
 			p3 = self._getPropertyName(3)
@@ -1049,9 +1051,6 @@ class FeatureNode(DataNode):
 			if (p2 == 'SurfaceBody'):               return 'Knit'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'TrimType'):                    return 'Trim'
-		elif (p0 == 'SurfaceBody'):
-			if (p1 == 'FaceBoundProxy'):            return 'LoftedFlangeDefinition'
-			if (p1 == 'SurfaceBody'):               return 'Reference'
 		elif (p0 == 'CornerSeam'):                  return 'Corner'
 		elif (p0 == 'AFD8A8E0'):                    return 'Corner'
 		elif (p0 == 'LoftSections'):                return 'Loft'

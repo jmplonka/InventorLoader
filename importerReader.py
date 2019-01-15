@@ -5,7 +5,7 @@ importerReader.py:
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys, os, uuid, datetime, re, zlib, operator, glob, struct, codecs, xlrd, FreeCAD, Import_IPT
+import sys, os, uuid, datetime, re, zlib, operator, glob, struct, codecs, xlrd, FreeCAD, Import_IPT, importerOle10Nateive
 from importerClasses     import *
 from importerSegment     import SegmentReader
 from importerBRep        import BRepReader
@@ -237,6 +237,13 @@ def ReadWorkbook(doc, data, name, stream):
 	xls = copy(wbk)
 	xls.save(u"%s/%s.xls" %(getDumpFolder(), name))
 	return len(data)
+
+def ReadOle10Native(doc, stream, fnames):
+	ole = importerOle10Nateive.olenative()
+	ole.read(stream)
+	with open(u"%s/%s" %(getDumpFolder(), ole.label), 'wb') as f:
+		f.write(ole.data)
+	return
 
 def ReadRSeSegment(data, offset, idx, count):
 	seg = RSeSegment()
