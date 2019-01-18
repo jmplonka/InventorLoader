@@ -1490,10 +1490,7 @@ class Wcs(Entity):
 class Transform(Entity):
 	def __init__(self):
 		super(Transform, self).__init__()
-		self.affine = []
-		self.affine.append((1, 0, 0))
-		self.affine.append((0, 1, 0))
-		self.affine.append((0, 0, 1))
+		self.affine = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]
 		self.transl     = (0, 0, 0)
 		self.scale      = 1.0
 		self.rotation   = False

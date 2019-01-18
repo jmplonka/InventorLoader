@@ -353,7 +353,7 @@ def readIamRefs(data, offset, log, txt):
 		n1, i = getUInt8(data, i)
 		t1, i = getLen32Text16(data, i)
 		a1, i = getUInt16A(data, i, 4)
-		refs.append([n1,t1] + a1)
+		refs.append([n1, t1] + list(a1))
 		log.write(u"  [%02X]: %02X,'%s',%s\n" %(j, n1, t1, IntArr2Str(a1, 3)))
 	return refs, i
 
@@ -437,7 +437,7 @@ def readL7BHLst1(data, offset, log, txt):
 		else:
 			l7bhls.n1, i = getUInt8(data, i)
 		tst, k = getUInt8A(data, i + 1, 3)
-		if (tst != [0,0,0]):
+		if (tst != (0,0,0)):
 			l7bhls.n2, i = getUInt8(data, i)
 		l7bhls.l1, i      = readBBLTvLNew(data, i)
 		l7bhls.l2, i      = readBBLTvLNew(data, i)

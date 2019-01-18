@@ -6,7 +6,7 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerClasses import AbstractData, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr
+from importerClasses import AbstractData, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry
 from importerUtils   import *
 from math            import log10, pi
 import numpy as np
@@ -67,6 +67,8 @@ _TYP_U32_TXT_TXT_DATA_      = 0x0044
 _TYP_U32_TXT_U32_LST2_      = 0x0045
 _TYP_APP_1_                 = 0x0046
 _TYP_F64_F64_U32_U8_U8_U16_ = 0x0047
+_TYP_NT_ENTRY_              = 0x0048
+_TYP_2D_UINT32_             = 0x0049
 
 _TYP_LIST_UINT16_A_         = 0x8001
 _TYP_LIST_SINT16_A_         = 0x8002
@@ -134,6 +136,7 @@ TYP_LIST_FUNC = {
 	_TYP_U32_TXT_U32_LST2_:      'getListApp3',
 	_TYP_APP_1_:                 'getListApp4',
 	_TYP_F64_F64_U32_U8_U8_U16_: 'getListApp5',
+	_TYP_NT_ENTRY_:              'getListNtEntries',
 	_TYP_LIST_UINT16_A_:         'getListListUInt16sA',
 	_TYP_LIST_SINT16_A_:         'getListListSInt16sA',
 	_TYP_LIST_UINT32_A_:         'getListListUInt32sA',
@@ -153,6 +156,7 @@ TYP_04_FUNC = {
 	_TYP_STRING8_:               'getListString8s',
 	_TYP_UINT32_:                'getListUInt32s',
 	_TYP_UINT32_A_:              'getListUInt32sA',
+	_TYP_2D_UINT32_:             'getList2DUInt32s',
 	_TYP_RESULT_1_:              'getListResult1',
 	_TYP_RESULT_2_:              'getListResult2',
 	_TYP_RESULT_3_:              'getListResult3',
@@ -415,8 +419,7 @@ class SecNode(AbstractData):
 		else:
 			val = Struct('<' + (s+'L')*cnt).unpack_from(self.data, offset)
 			i   = offset + (w+4)*cnt # 4Bytes float 4Byte blocklen
-			lst = list(val)[0::2]
-		lst = list(lst)
+			lst = val[0::2]
 		if (len(lst) > 100):
 			self.content += u" %s=[%s,...]" %(name, u",".join([fmt %(n) for n in lst]))
 		else:
@@ -716,6 +719,27 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
+	def getListNtEntries(self, name, offset, cnt, arraysize):
+		lst = []
+		i  = offset
+		for j in range(cnt):
+			nt, i  = getUInt32(self.data, i)
+			idx, i = getUInt32(self.data, i)
+			lst.append(NtEntry(nt, idx))
+		self.content += u" %s={%s}" %(name, u",".join([u"%r" %(e) for e in lst]))
+		self.set(name, lst)
+		return i
+
+	def getList2DUInt32s(self, name, offset, cnt, arraysize):
+		lst = []
+		i  = offset
+		for j in range(cnt):
+			u, i  = getUInt32A(self.data, i, 2)
+			lst.append(u)
+		self.content += u" %s={%s}" %(name, u",".join([u"(%d,%d)" %(u[0], u[1]) for u in lst]))
+		self.set(name, lst)
+		return i
+
 	def getListResult1(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
@@ -886,12 +910,12 @@ class SecNode(AbstractData):
 			arr32, i = getUInt32A(self.data, i, 2)
 		return func(name, i, cnt, arraySize)
 
-	def ReadMetaData_04(self, name, offset, typ, arraySize = 1):
+	def ReadMetaData_04(self, name, offset, typ, method = getUInt16A):
 		cnt, i = getUInt32(self.data, offset)
 		func = getattr(self, TYP_04_FUNC[typ])
 		if (cnt > 0):
-			arr16, i = getUInt16A(self.data, i, 2)
-		return func(name, i, cnt, arraySize)
+			arr16, i = method(self.data, i, 2)
+		return func(name, i, cnt, 1) # arraysize = 1 => dummy value has to be ignored by any function in TYP_04_FUNC's
 
 	def ReadMetaData_ARRAY(self, name, offset, typ):
 		cnt, i = getUInt32(self.data, offset)
@@ -1170,9 +1194,9 @@ class SecNode(AbstractData):
 		i = CheckList(self.data, offset, 0x0003)
 		return self.ReadMetaData_ARRAY(name, i, typ)
 
-	def ReadList4(self, offset, typ, name = 'lst4', arraySize = 1):
+	def ReadList4(self, offset, typ, name = 'lst4', method = getUInt16A):
 		i = CheckList(self.data, offset, 0x0004)
-		return self.ReadMetaData_04(name, i, typ, arraySize)
+		return self.ReadMetaData_04(name, i, typ, method)
 
 	def ReadList6(self, offset, typ, name = 'lst6'):
 		i = CheckList(self.data, offset, 0x0006)

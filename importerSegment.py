@@ -542,14 +542,13 @@ class SegmentReader(object):
 			logError(traceback.format_exc())
 
 		try:
-			if (i < len(node.data)):
+			node.data = node.data[i:]
+			if (len(node.data) > 0):
 				if (sys.version_info.major < 3):
-					s = " ".join(["%02X" % ord(c) for c in node.data[i:]])
+					s = " ".join(["%02X" % ord(c) for c in node.data])
 				else:
-					s = " ".join(["%02X" % c for c in node.data[i:]])
+					s = " ".join(["%02X" % c for c in node.data])
 				node.content += u"\taX=[%s]" %(s)
-			else:
-				node.data = None
 		except:
 			logError(u"ERROR in %s.Read_%s: %s", self.__class__.__name__, node.typeName, traceback.format_exc())
 

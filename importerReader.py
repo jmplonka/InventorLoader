@@ -748,8 +748,7 @@ def ReadRSeMetaDataB(dataB, seg):
 			data = z.decompress(dataB[i:])
 
 			reader.ReadSegmentData(newFile, data)
-
-	return len(dataB)
+	return
 
 def ReadRSeMetaDataM(dataM, name):
 	i = 0

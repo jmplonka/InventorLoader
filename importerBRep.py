@@ -83,6 +83,10 @@ class BRepReader(NameTableReader):
 		i = self.ReadHeaderNameTableChild1Node(node)
 		return i
 
+	def Read_8E5D4198(self, node):
+		i = self.ReadHeaderNameTableChild1Node(node)
+		return i
+
 	def Read_821ACB9E(self, node):
 		i = self.ReadHeaderNameTableChild1Node(node)
 		return i

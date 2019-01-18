@@ -427,7 +427,6 @@ def getUInt8A(data, offset, size):
 	end = int(offset + size)
 	assert end <= len(data), "Trying to read UInt8 array beyond data end (%d, %X > %X)" %(size, end, len(data))
 	val = unpack_from('<' +'B'*int(size), data, offset)
-	val = list(val)
 	return val, end
 
 def getUInt16(data, offset):
@@ -460,7 +459,6 @@ def getUInt16A(data, offset, size):
 		The new position in the 'stream'.
 	'''
 	val = unpack_from('<' +'H'*int(size), data, offset)
-	val = list(val)
 	return val, int(offset + 2 * size)
 
 def getSInt16(data, offset):
@@ -493,7 +491,6 @@ def getSInt16A(data, offset, size):
 		The new position in the 'stream'.
 	'''
 	val = unpack_from('<' +'h'*int(size), data, offset)
-	val = list(val)
 	return val, int(offset + 2 * size)
 
 def getUInt32(data, offset):
@@ -526,7 +523,6 @@ def getUInt32A(data, offset, size):
 		The new position in the 'stream'.
 	'''
 	val = unpack_from('<' +'L'*int(size), data, offset)
-	val = list(val)
 	return val, int(offset + 4 * size)
 
 def getSInt32(data, offset):
@@ -559,7 +555,6 @@ def getSInt32A(data, offset, size):
 		The new position in the 'stream'.
 	'''
 	val = unpack_from('<' + 'l'*int(size), data, offset)
-	val = list(val)
 	return val, int(offset + 4 * size)
 
 def getFloat32(data, offset):
@@ -598,12 +593,10 @@ def getFloat32A(data, offset, size):
 
 def getFloat32_2D(data, index):
 	val = FLOAT32_2D(data, index)
-	val = list(val)
 	return val, int(index + 0x8)
 
 def getFloat32_3D(data, index):
 	val = FLOAT32_3D(data, index)
-	val = list(val)
 	return val, int(index + 0xC)
 
 def getFloat64(data, offset):
@@ -636,17 +629,14 @@ def getFloat64A(data, offset, size):
 		The new position in the 'stream'.
 	'''
 	val = unpack_from('<' + 'd'*int(size), data, offset)
-	val = list(val)
 	return val, int(offset + 8 * size)
 
 def getFloat64_2D(data, index):
 	val = FLOAT64_2D(data, index)
-	val = list(val)
 	return val, int(index + 0x10)
 
 def getFloat64_3D(data, index):
 	val = FLOAT64_3D(data, index)
-	val = list(val)
 	return val, int(index + 0x18)
 
 def getColorRGBA(data, offset):

@@ -1412,7 +1412,7 @@ def export(filename, satHeader, satBodies):
 	path = path.replace('\\', '/')
 
 	# Dump subtype-table for the surfaces (debugging purposes)
-	subpath = "%s/%s" %(path,name)
+	subpath = "%s/%s" %(path, name)
 	if (not os.path.exists(subpath)):
 		os.makedirs(subpath)
 

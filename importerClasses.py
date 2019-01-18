@@ -1583,3 +1583,12 @@ def createNewModel():
 def getModel():
 	global model
 	return model
+
+class NtEntry():
+	def __init__(self, nameTable, entry):
+		self.nameTable = nameTable & 0x7FFFFFFF
+		self.entry     = entry
+	def __repr__(self):
+		if (self.nameTable is None):
+			return u""
+		return u"%04X[%04X]" %(self.nameTable, self.entry)
