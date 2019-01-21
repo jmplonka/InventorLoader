@@ -324,7 +324,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		node.set('a2', [0,0])
 		node.set('a3', [])
 		node.set('a4', [0,0,0])
-		return 
+		return i
 
 	def Read_B1ED010F(self, node): # Name table child node
 		i = self.ReadHeaderNameTableChild1Node(node)
