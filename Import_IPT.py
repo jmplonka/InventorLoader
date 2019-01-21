@@ -197,9 +197,9 @@ def read(doc, filename, readProperties):
 			if (not fname[-1].startswith('B')):
 				list.append(fname)
 
-	dumpRSeDB(getModel().RSeDb)
 	dumpiProperties(getModel().iProperties)
-	dumpRevisionInfo(getModel().RSeRevisions)
+	dumpRSeDB(getModel().RSeDb)
+#	dumpRevisionInfo(getModel().RSeRevisions)
 
 	for fname in list:
 		ReadElement(ole, fname, doc, counter, readProperties)
