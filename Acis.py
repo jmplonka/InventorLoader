@@ -3871,7 +3871,7 @@ class AcisChunk():
 		if (self.tag == TAG_SUBIDENT     ): return u"%s-"     %(self.val)
 		if (self.tag == TAG_SUBTYPE_OPEN ): return u"{ "
 		if (self.tag == TAG_SUBTYPE_CLOSE): return u"} "
-		if (self.tag == TAG_TERMINATOR   ): return u"#\n"
+		if (self.tag == TAG_TERMINATOR   ): return u"#"
 		if (self.tag == TAG_POSITION     ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == TAG_VECTOR_3D    ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == TAG_ENUM_VALUE   ): return u"%d "     %(self.val)
