@@ -221,9 +221,8 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
 		i = self.ReadNtEntry(node, i, 'face')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 2, 'a1')
-		i = node.ReadUInt16A(i, 2, 'a1')
-		node.content += u" a3=[] a4=[] a5=[] a6=[0000,0000,0000]"
+		i = node.ReadUInt32A(i, 3, 'a1')
+		node.content += u" a2=[] a3=[] a4=[] a5=[0000,0000,0000]"
 		node.set('a2', [])
 		node.set('a3', [])
 		node.set('a4', [])

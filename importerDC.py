@@ -1307,7 +1307,7 @@ class DCReader(EeDataReader):
 			i = node.ReadUInt32(i, 'u32_4')
 		elif (cnt == 0):
 			node.set('u32_4', 0)
-			node.content += ' u32_4=000000'
+			node.content += ' u32_4=0000'
 		i = node.ReadFloat64A(i, (len(node.data) - i) / 8, 'a1')
 		return i
 
@@ -1716,7 +1716,7 @@ class DCReader(EeDataReader):
 			node.set('u8_0', 0)
 		if (getFileVersion() < 2013):
 			i = self.skipBlockSize(i)
-			node.content += ' u32_1=000000'
+			node.content += ' u32_1=0000'
 			node.set('u32_0', 0)
 			i = node.ReadUInt8(i, 'u8_0')
 
@@ -5187,7 +5187,7 @@ class DCReader(EeDataReader):
 		else:
 			i = self.skipBlockSize(i)
 
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i)
 		i = node.ReadList8(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = node.ReadList8(i, importerSegNode._TYP_UINT32_, 'lst1')
@@ -5590,7 +5590,7 @@ class DCReader(EeDataReader):
 		else:
 			node.set('u32_0', 0)
 			node.set('u32_1', 0)
-			node.content += " u32_0=000000 u32_1=000000"
+			node.content += " u32_0=0000 u32_1=0000"
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i, 4)
 		return i
@@ -5624,7 +5624,7 @@ class DCReader(EeDataReader):
 		if (getFileVersion() > 2011):
 			i = node.ReadUInt32(i, 'u32_1')
 		else:
-			node.content += ' u32_1=000000'
+			node.content += ' u32_1=0000'
 			node.set('u32_1', 0)
 		return i
 
@@ -6985,7 +6985,7 @@ class DCReader(EeDataReader):
 			i = node.ReadUInt32(i, 'u32_0')
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
 		else:
-			node.content += ' u32_0=000000 lst2={}'
+			node.content += ' u32_0=0000 lst2={}'
 			node.set('u32_0', 0)
 			node.set('lst2', [])
 		endPointOf = node.get('endPointOf')

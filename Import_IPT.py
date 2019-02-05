@@ -235,8 +235,8 @@ def resolveLinks():
 	return
 
 def create3dModel(root, doc):
+#	resolveLinks()
 	strategy = getStrategy()
-	resolveLinks()
 	if (strategy == STRATEGY_NATIVE):
 		creator = FreeCADImporter()
 		creator.importModel(root, doc)

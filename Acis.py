@@ -1234,7 +1234,7 @@ class BDY_GEOM_PLANE(BDY_GEOM):
 			u = self.parameters[0]
 			v = self.parameters[1]
 			self.shape = self.curve.build(u, v)
-class LoftData():
+class LoftData(object):
 	def __init__(self):
 		self.surface = None
 		self.bs2cur  = None
@@ -1244,7 +1244,7 @@ class LoftData():
 		self.m       = 1
 		self.v       = []
 		self.e2      = TAG_FALSE
-class Skin():
+class Skin(object):
 	def __init__(self):
 		self.a1   = [-1, -1, -1, -1]
 		self.f    = MIN_0
@@ -1304,7 +1304,7 @@ class BS3_Surface(BS3_Curve):
 		self.vKnots, self.vMults, self.vPeriodic = adjustMultsKnots(self.vKnots, self.vMults, self.vPeriodic, self.vDegree)
 
 		return i
-class Helix():
+class Helix(object):
 	def __init__(self):
 		self.radAngles = Intervall(Range('I', 1.0), Range('I', 1.0))
 		self.posCenter = CENTER
@@ -1409,7 +1409,7 @@ class Helix():
 		helix.translate(self.posCenter)
 		return helix.toShape()
 
-class Range():
+class Range(object):
 	def __init__(self, type, limit, scale = 1.0):
 		self.type  = type
 		self.limit = limit
@@ -1417,7 +1417,7 @@ class Range():
 	def __str__(self): return 'I' if (self.type == 'I') else "F %g" %(self.getLimit())
 	def __repr__(self): return 'I' if (self.type == 'I') else "%g" %(self.getLimit())
 	def getLimit(self): return self.limit if (self.type == 'I') else self.limit * self.scale
-class Intervall():
+class Intervall(object):
 	def __init__(self, upper, lower):
 		self.lower = upper
 		self.upper = lower
@@ -1428,11 +1428,15 @@ class Intervall():
 	def getUpperType(self):  return self.upper.type
 	def getUpperLimit(self): return self.upper.getLimit()
 	def getLimit(self):      return self.getUpperLimit() - self.getLowerLimit()
-class BeginOfAcisHistoryData(): pass
-class EndOfAcisHistorySection(): pass
-class EndOfAcisData(): pass
-class DeltaState(): pass
-class AsmHeader(): pass
+class BeginOfAcisHistoryData(object):
+	def __init__(self):
+	return
+class DeltaState(object):
+	return
+
+class EndOfAcisHistorySection(object): pass
+class EndOfAcisData(object): pass
+class AsmHeader(object): pass
 
 # abstract super class
 class Entity(object):
@@ -3850,7 +3854,7 @@ class AnnotationTolCreate(AnnotationTol):
 class AnnotationTolRevert(AnnotationTol):
 	def __init__(self): super(AnnotationTolRevert, self).__init__()
 
-class AcisChunk():
+class AcisChunk(object):
 	def __init__(self, key, val):
 		self.tag = key
 		self.val = val
@@ -3871,7 +3875,7 @@ class AcisChunk():
 		if (self.tag == TAG_SUBIDENT     ): return u"%s-"     %(self.val)
 		if (self.tag == TAG_SUBTYPE_OPEN ): return u"{ "
 		if (self.tag == TAG_SUBTYPE_CLOSE): return u"} "
-		if (self.tag == TAG_TERMINATOR   ): return u"#\n"
+		if (self.tag == TAG_TERMINATOR   ): return u"#"
 		if (self.tag == TAG_POSITION     ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == TAG_VECTOR_3D    ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
 		if (self.tag == TAG_ENUM_VALUE   ): return u"%d "     %(self.val)
@@ -3901,7 +3905,7 @@ class AcisChunk():
 		if (self.tag == TAG_VECTOR_2D    ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
 		return "%s " %(self.val)
 
-class AcisEntity():
+class AcisEntity(object):
 	def __init__(self, name):
 		self.chunks = []
 		self.name   = name
@@ -3921,7 +3925,7 @@ class AcisEntity():
 			return ""
 		return "-%d %s %s" %(self.index, self.name, ''.join(u"%s" %(c) for c in self.chunks))
 
-class AcisRef():
+class AcisRef(object):
 	def __init__(self, index):
 		self.index = index
 		self.entity = None

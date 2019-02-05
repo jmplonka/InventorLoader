@@ -6,7 +6,7 @@ def getText(data, offset):
 	e = data.index('\x00', offset)
 	return data[offset:e], e + 1
 
-class olenative():
+class olenative(object):
 	def __init__(self):
 		self.size        = 0
 		self.header      = None

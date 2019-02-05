@@ -20,7 +20,7 @@ PART_LINE = Part.Line
 if (hasattr(Part, "LineSegment")):
 	PART_LINE = Part.LineSegment
 
-class RSeDatabase():
+class RSeDatabase(object):
 	def __init__(self):
 		self.segInfo = RSeSegInformation()
 		self.uid     = None # Internal-Name of the object
@@ -31,7 +31,7 @@ class RSeDatabase():
 		self.dat2    = None
 		self.txt     = u""
 
-class RSeSegInformation():
+class RSeSegInformation(object):
 	def __init__(self):
 		self.text     = u""
 		self.arr1     = []
@@ -47,7 +47,7 @@ class RSeSegInformation():
 		self.uidList1 = []
 		self.uidList2 = []
 
-class RSeSegmentObject():
+class RSeSegmentObject(object):
 	def __init__(self):
 		self.revisionRef = None # reference to RSeDbRevisionInfo
 		self.values      = []
@@ -58,7 +58,7 @@ class RSeSegmentObject():
 	def __str__(self):
 		return '[%s],%02X,%02X' % (IntArr2Str(self.values, 4), self.value1, self.value2)
 
-class RSeSegmentValue2():
+class RSeSegmentValue2(object):
 	def __init__(self):
 		self.index         = -1
 		self.indexSegList1 = -1
@@ -69,7 +69,7 @@ class RSeSegmentValue2():
 	def __str__(self):
 		return '%02X,%02X,%X,[%s],%04X' % (self.indexSegList1, self.indexSegList2, self.index, IntArr2Str(self.values, 4), self.number)
 
-class RSeSegment():
+class RSeSegment(object):
 	def __init__(self):
 		self.name        = ''
 		self.ID          = None
@@ -93,7 +93,7 @@ class RSeSegment():
 	def __lt__(self, other):
 		return self.name < other.name
 
-class RSeStorageBlockSize():
+class RSeStorageBlockSize(object):
 	'''
 	# The first section in the RSeMetaStream (Mxyz-files) contains the information
 	# about the block lengths in the RSeBinaryData (Bxyz-files).
@@ -101,7 +101,6 @@ class RSeStorageBlockSize():
 	# flags  = The flags of one of the MetaData blocks.
 	# parent = The segments the
 	'''
-
 	def __init__(self, parent, value):
 		self.parent = parent
 		self.length = (value & 0x7FFFFFFF)
@@ -110,7 +109,7 @@ class RSeStorageBlockSize():
 	def __str__(self):
 		return 'f=%X, l=%X' %(self.flags, self.length)
 
-class RSeStorageSection2():
+class RSeStorageSection2(object):
 	'''
 	 # arr[1] = RSeDbRevisionInfo.data[0]
 	 # arr[3] = RSeDbRevisionInfo.data[2]
@@ -132,7 +131,7 @@ class RSeStorageSection2():
 			u = ' - %s' %(self.revision)
 		return '%X, %X%s%s' %(self.flag, self.val, u, a)
 
-class RSeStorageSection3():
+class RSeStorageSection3(object):
 	def __init__(self, parent):
 		self.uid         = None
 		self.parent      = parent
@@ -141,7 +140,7 @@ class RSeStorageSection3():
 	def __str__(self):
 		return '%s: [%s]' %(self.uid, IntArr2Str(self.arr, 4))
 
-class RSeStorageSection4Data():
+class RSeStorageSection4Data(object):
 	def __init__(self):
 		self.num         = 0       # UInt16
 		self.val         = 0       # UInt32
@@ -149,7 +148,7 @@ class RSeStorageSection4Data():
 	def __str__(self):
 		return '(%04X,%08X)' %(self.num, self.val)
 
-class RSeStorageBlockType():
+class RSeStorageBlockType(object):
 	def __init__(self, parent):
 		self.parent = parent
 		self.uid    = None
@@ -158,7 +157,7 @@ class RSeStorageBlockType():
 	def __str__(self):
 		return '%s: [%s,%s]' %(self.uid, self.arr[0], self.arr[1])
 
-class RSeStorageSection4Data1():
+class RSeStorageSection4Data1(object):
 	def __init__(self, uid, val):
 		self.uid         = uid
 		self.val         = val
@@ -166,18 +165,18 @@ class RSeStorageSection4Data1():
 	def __str__(self):
 		return '[%s,%d]' %(self.uid, self.val)
 
-class RSeStorageSection5():
+class RSeStorageSection5(object):
 	def __init__(self, parent):
 		self.parent      = parent
 		self.indexSec4   = []
 
-class RSeStorageSection6():
+class RSeStorageSection6(object):
 	def __init__(self, parent):
 		self.parent      = parent
 		self.arr1        = []
 		self.arr2        = []
 
-class RSeStorageSection7():
+class RSeStorageSection7(object):
 	def __init__(self, parent):
 		self.parent      = parent
 		self.segRef      = None
@@ -200,7 +199,7 @@ class RSeStorageSection7():
 			return '[%s] [%s] [%s] [%s] %r %r %r' %(self.segRef, self.arr1, self.arr2, self.arr3, self.txt1, self.txt2, self.txt3)
 		return '[%s] [%s] [%s] [%s] %r %r %r' %(self.segName, self.arr1, self.arr2, self.arr3, self.txt1, self.txt2, self.txt3)
 
-class RSeStorageSection8():
+class RSeStorageSection8(object):
 	def __init__(self, parent):
 		self.parent      = parent
 		self.dbRevisionInfoRef = None
@@ -209,7 +208,7 @@ class RSeStorageSection8():
 	def __str__(self):
 		return '[%s]' %(IntArr2Str(self.arr, 4))
 
-class RSeStorageSection9():
+class RSeStorageSection9(object):
 	def __init__(self, parent):
 		self.parent      = parent
 		self.uid         = None
@@ -218,7 +217,7 @@ class RSeStorageSection9():
 	def __str__(self):
 		return '%s: [%s]' %(self.uid, IntArr2Str(self.arr, 4))
 
-class RSeStorageSectionA():
+class RSeStorageSectionA(object):
 	def __init__(self, parent):
 		self.parent      = parent
 		self.uid         = None
@@ -227,7 +226,7 @@ class RSeStorageSectionA():
 	def __str__(self):
 		return '[%s]' %(IntArr2Str(self.arr, 4))
 
-class RSeStorageSectionB():
+class RSeStorageSectionB(object):
 	def __init__(self, parent):
 		self.parent      = parent
 		self.uid         = None
@@ -236,12 +235,12 @@ class RSeStorageSectionB():
 	def __str__(self):
 		return '[%s]' %(IntArr2Str(self.arr, 4))
 
-class RSeRevisions():
-	def __init__(self, *args, **kwargs):
+class RSeRevisions(object):
+	def __init__(self):
 		self.mapping = {}
 		self.infos   = []
 
-class Inventor():
+class Inventor(object):
 	def __init__(self):
 		self.UFRxDoc            = None
 		self.RSeDb              = RSeDatabase()
@@ -326,7 +325,7 @@ class Inventor():
 			if (seg.isNBNotebook()): return seg
 		return EMPTY_SEGMENT
 
-class DbInterface():
+class DbInterface(object):
 	TYPE_MAPPING = {
 		0x01: 'BOOL',
 		0x04: 'SINT',
@@ -345,7 +344,7 @@ class DbInterface():
 		typeName = DbInterface.TYPE_MAPPING.get(self.type, '%4X' % self.type)
 		return '%s=%s:\t%s\t%s' % (self.name, self.value, typeName, self.uid)
 
-class RSeDbRevisionInfo():
+class RSeDbRevisionInfo(object):
 	def __init__(self):
 		self.ID     = ''
 		self.flags  = 0
@@ -363,7 +362,7 @@ class RSeDbRevisionInfo():
 	def __repr__(self):
 		return self.__str__()
 
-class ResultItem4():
+class ResultItem4(object):
 	a0 = None
 	def __init__(self):
 		self.a0          = []
@@ -373,7 +372,7 @@ class ResultItem4():
 	def __str__(self):
 		return '[%s] (%s)-(%s)' %(IntArr2Str(self.a0, 4), FloatArr2Str(self.a1), FloatArr2Str(self.a2))
 
-class GraphicsFont():
+class GraphicsFont(object):
 	def __init__(self):
 		self.number      = -1      # UInt32
 		self.ukn1        = 0       # UInt16[4]
@@ -386,7 +385,7 @@ class GraphicsFont():
 	def __str__(self):
 		return u"(%d) %s %r %r %r %r %r" %(self.number, self.name, self.ukn1, self.ukn2, self.ukn3, self.ukn4, self.ukn5)
 
-class Lightning():
+class Lightning(object):
 	def __init__(self):
 		self.n1 = 0
 		self.c1 = None
@@ -397,7 +396,7 @@ class Lightning():
 	def __str__(self):
 		return '%d: %s, %s, %s, [%s], [%s]' %(self.n1, self.c1, self.c2, self.c3, FloatArr2Str(self.a1), FloatArr2Str(self.a2))
 
-class AbstractValue():
+class AbstractValue(object):
 	def __init__(self, x, factor, offset, unit):
 		self.x      = x
 		self.factor = factor
@@ -409,81 +408,81 @@ class AbstractValue():
 
 class Length(AbstractValue):
 	def __init__(self, x, factor = 0.1, unit = 'mm'):
-		AbstractValue.__init__(self, x, factor, 0.0, unit)
+		super(Length, self).__init__(x, factor, 0.0, unit)
 	def getMM(self):      return self.x / 0.1
 	def toStandard(self): return '%g mm' %(self.x / 0.1)
 
 class Angle(AbstractValue):
 	def __init__(self, a, factor, unit):
-		AbstractValue.__init__(self, a, factor, 0.0, unit)
+		super(Angle, self).__init__(a, factor, 0.0, unit)
 	def getRAD(self):     return self.x
 	def getGRAD(self):    return degrees(self.x)
 	def toStandard(self): return '%g\xC2\xB0' %(self.getGRAD())
 
 class Mass(AbstractValue):
 	def __init__(self, m, factor, unit):
-		AbstractValue.__init__(self, m, factor, 0.0, unit)
+		super(Mass, self).__init__(m, factor, 0.0, unit)
 	def getGram(self):    return self.x
 	def toStandard(self): return '%ggr' %(self.getGram())
 
 class Time(AbstractValue):
 	def __init__(self, t, factor, unit):
-		AbstractValue.__init__(self, t, factor, 0.0, unit)
+		super(Time, self).__init__(t, factor, 0.0, unit)
 
 class Temperature(AbstractValue):
 	def __init__(self, t, factor, offset, unit):
-		AbstractValue.__init__(self, t, factor, offset, unit)
+		super(Temperature, self).__init__(t, factor, offset, unit)
 	def toStandard(self): return '%g K' %(self.x)
 
 class Velocity(AbstractValue):
 	def __init__(self, v, factor, unit):
-		AbstractValue.__init__(self, v, factor, 0.0, unit)
+		super(Velocity, self).__init__(v, factor, 0.0, unit)
 
 class Area(AbstractValue):
 	def __init__(self, a, factor, unit):
-		AbstractValue.__init__(self, a, factor, 0.0, unit)
+		super(Area, self).__init__(a, factor, 0.0, unit)
 
 class Volume(AbstractValue):
 	def __init__(self, v, factor, unit):
-		AbstractValue.__init__(self, v, factor, 0.0, unit)
+		super(Volume, self).__init__(v, factor, 0.0, unit)
 
 class Force(AbstractValue):
 	def __init__(self, F, factor, unit):
-		AbstractValue.__init__(self, F, factor, 0.0, unit)
+		super(Force, self).__init__(F, factor, 0.0, unit)
 
 class Pressure(AbstractValue):
 	def __init__(self, p, factor, unit):
-		AbstractValue.__init__(self, p, factor, 0.0, unit)
+		super(Pressure, self).__init__(p, factor, 0.0, unit)
 
 class Power(AbstractValue):
 	def __init__(self, p, factor, unit):
-		AbstractValue.__init__(self, p, factor, 0.0, unit)
+		super(Power, self).__init__(p, factor, 0.0, unit)
 
 class Work(AbstractValue):
 	def __init__(self, w, factor, unit):
-		AbstractValue.__init__(self, w, factor, 0.0, unit)
+		super(Work, self).__init__(w, factor, 0.0, unit)
 
 class Electrical(AbstractValue):
 	def __init__(self, l, factor, unit):
-		AbstractValue.__init__(self, l, factor, 0.0, unit)
+		super(Electrical, self).__init__(l, factor, 0.0, unit)
 
 class Luminosity(AbstractValue):
 	def __init__(self, l, unit):
-		AbstractValue.__init__(self, l, 1.0, 0.0, unit)
+		super(Luminosity, self).__init__(l, 1.0, 0.0, unit)
 
 class Substance(AbstractValue):
 	def __init__(self, s, unit):
-		AbstractValue.__init__(self, s, 1.0, 0.0, unit)
+		super(Substance, self).__init__(s, 1.0, 0.0, unit)
 
 class Scalar(AbstractValue):
 	def __init__(self, s):
-		AbstractValue.__init__(self, s, 1.0, 0.0, u'')
+		super(Scalar, self).__init__(s, 1.0, 0.0, u'')
 
 class Derived(AbstractValue):
 	def __init__(self, s, unit):
-		AbstractValue.__init__(self, s, 1.0, 0.0, unit)
+		super(Derived, self).__init__(s, 1.0, 0.0, unit)
 
-class DataNode():
+class DataNode(object):
 	def __init__(self, data, isRef):
 		## data must bean instance of AbstractData!
 		if (data):
@@ -633,7 +632,7 @@ class DataNode():
 
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(ParameterNode, self).__init__(data, isRef)
 		self.asText  = False
 
 	def getValueRaw(self):
@@ -844,7 +843,7 @@ class ParameterNode(DataNode):
 
 class ParameterTextNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(ParameterTextNode, self).__init__(data, isRef)
 
 	def getValueRaw(self):
 		return self.get('value')
@@ -859,7 +858,7 @@ class ParameterTextNode(DataNode):
 		x = self.getValueRaw()
 		return x
 
-class ParameterValue():
+class ParameterValue(object):
 	def __init__(self, value):
 		self.value = value
 
@@ -874,7 +873,7 @@ class ParameterValue():
 
 class EnumNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(EnumNode, self).__init__(data, isRef)
 
 	def getValueText(self):
 		enum = self.get('Values')
@@ -898,14 +897,14 @@ class EnumNode(DataNode):
 
 class DirectionNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(DirectionNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		return u'(%04X): %s - (%g,%g,%g)' %(self.index, self.typeName, self.get('dirX'), self.get('dirY'), self.get('dirZ'))
 
 class BendEdgeNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(BendEdgeNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		p1 = self.get('from')
@@ -914,14 +913,14 @@ class BendEdgeNode(DataNode):
 
 class SketchNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(SketchNode, self).__init__(data, isRef)
 		data.sketchEdges = {}
 		data.associativeIDs = {}
 		return
 
 class BlockPointNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(BlockPointNode, self).__init__(data, isRef)
 
 	def getRefText(self):
 		p = self.get('point')
@@ -929,7 +928,7 @@ class BlockPointNode(DataNode):
 
 class Block2DNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(Block2DNode, self).__init__(data, isRef)
 
 	def getRefText(self):
 		sketch = self.get('source')
@@ -937,7 +936,7 @@ class Block2DNode(DataNode):
 
 class FeatureNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(FeatureNode, self).__init__(data, isRef)
 
 	def _getPropertyName(self, index):
 		properties = self.get('properties')
@@ -1089,7 +1088,7 @@ class FeatureNode(DataNode):
 
 class ValueNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(ValueNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		try:
@@ -1112,7 +1111,7 @@ class ValueNode(DataNode):
 
 class PointNode(DataNode): # return unicoe
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(PointNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		if (self.typeName[-2:] == '2D'):
@@ -1124,7 +1123,7 @@ class PointNode(DataNode): # return unicoe
 
 class LineNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(LineNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		if (self.typeName[-2:] == '2D'):
@@ -1149,7 +1148,7 @@ class LineNode(DataNode):
 
 class CircleNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(CircleNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		r = self.get('r')
@@ -1171,7 +1170,7 @@ class CircleNode(DataNode):
 
 class GeometricRadius2DNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(GeometricRadius2DNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		o = self.get('entity')
@@ -1180,7 +1179,7 @@ class GeometricRadius2DNode(DataNode):
 
 class GeometricCoincident2DNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(GeometricCoincident2DNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		e1 = self.get('entity1')
@@ -1193,7 +1192,7 @@ class GeometricCoincident2DNode(DataNode):
 
 class DimensionAngleNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(DimensionAngleNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		d = self.get('parameter')
@@ -1208,7 +1207,7 @@ class DimensionAngleNode(DataNode):
 
 class DimensionDistance2DNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(DimensionDistance2DNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		d = self.get('parameter')
@@ -1224,14 +1223,14 @@ class DimensionDistance2DNode(DataNode):
 
 class SurfaceBodiesNode(DataNode):
 	def __init__(self, data, isRef):
-		DataNode.__init__(self, data, isRef)
+		super(SurfaceBodiesNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
 		bodies = self.get('bodies')
 		names = ','.join([u"'%s'" %(b.name) for b in bodies])
 		return u'(%04X): %s %s' %(self.index, self.typeName, names)
 
-class RSeMetaData():
+class RSeMetaData(object):
 	SEG_APP_ASSEMBLY      = 'AmAppSegment'
 	SEG_APP_PART          = 'PmAppSegment'
 	SEG_APP_DL            = 'DlAppSegment'
@@ -1455,16 +1454,17 @@ class BSplineEdge(_AbstractEdge_):
 			)
 		return bsc
 
-class Header0():
+class Header0(object):
 	def __init__(self, m, x):
 		self.m = m
 		self.x = x
 
 	def __str__(self):
-		return 'm=%X x=%04X' %(self.m, self.x)
-	def __repr__(self): return self.__str__()
+		return 'm=%X x=%03X' %(self.m, self.x)
+	def __repr__(self):
+		return '%X,%03X' %(self.m, self.x)
 
-class ModelerTxnMgr():
+class ModelerTxnMgr(object):
 	def __init__(self):
 		self.ref_1 = None
 		self.ref_2 = None
@@ -1479,7 +1479,7 @@ class ModelerTxnMgr():
 		s = ",".join(["[%s]" %IntArr2Str(a, 4) for a in self.lst])
 		return 'ref1=%s ref2=%s lst=[%s] [(%04X,%02X),(%04X,%02X)] %d' %(self.ref_1, self.ref_2, s, self.u32_0, self.u8_0, self.u32_1, self.u8_1, self.s32_0)
 
-class AbstractData():
+class AbstractData(object):
 	def __init__(self):
 		self.uid          = None
 		self.name         = None
@@ -1584,7 +1584,7 @@ def getModel():
 	global model
 	return model
 
-class NtEntry():
+class NtEntry(object):
 	def __init__(self, nameTable, entry):
 		self.nameTable = nameTable & 0x7FFFFFFF
 		self.entry     = entry

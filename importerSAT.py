@@ -22,7 +22,7 @@ wires = 0
 
 _fileName = None
 
-class Tokenizer():
+class Tokenizer(object):
 	def __init__(self, content):
 		self.content = content
 		self.pos = 0
@@ -119,7 +119,7 @@ def setEntities(entities):
 		Acis.clearEntities()
 	_entities = entities
 
-class Header():
+class Header(object):
 	def __init__(self):
 		self.version = 7.0
 		self.records = 0

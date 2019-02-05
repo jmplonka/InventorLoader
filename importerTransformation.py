@@ -15,7 +15,7 @@ __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-class Transformation2D:
+class Transformation2D(object):
 	def __init__(self):
 		self.a0 = 0x00000000
 		self.m  = [[1,0,0],[0,1,0],[0,0,1]]
@@ -86,7 +86,7 @@ class Transformation2D:
 		m2 = self.__m2s__(2)
 		return u"[%s, %s, %s]" %(m0, m1, m2)
 
-class Transformation3D:
+class Transformation3D(object):
 	def __init__(self):
 		self.a0 = 0x00000000
 		self.m = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
@@ -166,7 +166,7 @@ class Transformation3D:
 		m1 = self.__m2s__(1)
 		m2 = self.__m2s__(2)
 		m3 = self.__m2s__(3)
-		return u"[%s, %s, %s, %s]" %(m0, m1, m2, m3)
+		return u"[%s,%s,%s,%s]" %(m0, m1, m2, m3)
 
 	def getBase(self):
 		x = self.m[0, 3]

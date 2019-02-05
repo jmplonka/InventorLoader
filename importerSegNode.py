@@ -196,7 +196,7 @@ TYP_MAP_FUNC = {
 class SecNode(AbstractData):
 
 	def __init__(self):
-		AbstractData.__init__(self)
+		super(SecNode, self).__init__()
 
 	def ReadUInt8(self, offset, name):
 		x, i = getUInt8(self.data, offset)
@@ -303,7 +303,7 @@ class SecNode(AbstractData):
 	def ReadFloat64_3D(self, offset, name):
 		x, i = getFloat64_3D(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=(%g,%g,%g)' %(name, x[0], x[1], x[1])
+		self.content += ' %s=(%g,%g,%g)' %(name, x[0], x[1], x[2])
 		return i
 
 	def ReadVec3D(self, offset, name, scale = 1.0):
@@ -1340,7 +1340,7 @@ class SecNode(AbstractData):
 				return unitName
 		return None
 
-class SecNodeRef():
+class SecNodeRef(object):
 	TYPE_PARENT = 1
 	TYPE_CHILD  = 2
 	TYPE_CROSS  = 3

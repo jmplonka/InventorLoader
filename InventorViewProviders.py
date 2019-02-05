@@ -19,7 +19,7 @@ def getObjectName(name):
 		return "_%s" %(v)
 	return v
 
-class _ViewProviderBoundaryPatch:
+class _ViewProviderBoundaryPatch(object):
 	def __init__(self, vp):
 		self.attach(vp)
 
@@ -77,7 +77,7 @@ def makeBoundaryPatch(doc, edges, name):
 	_ViewProviderBoundaryPatch(fp.ViewObject)
 	return fp
 
-class _Knit:
+class _Knit(object):
 	def __init__(self, fp):
 		fp.addProperty("App::PropertyLinkList", "Faces", "Knit", "List of faces to knit together")
 		fp.addProperty("App::PropertyBool", "Solid", "Knit", "Create a solid if possible")
@@ -90,7 +90,7 @@ class _Knit:
 			if (fp.Shape.isClosed()):
 				fp.Shape = Part.Solid(fp.Shape)
 
-class _ViewProviderKnit:
+class _ViewProviderKnit(object):
 	def __init__(self, vp):
 		self.attach(vp)
 

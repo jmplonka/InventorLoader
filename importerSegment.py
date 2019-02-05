@@ -77,6 +77,7 @@ def dumpSat(node):
 				sat.write((u"-%d %s " %(ntt.index, ntt.name)).encode('utf8'))
 				for c in ntt.chunks:
 					sat.write(c.__str__().encode('utf8'))
+				sat.write(u"\n")
 		sat.write(b"End-of-ACIS-data\n")
 
 def checkReadAll(node, i, l):
@@ -603,10 +604,10 @@ class SegmentReader(object):
 	def Read_F645595C(self, node):
 		# Spatial's (A)CIS (S)olid (M)odeling
 		i = node.Read_Header0('ASM')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_0') # allways 0x357
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
-		txt, i = getText8(node.data, i, 15) # 'ASM BinaryFile4'
+		i = node.ReadUInt32(i, 'schema')
+		txt, i = getText8(node.data, i, 15) # 'ACIS BinaryFile' or from 20214 on 'ASM BinaryFile4'
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
 
