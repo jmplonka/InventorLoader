@@ -150,17 +150,10 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_189B3560(self, node):
-		vers = getFileVersion()
-		i = 0
-
-		i = node.ReadUInt16A(i, 3, 'a0')
-		if (vers < 2011):
-			if (node.get('a0')[0] > 0):
-				i += 3
-		i = self.skipBlockSize(i)
+		i = node.Read_Header0()
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadLen32Text16(i)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'grIdx')
 		return i
 
 	def Read_18BAA333(self, node):

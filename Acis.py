@@ -244,7 +244,11 @@ class Law(object):
 		# convert ^ into **
 		self.eq = self.eq.replace('^', ' ** ')
 	def evaluate(self, X):
-		return eval(self.eq)
+		try:
+			return eval(self.eq)
+		except Exception as e:
+			logError(u"Can't evaluate '%s': %s", self.eq, e)
+		return None
 
 def init():
 	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces
@@ -684,21 +688,23 @@ def readBlend(chunks, index):
 def readLaw(chunks, index):
 	n, i = getText(chunks, index)
 	if (n == 'TRANS'):
+		v = Transform()
 		i = v.setBulk(chunks, i)
-		return (n, Transform())
+		return (n, v), i
 	if (n == 'EDGE'):
 		c, i = readCurve(chunks, i)
 		f, i = getFloats(chunks, i, 2)
-		return (n, c, f)
+		return (n, c, f), i
 	if (n == 'SPLINE_LAW'):
 		a, i = getInteger(chunks, i)
 		b, i = getFloatArray(chunks, i)
 		c, i = getFloatArray(chunks, i)
 		d, i = getPoint(chunks, i)
-		return (n, a, b, c, d)
+		return (n, a, b, c, d), i
+	if (n == 'null_law'):
+		return (n, None), i
 	l = Law(n)
-	l.evaluate(0.5)
-	return l, i
+	return (n, l), i
 
 def newInstance(CLASSES, key):
 	cls = CLASSES[key]
@@ -1827,10 +1833,10 @@ class Edge(Topology):
 			self.text, i = getText(entity.chunks, i)
 		self.unknown, i = getUnknownFT(entity.chunks, i)
 		return i
-	def getStart(self):  return CENTER if (self._start is None)  else self._start.node.getPosition()
-	def getEnd(self):    return CENTER if (self._end is None)    else self._end.node.getPosition()
-	def getParent(self): return None if (self._owner is None)    else self._owner.node
-	def getCurve(self):  return None if (self._curve is None)    else self._curve.node
+	def getStart(self):  return None if (self._start is None) else self._start.node.getPosition()
+	def getEnd(self):    return None if (self._end   is None) else self._end.node.getPosition()
+	def getParent(self): return None if (self._owner is None) else self._owner.node
+	def getCurve(self):  return None if (self._curve is None) else self._curve.node
 class EdgeTolerance(Edge):
 	def __init__(self):
 		super(EdgeTolerance, self).__init__()
@@ -1902,7 +1908,7 @@ class Vertex(Topology):
 	def getPoint(self):    return None if (self._point is None) else self._point.node
 	def getPosition(self):
 		p = self.getPoint()
-		return CENTER if (p is None) else p.position
+		return None if (p is None) else p.position
 class VertexTolerance(Vertex):
 	def __init__(self):
 		super(VertexTolerance, self).__init__()
@@ -2195,7 +2201,6 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		x, i = getFloat(chunks, i)
 		return i
 	def setLaw(self, chunks, index, inventor):
-		i = index
 		i = self.setSurfaceCurve(chunks, index, inventor)
 		laws = []
 		if (inventor):
@@ -2213,11 +2218,9 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			return i
 		subLaws = []
 		laws.append(subLaws)
-		while (True):
+		while (isString(chunks[i].val)):
 			l, i  = readLaw(chunks, i) # null_law
 			subLaws.append(l)
-			if (l[0] != 'null_law'):
-				break
 		subLaws = []
 		laws.append(subLaws)
 		while (i < len(chunks)):
@@ -2857,7 +2860,7 @@ class SurfaceSpline(Surface):
 		return i
 	def setG2Blend(self, chunks, index, inventor):
 		t11, i = getValue(chunks, index)
-		while (type(t11) != str):
+		while (not isString(t11)):
 			t11, i = getValue(chunks, i)
 		s11, i = readSurface(self, chunks, i)
 		c11, i = readCurve(chunks, i)
@@ -3678,24 +3681,23 @@ class AttribNamingMatchingNMxPuchtoolBRep(AttribNamingMatching):
 class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 	def __init__(self):
 		super(AttribNamingMatchingNMxFFColorEntity, self).__init__()
+		self.a1         = []
+		self.name       = u"Default"
+		self.idxCreator = -1
+		self.a2         = []
 		self.red = self.green = self.blue = 0xBE / 255.0 # light gray
 	def set(self, entity):
 		i = super(AttribNamingMatchingNMxFFColorEntity, self).set(entity)
-		self.a,  i = getIntegers(entity.chunks, i, 2)
-		if (type(entity.chunks[i].val) != str):
-			j, i = getInteger(entity.chunks,i)
-			self.a.append(j)
-		else:
-			self.a.insert(0, 38)
-		name,    i = getText(entity.chunks, i)
-		if (sys.version_info.major < 3):
-			name = name.decode('utf8')
+		self.a1  , i = getIntegers(entity.chunks, i, 2)
+		self.name, i = getText(entity.chunks, i)
 		self.idxCreator, i = getInteger(entity.chunks, i)
 		self.a2, i = getIntegers(entity.chunks, i, len(entity.chunks) - i - 1)
-		color = getColor(name)
+		if (sys.version_info.major < 3):
+			self.name = self.name.decode('utf8')
+		color = getColor(self.name)
 		if (color is None):
-			logWarning(u"Color '%s' not defined in color table - using gray!" %(name))
-			setColor(name, self.red, self.green, self.blue) # ignore future complains...
+			logWarning(u"Color '%s' not defined in color table - using gray!" %(self.name))
+			setColor(self.name, self.red, self.green, self.blue) # ignore future complains...
 		else:
 			self.red   = color[0]
 			self.green = color[1]
@@ -3721,17 +3723,17 @@ class AttribNamingMatchingNMxBrepTag(AttribNamingMatching):
 	def __init__(self):
 		super(AttribNamingMatchingNMxBrepTag, self).__init__()
 		self.mapping = []
-	def set(self, entity):
-		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
-		n, i = getInteger(entity.chunks, i)
-		self.mapping, i = getIntegerMap(entity.chunks, i, n, 2) # (DC-index, mask){n}
-		return i
 class AttribNamingMatchingNMxBrepTagFeature(AttribNamingMatchingNMxBrepTag):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagFeature, self).__init__()
 class AttribNamingMatchingNMxBrepTagSwitch(AttribNamingMatchingNMxBrepTag):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagSwitch, self).__init__()
 class AttribNamingMatchingNMxBrepTagName(AttribNamingMatchingNMxBrepTag):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagName, self).__init__()
+	def set(self, entity):
+		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
+		n, i = getInteger(entity.chunks, i)
+		self.mapping, i = getIntegerMap(entity.chunks, i, n, 2) # (DC-index, mask){n}
+		return i
 class AttribNamingMatchingNMxBrepTagNameBPatch(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBPatch, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBlend(AttribNamingMatchingNMxBrepTagName):

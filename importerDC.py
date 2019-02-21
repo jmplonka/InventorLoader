@@ -4499,12 +4499,8 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadFloat64(i, 'a')
 		i = node.ReadUInt16A(i, 3, 'a0')
-		if (getFileVersion() > 2016):
-			i = node.ReadUInt8(i, 'u8_0')
-		else:
-			node.content += ' u8_0=01'
-			node.set('u8_0', 1)
-			i = self.skipBlockSize(i)
+		if (getFileVersion() > 2016): i += 1 # skip 01
+		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 6, 'a1')
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadSInt32(i, 's32_0')
@@ -5046,7 +5042,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt16A(i, 2,  'a0')
 		i = node.ReadChildRef(i,    'ref_5')
 		i = node.ReadUInt32(i,      'u32_2')
-		i = node.ReadChildRef(i,    'red_6')
+		i = node.ReadChildRef(i,    'ref_6') # -> ModelerTxnMgr
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i,    'ref_7')
 		i = node.ReadLen32Text16(i, 'refSegName')
@@ -5705,10 +5701,6 @@ class DCReader(EeDataReader):
 
 	def Read_9DA736B0(self, node):
 		i = self.ReadHeaderEnum(node)
-		return i
-
-	def Read_9DC2A241(self, node):
-		i = node.Read_Header0()
 		return i
 
 	def Read_9E43716A(self, node): # Circle3D
@@ -6757,9 +6749,10 @@ class DCReader(EeDataReader):
 	def Read_CA02411F(self, node):
 		i = self.ReadHeaderContent(node)
 		i = self.skipBlockSize(i)
-		if (getFileVersion() > 2018): i += 4
+		if (getFileVersion() > 2018): i += 4 # skip FF FF FF FF
+		i = self.skipBlockSize(i)
 		i = node.ReadSInt32(i, 's32_0')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i)
 		if (node.get('label') is None):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		else:
@@ -7615,7 +7608,7 @@ class DCReader(EeDataReader):
 	def Read_E28A0597(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		i = node.ReadChildRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'ref_1')
 		return i
 
 	def Read_E28D3B3F(self, node):
