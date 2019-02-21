@@ -505,7 +505,7 @@ def getNameTableEntry(node):
 			lst2[i] = (nte, value[2])
 	return entry
 
-class FreeCADImporter:
+class FreeCADImporter(object):
 	FX_EXTRUDE_NEW          = 0x0001
 	FX_EXTRUDE_CUT          = 0x0002
 	FX_EXTRUDE_JOIN         = 0x0003
