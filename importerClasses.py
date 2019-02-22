@@ -239,15 +239,26 @@ class RSeRevisions(object):
 	def __init__(self):
 		self.mapping = {}
 		self.infos   = []
-
+	def __del__(self):
+		self.mapping.clear()
+		del self.mapping
+		self.infos[:] = []
+		del self.infos
 class Inventor(object):
 	def __init__(self):
 		self.UFRxDoc            = None
 		self.RSeDb              = RSeDatabase()
 		self.RSeRevisions       = RSeRevisions()
-		self.DatabaseInterfaces = None
 		self.iProperties        = {}
 		self.RSeMetaData        = {}
+	def __del__(self):
+		del self.UFRxDoc
+		del self.RSeDb
+		del self.RSeRevisions
+		self.iProperties.clear()
+		del self.iProperties
+		self.RSeMetaData.clear()
+		del self.RSeMetaData
 
 	def __repr__(self):
 		if (getInventorFile() is None): return u"#NV#"
@@ -969,7 +980,7 @@ class FeatureNode(DataNode):
 			return 'Rip'
 		if (p0 == 'EdgeCollectionProxy'):
 			p4 = self._getPropertyName(4)
-			if (p4 == '7DAA0032'):                  return 'Chamfer'
+			if (p4 == 'ChamferType'):               return 'Chamfer'
 			if (p1 == 'Parameter'):                 return 'Bend'
 			if (p1 == 'FxExtend'):                  return 'Extend'
 			if (p1 is None):                        return 'CornerChamfer'
@@ -1048,6 +1059,7 @@ class FeatureNode(DataNode):
 			p2 = self._getPropertyName(2)
 			if (p2 == 'FeatureDimensions'):         return 'Move'
 			if (p2 == 'SurfaceBody'):               return 'Knit'
+			if (p1 == 'SurfaceBodies'):             return 'Stitch'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'TrimType'):                    return 'Trim'
 		elif (p0 == 'CornerSeam'):                  return 'Corner'
@@ -1466,18 +1478,14 @@ class Header0(object):
 
 class ModelerTxnMgr(object):
 	def __init__(self):
-		self.ref_1 = None
-		self.ref_2 = None
-		self.lst   = []
-		self.u32_0 = 0
-		self.u8_0  = 0
-		self.u32_1 = 0
-		self.u8_1  = 0
-		self.s32_0 = 0
+		self.node  = 0  # DC.node
+		self.dcIdx = 0  # DC-index ref
+		self.lst = []   # 1st= ref BRep.node.ref_1,byte,key; 2nd = ref to Result.node,byte,key => mapping
 
 	def __str__(self):
-		s = ",".join(["[%s]" %IntArr2Str(a, 4) for a in self.lst])
-		return 'ref1=%s ref2=%s lst=[%s] [(%04X,%02X),(%04X,%02X)] %d' %(self.ref_1, self.ref_2, s, self.u32_0, self.u8_0, self.u32_1, self.u8_1, self.s32_0)
+		s = ",".join(["(%04X,%02X,%04X)" %a for a in self.lst])
+		return '%04X %04X [%s]' %(self.node, self.dcIdx, s)
+	def __repr__(self): return self.__str__()
 
 class AbstractData(object):
 	def __init__(self):
@@ -1584,11 +1592,16 @@ def getModel():
 	global model
 	return model
 
+def releaseModel():
+	global model
+	del model
+
 class NtEntry(object):
-	def __init__(self, nameTable, entry):
+	def __init__(self, nameTable, key):
 		self.nameTable = nameTable & 0x7FFFFFFF
-		self.entry     = entry
+		self.key       = key
+		self.entry     = None
 	def __repr__(self):
 		if (self.nameTable is None):
 			return u""
-		return u"%04X[%04X]" %(self.nameTable, self.entry)
+		return u"%04X[%04X]" %(self.nameTable, self.key)

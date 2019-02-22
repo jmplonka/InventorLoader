@@ -68,6 +68,7 @@ UUID_NAMES = {
 	'2b24130911d272cc60007bb79b49ebb0': 'RDxBrowserFolder',
 	'9e43716a11d20fa5600084b7b035c3b0': 'RDxCircle3',
 	'4ef32ef04cf83c27f0b185a66f245b22': 'RDxClientFeature',
+	'90874d9411d0d1f80008cabc0663dc09': 'RDxCoincident2',
 	'90874d5911d0d1f80008cabc0663dc09': 'RDxComponent',
 	'81afc10f11d514051000569772d147b5': 'RDxCompositeInterfaceDef',
 	'778752c64a5426253aab58b51014c910': 'RDxCurveToSurfaceProjection',
@@ -78,6 +79,7 @@ UUID_NAMES = {
 	'255d7ed711d3b5f2c0000385e89c6b4f': 'RDxDerivedPart',
 	'26287e9611d490bd1000e2962dba09b5': 'RDxDeselTableNode',
 	'89b87c6f11d2e0d26000f1b26c74fcb0': 'RDxDiagProfileInvalidLoop',
+	'3683ce3311d2fcf16000fab26c74fcb0': 'RDxDiagSketchDimRefGeomFailed',
 	'74df96e011d1e069800066b1e13554c7': 'RDxDiameter2',
 	'1105855811d295e360000cb38932edb0': 'RDxDistanceDimension2',
 	'10b6adef45f57b24911db28d8c498f80': 'RDxDistanceDimension3',
@@ -144,17 +146,6 @@ UUID_NAMES = {
 	'14533d8211d1087100085ba406e5dc09': 'UCxWorkplaneNode',
 	'2c7020f811d1b3c06000b1b801f31bb0': 'UCxWorkpointNode',
 	'd31891c248bf14c3aa42ea872a846b2a': 'UFRxRef',
-
-}
-
-TRANSLATIONS = {
-	u"Ä": u"Ae",
-	u"ä": u"ae",
-	u"Ö": u"Oe",
-	u"ö": u"oe",
-	u"Ü": u"Ue",
-	u"ü": u"ue",
-	u"ß": u"ss",
 }
 
 ENCODING_FS      = 'utf8'
@@ -365,7 +356,6 @@ def getThumbnailImage():
 
 UINT8      = Struct('<B').unpack_from
 UINT16     = Struct('<H').unpack_from
-UINT16_2D  = Struct('<HH').unpack_from
 SINT16     = Struct('<h').unpack_from
 UINT32     = Struct('<L').unpack_from
 SINT32     = Struct('<l').unpack_from
@@ -377,21 +367,6 @@ FLOAT64    = Struct('<d').unpack_from
 FLOAT64_2D = Struct('<dd').unpack_from
 FLOAT64_3D = Struct('<ddd').unpack_from
 DATETIME   = Struct('<Q').unpack_from
-
-def getUInt8(data, offset):
-	'''
-	Returns a single unsingned 8-Bit value (byte).
-	Args:
-		data
-			A binary string.
-		offset
-			The zero based offset of the byte.
-	Returns:
-		The unsigned 8-Bit value at offset.
-		The new position in the 'stream'.
-	'''
-	val, = UINT8(data, offset)
-	return val, offset + 1
 
 def getBoolean(data, offset):
 	'''
@@ -409,6 +384,21 @@ def getBoolean(data, offset):
 	if (val == 1): return True, offset + 1
 	if (val == 0): return False, offset + 1
 	raise ValueError(u"Expected either 0 or 1 but found %02X" %(val))
+
+def getUInt8(data, offset):
+	'''
+	Returns a single unsingned 8-Bit value (byte).
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the byte.
+	Returns:
+		The unsigned 8-Bit value at offset.
+		The new position in the 'stream'.
+	'''
+	val, = UINT8(data, offset)
+	return val, offset + 1
 
 def getUInt8A(data, offset, size):
 	'''
@@ -843,17 +833,17 @@ def setInventorFile(file):
 				shutil.rmtree(p)
 	return OleFileIO(file)
 
-def translate(str):
-	res = str
-	for c in TRANSLATIONS:
-		res = res.replace(c, TRANSLATIONS[c])
-	return res
-
 def viewAxonometric():
 	if (GuiUp):
 		FreeCADGui.activeView().viewAxonometric()
 		FreeCADGui.SendMsgToActiveView("ViewFit")
 	logInfo(u"DONE!")
+
+def isString(value):
+	if (type(value) is str): return True
+	if (sys.version_info.major < 3):
+		if (type(value) is unicode): return True
+	return False
 
 class Color(object):
 	def __init__(self, red, green, blue, alpha):

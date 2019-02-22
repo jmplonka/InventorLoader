@@ -3,7 +3,7 @@
 '''
 importerFreeCAD.py
 '''
-import sys, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders
+import sys, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, importerSAT, Acis
 
 from importerUtils   import *
 from importerClasses import *
@@ -475,35 +475,103 @@ def hide(geos):
 		__hide__(geos)
 	return
 
-def resolveNameTableItem(item, name):
-	vk  = item.get(name)
-	if (type(vk) is list):
-		nt  = item.segment.elementNodes.get(vk[0] & 0x7FFFFFFF)
-		if (nt is None):
-			vk = None
-		else:
-			vk = nt.get('entries')[vk[1]]
-		item.set(name, vk)
-	return
+def resolveNameTableItem(item, vk):
+	if (hasattr(vk, 'entry') and (vk.entry is None)):
+		nt  = item.segment.elementNodes.get(vk.nameTable)
+		if (nt is not None):
+			vk.entry = nt.get('entries')[vk.key]
+		return vk.entry
+	return None
 
 def getNameTableEntry(node):
-	if (node.handled): return
-	node.handled = True
-	nameTable = node.get('nameTable')
-	entry     = nameTable.get('entries')[node.get('ntIdx')]
-	resolveNameTableItem(entry, 'from')
-	resolveNameTableItem(entry, 'to')
-	resolveNameTableItem(entry, 'edge')
-	lst2 = entry.get('lst2')
-	for i, value in enumerate(lst2):
-		if (type(value) is list):
-			nt  = node.segment.elementNodes.get(value[0] & 0x7FFFFFFF)
-			if (nt is None):
-				nte = None
-			else:
-				nte = nt.get('entries')[value[1]]
-			lst2[i] = (nte, value[2])
-	return entry
+	ntEntry = node.get('ntEntry')
+	if (ntEntry.entry is None):
+		entry = resolveNameTableItem(node, ntEntry)
+		resolveNameTableItem(node, entry.get('from'))
+		resolveNameTableItem(node, entry.get('to'))
+		resolveNameTableItem(node, entry.get('edge'))
+		lst2 = entry.get('lst2')
+		for i, vk in enumerate(lst2):
+			resolveNameTableItem(node, vk)
+	return ntEntry.entry
+
+def getSatAttribute(segment, key, idx):
+	ntKeyDef = segment.ntKeys.get(key, None)
+	if (ntKeyDef is None): return None
+	asm = ntKeyDef.get('ref_1').get('refWrapper').get('asm')
+	nameMtchAttr = asm.get('nameMtchAttr')
+	if (nameMtchAttr is None):
+		# FIXME - moove to reading asm in DC!
+		entities = {}
+		lst      = []
+		hdr, lst = asm.get('SAT')
+		for entity in lst:
+			if (entity.index >= 0):
+				entities[entity.index] = entity
+		importerSAT.resolveEntityReferences(entities, lst)
+		Acis.setHeader(hdr)
+		importerSAT.setEntities(lst)
+		importerSAT.resolveNodes()
+		nameMtchAttr = Acis.getNameMatchAttributes()
+		asm.set('nameMatches', nameMtchAttr)
+		Acis.clearEntities()
+	atr = nameMtchAttr.get(idx, None)[0] # even if there are more than one...
+	return atr
+
+def getSatPoint(ntEntry, isStart):
+	if (ntEntry is None): return None
+	ntPoint = ntEntry.entry
+	if (ntPoint is None): return None
+	if (ntPoint.typeName in ('90F4820A','2E04A208')):
+		key, idx, typ  = ntPoint.get('a1')
+	elif (ntPoint.typeName in ('436D821A')):
+		satAtrs = ntPoint.get('satAtrs')
+		if (len(satAtrs) > 0):
+			key = satAtrs[0][0]
+			idx = satAtrs[0][1]
+			typ = satAtrs[0][2]
+			if (len(satAtrs) > 1):
+				logError(u"Can only handle one definition for %s", ntPoint.node)
+				return None
+		else:
+			logError(u"Don't know how to get Sat-Point from %s", ntPoint.node)
+			return None
+	else:
+		logError(u"Don't know how to get Sat-Point from %s", ntPoint.node)
+		return None
+
+	atr = getSatAttribute(ntPoint.segment, key, idx)
+	if (atr is None):
+		logError(u"Can't find ntKey=%04X for %s", key, ntPoint.node)
+		return None
+	vtx = atr.getOwner()
+	if (isinstance(vtx, Acis.Vertex)):
+		return vtx.getPosition() * 10.0
+	if (isinstance(vtx, Acis.Edge)):
+		if (isStart):
+			return vtx.getStart() * 10.0
+		return vtx.getEnd() * 10.0
+	logError(u"Expected 'vertex' not '%s'!", vtx.entity.name)
+	return None
+
+def _getSatCurveFromArray(segment, msk, key, idx):
+	if (msk == 0x0102):
+		atr = getSatAttribute(segment, key, idx)
+		edg = atr.getOwner()
+		assert isinstance(edg, Acis.Edge)
+		crv = edg.getCurve()
+		return crv
+
+def getSatCurve(ntEntry):
+	if (ntEntry is None): return None
+	if (ntEntry.typeName in ('22178C64','488C5309','9BB4281C','F4360D18','FF46726C')):
+		edge = ntEntry.get('edge')
+		if (edge is not None):
+			ntEdge = edge.entry
+			logError("CHAMFER\tPOINT\t%s" %(ntEdge.typeName))
+	else:
+		lst = ntEntry.get('entries')
+	return None
 
 class FreeCADImporter(object):
 	FX_EXTRUDE_NEW          = 0x0001
@@ -987,7 +1055,7 @@ class FreeCADImporter(object):
 				logWarning(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
-	def getIndexdEdges(self, matchedEdge, outline):
+	def getIndexdEdges(self, matchedEdge):
 		edges = []
 
 		for idxRef in matchedEdge.get('indexRefs'):
@@ -1000,12 +1068,24 @@ class FreeCADImporter(object):
 				self.getEntity(creator) # ensure that the creator is already available!
 			ntEntry = getNameTableEntry(ref)
 			if (ntEntry is not None):
-				try:
-					edgeItem = ntEntry.get('edge').get('a1') # Is a1[1] the item index of
-					edgeNode = outline.get('edges')[edgeItem[1]]
-					edges.append(edgeNode)
-				except:
-					pass
+				pass
+				# ntEntry.typeName in [22178C64,488C5309,9BB4281C,BF32E0A6,F4360D18,FF46726C]
+#				pt1 = getSatPoint(ntEntry.get('from'), True)
+#				pt2 = getSatPoint(ntEntry.get('to'), False)
+#				crv = getSatCurve(ntEntry)
+				# # get all edges from the document
+				# for o in self.doc.Objects:
+				# 	if (hasattr(o, 'Shape')):
+				# 		s = o.Shape
+				# 		for e in s.Edges:
+				# 			v1 = e.firstVertex(True).Point
+				# 			v2 = e.secondVertex(True).Point
+				# 			logAlways("DEBUG> p1=(%s), p2=(%s), v1=(%s), p2=(%s)", pt1, pt2, v1, v2)
+				# 			if ((isEqual(pt1, v1) and isEqual(pt2, v2)) or (isEqual(pt1, v2) and isEqual(pt2, v1))):
+				# 				edges.append(e)
+
+				# if more than one curve remains fillter according curve
+
 		return edges
 
 	def getEdgesFromProxy(self, fxCreator, proxy):
@@ -1013,7 +1093,7 @@ class FreeCADImporter(object):
 		if (proxy is not None):
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-#				edges = self.getIndexdEdges(matchedEdge, fxCreator.outline)
+				edges = self.getIndexdEdges(matchedEdge)
 #				all_edges += edges
 		return all_edges
 
@@ -1816,7 +1896,7 @@ class FreeCADImporter(object):
 		logInfo(u"        ... added BSpline = %s", splineNode.sketchIndex)
 		return
 
-	def addSketch_Image2D(self, imageNode, sketchObj):
+	def addSketch_Picture(self, imageNode, sketchObj):
 		imageNode.setSketchEntity(-1, None)
 		return
 
@@ -2703,9 +2783,9 @@ class FreeCADImporter(object):
 		properties   = chamferNode.get('properties')
 		edgesProxies = getProperty(properties, 0x00) # edge proxies
 		faceProxies  = getProperty(properties, 0x01) # base faces for the edges
-		dim1         = getProperty(properties, 0x02) # dimension start
-		dim2         = getProperty(properties, 0x03) # dimension end
-		#            = getProperty(properties, 0x04) # boolean 'True'
+		dim1         = getProperty(properties, 0x02) # first distance
+		dim2         = getProperty(properties, 0x03) # second distance
+		chamferType  = getProperty(properties, 0x04) # chamfer type
 		flip         = getProperty(properties, 0x05) # flip directions
 		#            = getProperty(properties, 0x06) # corner setback (boolean) => not supported!
 		#            = getProperty(properties, 0x07) # !!!never seen!!!
@@ -2714,8 +2794,8 @@ class FreeCADImporter(object):
 		angle        = getProperty(properties, 0x0A) # Angle
 		body         = getProperty(properties, 0x0B) # SolidBody
 
-		radius1  = getMM(dim1)
-		radius2  = getMM(dim2)
+		dist1  = getMM(dim1) # 1st distance
+		dist2  = getMM(dim2) # 2nd distance
 		creators = self.getCreatorsFromProxy(edgesProxies)
 		name     = chamferNode.name
 		if (len(creators) > 1): name = u"%s_0" %(name)
@@ -2727,7 +2807,7 @@ class FreeCADImporter(object):
 			for edgeNode in edges:
 				for j, edge in enumerate(fx.Shape.Edges):
 					if (edgeNode.matches(edge)):
-						fillets.append((j+1, radius1, radius2))
+						fillets.append((j+1, dist1, dist2))
 			chamfer = newObject(self.doc, 'Part::Chamfer', name)
 			chamfer.Base  = fx.sketchEntity
 			chamfer.Edges = fillets
@@ -2932,7 +3012,7 @@ class FreeCADImporter(object):
 #		getProperty(properties, 18) #  Boolean
 #		getProperty(properties, 20) #  Boolean
 
-		edges = self.getEdgesFromProxy(faceNode, edgesProxies)
+#		edges = self.getEdgesFromProxy(faceNode, edgesProxies)
 
 		return notYetImplemented(faceNode)
 
@@ -3021,6 +3101,16 @@ class FreeCADImporter(object):
 #		getProperty(properties, 9) # SolidBody 'Solid1'
 
 		return notYetImplemented(shellNode)
+
+	def Create_FxStitch(self, fxNode):
+		properties = fxNode.get('properties')
+#		getProperty(properties, 0) # ObjectCollection 'Fläche1','Fläche2',...
+#       getProperty(properties, 1) # SurfaceBodies
+#		getProperty(properties, 3) # ParameterBoolean=False
+#		tolerance = getProperty(properties, 4) # Parameter 'RDxVar2'=0.0254
+#		getProperty(properties, 5) # ParameterBoolean=False
+
+		return notYetImplemented(fxNode)
 
 	def Create_FxTrim(self, trimNode):
 		properties = trimNode.get('properties')
@@ -3735,7 +3825,7 @@ class FreeCADImporter(object):
 
 		if ((valueNode is not None) and (valueNode.handled != True)):
 			valueNode.handled = True
-			key      = translate(ref.name)
+			key      = ref.name
 			mdlValue = u''
 			tlrValue = u''
 			remValue = u''

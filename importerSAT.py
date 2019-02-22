@@ -7,7 +7,6 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 
 import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime, ImportGui
 from importerUtils import logInfo, logWarning, logError, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
-from Acis          import AcisRef, AcisEntity, readNextSabChunk, setHeader, getHeader
 from Acis2Step     import export
 from math          import fabs
 
@@ -58,24 +57,24 @@ class Tokenizer(object):
 			self.skipWhiteSpace()
 			text = self.content[self.pos:self.pos+count]
 			self.pos += count + 1
-			return 0x08, text
+			return Acis.TAG_UTF8_U16, text
 		if (token.startswith('$')):
 			ref = int(token[1:])
-			return 0x0C, AcisRef(ref)
+			return Acis.TAG_ENTITY_REF, Acis.AcisRef(ref)
 		if (token == '('):
 			tokX  = self.getNextToken()
 			tokY  = self.getNextToken()
 			tokZ  = self.getNextToken()
 			dummy = self.getNextToken()
 			assert (dummy == ')'), "Expected ')' but found '%s'!" %(dummy)
-			return 0x13, [float(tokX), float(tokY), float(tokZ)]
+			return Acis.TAG_POSITION, [float(tokX), float(tokY), float(tokZ)]
 		tag = TokenTranslations.get(token, None)
 		val = token
 		if (tag is None):
-			tag = 0x07
+			tag = Acis.TAG_UTF8_U8
 			try:
 				val = float(val)
-				tag = 0x06
+				tag = Acis.TAG_DOUBLE
 			except:
 				pass
 		return tag, val
@@ -118,6 +117,12 @@ def setEntities(entities):
 			del _entities[:]
 		Acis.clearEntities()
 	_entities = entities
+
+def resolveHistoryLink(history, ref):
+	if (ref.index >= 0):
+		ref.entity = history.delta_states[ref.index]
+	else:
+		ref.entity = None
 
 class Header(object):
 	def __init__(self):
@@ -167,22 +172,132 @@ class Header(object):
 			Acis.setVersion(self.version)
 		return
 	def readBinary(self, data):
-		tag, self.version, i = readNextSabChunk(data, 0)
-		tag, self.records, i = readNextSabChunk(data, i)
-		tag, self.bodies, i  = readNextSabChunk(data, i)
-		tag, self.flags, i   = readNextSabChunk(data, i)
-		tag, self.prodId, i  = readNextSabChunk(data, i)
-		tag, self.prodVer, i = readNextSabChunk(data, i)
-		tag, self.date, i    = readNextSabChunk(data, i)
-		tag, self.scale, i   = readNextSabChunk(data, i)
-		tag, self.resabs, i  = readNextSabChunk(data, i)
-		tag, self.resnor, i  = readNextSabChunk(data, i)
+		c, i = Acis.readNextSabChunk(data, 0)
+		self.version = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.records = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.bodies  = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.flags   = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.prodId  = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.prodVer = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.date    = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.scale   = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.resabs  = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+		self.resnor  = c.val
 		self.version = int2version(self.version)
 		logInfo(u"    product: '%s'", self.prodId)
 		logInfo(u"    version: '%s'", self.prodVer)
 		logInfo(u"    date:    %s",   self.date)
 		Acis.setVersion(self.version)
 		return i
+
+class Bulletin(object):
+	def __init__(self, old, new):
+		self.old = old
+		self.new = new
+	def __str__(self):
+		if (self.old.index == -1):
+			return u"$-1   $%-4d // inserted:   %s" %(self.new.index, self.new.entity)
+		if (self.new.index == -1):
+			return u"$%-4d $-1   // deleted:    %s" %(self.old.index, self.old.entity)
+		return u"$%-4d $%-4d // updated id: %s" %(self.old.index, self.new.index, self.new.entity)
+	def __repr__(self):
+		return str(self)
+
+class BulletinBoard(object):
+	def __init__(self, owner, number):
+		super(BulletinBoard, self).__init__()
+		self.owner  = owner
+		self.number = number
+		self.bulletins = []
+	def __str__(self):
+		return u"BulletinBoard: %d" %(self.number)
+	def __repr__(self):
+		return str(self)
+
+class DeltaState(object):
+	def __init__(self, history, entity, entities):
+		super(DeltaState, self).__init__()
+		self.history = history
+		self.index = entity.index
+		chunks = entity.chunks
+		self.id       , i = Acis.getInteger(chunks, 0) # Number of this state
+		self.rollbacks, i = Acis.getInteger(chunks, i) # Number of states that can be rolled back
+		self.hidden   , i = Acis.getInteger(chunks, i)
+		self.previous , i = Acis.getValue(chunks, i)   # previous delta state with respect to roll back
+		self.next     , i = Acis.getValue(chunks, i)   # next delta state with respect to roll back
+		self.partner  , i = Acis.getValue(chunks, i)   # partner delta state; if no branches, points to itself
+		self.merged   , i = Acis.getValue(chunks, i)   # delta state this is merged with
+		self.owner    , i = Acis.getValue(chunks, i)   # the owner stream
+		self.unknown  , i = Acis.getValue(chunks, i)   # == 0x0B
+		self.bulletin_boards = []
+		next, i = Acis.getInteger(chunks, i)
+		while (next):
+			bb = BulletinBoard(chunks[i].val, chunks[i+1].val)
+			self.bulletin_boards.append(bb)
+			next, i = Acis.getInteger(chunks, i + 2)
+			while (next):
+				refOld = chunks[i+0].val
+				if (refOld.index >= 0): refOld.entity = entities[refOld.index]
+				refNew = chunks[i+1].val
+				if (refNew.index >= 0): refNew.entity = entities[refNew.index]
+				b = Bulletin(refOld, refNew)
+				bb.bulletins.append(b)
+				next, i = Acis.getInteger(chunks, i + 2)
+			next, i = Acis.getInteger(chunks, i)
+	def getPrevious(self): return self.previous.entity
+	def getNext(self):     return self.next.entity
+	def getPartner(self):  return self.partner.entity
+	def getMerged(self):   return self.merged.entity
+	def resolveLinks(self):
+		resolveHistoryLink(self.history, self.previous)
+		resolveHistoryLink(self.history, self.next)
+		resolveHistoryLink(self.history, self.partner)
+		resolveHistoryLink(self.history, self.merged)
+	def __str__(self):
+		return u"delta_state %d %d %d %s %s %s %s %s %s" %(self.id, self.rollbacks, self.hidden, self.previous, self.next, self.partner, self.merged, self.owner, self.unknown)
+	def __repr__(self):
+		return u"%d delta_state %d %d %d %s %s %s %s %s %s" %(self.index, self.id, self.rollbacks, self.hidden, self.previous, self.next, self.partner, self.merged, self.owner, self.unknown)
+
+class History(object):
+	def __init__(self, entity):
+		super(History, self).__init__()
+		entity.index = -1
+		self.history_stream , i = Acis.getValue(entity.chunks, 0)
+		self.current_state  , i = Acis.getInteger(entity.chunks, i) # current delta_state
+		self.next_state     , i = Acis.getInteger(entity.chunks, i) # next stae to with respect to roll back
+		self.keep_max_states, i = Acis.getInteger(entity.chunks, i) # max number of states to keep
+		self.unknown        , i = Acis.getInteger(entity.chunks, i)
+		self.ds_current     , i = Acis.getValue(entity.chunks, i)   # current delta state, a.k. "working state"
+		self.ds_root        , i = Acis.getValue(entity.chunks, i)   # root delta state
+		self.ds_active      , i = Acis.getValue(entity.chunks, i)   # the most recent delta state
+		self.attribute      , i = Acis.getValue(entity.chunks, i)   # history's attributes.
+		self.delta_states = {}
+	def resolveDeltaStates(self, entities):
+		for key in self.delta_states:
+			entity = self.delta_states[key]
+			ds = DeltaState(self, entity, entities)
+			self.delta_states[key] = ds
+		resolveHistoryLink(self, self.ds_current)
+		resolveHistoryLink(self, self.ds_root)
+		resolveHistoryLink(self, self.ds_active)
+		for key in self.delta_states:
+			ds = self.delta_states[key]
+			ds.resolveLinks()
+	def getRoot(self):
+		return self.ds_root.entity
+	def __str__(self):
+		return "SAT %s: %d %d %d %d %s %s %s %s" %(self.history_stream, self.current_state, self.next_state, self.keep_max_states, self.unknown, self.ds_current, self.ds_root, self.ds_active, self.attribute)
+	def __repr__(self):
+		return "%s: %d %d %d %d %s %s %s %s" %(self.history_stream, self.current_state, self.next_state, self.keep_max_states, self.unknown, self.ds_current, self.ds_root, self.ds_active, self.attribute)
 
 def getNextText(data):
 	m = LENGTH_TEXT.match(data)
@@ -194,22 +309,22 @@ def getNextText(data):
 def readEntityBinary(data, index, end):
 	names = []
 	eIndex = -1
-	tag, val, i = readNextSabChunk(data, index)
-	if (not tag in (0x0D, 0x0E)):
-		eIndex = val
-		tag, val, i = readNextSabChunk(data, i)
-	names.append(val)
-	while (tag != 0x0D):
-		tag, val, i = readNextSabChunk(data, i)
-		if (val == 'ASM'): val = 'ACIS'
-		names.append(val)
+	c, i = Acis.readNextSabChunk(data, index)
+	if (c.tag not in (Acis.TAG_IDENT, Acis.TAG_SUBIDENT)):
+		eIndex = c.val
+		c, i = Acis.readNextSabChunk(data, i)
+	names.append(c.val)
+	while (c.tag != Acis.TAG_IDENT):
+		c, i = Acis.readNextSabChunk(data, i)
+		if (c.val == 'ASM'): c.val = 'ACIS'
+		names.append(c.val)
 
-	entity = AcisEntity('-'.join(names))
+	entity = Acis.AcisEntity('-'.join(names))
 	entity.index = eIndex
 	if (not entity.name.startswith('End-of-')):
-		while ((tag != 0x11) and (i < end)):
-			tag, val, i = readNextSabChunk(data, i)
-			entity.add(tag, val)
+		while ((c.tag != Acis.TAG_TERMINATOR) and (i < end)):
+			c, i = Acis.readNextSabChunk(data, i)
+			entity.chunks.append(c)
 
 	return entity, i
 
@@ -221,28 +336,33 @@ def readEntityText(tokenizer, index):
 	if (name.startswith('-')):
 		id = int(name[1:])
 		name = tokenizer.getNextToken()
-	entity = AcisEntity(name)
+	entity = Acis.AcisEntity(name)
 	entity.index = id
 	while (tokenizer.hasNext()):
 		token = tokenizer.getNextToken()
 		if (token):
 			tag, val = tokenizer.translateToken(token)
 			entity.add(tag, val)
-			if (tag == 0x11):
+			if (tag == Acis.TAG_TERMINATOR):
 				break;
 
 	return entity, id + 1
 
-def resolveEntityReferences(entities, lst):
+def resolveEntityReferences(entities, lst, history):
 	progress = FreeCAD.Base.ProgressIndicator()
 	progress.start("Resolving references...", len(lst))
+	map = entities
 	for entity in lst:
 		progress.next()
+		if (entity.name == "Begin-of-ACIS-History-Data"):
+			map = history
+		elif (entity.name == "End-of-ACIS-History-Section"):
+				map = entities
 		for chunk in entity.chunks:
-			if (chunk.tag == 0x0C):
+			if (chunk.tag == Acis.TAG_ENTITY_REF):
 				ref = chunk.val
 				try:
-					ref.entity = entities[ref.index]
+					ref.entity = map[ref.index]
 				except:
 					ref.entity = None
 	progress.stop()
@@ -388,7 +508,7 @@ def importModel(root, doc):
 
 def convertModel(group, doc):
 	global _fileName
-	header = getHeader()
+	header = Acis.getHeader()
 	bodies = resolveNodes()
 	stepfile = export(_fileName, header, bodies)
 	ImportGui.insert(stepfile, doc.Name)
@@ -397,11 +517,13 @@ def readText(doc, fileName):
 	global _fileName
 	_fileName = fileName
 	header = Header()
-	entities = {}
-	lst      = []
-	index    = 0
 	valid    = True
+	Acis.setHeader(header)
+	index    = 0
 	Acis.clearEntities()
+	entities = {}
+	map      = entities
+	lst      = []
 
 	with open(fileName, 'rU') as file:
 		header.readText(file)
@@ -413,17 +535,25 @@ def readText(doc, fileName):
 		while (tokenizer.hasNext()):
 			entity, index = readEntityText(tokenizer, index)
 			#TODO: update progress indocator for tokenizer.pos
-			if (entity is not None):
-				lst.append(entity)
-				entities[entity.index] = entity
-				if (entity.name == "Begin-of-ACIS-History-Data"):
-					valid = False
-				if (entity.name == "End-of-ACIS-data"):
-					valid = False
-				entity.valid = valid
+			if (entity.index < 0): entity.index = index
+			map[entity.index] = entity
+			lst.append(entity)
+			if (entity.name == "Begin-of-ACIS-History-Data"):
+				history = History(entity)
+				entityIdx = index
+				index = 0
+				map = history.delta_states
+			elif (entity.name == "End-of-ACIS-History-Section"):
+				del map[index]
+				entity.index = -1
+				index = entityIdx
+				map = entities
+			elif (entity.name == "End-of-ACIS-data"):
+				entity.index = -1
+			else:
+				index += 1
 		#progress.stop() # DONE reading file
-	resolveEntityReferences(entities, lst)
-	setHeader(header)
+	resolveEntityReferences(entities, lst, history)
 	setEntities(lst)
 	return True
 
@@ -431,6 +561,7 @@ def readBinary(doc, fileName):
 	global _fileName
 	_fileName = fileName
 	header = Header()
+	Acis.setHeader(header)
 	entities = {}
 	lst      = []
 	index    = 0
@@ -448,10 +579,9 @@ def readBinary(doc, fileName):
 			lst.append(entity)
 			index += 1
 			if (entity.name == "End-of-ACIS-data"):
-				entity.index = -2
+				entity.index = -1
 				break
 	resolveEntityReferences(entities, lst)
-	setHeader(header)
 	setEntities(lst)
 	return
 
@@ -462,12 +592,12 @@ def create3dModel(group, doc):
 	else:
 		convertModel(group, doc)
 	setEntities(None)
-	setHeader(None)
+	Acis.setHeader(None)
 	return
 
 def readEntities(asm):
 	header, lst = asm.get('SAT')
-	setHeader(header)
+	Acis.setHeader(header)
 	setEntities(lst)
 	bodies = 0
 	for entity in lst:

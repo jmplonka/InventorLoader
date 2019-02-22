@@ -11,8 +11,8 @@ from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
 from importerUtils          import *
-from Acis                   import clearEntities, readNextSabChunk, setVersion
-from importerSAT            import readEntityBinary, int2version, Header
+from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, createNode, setHeader
+from importerSAT            import readEntityBinary, int2version, Header, History
 from uuid                   import UUID
 
 __author__     = 'Jens M. Plonka'
@@ -23,62 +23,49 @@ _listPattern = re.compile('[^\x00]\x00\x00\x30')
 
 _fmt_new = False
 
-if (sys.version_info.major < 3):
-	_unicode_ = unicode
-else:
-	_unicode_ = str
+def resolveEntityReferences(node, entities):
+	header, lst, history, refs = node.get('SAT')
 
-def resolveEntityReferences(entities, lst):
-	skip = False
-	for entity in lst:
-		name = entity.name
-		entity.valid = True
-		if (name == "Begin-of-ACIS-History-Data"):
-			entity.index = -1
-			skip = True
-		elif (name == 'asmheader'):
-			# skip ASM specific stuff
-			entity.index = -1 # mark as deleted
+	try:
+		dumpSat(node.index, header, lst)
 
-		try:
-			# clear history reference!
-			entity.chunks[1].val = -1
-		except:
-			pass
+		# until now each ref only knwos the id of the targetting entity -> resolve it
+		for index in refs:
+			ref = refs[index]
+			ref.entity = entities.get(index, None)
 
-		if (not skip):
-			for chunk in entity.chunks:
-				if (chunk.tag == 0x0C):
-					ref = chunk.val
-					if (ref.index >= 0):
-						entity = entities[ref.index]
-						if (entity.index == -1):
-							ref.index = -1 # entity was removed
-							ref.entity = None
-						else:
-							ref.entity = entity
-		else:
-			# skip everything beyond history
-			entity.index = -1
-			entity.valid = False
+		# create a node for each entity
+		for entity in lst:
+			createNode(entity)
 
-	idx = 0
-	for entity in lst:
-		if (entity.index != -1):
-			entity.index = idx
-		idx += 1
+		# resolve the roll-back information from the history
+		history.resolveDeltaStates(entities)
+		dumpHistory(node.index, history, entities)
+	except:
+		logError(traceback.format_exc())
 
-def dumpSat(node):
-	header, entities = node.get('SAT')
-	with open(u"%s/%04X.sat" %(getDumpFolder(), node.index), 'wb') as sat:
+def dumpSat(nodeIdx, header, entities):
+	with open(u"%s/%04X.sat" %(getDumpFolder(), nodeIdx), 'wb') as sat:
 		sat.write(header.__str__().encode('utf8'))
 		for ntt in entities:
-			if ntt.index >= 0:
-				sat.write((u"-%d %s " %(ntt.index, ntt.name)).encode('utf8'))
-				for c in ntt.chunks:
-					sat.write(c.__str__().encode('utf8'))
-				sat.write(u"\n")
-		sat.write(b"End-of-ACIS-data\n")
+			if ntt.index >= 0: sat.write((u"-%d " %(ntt.index)).encode('utf8'))
+			sat.write((u"%s " %(ntt.name)).encode('utf8'))
+			for c in ntt.chunks:
+				sat.write(c.__str__().encode('utf8'))
+			sat.write(u"\n")
+
+def dumpHistory(nodeIdx, history, entities):
+	with open(u"%s/%04X_sat.history" %(getDumpFolder(), nodeIdx), 'wb') as dump:
+		dump.write((u"%s:\n" %(history)).encode('utf8'))
+		ds = history.getRoot()
+		while (ds):
+			dump.write((u"%r\n" %(ds)).encode('utf8'))
+			for bb in ds.bulletin_boards:
+				dump.write((u"\t%s\n" %(bb)).encode('utf8'))
+				for b in bb.bulletins:
+					dump.write((u"\t\t%s\n" %(b)).encode('utf8'))
+			ds = ds.getNext()
+	return
 
 def checkReadAll(node, i, l):
 	assert (i == l), '%s: Have not read all data (%d <> %d)' %(node.uid, i, l)
@@ -148,7 +135,7 @@ def __dumpBranch(file, ref, branch, level, prefix):
 			t = type(ref.number)
 			if ((t is list) or (t is dict)):
 				file.write(u"%s = " %(ref.number))
-			elif ((t is str) or (t is _unicode_)):
+			elif (isString(t)):
 				file.write(u"['%s'] = " %(ref.number))
 			elif (t is UUID):
 				file.write(u"[{%s}] = " %(str(ref.number).upper()))
@@ -611,52 +598,67 @@ class SegmentReader(object):
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
 
-		header = Header()
+		header  = Header()
+		history = None
 		header.version, i = getUInt32(node.data, i)
 		header.records, i = getUInt32(node.data, i)
 		header.bodies, i  = getUInt32(node.data, i)
 		header.flags, i   = getUInt32(node.data, i)
-		tag, header.prodId, i  = readNextSabChunk(node.data, i)
-		tag, header.prodVer, i = readNextSabChunk(node.data, i)
-		tag, header.date, i    = readNextSabChunk(node.data, i)
-		tag, header.scale, i   = readNextSabChunk(node.data, i)
-		tag, header.resabs, i  = readNextSabChunk(node.data, i)
-		tag, header.resnor, i  = readNextSabChunk(node.data, i)
+		c, i = readNextSabChunk(node.data, i)
+		header.prodId = c.val
+		c, i = readNextSabChunk(node.data, i)
+		header.prodVer = c.val
+		c, i = readNextSabChunk(node.data, i)
+		header.date = c.val
+		c, i = readNextSabChunk(node.data, i)
+		header.scale = c.val
+		c, i = readNextSabChunk(node.data, i)
+		header.resabs = c.val
+		c, i = readNextSabChunk(node.data, i)
+		header.resnor = c.val
 		self.version = int2version(header.version)
 		setVersion(7.0)
-
+		setHeader(header)
 		index = 0
 		clearEntities()
 		entities = {}
+		map = entities
 		lst = []
 		e = len(node.data) - 17
 		vers = getFileVersion()
 		if (vers > 2010): e -=1
 		if (vers > 2018): e -=1
 		if (vers < 2011): e -=8
-		add = True
 		while (i < e):
 			entity, i = readEntityBinary(node.data, i, e)
 			entity.index = index
-			entities[index] = entity
-			if (add):
-				lst.append(entity)
+			map[entity.index] = entity
+			lst.append(entity)
 			convert2Version7(entity)
-			if (entity.name == "End-of-ACIS-data"):
-				entity.index = -2
-				add = False
-			index += 1
-		resolveEntityReferences(entities, lst)
-		node.set('SAT', [header, lst])
+			if (entity.name == "Begin-of-ACIS-History-Data"):
+				history = History(entity)
+				entityIdx = index
+				index = 0
+				map = history.delta_states
+			elif (entity.name == "End-of-ACIS-History-Section"):
+				del map[index]
+				entity.index = -1
+				index = entityIdx
+				map = entities
+			elif (entity.name == "End-of-ACIS-data"):
+				entity.index = -1
+			else:
+				index += 1
+		node.set('SAT', [header, lst, history, getSatRefs()])
+		resolveEntityReferences(node, entities)
 		self.segment.AcisList.append(node)
-		dumpSat(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'selectedKey')
 		i += 1 # skip 00
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2018): i += 1 # skip 00
-		i = node.ReadChildRef(i, 'mappings')
+		i = node.ReadChildRef(i, 'history')
 		i += 4 # skip FF FF FF FF
 		return i
 

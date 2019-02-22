@@ -26,16 +26,18 @@ class ResultReader(SegmentReader):
 
 	def Read_Header2(self, node):
 		i = self.skipBlockSize(0)
-		i = node.ReadCrossRef(i, 'root')
+		#i = node.ReadCrossRef(i, 'root')
+		i = node.ReadUInt32(i, 'root')
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'flags')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_0')
+		#i = node.ReadCrossRef(i, 'ref_0')
+		i = node.ReadUInt32(i, 'ref_0')
 		return i
 
 	def Read_09780457(self, node):
 		i = self.Read_Header1(node)
-		i = node.ReadSInt32(i, 'key')
+		i = node.ReadSInt32(i, 'delta_state') # the number of the delta_states in the sat file
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
@@ -147,12 +149,12 @@ class ResultReader(SegmentReader):
 		return i
 
 	def Read_F78B08D5(self, node):
-		i = node.Read_Header0()
+		i = node.Read_Header0('SatHistory')
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'keys')
-		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'mapping')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'numbers') # see "*_sat.history" file for details
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'delta_states')
 		i = node.ReadChildRef(i, 'ref_1')
 		return i
 

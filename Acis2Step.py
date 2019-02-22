@@ -562,6 +562,36 @@ def _initExport():
 	_entities        = []
 	return
 
+def _finalizeExport():
+	global _pointsVertex
+	global _pointsCartesian
+	global _directions
+	global _edgeCurves
+	global _lines
+	global _ellipses
+	global _vectors
+	global _cones
+	global _planes
+	global _spheres
+	global _curveBSplines
+	global _assignments
+	global _colorPalette
+	global _entities
+
+	_pointsVertex.clear()
+	_pointsCartesian.clear()
+	_directions.clear()
+	_edgeCurves.clear()
+	_lines.clear()
+	_ellipses.clear()
+	_vectors.clear()
+	_cones.clear()
+	_planes.clear()
+	_spheres.clear()
+	_curveBSplines.clear()
+	_assignments.clear()
+	_entities[:] = []
+
 def _setExported(l, b):
 	if ((type(l) == dict) or (type(l) == list)):
 		for p in l:
@@ -1448,5 +1478,7 @@ def export(filename, satHeader, satBodies):
 	with open(stepfile, 'wb') as stepFile:
 		_writeStep(stepFile, step)
 		logInfo(u"    File written to '%s'.", stepfile)
+
+	_finalizeExport()
 
 	return stepfile

@@ -330,7 +330,7 @@ class GraphicsReader(EeSceneReader):
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.ReadEdgeList(node, i)
-		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst1', 3)
+		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'points', 3)
 		i = node.ReadFloat64_3D(i, 'p1')
 		i = node.ReadFloat64_3D(i, 'p2')
 		return i
@@ -342,7 +342,7 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadFloat64A(i, 6, 'a4')
-		i = node.ReadUInt8A(i, 4, 'a5')
+		i = self.ReadTransformation3D(node, i)
 		return i
 
 	def Read_733CA999(self, node):
@@ -471,7 +471,7 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'index')
 		i = node.ReadFloat64A(i, 6, 'box') # bounding box
 		i = self.ReadEdgeList(node, i)
-		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'splines', 3)
+		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'points', 3)
 		return i
 
 	def Read_7DFC2448(self, node): # CompositeFeatureOutline
@@ -658,9 +658,6 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadColorRGBA(i, 'c3')
 		i = node.ReadFloat32(i, 'f32_0')
 		i = self.skipBlockSize(i)
-		outlines = node.get('outlines')
-		if (len(outlines) > 0):
-			node.segment.outlines = outlines
 		return i
 
 	def Read_D28CA9B4(self, node): return 0

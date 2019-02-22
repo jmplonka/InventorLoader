@@ -23,6 +23,7 @@ APP_4_A = Struct('<LHLff').unpack_from
 APP_4_B = Struct('<ffHB').unpack_from
 APP_5_A = Struct('<ddL').unpack_from
 APP_5_B = Struct('<BBH').unpack_from
+MTM_LST = Struct('<LBL').unpack_from
 
 def CheckList(data, offset, type):
 	lst, i = getUInt16A(data, offset, 2)
@@ -69,6 +70,7 @@ _TYP_APP_1_                 = 0x0046
 _TYP_F64_F64_U32_U8_U8_U16_ = 0x0047
 _TYP_NT_ENTRY_              = 0x0048
 _TYP_2D_UINT32_             = 0x0049
+_TYP_MTM_LST_               = 0x004A
 
 _TYP_LIST_UINT16_A_         = 0x8001
 _TYP_LIST_SINT16_A_         = 0x8002
@@ -98,8 +100,7 @@ _TYP_MAP_U16_U16_           = 0x7010
 _TYP_MAP_KEY_APP_1_         = 0x7011
 _TYP_MAP_KEY_MAP_APP_1_     = 0x7012
 
-_TYP_MAP_MDL_TXN_MGR_1_     = 0x6001
-_TYP_MAP_MDL_TXN_MGR_2_     = 0x6002
+_TYP_MAP_MDL_TXN_MGR_       = 0x6001
 
 _TYP_RESULT_1_              = 0x5001
 _TYP_RESULT_2_              = 0x5002
@@ -137,6 +138,7 @@ TYP_LIST_FUNC = {
 	_TYP_APP_1_:                 'getListApp4',
 	_TYP_F64_F64_U32_U8_U8_U16_: 'getListApp5',
 	_TYP_NT_ENTRY_:              'getListNtEntries',
+	_TYP_MTM_LST_:               'getListMdlrTxnMgr',
 	_TYP_LIST_UINT16_A_:         'getListListUInt16sA',
 	_TYP_LIST_SINT16_A_:         'getListListSInt16sA',
 	_TYP_LIST_UINT32_A_:         'getListListUInt32sA',
@@ -187,8 +189,7 @@ TYP_MAP_FUNC = {
 	_TYP_MAP_TEXT8_X_REF_:      'getMapT8XRef',
 	_TYP_MAP_TEXT16_REF_:       'getMapT16Ref',
 	_TYP_MAP_TEXT16_X_REF_:     'getMapT16XRef',
-	_TYP_MAP_MDL_TXN_MGR_1_:    'getMapMdlTxnMgr1',
-	_TYP_MAP_MDL_TXN_MGR_2_:    'getMapMdlTxnMgr2',
+	_TYP_MAP_MDL_TXN_MGR_:      'getMapMdlTxnMgr',
 	_TYP_MAP_KEY_APP_1_:        'getMapKeyApp1',
 	_TYP_MAP_KEY_MAP_APP_1_:    'getMapKeyMapApp1',
 }
@@ -730,6 +731,19 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
+	def getListMdlrTxnMgr(self, name, offset, cnt, arraysize):
+		lst = []
+		i = offset
+		skip1 = 0 if (getFileVersion() > 2010) else 4
+		skip2 = 1 if (getFileVersion() > 2018) else 0
+		structLen = 9 + skip1 + skip2 # 2 x UInt32 + 1 x UInt8
+		for j in range(cnt):
+			a = MTM_LST(self.data, i)
+			lst.append(a)
+			i += structLen
+		self.set(name, lst)
+		return i
+
 	def getList2DUInt32s(self, name, offset, cnt, arraysize):
 		lst = []
 		i  = offset
@@ -1100,56 +1114,22 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
-	def	getMapMdlTxnMgr1(self, name, offset, cnt):
-		lst = {}
+	def	getMapMdlTxnMgr(self, name, offset, cnt):
+		lst = []
 		i   = offset
 		c = self.content
 		self.content = u""
-		skip1 = 4 if (getFileVersion() < 2011) else 0
-		skip2 = 1 if (getFileVersion() > 2018) else 0
+		skip = 0 if (getFileVersion() > 2010) else 4
 		for j in range(cnt):
-			key = len(lst)
-			tmp = u"%s[%02x]" %(name, key)
 			val = ModelerTxnMgr()
-			i = self.ReadCrossRef(i, tmp, j)
-			val.ref_1 = self.get(tmp)
-			val.u32_0, i = getUInt32(self.data, i)
-
-			i =  self.ReadList2(i, _TYP_UINT16_A_, tmp, 2)
-			val.lst = self.get(tmp)
-			val.u8_0, i  = getUInt8(self.data, i)
-			i += skip1 + skip2
-			val.u32_1, i  = getUInt32(self.data, i)
-			val.u8_1, i   = getUInt8(self.data, i)
-			val.s32_0, i  = getSInt32(self.data, i)
-			i += skip1 + skip1 + skip2
-			self.delete(tmp)
-		self.content = c + u" %s=[%s]" % (name, u",".join([u"[\'%s\': (%s)]" %(key, lst[val]) for key in lst]))
-		self.set(name, lst)
-		return i
-
-	def	getMapMdlTxnMgr2(self, name, offset, cnt):
-		lst = {}
-		i   = offset
-		c = self.content
-		self.content = u""
-		skip1 = 8 if (getFileVersion() < 2011) else 0
-		skip2 = 1 if (getFileVersion() > 2018) else 0
-		for j in range(cnt):
-			key = len(lst)
-			val = ModelerTxnMgr()
-			tmp = u"[%02X].ref_1" %(j)
-			i = self.ReadCrossRef(i, name, tmp)
-			val.ref_1 = self.get(tmp)
-			self.delete(tmp)
-			val.u32_0, i = getUInt32(self.data, i)
-			i =  self.ReadList2(i, _TYP_UINT16_A_, 'tmp', 2)
+			val.node, i  = getUInt32(self.data, i)
+			val.dcIdx, i = getUInt32(self.data, i)
+			i =  self.ReadList2(i, _TYP_MTM_LST_, 'tmp')
+			i += skip
 			val.lst = self.get('tmp')
-			val.u8_0, i  = getUInt8(self.data, i)
-			val.s32_0, i  = getSInt32(self.data, i)
-			i += skip1 + skip2
-		self.content += u" %s=[%s]" % (name, u",".join([u"[\'%s\': (%s)]" %(key, lst[val]) for key in lst]))
-		self.delete('tmp')
+			self.delete('tmp')
+			lst.append(val)
+		self.content = c + u" %s=[%s]" % (name, u",".join([u"[(%s)]" %(val) for val in lst]))
 		self.set(name, lst)
 		return i
 
@@ -1217,6 +1197,7 @@ class SecNode(AbstractData):
 
 		hdr = Header0(u32_0, u16_0)
 		self.set('hdr', hdr)
+#		self.content += ' hdr=(%r)' %(hdr)
 		if (typeName is not None): self.typeName = typeName
 
 		return i

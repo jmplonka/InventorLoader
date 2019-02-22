@@ -501,7 +501,8 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUUID(i, 'ui')
 		return i
 
-	def Read_3683CE33(self, node):
+	def Read_3683CE33(self, node): # RDxDiagSketchDimRefGeomFailed
+		node.typeName = "DiagSketchDimRefGeomFailed"
 		i = node.ReadParentRef(0)
 		i = node.ReadUInt32A(i, 3, 'a0')
 		return i

@@ -65,6 +65,15 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		node.set(name, lst)
 		return i
 
+	def ReadList2U32(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
+		i = node.ReadSInt32A(i, 7, 'a0')
+		i = self.skipBlockSize(i)
+		return i
+
 	def ReadHeaderNameTableRootNode(self, node, typeName = None):
 		if (typeName is not None):
 			node.typeName = typeName
@@ -93,19 +102,19 @@ class NameTableReader(SegmentReader): # for BRep and DC
 
 	def ReadHeaderNameTableChild2Node(self, node, typeName = None):
 		i = self.ReadHeaderNameTableChild1Node(node, typeName)
-		i = node.ReadUInt32A(i, 7, 'a0')
+		i = node.ReadSInt32A(i, 7, 'a0')
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		return i
 
 	def Read_05C619B6(self, node):
 		i = self.ReadHeaderNameTableOtherNode(node)
-		i = node.ReadUInt8(i, 'u8_2')
+		i = node.ReadBoolean(i, 'b1')
 		i = self.ReadNtEntryList(node, i, 'entries')
-		i = self.ReadNtEntry(node, i, 'face')
+		i = self.ReadNtEntry(node, i, 'edge')
 		i = self.ReadNtEntryU8List(node, i, 'lst2')
-		i = self.ReadNtEntryD64List(node, i, 'a0')
-		i = self.ReadNtEntryD64List(node, i, 'a1')
+		i = self.ReadNtEntryD64List(node, i, 'a5')
+		i = self.ReadNtEntryD64List(node, i, 'a6')
 		if (getFileVersion() > 2010): i += 16
 		return i
 
@@ -113,10 +122,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = self.ReadHeaderNameTableOtherNode(node)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst2', 2)
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 5, 'a1')
-		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'satAtrs', 5) # -> LoftSection.label.u32_4
 		return i
 
 	# The name table itself
@@ -158,10 +164,10 @@ class NameTableReader(SegmentReader): # for BRep and DC
 
 	def Read_22178C64(self, node): # Name table root node
 		i = self.ReadHeaderNameTableRootNode(node)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2) # same as lst1 ?!?
 		i = self.ReadNtEntry(node, i, 'edge')
 		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst4', 5)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'satAtrs', 5) # [asmKey, atrKey, type, 0, 0]
 		return i
 
 	def Read_40236C89(self, node): # Name table root node
@@ -204,7 +210,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 	def Read_9BB4281C(self, node): # Name table root node for Fillet-Chamfer
 		i = self.ReadHeaderNameTableRootNode(node)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
-		i = self.ReadNtEntry(node, i, 'face')
+		i = self.ReadNtEntry(node, i, 'edge')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
 		cnt, i = getUInt32(node.data, i)
@@ -219,7 +225,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 	def Read_F4360D18(self, node): # Name table root node
 		i = self.ReadHeaderNameTableRootNode(node)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
-		i = self.ReadNtEntry(node, i, 'face')
+		i = self.ReadNtEntry(node, i, 'edge')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
 		node.content += u" a2=[] a3=[] a4=[] a5=[0000,0000,0000]"
@@ -254,8 +260,8 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
 		i = self.ReadNtEntry(node, i, 'edge')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_4')
-		i = node.ReadUInt16(i, 'u16_1')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
 	# Child name table entries
@@ -308,26 +314,21 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = self.ReadHeaderNameTableChild2Node(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
-		i = node.ReadUInt32A(i, 2, 'a2')
+		i = node.ReadUInt32A(i, 2, 'a2')   # always (0,0)
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'a3')
-		i = node.ReadUInt32A(i, 3, 'a4')
+		i = node.ReadUInt32A(i, 3, 'a4')   # always (0,0,0)
 		return i
 
 	def Read_90F4820A(self, node): # Name table child node for points (first-vertex)
 		i = self.ReadHeaderNameTableChild2Node(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
-		node.content += u" a2=[0000,0000] a3=[] a4=[0000,0000,0000]"
-		node.set('lst2', [])
-		node.set('a2', [0,0])
-		node.set('a3', [])
-		node.set('a4', [0,0,0])
 		return i
 
 	def Read_B1ED010F(self, node): # Name table child node
 		i = self.ReadHeaderNameTableChild1Node(node)
-		i = node.ReadUInt32A(i, 7, 'a0')
+		i = node.ReadSInt32A(i, 7, 'a0')
 		i = self.ReadNtEntry(node, i, 'from') # or is it face 1?
 		i = self.ReadNtEntryList(node, i, 'entries')
 		return i

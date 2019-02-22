@@ -8,6 +8,7 @@ Collection of 3D Mesh importers
 import os, sys, FreeCAD, importerSAT, Import_IPT
 from importerUtils import canImport, logWarning, logError, logAlways, viewAxonometric
 from olefile       import isOleFile
+import importerUtils, Acis, importerClasses
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -59,6 +60,11 @@ def isFileValid(filename):
 			return False
 	return canImport()
 
+def releaseMemory():
+	importerUtils._thumbnail = None
+	Acis.clearEntities()
+	importerClasses.releaseModel()
+
 def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
@@ -74,6 +80,7 @@ def insert(filename, docname, skip = [], only = [], root = None):
 				group = insertGroup(doc, name)
 				reader.create3dModel(group, doc)
 				viewAxonometric()
+			releaseMemory()
 		except:
 			open(filename, skip, only, root)
 	return
@@ -93,4 +100,5 @@ def open(filename, skip = [], only = [], root = None):
 			# Create 3D-Model in root (None) of document
 			reader.create3dModel(None , doc)
 			viewAxonometric()
+		releaseMemory()
 	return

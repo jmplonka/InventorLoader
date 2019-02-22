@@ -122,7 +122,7 @@ class BRepReader(NameTableReader):
 	def Read_09780457(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadParentRef(i)
-		i = node.ReadUInt32(i, 'key')
+		i = node.ReadSInt32(i, 'delta_state') # the number of the data_set in the sat file
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
@@ -180,6 +180,7 @@ class BRepReader(NameTableReader):
 	def Read_6D0B7807(self, node):
 		i = node.Read_Header0()
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
+		i = self.skipBlockSize(i)
 		return i
 
 	def Read_766EA5E5(self, node):
@@ -187,7 +188,8 @@ class BRepReader(NameTableReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 10, 'a0')
+		i = node.ReadUInt16A(i, 8, 'a1')
+		i = node.ReadUInt32(i, 'u32_1') # same as AsmEntityWrapper.u32_1
 		return i
 
 	def Read_A618B833(self, node):
@@ -295,11 +297,11 @@ class BRepReader(NameTableReader):
 		return i
 
 	def Read_F78B08D5(self, node):
-		i = node.Read_Header0()
+		i = node.Read_Header0('SatHistory')
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'keys')
-		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'mapping')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'numbers') # see "*_sat.history" file for details
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'delta_states')
 		i = node.ReadChildRef(i, 'ref_1')
 		return i

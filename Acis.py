@@ -154,12 +154,23 @@ scale   = 1.0
 
 version = 7.0
 
-subtypeTableCurves = []
-subtypeTablePCurves = []
-subtypeTableSurfaces = {}
+subtypeTableCurves      = []
+subtypeTablePCurves     = []
+subtypeTableSurfaces    = {}
 invSubtypeTableSurfaces = {}
+nameMtchAttr            = {}
+references              = {}
+_refs                   = {}
 
-references = {}
+def getSatRefs():
+	global _refs
+	return _refs
+
+def _getStr_(data, offset, end):
+	txt = data[offset: end].decode('cp1252')
+	if (sys.version_info.major < 3):
+		txt = txt.encode(ENCODING_FS).decode("utf8")
+	return txt, end
 
 _currentEntityId = -2
 
@@ -251,20 +262,15 @@ class Law(object):
 		return None
 
 def init():
-	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces
+	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces, nameMtchAttr, _refs
 
-	references = {}
-	subtypeTableCurves = []
-	subtypeTablePCurves = []
-	subtypeTableSurfaces = {}
+	subtypeTableCurves      = []
+	subtypeTablePCurves     = []
+	subtypeTableSurfaces    = {}
 	invSubtypeTableSurfaces = {}
-
-def addNode(node):
-	if (node.entity is not None):
-		subtype = node.getType()
-		i = subtype.rfind('-')
-		if (i > 0):
-			subtype = subtype[0:i]
+	nameMtchAttr            = {}
+	references              = {}
+	_refs                   = {}
 
 def addSubtypeNodeCurve(curve):
 	global subtypeTableCurves
@@ -306,6 +312,8 @@ def clearEntities():
 	subtypeTableCurves[:] = []
 	subtypeTablePCurves[:] = []
 	subtypeTableSurfaces.clear()
+	invSubtypeTableSurfaces.clear()
+	nameMtchAttr.clear()
 	references.clear()
 
 def setScale(value):
@@ -348,14 +356,16 @@ def createNode(entity):
 				try:
 					t = "-".join(types[i:])
 					node = ENTITY_TYPES[t]()
-					i = len(types)
-				except Exception as e:
+					break
+				except:
 					i += 1
 			logError(u"TypeError: Can't find class for '%s' - using '%s'!", entity.name, t)
 
 		if (entity.index >= 0):
 			references[entity.index] = node
 		if (hasattr(node, 'set')):
+			entity.node = node
+			node.entity = entity
 			node.set(entity)
 	return node
 
@@ -369,13 +379,13 @@ def getRefNode(entity, index, name):
 		ref = val.entity
 		if (name is not None) and (ref is not None) and (ref.name.endswith(name) == False):
 			raise Exception("Excpeced %s but found %s" %(name, ref.name))
-	else:
-		raise Exception("Chunk at index=%d, is not a reference" %(index))
-	return ref, i
+		return ref, i
+	raise Exception("Chunk at index=%d, is not a reference" %(index))
 
 def getEnum(chunks, index):
-	tag = chunks[index].tag
-	assert (tag in [TAG_TRUE, TAG_FALSE])
+	chunk = chunks[index]
+	tag = chunk.tag
+	assert (tag in [TAG_TRUE, TAG_FALSE]), u"Expected either TRUE or FALSE but found '%s'" %(chunk)
 	return tag, index + 1
 
 def getInteger(chunks, index):
@@ -390,11 +400,11 @@ def getIntegers(chunks, index, count):
 		arr.append(n)
 	return arr, i
 
-def getIntegerMap(chunks, index, count, size):
-	i = index
+def getIntegerMap(chunks, index):
 	m = []
+	count, i = getInteger(chunks, index)
 	for n in range(count):
-		a, i = getIntegers(chunks, i, size)
+		a, i = getIntegers(chunks, i, 2)
 		m.append(a)
 	return m, i
 
@@ -436,7 +446,7 @@ def getLength(chunks, index):
 
 def getText(chunks, index):
 	chunk = chunks[index]
-	if (chunk.tag == 6):
+	if (chunk.tag == TAG_DOUBLE):
 		return getValue(chunks, index+1)
 	return getValue(chunks, index)
 
@@ -707,28 +717,22 @@ def readLaw(chunks, index):
 	return (n, l), i
 
 def newInstance(CLASSES, key):
-	cls = CLASSES[key]
-	if (cls is None):
-		return None
-	return cls()
+	return CLASSES[key]()
 
 def readCurve(chunks, index):
 	val, i = getValue(chunks, index)
-	curve = None
 	try:
 		curve = newInstance(CURVES, val)
+		i = curve.setSubtype(chunks, i)
+		return curve, i
 	except:
 		raise Exception("Unknown curve-type '%s'!" % (val))
-	if (curve):
-		i = curve.setSubtype(chunks, i)
-	return curve, i
 
 def readSurface(spline, chunks, index):
 	chunk = chunks[index]
 	i = index + 1
 	subtype = chunk.val
-	tag = chunk.tag
-	if (tag in [TAG_UTF8_U8, TAG_IDENT]):
+	if (chunk.tag in [TAG_UTF8_U8, TAG_IDENT]):
 		surface = None
 		try:
 			surface = newInstance(SURFACES, subtype)
@@ -738,12 +742,13 @@ def readSurface(spline, chunks, index):
 					spline.surfaces.append(surface)
 		except:
 			raise Exception("Unknown surface-type '%s'!" % (subtype))
+
 		return surface, i
 #FIXME: this is a dirty hack :(
-	elif (tag == TAG_DOUBLE):
+	if (chunk.tag == TAG_DOUBLE):
 		a, i = getFloats(chunks, index, 5)
 		return None, i
-	elif ((tag == TAG_POSITION) or (tag == TAG_VECTOR_3D)):
+	if (chunk.tag in [TAG_POSITION, TAG_VECTOR_3D]):
 		a, i = getFloats(chunks, i, 2)
 		return None, i
 
@@ -1192,6 +1197,10 @@ def addCurveSurfaceDefs(curve, defs):
 	for srf in lst:
 		addSurfaceDefs(srf, defs)
 
+def getNameMatchAttributes():
+	global nameMtchAttr
+	return nameMtchAttr
+
 class BDY_GEOM(object):
 	def __init__(self, svId):
 		self.svId  = svId
@@ -1434,34 +1443,29 @@ class Intervall(object):
 	def getUpperType(self):  return self.upper.type
 	def getUpperLimit(self): return self.upper.getLimit()
 	def getLimit(self):      return self.getUpperLimit() - self.getLowerLimit()
-class BeginOfAcisHistoryData(object):
-	def __init__(self):
-	return
-class DeltaState(object):
-	return
 
+class AsmHeader(object): pass
+class BeginOfAcisHistoryData(object): pass
+class DeltaState(object): pass
 class EndOfAcisHistorySection(object): pass
 class EndOfAcisData(object): pass
-class AsmHeader(object): pass
 
 # abstract super class
 class Entity(object):
 	def __init__(self):
 		self._attrib = None
 		self.entity  = None
+		self.history = None
 
 	def set(self, entity):
 		global _currentEntityId
-		entity.node = self
-		self.entity = entity
 		_currentEntityId = entity.index
-		addNode(self)
 
 		try:
 			references[entity.index] = self
 			self._attrib, i = getRefNode(entity, 0, None)
 			if (getVersion() > 6):
-				i += 1 # skip history!
+				self.history, i = getInteger(entity.chunks, i)
 		except Exception as e:
 			logError(traceback.format_exc())
 		return i
@@ -2819,36 +2823,78 @@ class SurfaceSpline(Surface):
 		return i
 	def setDefm(self, chunks, index, inventor):
 		self.surface, i = readSurface(self, chunks, index)
-		a1, i = getInteger(chunks, i) # 1, 3, 5, 8
-		if (a1 == 5):
-			self.surface, i = readSurface(self, chunks, i)
-#		elif
-		else:
+		t1, i = getInteger(chunks, i) # 1, 3, 5, 8
+		if (t1 == 1):
 			v11, i = getVector(chunks, i)
 			v12, i = getVector(chunks, i)
 			v13, i = getVector(chunks, i)
 			v14, i = getVector(chunks, i)
-			t1, i = getInteger(chunks, i) # 0, 1
-			if (t1 == 1):
-				e21, i = getEnum(chunks, i)
-				e22, i = getEnum(chunks, i)
-				e23, i = getEnum(chunks, i)
-				v21, i = getVector(chunks, i)
-				v22, i = getVector(chunks, i)
-				v23, i = getVector(chunks, i)
-				f21, i = getFloat(chunks, i)
-				e24, i = getEnum(chunks, i)
-				e25, i = getEnum(chunks, i)
-				v24, i = getPoint(chunks, i)
-				e26, i = getEnum(chunks, i)
-				e27, i = getEnum(chunks, i)
-				e28, i = getEnum(chunks, i)
-				e29, i = getEnum(chunks, i)
-				e2A, i = getEnum(chunks, i)
-				a21, i = getIntegers(chunks, i, 2)
-			elif (t1 != 0):
-				raise Exception()
-			i = self.setSurfaceShape(chunks, i, inventor)
+			f15, i = getFloat(chunks, i)
+			e21, i = getEnum(chunks, i)
+			e22, i = getEnum(chunks, i)
+			e23, i = getEnum(chunks, i)
+			v21, i = getVector(chunks, i)
+			v22, i = getVector(chunks, i)
+			v23, i = getVector(chunks, i)
+			f21, i = getFloat(chunks, i)
+			e24, i = getEnum(chunks, i)
+			e25, i = getEnum(chunks, i)
+			v24, i = getPoint(chunks, i)
+			e26, i = getEnum(chunks, i)
+			e27, i = getEnum(chunks, i)
+			e28, i = getEnum(chunks, i)
+			e29, i = getEnum(chunks, i)
+			e2A, i = getEnum(chunks, i)
+			t3, i  = getInteger(chunks, i) # 1
+			v31, i = getPoint(chunks, i)
+		elif (t1 == 3):
+			v11, i = getVector(chunks, i)
+			v12, i = getVector(chunks, i)
+			v13, i = getVector(chunks, i)
+			v14, i = getVector(chunks, i)
+			f15, i = getFloat(chunks, i)
+			e21, i = getEnum(chunks, i)
+			e22, i = getEnum(chunks, i)
+			e23, i = getEnum(chunks, i)
+			v21, i = getVector(chunks, i)
+			v22, i = getVector(chunks, i)
+			v23, i = getVector(chunks, i)
+			f21, i = getFloat(chunks, i)
+			e24, i = getEnum(chunks, i)
+			e25, i = getEnum(chunks, i)
+			v24, i = getPoint(chunks, i)
+			e26, i = getEnum(chunks, i)
+			e27, i = getEnum(chunks, i)
+			e28, i = getEnum(chunks, i)
+			e29, i = getEnum(chunks, i)
+			e2A, i = getEnum(chunks, i)
+			t3, i  = getInteger(chunks, i) # 1
+			v31, i = getFloat(chunks, i)
+		elif (t1 == 5):
+			self.surface, i = readSurface(self, chunks, i)
+			e31, i = getEnum(chunks, i)
+			f32, i = getFloat(chunks, i)
+			i33, i = getInteger(chunks, i)
+			f34, i = getFloat(chunks, i)
+			self.curve = CurveInt()
+			i = self.curve.setSubtype(chunks, i)
+			v11, i = getVector(chunks, i)
+			v12, i = getVector(chunks, i)
+			v13, i = getVector(chunks, i)
+			v14, i = getVector(chunks, i)
+			f15, i = getFloat(chunks, i)
+			e21, i = getEnum(chunks, i)
+			e22, i = getEnum(chunks, i)
+			e23, i = getEnum(chunks, i)
+		elif (t1 == 8):
+			v11, i = getVector(chunks, i)
+			v12, i = getVector(chunks, i)
+			v13, i = getVector(chunks, i)
+			v14, i = getVector(chunks, i)
+			t2, i  = getInteger(chunks, i) # 0
+		else:
+			raise TypeError("Unknown defm_sur_spl type %d" %(t1))
+		i = self.setSurfaceShape(chunks, i, inventor)
 		return i
 	def setExact(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
@@ -3316,9 +3362,9 @@ class SurfaceSpline(Surface):
 			self.entity = AcisEntity('spline')
 			self.entity.index = _currentEntityId
 			if (self.sense == 'forward'):
-				self.entity.chunks = [AcisChunk(TAG_FALSE, 'forward')] + block
+				self.entity.chunks = [ACIS_CONST_CHUNKS[TAG_FALSE]] + block
 			else:
-				self.entity.chunks = [AcisChunk(TAG_TRUE, 'reversed')] + block
+				self.entity.chunks = [ACIS_CONST_CHUNKS[TAG_TRUE]] + block
 
 		self.setBulk(block, 1)
 		self.rangeU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
@@ -3651,6 +3697,8 @@ class AttribMixOrganizationNoBendRelief(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationNoBendRelief, self).__init__()
 class AttribMixOrganizationNoCenterline(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationNoCenterline, self).__init__()
+class AttribMixOrganizationRefoldInfo(AttribMixOrganization):
+	def __init__(self): super(AttribMixOrganizationRefoldInfo, self).__init__()
 class AttribMixOrganizationRolExtents(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationRolExtents, self).__init__()
 class AttribMixOrganizationSmoothBendEdge(AttribMixOrganization):
@@ -3661,6 +3709,8 @@ class AttribMixOrganizationUfContourRollExtentTrack(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationUfContourRollExtentTrack, self).__init__()
 class AttribMixOrganizationUfFaceType(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationUfFaceType, self).__init__()
+class AttribMixOrganizationUfUnrollTrack(AttribMixOrganization):
+	def __init__(self): super(AttribMixOrganizationUfUnrollTrack, self).__init__()
 class AttribMixOrganizationUnfoldInfo(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationUnfoldInfo, self).__init__()
 class AttribNamingMatching(Attrib):
@@ -3676,6 +3726,8 @@ class AttribNamingMatchingNMxEdgeCurve(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxEdgeCurve, self).__init__()
 class AttribNamingMatchingNMxDup(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxDup, self).__init__()
+class AttribNamingMatchingNMxOrderCount(AttribNamingMatching):
+	def __init__(self): super(AttribNamingMatchingNMxOrderCount, self).__init__()
 class AttribNamingMatchingNMxPuchtoolBRep(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxPuchtoolBRep, self).__init__()
 class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
@@ -3692,8 +3744,6 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 		self.name, i = getText(entity.chunks, i)
 		self.idxCreator, i = getInteger(entity.chunks, i)
 		self.a2, i = getIntegers(entity.chunks, i, len(entity.chunks) - i - 1)
-		if (sys.version_info.major < 3):
-			self.name = self.name.decode('utf8')
 		color = getColor(self.name)
 		if (color is None):
 			logWarning(u"Color '%s' not defined in color table - using gray!" %(self.name))
@@ -3731,12 +3781,13 @@ class AttribNamingMatchingNMxBrepTagName(AttribNamingMatchingNMxBrepTag):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagName, self).__init__()
 	def set(self, entity):
 		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
-		n, i = getInteger(entity.chunks, i)
-		self.mapping, i = getIntegerMap(entity.chunks, i, n, 2) # (DC-index, mask){n}
+		self.mapping, i = getIntegerMap(entity.chunks, i) # (DC-index, mask){n}
 		return i
 class AttribNamingMatchingNMxBrepTagNameBPatch(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, n3, n4, n5, 0
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBPatch, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBlend(AttribNamingMatchingNMxBrepTagName):
+	# n1, [a1], [a2], [a3]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBlend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBodySplit(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBodySplit, self).__init__()
@@ -3745,81 +3796,138 @@ class AttribNamingMatchingNMxBrepTagNameCompositeFeature(AttribNamingMatchingNMx
 class AttribNamingMatchingNMxBrepTagNameCornerSculpt(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameCornerSculpt, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameMold(AttribNamingMatchingNMxBrepTagName):
+	# n1, 0, 0
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameMold, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameMoveFace(AttribNamingMatchingNMxBrepTagName):
+	# no more values!
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameMoveFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameHole(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameHole, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameImportAlias(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameImportAlias, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameLocalFaceModifier(AttribNamingMatchingNMxBrepTagName):
+	# no more values!
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameLocalFaceModifier, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameLocalFaceModifierForCorner(AttribNamingMatchingNMxBrepTagName):
+	# n1
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameLocalFaceModifierForCorner, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameThickenFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, [a], x, n2, n3, n4
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameThickenFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameTrim(AttribNamingMatchingNMxBrepTagName):
+	# n1, 1, n3, n4, n5, n6, n7, 0, 0, 0, 0, x, y
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameTrim, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameTweakFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, 1, n3, 1, 0, 0, 0
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameTweakFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameTweakReblend(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameTweakReblend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameUnfoldBendLine(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, [a], n3, 0, 0
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameUnfoldBendLine, self).__init__()
+class AttribNamingMatchingNMxBrepTagNameUnfoldGeomRepl(AttribNamingMatchingNMxBrepTagName):
+	# n1, [a]
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameUnfoldGeomRepl, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameVertexBlend(AttribNamingMatchingNMxBrepTagName):
+	# n1
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameVertexBlend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameLoftSurface(AttribNamingMatchingNMxBrepTagName):
+	# [a, b, c, d, e]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameLoftSurface, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameLoftedFlange(AttribNamingMatchingNMxBrepTagName):
+	# [a, b, c, d, e, f, g]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameLoftedFlange, self).__init__()
+class AttribNamingMatchingNMxBrepTagNameMidSurfaceFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, n3, n4, x, n6, n7, n8
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameMidSurfaceFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameReversedFace(AttribNamingMatchingNMxBrepTagName):
+	# n1
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameReversedFace, self).__init__()
+class AttribNamingMatchingNMxBrepTagNameRuledSurface(AttribNamingMatchingNMxBrepTagName):
+	# [a], n2
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameRuledSurface, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameShadowTaperFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, 0
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameShadowTaperFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameModFace(AttribNamingMatchingNMxBrepTagName):
+	# no more values!
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameModFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBend(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBendPart(AttribNamingMatchingNMxBrepTagName):
+	# 0, n2, n3, n4, n5, 0, 0, n8
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBendPart, self).__init__()
 class AttribNamingMatchingNMxBrepTagBendLineFeature(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagBendLineFeature, self).__init__()
+class AttribNamingMatchingNMxBrepTagNameCutXBendBottomFaceTag(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameCutXBendBottomFaceTag, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameCutXBendRimFaceTag(AttribNamingMatchingNMxBrepTagName):
+	# n1, 0 20, 0, n5, 0
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameCutXBendRimFaceTag, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameDeleteFace(AttribNamingMatchingNMxBrepTagName):
+	# n1
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameDeleteFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameEdgeBlend(AttribNamingMatchingNMxBrepTagName):
+	# n1
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameEdgeBlend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameEmbossBottomFace(AttribNamingMatchingNMxBrepTagName):
+	# 0, n2
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameEmbossBottomFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameEmbossRimFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, 2, 0, n5, [a, b, c]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameEmbossRimFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameEntityEntityBlend(AttribNamingMatchingNMxBrepTagName):
+	# [a]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameEntityEntityBlend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameExtBool(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, n3, n4, n5, n6
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameExtBool, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameExtendSurf(AttribNamingMatchingNMxBrepTagName):
+	# [a], [b], 0
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameExtendSurf, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameFlange(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, n3, n4, n5, 0, flags
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameFlange, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameFoldFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, [a]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameFoldFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameGenerated(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, n3
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameGenerated, self).__init__()
 	def set(self, entity):
+		global nameMtchAttr
 		i = super(AttribNamingMatchingNMxBrepTagNameGenerated, self).set(entity)
+		self.key, i = getInteger(entity.chunks, i)
+		self.n2,  i = getInteger(entity.chunks, i)
+		self.n3,  i = getInteger(entity.chunks, i)
+		lst = nameMtchAttr.get(self.key, None)
+		if (lst is None):
+			lst = []
+			nameMtchAttr[self.key] = lst
+		lst.append(self)
 		return i
+class AttribNamingMatchingNMxBrepTagNameGrillSplitFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameGrillSplitFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameGrillOffsetBrep(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameGrillOffsetBrep, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSweepGenerated(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, n3, 0, [a], [b], [c], n8, n9, n10
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSweepGenerated, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameShellFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, f2, 0, n3
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameShellFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSplitFace(AttribNamingMatchingNMxBrepTagName):
+	# n1, [a, 2, c, 0, x, f, g, h, 1, y, k, l]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSplitFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSplitVertex(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, 0, n4, 0, n6, [1, x, 1, 1]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSplitVertex, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSplitEdge(AttribNamingMatchingNMxBrepTagName):
+	# n1, 3, 0, n4, 0, n6
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSplitEdge, self).__init__()
 class AttribAtUfld(Attrib):
 	def __init__(self): super(AttribAtUfld, self).__init__()
@@ -3827,6 +3935,8 @@ class AttribAtUfldDefmData(AttribAtUfld):
 	def __init__(self): super(AttribAtUfldDefmData, self).__init__()
 class AttribAtUfldDevPair(AttribAtUfld):
 	def __init__(self): super(AttribAtUfldDevPair, self).__init__()
+class AttribAtUfldFlatBend(AttribAtUfld):
+	def __init__(self): super(AttribAtUfldFlatBend, self).__init__()
 class AttribAtUfldFfldPosTransf(AttribAtUfld):
 	def __init__(self): super(AttribAtUfldFfldPosTransf, self).__init__()
 class AttribAtUfldFfldPosTransfMixUfContourRollTrack(AttribAtUfldFfldPosTransf):
@@ -3856,57 +3966,200 @@ class AnnotationTolCreate(AnnotationTol):
 class AnnotationTolRevert(AnnotationTol):
 	def __init__(self): super(AnnotationTolRevert, self).__init__()
 
-class AcisChunk(object):
-	def __init__(self, key, val):
+class _AcisChunk_(object):
+	def __init__(self, key, val = None):
 		self.tag = key
 		self.val = val
-	def __str__(self):
-		if (self.tag == TAG_CHAR         ): return u"%s "     %(self.val)
-		if (self.tag == TAG_SHORT        ): return u"%d "     %(self.val)
-		if (self.tag == TAG_LONG         ): return u"%d "     %(self.val)
-		if (self.tag == TAG_FLOAT        ): return u"%g "     %(self.val)
-		if (self.tag == TAG_DOUBLE       ): return u"%g "     %(self.val)
-		if (self.tag == TAG_UTF8_U8      ): return u"@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_UTF8_U16     ): return u"@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_UTF8_U32_A   ): return u"@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_UTF8_U32_B   ): return u"@%d %s " %(len(self.val), self.val)
-		if (self.tag == TAG_TRUE         ): return u"0x0A "
-		if (self.tag == TAG_FALSE        ): return u"0x0B "
-		if (self.tag == TAG_ENTITY_REF   ): return u"%s "     %(self.val)
-		if (self.tag == TAG_IDENT        ): return u"%s "     %(self.val)
-		if (self.tag == TAG_SUBIDENT     ): return u"%s-"     %(self.val)
-		if (self.tag == TAG_SUBTYPE_OPEN ): return u"{ "
-		if (self.tag == TAG_SUBTYPE_CLOSE): return u"} "
-		if (self.tag == TAG_TERMINATOR   ): return u"#"
-		if (self.tag == TAG_POSITION     ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_VECTOR_3D    ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_ENUM_VALUE   ): return u"%d "     %(self.val)
-		if (self.tag == TAG_VECTOR_2D    ): return u"(%s) "   %(" ".join(["%g" %(f) for f in self.val]))
-		return "%s " %(self.val)
-	def __repr__(self):
-		if (self.tag == TAG_CHAR         ): return u"%s "   %(self.val)
-		if (self.tag == TAG_SHORT        ): return u"%d "   %(self.val)
-		if (self.tag == TAG_LONG         ): return u"%d "   %(self.val)
-		if (self.tag == TAG_FLOAT        ): return u"%g "   %(self.val)
-		if (self.tag == TAG_DOUBLE       ): return u"%g "   %(self.val)
-		if (self.tag == TAG_UTF8_U8      ): return u"'%s' " %(self.val)
-		if (self.tag == TAG_UTF8_U16     ): return u"'%s' " %(self.val)
-		if (self.tag == TAG_UTF8_U32_A   ): return u"'%s' " %(self.val)
-		if (self.tag == TAG_UTF8_U32_B   ): return u"'%s' " %(self.val)
-		if (self.tag == TAG_TRUE         ): return u"0x0A "
-		if (self.tag == TAG_FALSE        ): return u"0x0B "
-		if (self.tag == TAG_ENTITY_REF   ): return u"%s "   %(self.val)
-		if (self.tag == TAG_IDENT        ): return u"%s "   %(self.val)
-		if (self.tag == TAG_SUBIDENT     ): return u"%s-"   %(self.val)
-		if (self.tag == TAG_SUBTYPE_OPEN ): return u"{ "
-		if (self.tag == TAG_SUBTYPE_CLOSE): return u"} "
-		if (self.tag == TAG_TERMINATOR   ): return u"#"
-		if (self.tag == TAG_POSITION     ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_VECTOR_3D    ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
-		if (self.tag == TAG_ENUM_VALUE   ): return u"%d "   %(self.val)
-		if (self.tag == TAG_VECTOR_2D    ): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
-		return "%s " %(self.val)
+	def __str__(self):  return self.__repr__()
+	def __repr__(self): return "%s " %(self.val)
+	def read(self, data, offset): return offset
+class AcisCharChunk(_AcisChunk_):
+	'''Single character (unsigned 8 bit)'''
+	def __init__(self, value = None):
+		super(AcisCharChunk, self).__init__(TAG_CHAR, value)
+	def __repr__(self): return u"%s " %(self.val)
+	def read(self, data, offset):
+		self.val = data[offset]
+		return offset + 1
+class AcisNumberChunk(_AcisChunk_):
+	def __init__(self, tag, value = None):
+		super(AcisNumberChunk, self).__init__(tag, value)
+	def __repr__(self): return u"%g " %(self.val)
+class AcisShortChunk(AcisNumberChunk):
+	'''16Bit signed value'''
+	def __init__(self, value = None):
+		super(AcisShortChunk, self).__init__(TAG_SHORT, value)
+	def read(self, data, offset):
+		self.val, i = getSInt16(data, offset)
+		return i
+class AcisLongChunk(AcisNumberChunk):
+	'''32Bit signed value'''
+	def __init__(self, value = None):
+		super(AcisLongChunk, self).__init__(TAG_LONG, value)
+	def read(self, data, offset):
+		self.val, i = getSInt32(data, offset)
+		return i
+class AcisFloatChunk(AcisNumberChunk):
+	'''32Bit IEEE float value'''
+	def __init__(self, value = None):
+		super(AcisFloatChunk, self).__init__(TAG_FLOAT, value)
+	def read(self, data, offset):
+		self.val, i = getFloat32(data, offset)
+		return i
+class AcisDoubleChunk(AcisNumberChunk):
+	'''64Bit IEEE float value'''
+	def __init__(self, value = None):
+		super(AcisDoubleChunk, self).__init__(TAG_DOUBLE, value)
+	def read(self, data, offset):
+		self.val, i = getFloat64(data, offset)
+		return i
+class AcisUtf8U8Chunk(_AcisChunk_):
+	'''8Bit length + UTF8-Chars'''
+	def __init__(self, value = None):
+		super(AcisUtf8U8Chunk, self).__init__(TAG_UTF8_U8, value)
+	def __str__(self):  return u"%d %s " %(len(self.val), self.val)
+	def __repr__(self): return u"'%s' " %(self.val)
+	def read(self, data, offset):
+		l, i = getUInt8(data, offset)
+		self.val, i = _getStr_(data, i, l + i)
+		return i
+class _AcisUtf8StringChunk_(_AcisChunk_):
+	def __init__(self, key, val = None):
+		super(_AcisUtf8StringChunk_, self).__init__(key, val)
+	def __str__(self):  return u"@%d %s " %(len(self.val), self.val)
+	def __repr__(self): return u"'%s' " %(self.val)
+class AcisUtf8U16Chunk(_AcisUtf8StringChunk_):
+	'''16Bit length + UTF8-Chars'''
+	def __init__(self, value = None):
+		super(AcisUtf8U16Chunk, self).__init__(TAG_UTF8_U16, value)
+	def read(self, data, offset):
+		l, i = getUInt16(data, offset)
+		self.val, i = _getStr_(data, i, l + i)
+		return i
+class AcisUtf8U32AChunk(_AcisUtf8StringChunk_):
+	'''32Bit length + UTF8-Chars'''
+	def __init__(self, value = None):
+		super(AcisUtf8U32AChunk, self).__init__(TAG_UTF8_U32_A, value)
+	def read(self, data, offset):
+		l, i = getUInt32(data, offset)
+		self.val, i = _getStr_(data, i, l + i)
+		return i
+class AcisUtf8U32BChunk(_AcisUtf8StringChunk_):
+	'''32Bit length + UTF8-Chars'''
+	def __init__(self, value = None):
+		super(AcisUtf8U32BChunk, self).__init__(TAG_UTF8_U32_B, value)
+	def read(self, data, offset):
+		l, i = getUInt32(data, offset)
+		self.val, i = _getStr_(data, i, l + i)
+		return i
+class _AcisBooleanChunk_(_AcisChunk_):
+	'''Boolean value 0x0A=True, 0x0B=False'''
+	def __init__(self, tag, value = None):
+		super(_AcisBooleanChunk_, self).__init__(tag, value)
+class AcisTrueChunk(_AcisBooleanChunk_):
+	'''Boolean value 0x0A=True, 0x0B=False'''
+	def __init__(self):
+		super(AcisTrueChunk, self).__init__(TAG_TRUE, u"0x0A")
+class AcisFalseChunk(_AcisBooleanChunk_):
+	'''Boolean value 0x0A=True, 0x0B=False'''
+	def __init__(self):
+		super(AcisFalseChunk, self).__init__(TAG_FALSE, u"0x0B")
+class AcisEntityRefChunk(_AcisChunk_):
+	'''Entity reference'''
+	def __init__(self, value = None):
+		super(AcisEntityRefChunk, self).__init__(TAG_ENTITY_REF, value)
+	def __repr__(self): return u"%s " %(self.val)
+	def read(self, data, offset):
+		global _refs
+		index, i = getSInt32(data, offset)
+		try:
+			self.val = _refs[index]
+		except:
+			self.val = AcisRef(index)
+			_refs[index] = self.val
+		return i
+class AcisIdentChunk(_AcisChunk_):
+	'''name of the base class'''
+	def __init__(self, value = None):
+		super(AcisIdentChunk, self).__init__(TAG_IDENT, value)
+	def __repr__(self): return u"%s " %(self.val)
+	def read(self, data, offset):
+		l, i = getUInt8(data, offset)
+		self.val, i = _getStr_(data, i, l + i)
+		return i
+class AcisSubidentChunk(_AcisChunk_):
+	'''name of the sub class'''
+	def __init__(self, value = None):
+		super(AcisSubidentChunk, self).__init__(TAG_SUBIDENT, value)
+	def __repr__(self): return u"%s-" %(self.val)
+	def read(self, data, offset):
+		l, i = getUInt8(data, offset)
+		self.val, i = _getStr_(data, i, l + i)
+		return i
+class AcisSubtypeOpenChunk(_AcisChunk_):
+	'''Opening block tag'''
+	def __init__(self):
+		super(AcisSubtypeOpenChunk, self).__init__(TAG_SUBTYPE_OPEN, u"{")
+class AcisSubtypeCloseChunk(_AcisChunk_):
+	'''Closing block tag'''
+	def __init__(self):
+		super(AcisSubtypeCloseChunk, self).__init__(TAG_SUBTYPE_CLOSE, u"}")
+class AcisTerminatorChunk(_AcisChunk_):
+	'''terminator char ('#') for the entity'''
+	def __init__(self):
+		super(AcisTerminatorChunk, self).__init__(TAG_TERMINATOR, u"#")
+	def __repr__(self): return u"#"
+class AcisEnumValueChunk(_AcisChunk_):
+	'''value of an enumeration'''
+	def __init__(self, value = None):
+		super(AcisEnumValueChunk, self).__init__(TAG_ENUM_VALUE, value)
+	def __repr__(self): return u"%d " %(self.val)
+	def read(self, data, offset):
+		self.val, i = getUInt32(data, offset)
+		return i
+class _AcisArrayChunk_(_AcisChunk_):
+	def __init__(self, tag, array_size, value = None):
+		super(_AcisArrayChunk_, self).__init__(tag, value)
+		self.array_size = array_size
+	def __repr__(self): return u"(%s) " %(" ".join(["%g" %(f) for f in self.val]))
+	def read(self, data, offset):
+		self.val, i = getFloat64A(data, offset, self.array_size)
+		return i
+class AcisPositionChunk(_AcisArrayChunk_):
+	def __init__(self, value = None):
+		super(AcisPositionChunk, self).__init__(TAG_POSITION, 3, value)
+class AcisVector2dChunk(_AcisArrayChunk_):
+	def __init__(self, value = None):
+		super(AcisVector2dChunk, self).__init__(TAG_VECTOR_2D, 2, value)
+class AcisVector3dChunk(_AcisArrayChunk_):
+	def __init__(self, value = None):
+		super(AcisVector3dChunk, self).__init__(TAG_VECTOR_3D, 3, value)
 
+ACIS_CONST_CHUNKS = {
+	TAG_TRUE:          AcisTrueChunk(),
+	TAG_FALSE:         AcisFalseChunk(),
+	TAG_SUBTYPE_OPEN:  AcisSubtypeOpenChunk(),
+	TAG_SUBTYPE_CLOSE: AcisSubtypeCloseChunk(),
+	TAG_TERMINATOR:    AcisTerminatorChunk(),
+}
+ACIS_VALUE_CHUNKS = {
+	TAG_CHAR         : AcisCharChunk,
+	TAG_SHORT        : AcisShortChunk,
+	TAG_LONG         : AcisLongChunk,
+	TAG_FLOAT        : AcisFloatChunk,
+	TAG_DOUBLE       : AcisDoubleChunk,
+	TAG_UTF8_U8      : AcisUtf8U8Chunk,
+	TAG_UTF8_U16     : AcisUtf8U16Chunk,
+	TAG_UTF8_U32_A   : AcisUtf8U32AChunk,
+	TAG_UTF8_U32_B   : AcisUtf8U32BChunk,
+	TAG_ENTITY_REF   : AcisEntityRefChunk,
+	TAG_IDENT        : AcisIdentChunk,
+	TAG_SUBIDENT     : AcisSubidentChunk,
+	TAG_ENUM_VALUE   : AcisEnumValueChunk,
+	TAG_POSITION     : AcisPositionChunk,
+	TAG_VECTOR_2D    : AcisVector2dChunk,
+	TAG_VECTOR_3D    : AcisVector3dChunk,
+}
 class AcisEntity(object):
 	def __init__(self, name):
 		self.chunks = []
@@ -3915,7 +4168,11 @@ class AcisEntity(object):
 		self.node   = None
 
 	def add(self, key, val):
-		self.chunks.append(AcisChunk(key, val))
+		try:
+			chunk = ACIS_CONST_CHUNKS[key]
+		except:
+			chunk = ACIS_VALUE_CHUNKS[key](val)
+		self.chunks.append(chunk)
 
 	def __repr__(self):
 		return "%s %s" %(self.name, ''.join(c.__repr__() for c in self.chunks))
@@ -3939,69 +4196,14 @@ class AcisRef(object):
 	def __repr__(self):
 		return self.__str__()
 
-def __getStr(data, offset, end):
-	txt = data[offset: end].decode('cp1252')
-	if (sys.version_info.major < 3):
-		txt = txt.encode(ENCODING_FS).decode("utf8")
-	return txt, end
-
-def getStr1(data, offset):
-	l, i = getUInt8(data, offset)
-	return __getStr(data, i, l + i)
-
-def getStr2(data, offset):
-	l, i = getUInt16(data, offset)
-	return __getStr(data, i, l + i)
-
-def getStr4(data, offset):
-	l, i = getUInt32(data, offset)
-	return __getStr(data, i, l + i)
-
-def getEntityRef(data, offset):
-	index, i = getSInt32(data, offset)
-	return AcisRef(index), i
-
-def getTagChar(data, index):      return data[index], index + 1
-def getTagA(data, index):         return '0x0A', index
-def getTagB(data, index):         return '0x0B', index
-def getTagOpen(data, index):      return '{', index
-def getTagClose(data, index):     return '}', index
-def getTagTerminate(data, index): return '#', index
-
-'''
-Mapper for binary tags to corresponding reader
-'''
-TAG_READER = {
-#	TAG_0:           : get?????,        # ??? no example available
-#	TAG_1:           : get?????,        # ??? no example available
-	TAG_CHAR         : getTagChar,      # single character (unsigned 8 bit)
-	TAG_SHORT        : getSInt16,       # 16Bit signed value
-	TAG_LONG         : getSInt32,       # 32Bit signed value
-	TAG_FLOAT        : getFloat32,      # 32Bit IEEE float value
-	TAG_DOUBLE       : getFloat64,      # 64Bit IEEE float value
-	TAG_UTF8_U8      : getStr1,         # 8Bit length + UTF8-Char
-	TAG_UTF8_U16     : getStr2,         # 16Bit length + UTF8-Char
-	TAG_UTF8_U32_A   : getStr4,         # 32Bit length + UTF8-Char
-	TAG_TRUE         : getTagA,         # False
-	TAG_FALSE        : getTagB,         # True
-	TAG_ENTITY_REF   : getEntityRef,    # Entity reference
-	TAG_IDENT        : getStr1,         # Sub-Class-Name
-	TAG_SUBIDENT     : getStr1,         # Base-Class-Namme
-	TAG_SUBTYPE_OPEN : getTagOpen,      # Opening block tag
-	TAG_SUBTYPE_CLOSE: getTagClose,     # Closing block tag
-	TAG_TERMINATOR   : getTagTerminate, # '#' character
-	TAG_UTF8_U32_B   : getStr4,         # 32Bit length + UTF8-Char
-	TAG_POSITION     : getFloat64_3D,   # Scaling will be done later because of text file handling!
-	TAG_VECTOR_3D    : getFloat64_3D,   # 3D-Vector normalized
-	TAG_ENUM_VALUE   : getUInt32,       # value of an enumeration
-	TAG_VECTOR_2D    : getFloat64_2D,   # U-V-Vector
-}
-
 def readNextSabChunk(data, index):
 	tag, i = getUInt8(data, index)
 	try:
-		readTagData = TAG_READER[tag]
-		return (tag, ) + readTagData(data, i)
+		chunk = ACIS_CONST_CHUNKS.get(tag, None)
+		if (chunk is None):
+			chunk = ACIS_VALUE_CHUNKS[tag]()
+			i = chunk.read(data, i)
+		return chunk, i
 	except KeyError as ke:
 		raise Exception("Don't know to read TAG %X" %(tag))
 
@@ -4143,6 +4345,7 @@ ENTITY_TYPES = {
 	"at_ufld-attrib":                                                                              AttribAtUfld,
 	"ufld_defm_data_attrib-at_ufld-attrib":                                                        AttribAtUfldDefmData,
 	"ufld_dev_pair_attrib-at_ufld-attrib":                                                         AttribAtUfldDevPair,
+	"ufld_flat_bend_attrib-at_ufld-attrib":                                                        AttribAtUfldFlatBend,
 	"ufld_pos_transf_attrib-at_ufld-attrib":                                                       AttribAtUfldFfldPosTransf,
 	"mix_UF_ContourRoll_Track-ufld_pos_transf_attrib-at_ufld-attrib":                              AttribAtUfldFfldPosTransfMixUfContourRollTrack,
 	"mix_UF_Transform_Track-ufld_pos_transf_attrib-at_ufld-attrib":                                AttribAtUfldFfldPosTransfMixUfTransformTrack,
@@ -4182,11 +4385,13 @@ ENTITY_TYPES = {
 	"mix_LimitTrackingFaceFrom-mix_Organizaion-attrib":                                            AttribMixOrganizationLimitTrackingFraceFrom,
 	"mix_NoBendRelief-mix_Organizaion-attrib":                                                     AttribMixOrganizationNoBendRelief,
 	"mix_NoCenterline-mix_Organizaion-attrib":                                                     AttribMixOrganizationNoCenterline,
+	"mix_RefoldInfo-mix_Organizaion-attrib":                                                       AttribMixOrganizationRefoldInfo,
 	"mix_RollExtents-mix_Organizaion-attrib":                                                      AttribMixOrganizationRolExtents,
 	"mix_SmoothBendEdge-mix_Organizaion-attrib":                                                   AttribMixOrganizationSmoothBendEdge,
 	"mix_TrackFace-mix_Organizaion-attrib":                                                        AttribMixOrganizationTraceFace,
 	"mix_UF_ContourRoll_Extent_Track-mix_Organizaion-attrib":                                      AttribMixOrganizationUfContourRollExtentTrack,
 	"mix_UF_Face_Type-mix_Organizaion-attrib":                                                     AttribMixOrganizationUfFaceType,
+	"mix_UF_Unroll_Track-mix_Organizaion-attrib":                                                  AttribMixOrganizationUfUnrollTrack,
 	"mix_UnfoldInfo-mix_Organizaion-attrib":                                                       AttribMixOrganizationUnfoldInfo,
 	"NamingMatching-attrib":                                                                       AttribNamingMatching,
 	"NMx_Brep_tag-NamingMatching-attrib":                                                          AttribNamingMatchingNMxBrepTag,
@@ -4200,6 +4405,7 @@ ENTITY_TYPES = {
 	"NMx_body_split_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameBodySplit,
 	"NMx_Composite_feature_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":              AttribNamingMatchingNMxBrepTagNameCompositeFeature,
 	"NMx_Corner_Sculpt_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                  AttribNamingMatchingNMxBrepTagNameCornerSculpt,
+	"NMx_CutXBendBottomFaceTag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":              AttribNamingMatchingNMxBrepTagNameCutXBendBottomFaceTag,
 	"NMx_CutXBendRimFaceTag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                 AttribNamingMatchingNMxBrepTagNameCutXBendRimFaceTag,
 	"NMx_delete_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                    AttribNamingMatchingNMxBrepTagNameDeleteFace,
 	"NMx_edge_blend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameEdgeBlend,
@@ -4211,6 +4417,7 @@ ENTITY_TYPES = {
 	"NMx_flange_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                         AttribNamingMatchingNMxBrepTagNameFlange,
 	"NMx_fold_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                      AttribNamingMatchingNMxBrepTagNameFoldFace,
 	"NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                 AttribNamingMatchingNMxBrepTagNameGenerated,
+	"NMx_grill_split_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameGrillSplitFace,
 	"NMx_GrillOffset_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameGrillOffsetBrep,
 	"NMx_Hole_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                      AttribNamingMatchingNMxBrepTagNameHole,
 	"NMx_import_alias_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                   AttribNamingMatchingNMxBrepTagNameImportAlias,
@@ -4218,10 +4425,12 @@ ENTITY_TYPES = {
 	"NMx_local_face_modifier_for_corner_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib": AttribNamingMatchingNMxBrepTagNameLocalFaceModifierForCorner,
 	"NMx_Loft_Surface_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":              AttribNamingMatchingNMxBrepTagNameLoftSurface,
 	"NMx_LoftedFlange_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":              AttribNamingMatchingNMxBrepTagNameLoftedFlange,
+	"NMx_MidSurface_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                AttribNamingMatchingNMxBrepTagNameMidSurfaceFace,
 	"NMx_mod_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                       AttribNamingMatchingNMxBrepTagNameModFace,
 	"NMx_mold_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                           AttribNamingMatchingNMxBrepTagNameMold,
 	"NMx_move_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                      AttribNamingMatchingNMxBrepTagNameMoveFace,
 	"NMx_reversed_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                  AttribNamingMatchingNMxBrepTagNameReversedFace,
+	"NMx_Ruled_Surface_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                  AttribNamingMatchingNMxBrepTagNameRuledSurface,
 	"NMx_shadow_taper_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":              AttribNamingMatchingNMxBrepTagNameShadowTaperFace,
 	"NMx_shell_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameShellFace,
 	"NMx_Split_Egde_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameSplitEdge,
@@ -4233,6 +4442,7 @@ ENTITY_TYPES = {
 	"NMx_tweak_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameTweakFace,
 	"NMx_tweak_reblend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                  AttribNamingMatchingNMxBrepTagNameTweakReblend,
 	"NMx_unfold_bend_line_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameUnfoldBendLine,
+	"NMx_unfold_geom_repl_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameUnfoldGeomRepl,
 	"NMx_vertex_blend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                   AttribNamingMatchingNMxBrepTagNameVertexBlend,
 	"NMx_stitch_tag-NMx_Brep_tag-NamingMatching-attrib":                                           AttribNamingMatchingNMxBrepTagSwitch,
 	"NMx_Dup_Attrib-NamingMatching-attrib":                                                        AttribNamingMatchingNMxDup,
@@ -4242,6 +4452,7 @@ ENTITY_TYPES = {
 	"NMx_Feature_Orientation-NamingMatching-attrib":                                               AttribNamingMatchingNMxFeatureOrientation,
 	"NMx_GenTag_Disambiguation_Attrib-NamingMatching-attrib":                                      AttribNamingMatchingNMxGenTagDisambiguation,
 	"NMx_Matched_Entity-NamingMatching-attrib":                                                    AttribNamingMatchingNMxMatchedEntity,
+	"NMx_Order_Count_Attrib-NamingMatching-attrib":                                                AttribNamingMatchingNMxOrderCount,
 	"NMx_Punchtool_Brep_tag-NamingMatching-attrib":                                                AttribNamingMatchingNMxPuchtoolBRep,
 	"NMx_Thread_Entity-NamingMatching-attrib":                                                     AttribNamingMatchingNMxThreadEntity,
 	"RFbase-attrib":                                                                               AttribRfBase,
