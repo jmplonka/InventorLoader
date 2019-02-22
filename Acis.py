@@ -337,8 +337,8 @@ def createNode(entity):
 	global references
 
 	try:
-		if (entity.index < 0):
-			return None
+		if (entity.index < 0): return None
+		if (entity.name == 'delta_state'): return None
 		node = references[entity.index]
 		# this entity is overwriting a previous entity with the same index -> ignore it
 		logWarning(u"    Found 2nd '-%d %s' - IGNORED!", entity.index, entity.name)
@@ -1704,8 +1704,9 @@ class Face(Topology):
 		edges = []
 		loop = self.getLoop()
 		while (loop is not None):
-			coEdges = loop.getCoEdges()
-			for coEdge in coEdges:
+			coedges = loop.getCoEdges()
+			for index in coedges:
+				coEdge = coedges[index]
 				edge = coEdge.build(doc)
 				if (edge is not None):
 					edges.append(edge)
@@ -1783,18 +1784,18 @@ class Loop(Topology):
 	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.node
 	def getFace(self):   return None if (self._owner is None)  else self._owner.node
 	def getCoEdges(self):
-		coedges = []
+		coedges = {}
 		ce = self.getCoEdge()
-		index =  -1 if (ce is None) else ce.index
 		while (ce is not None):
-			coedges.append(ce)
+			if (ce.index in cedges): break
+			coedges[ce.index] = ce
 			ce = ce.getNext()
-			if ((ce is not None) and (ce.index == index)):
-				ce = None
 		return coedges
 	def getCoEdgeRefs(self):
 		refs = []
-		for ce in self.getCoEdges():
+		coedges = self.getCoEdges()
+		for index in coedges:
+			ce = coedges[index]
 			srf = getattr(ce.getCurve(), 'surface', None)
 			ref = getattr(srf, 'ref', None)
 			if (ref is not None):
@@ -1808,7 +1809,9 @@ class Loop(Topology):
 		return refs
 	def getSurfaceDefinitions(self):
 		defs = []
-		for ce in self.getCoEdges():
+		coEdges = self.getCoEdges()
+		for index in coEdges:
+			ce = coEdges[index]
 			addCurveSurfaceDefs(ce.getCurve(), defs)
 			e = ce.getEdge()
 			if (e is not None):
@@ -1947,16 +1950,14 @@ class Wire(Topology):
 	def getShell(self):  return None if (self._shell is None)  else self._shell.node
 	def getOwner(self):  return None if (self._owner is None)  else self._owner.node
 	def getCoEdges(self):
-		coedges = []
+		coedges = {}
 		ce = self.getCoEdge()
 		index = -1 if (ce is None) else ce.index
-		idxLst = []
 		while (ce is not None):
-			coedges.append(ce)
-			idxLst.append(ce.index)
+			if (ce.index in coedges):
+				break
+			coedges[ce.index] = ce
 			ce = ce.getNext()
-			if ((not ce is None) and (ce.index in idxLst)):
-				ce = None
 		return coedges
 	def getShells(self):
 		shells = []
@@ -4022,7 +4023,7 @@ class AcisUtf8U8Chunk(_AcisChunk_):
 	'''8Bit length + UTF8-Chars'''
 	def __init__(self, value = None):
 		super(AcisUtf8U8Chunk, self).__init__(TAG_UTF8_U8, value)
-	def __str__(self):  return u"%d %s " %(len(self.val), self.val)
+	def __str__(self):  return u"@%d %s " %(len(self.val), self.val)
 	def __repr__(self): return u"'%s' " %(self.val)
 	def read(self, data, offset):
 		l, i = getUInt8(data, offset)

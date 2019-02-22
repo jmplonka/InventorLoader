@@ -342,7 +342,8 @@ def _createBoundaries(acisLoops):
 	for acisLoop in acisLoops:
 		coedges = acisLoop.getCoEdges()
 		edges = []
-		for acisCoEdge in coedges:
+		for index in coedges:
+			acisCoEdge = coedges[index]
 			edge = _createCoEdge(acisCoEdge)
 			if (edge is not None):
 				edges.append(edge)

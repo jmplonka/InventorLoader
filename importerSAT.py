@@ -65,9 +65,10 @@ class Tokenizer(object):
 			tokX  = self.getNextToken()
 			tokY  = self.getNextToken()
 			tokZ  = self.getNextToken()
+			if (tokZ == ')'): return Acis.TAG_VECTOR_2D, [float(tokX), float(tokY)]
 			dummy = self.getNextToken()
 			assert (dummy == ')'), "Expected ')' but found '%s'!" %(dummy)
-			return Acis.TAG_POSITION, [float(tokX), float(tokY), float(tokZ)]
+			return Acis.TAG_VECTOR_3D, [float(tokX), float(tokY), float(tokZ)]
 		tag = TokenTranslations.get(token, None)
 		val = token
 		if (tag is None):
@@ -450,7 +451,8 @@ def buildFaces(shells, doc, root, name, transform):
 def buildWires(coedges, doc, root, name, transform):
 	edges = []
 
-	for coedge in coedges:
+	for index in coedges:
+		coedge = coedges[index]
 		edge = coedge.build(doc)
 		if (edge is not None):
 			edges.append(edge)
@@ -594,7 +596,7 @@ def create3dModel(group, doc):
 	return
 
 def readEntities(asm):
-	header, lst = asm.get('SAT')
+	header, lst, history, refs = asm.get('SAT')
 	Acis.setHeader(header)
 	setEntities(lst)
 	bodies = 0

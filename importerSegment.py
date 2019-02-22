@@ -11,7 +11,7 @@ from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
 from importerUtils          import *
-from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, createNode, setHeader
+from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, createNode, setHeader, getNameMatchAttributes
 from importerSAT            import readEntityBinary, int2version, Header, History
 from uuid                   import UUID
 
@@ -651,6 +651,7 @@ class SegmentReader(object):
 				index += 1
 		node.set('SAT', [header, lst, history, getSatRefs()])
 		resolveEntityReferences(node, entities)
+		node.set('nameMatches', getNameMatchAttributes())
 		self.segment.AcisList.append(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'selectedKey')

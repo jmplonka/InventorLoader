@@ -500,21 +500,6 @@ def getSatAttribute(segment, key, idx):
 	if (ntKeyDef is None): return None
 	asm = ntKeyDef.get('ref_1').get('refWrapper').get('asm')
 	nameMtchAttr = asm.get('nameMtchAttr')
-	if (nameMtchAttr is None):
-		# FIXME - moove to reading asm in DC!
-		entities = {}
-		lst      = []
-		hdr, lst = asm.get('SAT')
-		for entity in lst:
-			if (entity.index >= 0):
-				entities[entity.index] = entity
-		importerSAT.resolveEntityReferences(entities, lst)
-		Acis.setHeader(hdr)
-		importerSAT.setEntities(lst)
-		importerSAT.resolveNodes()
-		nameMtchAttr = Acis.getNameMatchAttributes()
-		asm.set('nameMatches', nameMtchAttr)
-		Acis.clearEntities()
 	atr = nameMtchAttr.get(idx, None)[0] # even if there are more than one...
 	return atr
 
