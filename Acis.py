@@ -284,7 +284,7 @@ def addSubtypeNodeSurface(surface, index):
 	global subtypeTableSurfaces
 	global invSubtypeTableSurfaces
 
-	entityID = surface.getIndex()
+	entityID = surface.index
 	subtypeTableSurfaces[index] = surface
 	invSubtypeTableSurfaces[entityID] = index
 
@@ -717,13 +717,16 @@ def readLaw(chunks, index):
 	return (n, l), i
 
 def newInstance(CLASSES, key):
-	return CLASSES[key]()
+	cls = CLASSES[key]
+	if cls is None: return None
+	return cls()
 
 def readCurve(chunks, index):
 	val, i = getValue(chunks, index)
 	try:
 		curve = newInstance(CURVES, val)
-		i = curve.setSubtype(chunks, i)
+		if (curve is not None):
+			i = curve.setSubtype(chunks, i)
 		return curve, i
 	except:
 		raise Exception("Unknown curve-type '%s'!" % (val))
@@ -1185,7 +1188,7 @@ def addSurfaceDefs(surface, defs):
 
 	if (isinstance(surface, SurfaceSpline)):
 		if (not hasattr(surface, 'ref')):
-			if (surface.getIndex() not in invSubtypeTableSurfaces):
+			if (surface.index not in invSubtypeTableSurfaces):
 				defs.append(surface)
 		for srf in surface.surfaces:
 			addSurfaceDefs(srf, defs)
@@ -1469,16 +1472,18 @@ class Entity(object):
 		except Exception as e:
 			logError(traceback.format_exc())
 		return i
-	def getIndex(self):  return -1   if (self.entity is None)  else self.entity.index
+	@property
+	def index(self):  return -1   if (self.entity is None)  else self.entity.index
 	def getType(self):   return -1   if (self.entity is None)  else self.entity.name
-	def getAttrib(self): return None if (self._attrib is None) else self._attrib.node
+	@property
+	def attrib(self): return None if (self._attrib is None) else self._attrib.node
 	def __str__(self):   return "%s" % (self.entity)
 	def __repr__(self): return self.__str__()
 	def __lt__(self, other):
-		return self.getIndex() < other.getIndex()
+		return self.index < other.index
 	def getAttribute(self, clsName):
-		a = self.getAttrib()
-		while (a is not None) and (a.getIndex() >= 0):
+		a = self.attrib
+		while (a is not None) and (a.index >= 0):
 			if (a.__class__.__name__ == clsName):
 				return a
 			a = a.getNext()
@@ -1722,9 +1727,9 @@ class Face(Topology):
 			return surface
 		if (hasattr(s, 'type')):
 			if (s.type != 'ref'):
-				logWarning(u"    ... Don't know how to build surface '-%d %s::%s' - only edges displayed!", s.getIndex(), s.__class__.__name__, s.type)
+				logWarning(u"    ... Don't know how to build surface '-%d %s::%s' - only edges displayed!", s.index, s.__class__.__name__, s.type)
 		else:
-			logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", s.getIndex(), s.__class__.__name__)
+			logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", s.index, s.__class__.__name__)
 		return self.showEdges(edges)
 	def getSurfaceRef(self):
 		return getattr(self.getSurface(), 'ref', None)
@@ -1780,11 +1785,11 @@ class Loop(Topology):
 	def getCoEdges(self):
 		coedges = []
 		ce = self.getCoEdge()
-		index =  -1 if (ce is None) else ce.getIndex()
+		index =  -1 if (ce is None) else ce.index
 		while (ce is not None):
 			coedges.append(ce)
 			ce = ce.getNext()
-			if ((ce is not None) and (ce.getIndex() == index)):
+			if ((ce is not None) and (ce.index == index)):
 				ce = None
 		return coedges
 	def getCoEdgeRefs(self):
@@ -1944,19 +1949,19 @@ class Wire(Topology):
 	def getCoEdges(self):
 		coedges = []
 		ce = self.getCoEdge()
-		index = -1 if (ce is None) else ce.getIndex()
+		index = -1 if (ce is None) else ce.index
 		idxLst = []
 		while (ce is not None):
 			coedges.append(ce)
-			idxLst.append(ce.getIndex())
+			idxLst.append(ce.index)
 			ce = ce.getNext()
-			if ((not ce is None) and (ce.getIndex() in idxLst)):
+			if ((not ce is None) and (ce.index in idxLst)):
 				ce = None
 		return coedges
 	def getShells(self):
 		shells = []
 		shell = self.getShell()
-		index = -1 if (shell is None) else shell.getIndex()
+		index = -1 if (shell is None) else shell.index
 		while (shell is not None):
 			shells.append(shell)
 			shell = shell.getNext()
@@ -3459,11 +3464,11 @@ class SurfaceSpline(Surface):
 				if (self.shape is None):
 					if (hasattr(self.surface, 'type')):
 						if (self.surface.type == 'ref'):
-							logWarning(u"    ... Don't know how to build surface '-%d %s::ref %d' - only edges displayed!", self.surface.getIndex(), self.surface.__class__.__name__, self.surface.ref)
+							logWarning(u"    ... Don't know how to build surface '-%d %s::ref %d' - only edges displayed!", self.surface.index, self.surface.__class__.__name__, self.surface.ref)
 						else:
-							logWarning(u"    ... Don't know how to build surface '-%d %s::%s' - only edges displayed!", self.surface.getIndex(), self.surface.__class__.__name__, self.surface.type)
+							logWarning(u"    ... Don't know how to build surface '-%d %s::%s' - only edges displayed!", self.surface.index, self.surface.__class__.__name__, self.surface.type)
 					else:
-						logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", self.surface.getIndex(), self.surface.__class__.__name__)
+						logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", self.surface.index, self.surface.__class__.__name__)
 #				elif (not (isinstance(self.shape.Surface, Part.BSplineSurface) or isinstance(self.shape.Surface, Part.SurfaceOfRevolution))):
 #					logWarning(u"    ... referenced spline surface is of incompatible type '%s' - only edges displayed!", self.shape.Surface.__class__.__name__)
 #					self.shape = None

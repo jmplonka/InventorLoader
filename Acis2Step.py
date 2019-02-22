@@ -495,7 +495,7 @@ def _convertShell(acisShell, representation, shape, parentColor):
 
 def _convertLump(acisLump, name, appContext, parentColor):
 
-	name = "%s_L_%02d" %(name, acisLump.getIndex())
+	name = "%s_L_%02d" %(name, acisLump.index)
 	shape = SHAPE_DEFINITION_REPRESENTATION(name, appContext)
 
 	shapeRepresentation = SHAPE_REPRESENTATION()
@@ -521,7 +521,7 @@ def _convertBody(acisBody, appPrtDef):
 
 	name = acisBody.getName()
 	if ((name is None) or (len(name) == 0)):
-		name = "Body_%02d" %(acisBody.getIndex())
+		name = "Body_%02d" %(acisBody.index)
 
 	for acisLump in acisBody.getLumps():
 		shape = _convertLump(acisLump, name, appPrtDef.application, getColor(acisBody))
@@ -686,7 +686,7 @@ class ExportEntity(AnonymEntity):
 			if (self.__acis__.type == 'ref'):
 				step += u"/*\n * ref = %d\n */\n" %(self.__acis__.ref)
 			else:
-				step += u"/*\n * $%d\n */\n" %(self.__acis__.getIndex())
+				step += u"/*\n * $%d\n */\n" %(self.__acis__.index)
 		step += u"%s;\n" %(self.__repr__())
 		step += self.exportProperties()
 		self.isexported = True
@@ -885,7 +885,7 @@ class ListEntity(ReferencedEntity):
 			if (self.__acis__.type == 'ref'):
 				step += u"/*\n * ref = %d\n */\n" %(self.__acis__.ref)
 			else:
-				step += u"/*\n * $%d\n */\n" %(self.__acis__.getIndex())
+				step += u"/*\n * $%d\n */\n" %(self.__acis__.index)
 		step += u"%r;\n" %(self)
 		for e in self.entities:
 			try:
@@ -1449,7 +1449,7 @@ def export(filename, satHeader, satBodies):
 	appPrtDef    = APPLICATION_PROTOCOL_DEFINITION()
 	bodies = []
 	for body in satBodies:
-		bodies += _convertBody(body.node, appPrtDef)
+		bodies += _convertBody(body, appPrtDef)
 	PRODUCT_RELATED_PRODUCT_CATEGORY('part', bodies)
 
 	stepfile = "%s/%s.step" %(path, name)

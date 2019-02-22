@@ -357,7 +357,7 @@ def resolveEntityReferences(entities, lst, history):
 		if (entity.name == "Begin-of-ACIS-History-Data"):
 			map = history
 		elif (entity.name == "End-of-ACIS-History-Section"):
-				map = entities
+			map = entities
 		for chunk in entity.chunks:
 			if (chunk.tag == Acis.TAG_ENTITY_REF):
 				ref = chunk.val
@@ -384,12 +384,11 @@ def resolveNodes():
 	faces  = []
 	model = getEntities()
 	for entity in model:
-		if (entity.valid):
-			node = resolveNode(entity)
-			if (entity.name == 'body'):
-				bodies.append(entity)
-			elif (entity.name == 'face'):
-				faces.append(node)
+		node = resolveNode(entity)
+		if (entity.name == 'body'):
+			bodies.append(node)
+		elif (entity.name == 'face'):
+			faces.append(node)
 
 	# try to resolve surface references...
 	for face in faces:
@@ -402,11 +401,11 @@ def resolveNodes():
 				n = 0
 				while (j < len(srfs)):
 					s = srfs[j]
-					if ((id == -1) or (s.getIndex() == id)):
+					if ((id == -1) or (s.index == id)):
 						Acis.addSubtypeNodeSurface(s, ref + n)
 						j += 1
 						n += 1
-						id = s.getIndex()
+						id = s.index
 					else:
 						break
 	return bodies
@@ -484,9 +483,8 @@ def buildWire(root, doc, wire, transform):
 
 	return True
 
-def buildBody(root, doc, entity):
-	if (entity.index >= 0 ):
-		node = entity.node
+def buildBody(root, doc, node):
+	if (node.index >= 0 ):
 		transform = node.getTransform()
 		setCurrentColor(node)
 
@@ -544,7 +542,7 @@ def readText(doc, fileName):
 				index = 0
 				map = history.delta_states
 			elif (entity.name == "End-of-ACIS-History-Section"):
-				del map[index]
+				del map[entity.index]
 				entity.index = -1
 				index = entityIdx
 				map = entities

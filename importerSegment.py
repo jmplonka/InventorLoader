@@ -641,7 +641,7 @@ class SegmentReader(object):
 				index = 0
 				map = history.delta_states
 			elif (entity.name == "End-of-ACIS-History-Section"):
-				del map[index]
+				del map[entity.index]
 				entity.index = -1
 				index = entityIdx
 				map = entities
