@@ -1179,8 +1179,12 @@ def getBlendValues(chunks, index):
 		a2, i  = getFloats(chunks, i, 3)
 		v2, i  = getLocation(chunks, i)
 		d2, i  = getVector(chunks, i)
-		r2, i  = getFloat(chunks, i)
-		return (name, c, t, a, [s], bsc, r, [(a1, v1, d1, r1),(a2, v2, d2, r2)]), i
+		b1, i  = getInteger(chunks, i)
+		if (b1):
+			a3, i = getFloats(chunks, i, 2)
+		else:
+			a3 = [0.0, 0.0]
+		return (name, c, t, a, [s], bsc, r, [(a1, v1, d1, r1),(a2, v2, d2, b1, a3)]), i
 	raise Exception("Unknown BlendValue %s!" %(name))
 
 def addSurfaceDefs(surface, defs):
