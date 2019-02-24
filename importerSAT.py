@@ -356,7 +356,10 @@ def resolveEntityReferences(entities, lst, history):
 	for entity in lst:
 		progress.next()
 		if (entity.name == "Begin-of-ACIS-History-Data"):
-			map = history
+			if (history is None):
+				map = {}
+			else:
+				map = history.delta_states
 		elif (entity.name == "End-of-ACIS-History-Section"):
 			map = entities
 		for chunk in entity.chunks:
@@ -524,6 +527,7 @@ def readText(doc, fileName):
 	entities = {}
 	map      = entities
 	lst      = []
+	history = None
 
 	with open(fileName, 'rU') as file:
 		header.readText(file)
