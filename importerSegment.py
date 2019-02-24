@@ -637,6 +637,8 @@ class SegmentReader(object):
 			lst.append(entity)
 			convert2Version7(entity)
 			if (entity.name == "Begin-of-ACIS-History-Data"):
+				del map[entity.index]
+				entity.index = -1
 				history = History(entity)
 				entityIdx = index
 				index = 0
@@ -647,6 +649,7 @@ class SegmentReader(object):
 				index = entityIdx
 				map = entities
 			elif (entity.name == "End-of-ACIS-data"):
+				del map[entity.index]
 				entity.index = -1
 			else:
 				index += 1

@@ -723,13 +723,14 @@ def newInstance(CLASSES, key):
 
 def readCurve(chunks, index):
 	val, i = getValue(chunks, index)
+	curve = None
 	try:
 		curve = newInstance(CURVES, val)
-		if (curve is not None):
-			i = curve.setSubtype(chunks, i)
-		return curve, i
 	except:
 		raise Exception("Unknown curve-type '%s'!" % (val))
+	if (curve is not None):
+		i = curve.setSubtype(chunks, i)
+	return curve, i
 
 def readSurface(spline, chunks, index):
 	chunk = chunks[index]
@@ -739,12 +740,12 @@ def readSurface(spline, chunks, index):
 		surface = None
 		try:
 			surface = newInstance(SURFACES, subtype)
-			if (surface is not None):
-				i = surface.setSubtype(chunks, i)
-				if (isinstance(surface, SurfaceSpline)):
-					spline.surfaces.append(surface)
 		except:
 			raise Exception("Unknown surface-type '%s'!" % (subtype))
+		if (surface is not None):
+			i = surface.setSubtype(chunks, i)
+			if (isinstance(surface, SurfaceSpline)):
+				spline.surfaces.append(surface)
 
 		return surface, i
 #FIXME: this is a dirty hack :(
@@ -1167,9 +1168,10 @@ def getBlendValues(chunks, index):
 		bv, i  = getBlendValues(chunks, i)  # two_ends ...
 		return (name, c, t, a, [s], bsc, r, (vc, ct, bv)), i
 	if (name == 'interp'):
-		a, i   = getFloats(chunks, i, 2)
+		a, i   = getFloats(chunks, i, 1)
+		s, i   = getLength(chunks, i)
 		bsc, i = readBS2Curve(chunks, i)
-		n, i   = getInteger(chunks, i)
+		n, i   = getInteger(chunks, i)      # enum value
 		m, i   = getInteger(chunks, i)
 		r, i   = getFloat(chunks, i)
 		a1, i  = getFloats(chunks, i, 3)
@@ -1179,7 +1181,7 @@ def getBlendValues(chunks, index):
 		a2, i  = getFloats(chunks, i, 3)
 		v2, i  = getLocation(chunks, i)
 		d2, i  = getVector(chunks, i)
-		b1, i  = getInteger(chunks, i)
+		b1, i  = getInteger(chunks, i)     # enum value
 		if (b1):
 			a3, i = getFloats(chunks, i, 2)
 		else:
@@ -2752,13 +2754,13 @@ class SurfaceSpline(Surface):
 			i += 2 # 122, -1
 		cur1, i = readCurve(chunks, i)
 		if (getVersion() > 22.0):
-			curT, i = readCurve(chunks, i)
-			curT, i = readCurve(chunks, i)
-			curT, i = readCurve(chunks, i)
-			curT, i = readCurve(chunks, i)
+			curT1, i = readCurve(chunks, i)
+			curT2, i = readCurve(chunks, i)
+			curT3, i = readCurve(chunks, i)
+			curT4, i = readCurve(chunks, i)
 
 		tol1, i = getFloats(chunks, i, 2)    # 0, 0
-		r1,  i  = getVarRadius(chunks, i)    # 0 = single_radius, 1 = two_radii ## convert SAT to STEP!!!
+		r1  , i = getVarRadius(chunks, i)   # 0 = single_radius, 1 = two_radii
 		if (r1 != 0xFFFFFFFF):
 			bv1, i  = getBlendValues(chunks, i)  # two_ends ...
 			if (r1 == 'two_radii'):
@@ -3765,7 +3767,7 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 		self.a2, i = getIntegers(entity.chunks, i, len(entity.chunks) - i - 1)
 		color = getColor(self.name)
 		if (color is None):
-			logWarning(u"Color '%s' not defined in color table - using gray!" %(self.name))
+			logWarning(u"Color '%s' not defined in color table - using gray!", self.name)
 			setColor(self.name, self.red, self.green, self.blue) # ignore future complains...
 		else:
 			self.red   = color[0]
@@ -4337,7 +4339,7 @@ SURFACE_TYPES = {
 	'sweep_spl_sur':        ('setSweep', 1, True),
 #	'':                     ('setSweepSpline', 0, False),
 	'sweep_sur':            ('setSweepSpline', 1, True),
-#	'':                     ('setSSSBend', 0, False),
+	'sssblndsur':           ('setSSSBend', 0, False),
 	'sss_blend_spl_sur':    ('setSSSBend', 1, True),
 #	'':                     ('setTSpline', 0, False),
 	't_spl_sur':            ('setTSpline', 1, True),
@@ -4345,8 +4347,6 @@ SURFACE_TYPES = {
 	'VBL_SURF':             ('setVertexBlend', 1, True),
 	'srfsrfblndsur':        ('setBlendSupply', 0, False),
 	'srf_srf_v_bl_spl_sur': ('setBlendSupply', 1, True),
-	'sssblndsur':           ('setBlendSupply', 0, False),
-	'sss_blend_spl_sur':    ('setBlendSupply', 1, True),
 	'sumsur':               ('setSum', 0, False),
 	'sum_spl_sur':          ('setSum', 1, True),
 	'ruledtapersur':        ('setRuledTaper', 0, False),
