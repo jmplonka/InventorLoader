@@ -553,8 +553,6 @@ def readText(doc, fileName):
 				map = entities
 			elif (entity.name == "End-of-ACIS-data"):
 				entity.index = -1
-			else:
-				index += 1
 		#progress.stop() # DONE reading file
 	resolveEntityReferences(entities, lst, history)
 	setEntities(lst)
