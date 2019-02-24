@@ -2806,15 +2806,24 @@ class SurfaceSpline(Surface):
 		scl2, i = self._readScaleClLoft(chunks, i)
 		scl3, i = self._readScaleClLoft(chunks, i)
 		scl4, i = self._readScaleClLoft(chunks, i)
-		e1, i = getEnum(chunks, i)
-		e2, i = getEnum(chunks, i)
-		n1, i = getInteger(chunks, i) # 7
-		e3, i = getEnum(chunks, i)
-		scl5, i = self._readScaleClLoft(chunks, i)
-		e4, i = getEnum(chunks, i)
-		scl6, i = self._readScaleClLoft(chunks, i)
-		n2, i = getInteger(chunks, i) # 0
-		v1, i = getVector(chunks, i)
+		e1, i = getEnum(chunks, i)    # 0x0B
+		e2, i = getEnum(chunks, i)    # 0x0B
+		n1, i = getInteger(chunks, i) # 0, 7
+		if (n1 > 0):
+			e3, i = getEnum(chunks, i)    # 0x0B
+			scl5, i = self._readScaleClLoft(chunks, i)
+			e4, i = getEnum(chunks, i)
+			scl6, i = self._readScaleClLoft(chunks, i)
+			n2, i = getInteger(chunks, i) # 0
+			v1, i = getVector(chunks, i)
+		else:
+			e3, i = getEnum(chunks, i)    # 0x0B
+			e4, i = getEnum(chunks, i)    # 0x0B
+			n2, i = getInteger(chunks, i)
+			if (n2 == 0):
+				c3, i = getVector(chunks, i)
+			else:
+				c3, i = readBS3Curve(chunks, i)
 		e6, i = getEnum(chunks, i)
 		e7, i = getEnum(chunks, i)
 		return i
