@@ -460,9 +460,9 @@ def getEnumByTag(chunks, index, values):
 def getEnumByValue(chunks, index, values):
 	val, i = getValue(chunks, index)
 	try:
-		return values[val], index + 1
+		return values[val], i
 	except:
-		return val, index + 1
+		return val, i
 
 def getReflection(chunks, index):
 	return getEnumByTag(chunks, index, REFLECTION)
@@ -525,7 +525,7 @@ def getCircleSmoothing(chunks, index):
 
 def getVarRadius(chunks, index):
 	radius, i = getEnumByValue(chunks, index, VAR_RADIUS)
-	if (type(radius) == str):
+	if (isString(radius)):
 		return radius.lower(), i
 	return radius, i
 
@@ -1791,7 +1791,7 @@ class Loop(Topology):
 		coedges = {}
 		ce = self.getCoEdge()
 		while (ce is not None):
-			if (ce.index in cedges): break
+			if (ce.index in coedges): break
 			coedges[ce.index] = ce
 			ce = ce.getNext()
 		return coedges
