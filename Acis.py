@@ -4206,6 +4206,21 @@ class AcisRef(object):
 	def __repr__(self):
 		return self.__str__()
 
+class AttribCt(Attrib):
+	def __init__(self): super(AttribCt, self).__init__()
+class AttribCtCellPtr(AttribCt):
+	def __init__(self): super(AttribCtCellPtr, self).__init__()
+class AttribCtCFace(AttribCt):
+	def __init__(self): super(AttribCtCFace, self).__init__()
+class Cell(Entity):
+	def __init__(self): super(Cell, self).__init__()
+class Cell3d(Cell):
+	def __init__(self): super(Cell3d, self).__init__()
+class CFace(Entity):
+	def __init__(self): super(CFace, self).__init__()
+class CShell(Entity):
+	def __init__(self): super(CShell, self).__init__()
+
 def readNextSabChunk(data, index):
 	tag, i = getUInt8(data, index)
 	try:
@@ -4524,4 +4539,11 @@ ENTITY_TYPES = {
 	"tvertex-vertex":                                                                              VertexTolerance,
 	"wcs":                                                                                         Wcs,
 	"wire":                                                                                        Wire,
+	"ct-attrib":                                                                                   AttribCt,
+	"cell_ptr-ct-attrib":                                                                          AttribCtCellPtr,
+	"cface_ptr-ct-attrib":                                                                         AttribCtCFace,
+	"cell":                                                                                        Cell,
+	"cell3d-cell":                                                                                 Cell3d,
+	"cface":                                                                                       CFace,
+	"cshell":                                                                                      CShell,
 }
