@@ -4204,9 +4204,9 @@ class AcisEntity(object):
 		return "-%d %s %s" %(self.index, self.name, ''.join(u"%s" %(c) for c in self.chunks))
 
 class AcisRef(object):
-	def __init__(self, index):
+	def __init__(self, index, entity = None):
 		self.index = index
-		self.entity = None
+		self.entity = entity
 
 	def __str__(self):
 		if (self.entity is None or self.entity.index < 0):

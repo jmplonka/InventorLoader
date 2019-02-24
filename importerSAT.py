@@ -121,9 +121,8 @@ def setEntities(entities):
 
 def resolveHistoryLink(history, ref):
 	if (ref.index >= 0):
-		ref.entity = history.delta_states[ref.index]
-	else:
-		ref.entity = None
+		return Acis.AcisRef(ref.index, history.delta_states[ref.index])
+	return Acis.AcisRef(ref.index)
 
 class Header(object):
 	def __init__(self):
@@ -259,10 +258,10 @@ class DeltaState(object):
 	def getPartner(self):  return self.partner.entity
 	def getMerged(self):   return self.merged.entity
 	def resolveLinks(self):
-		resolveHistoryLink(self.history, self.previous)
-		resolveHistoryLink(self.history, self.next)
-		resolveHistoryLink(self.history, self.partner)
-		resolveHistoryLink(self.history, self.merged)
+		self.previous = resolveHistoryLink(self.history, self.previous)
+		self.next     = resolveHistoryLink(self.history, self.next)
+		self.partner  = resolveHistoryLink(self.history, self.partner)
+		self.merged   = resolveHistoryLink(self.history, self.merged)
 	def __str__(self):
 		return u"delta_state %d %d %d %s %s %s %s %s %s" %(self.id, self.rollbacks, self.hidden, self.previous, self.next, self.partner, self.merged, self.owner, self.unknown)
 	def __repr__(self):
@@ -287,9 +286,9 @@ class History(object):
 			entity = self.delta_states[key]
 			ds = DeltaState(self, entity, entities)
 			self.delta_states[key] = ds
-		resolveHistoryLink(self, self.ds_current)
-		resolveHistoryLink(self, self.ds_root)
-		resolveHistoryLink(self, self.ds_active)
+		self.ds_current = resolveHistoryLink(self, self.ds_current)
+		self.ds_root    = resolveHistoryLink(self, self.ds_root)
+		self.ds_active  = resolveHistoryLink(self, self.ds_active)
 		for key in self.delta_states:
 			ds = self.delta_states[key]
 			ds.resolveLinks()
