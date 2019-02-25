@@ -516,14 +516,16 @@ def convertModel(group, doc):
 def readText(doc, fileName):
 	global _fileName
 	_fileName = fileName
-	header = Header()
-	valid    = True
+	header    = Header()
+	history   = None
+	valid     = True
+	index     = 0
+	entities  = {}
+	map       = entities
+	lst       = []
+
 	Acis.setHeader(header)
-	index    = 0
 	Acis.clearEntities()
-	entities = {}
-	map      = entities
-	lst      = []
 
 	with open(fileName, 'rU') as file:
 		header.readText(file)
@@ -539,8 +541,10 @@ def readText(doc, fileName):
 			map[entity.index] = entity
 			lst.append(entity)
 			if (entity.name == "Begin-of-ACIS-History-Data"):
+				del map[entity.index]
+				entityIdx = entity.index
+				entity.index = -1
 				history = History(entity)
-				entityIdx = index
 				index = 0
 				map = history.delta_states
 			elif (entity.name == "End-of-ACIS-History-Section"):
@@ -550,8 +554,6 @@ def readText(doc, fileName):
 				map = entities
 			elif (entity.name == "End-of-ACIS-data"):
 				entity.index = -1
-			else:
-				index += 1
 		#progress.stop() # DONE reading file
 	resolveEntityReferences(entities, lst, history)
 	setEntities(lst)

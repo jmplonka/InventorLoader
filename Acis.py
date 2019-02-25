@@ -460,9 +460,9 @@ def getEnumByTag(chunks, index, values):
 def getEnumByValue(chunks, index, values):
 	val, i = getValue(chunks, index)
 	try:
-		return values[val], index + 1
+		return values[val], i
 	except:
-		return val, index + 1
+		return val, i
 
 def getReflection(chunks, index):
 	return getEnumByTag(chunks, index, REFLECTION)
@@ -525,7 +525,7 @@ def getCircleSmoothing(chunks, index):
 
 def getVarRadius(chunks, index):
 	radius, i = getEnumByValue(chunks, index, VAR_RADIUS)
-	if (type(radius) == str):
+	if (isString(radius)):
 		return radius.lower(), i
 	return radius, i
 
@@ -736,7 +736,6 @@ def readSurface(spline, chunks, index):
 	i = index + 1
 	subtype = chunk.val
 	if (chunk.tag in [TAG_UTF8_U8, TAG_IDENT]):
-		surface = None
 		try:
 			surface = newInstance(SURFACES, subtype)
 			if (surface is not None):
@@ -1167,7 +1166,8 @@ def getBlendValues(chunks, index):
 		bv, i  = getBlendValues(chunks, i)  # two_ends ...
 		return (name, c, t, a, [s], bsc, r, (vc, ct, bv)), i
 	if (name == 'interp'):
-		a, i   = getFloats(chunks, i, 2)
+		a, i   = getFloats(chunks, i, 1)
+		s, i   = getLength(chunks, i)
 		bsc, i = readBS2Curve(chunks, i)
 		n, i   = getInteger(chunks, i)
 		m, i   = getInteger(chunks, i)
@@ -1179,8 +1179,12 @@ def getBlendValues(chunks, index):
 		a2, i  = getFloats(chunks, i, 3)
 		v2, i  = getLocation(chunks, i)
 		d2, i  = getVector(chunks, i)
-		r2, i  = getFloat(chunks, i)
-		return (name, c, t, a, [s], bsc, r, [(a1, v1, d1, r1),(a2, v2, d2, r2)]), i
+		b1, i  = getInteger(chunks, i)     # enum value
+		if (b1):
+			a3, i = getFloats(chunks, i, 2)
+		else:
+			a3 = [0.0, 0.0]
+		return (name, c, t, a, [s], bsc, r, [(a1, v1, d1, r1),(a2, v2, d2, b1, a3)]), i
 	raise Exception("Unknown BlendValue %s!" %(name))
 
 def addSurfaceDefs(surface, defs):
@@ -1787,7 +1791,7 @@ class Loop(Topology):
 		coedges = {}
 		ce = self.getCoEdge()
 		while (ce is not None):
-			if (ce.index in cedges): break
+			if (ce.index in coedges): break
 			coedges[ce.index] = ce
 			ce = ce.getNext()
 		return coedges
@@ -2748,23 +2752,30 @@ class SurfaceSpline(Surface):
 			i += 2 # 122, -1
 		cur1, i = readCurve(chunks, i)
 		if (getVersion() > 22.0):
-			curT, i = readCurve(chunks, i)
-			curT, i = readCurve(chunks, i)
-			curT, i = readCurve(chunks, i)
-			curT, i = readCurve(chunks, i)
+			curT1, i = readCurve(chunks, i)
+			curT2, i = readCurve(chunks, i)
+			curT3, i = readCurve(chunks, i)
+			curT4, i = readCurve(chunks, i)
 
-		tol1, i = getFloats(chunks, i, 2)    # 0, 0
-		r1,  i  = getVarRadius(chunks, i)    # 0 = single_radius, 1 = two_radii ## convert SAT to STEP!!!
-		if (r1 != 0xFFFFFFFF):
-			bv1, i  = getBlendValues(chunks, i)  # two_ends ...
-			if (r1 == 'two_radii'):
-				bv2, i  = getBlendValues(chunks, i)  # two_ends ...
-				n, i    = getVarChamfer(chunks, i)   # 3 = rounded_chamfer
-				t, i    = getChamferType(chunks, i)  # 0x0A = radius, 0x0B = const
-				bv3, i  = getBlendValues(chunks, i)  # two_ends ...
+		tol1, i = getFloats(chunks, i, 2)   # 0, 0
+		r1  , i = getVarRadius(chunks, i)   # 0 = single_radius, 1 = two_radii
+		bv1 , i = getBlendValues(chunks, i)
+		if (r1 == 'two_radii'):
+			bv2 , i  = getBlendValues(chunks, i)
+			if (chunks[i].val in [3, 'rounded_chamfer']):
+				vc  , i  = getVarChamfer(chunks, i)
+				ct  , i  = getChamferType(chunks, i)
+				bv3 , i  = getBlendValues(chunks, i)
+			else:
+				vc  = None
+				ct  = False
+				bv3 = None
+		elif (r1 == 'single_radius'):
+			if (chunks[i].val == 7): # ==> ..\Test\Fillets\Fillet_edge_2mm_Mixed_G1_noSmooth.ipt: convert to SAT!!!
+				ut1, i = getEnum(chunks, i)
+				uv1, i = getFloats(chunks, i, 2)
 		rU, i   = getInterval(chunks, i, 0, 1, 1.0)
 		rV, i   = getInterval(chunks, i, 0, 1, 1.0)
-
 		j, i    = getInteger(chunks, i)      # 1
 		f, i    = getFloat(chunks, i)        #
 		s, i    = getLength(chunks, i)       #
@@ -2772,29 +2783,16 @@ class SurfaceSpline(Surface):
 		if (getVersion() > 22.0):
 			i += 1 # T
 
-		j, i    = getInteger(chunks, i)      # 1
+		k, i    = getInteger(chunks, i)      # 1
 		i = self.setSurfaceShape(chunks, i, inventor)
-
+		if (inventor): a, i = getIntegers(chunks, i, 3) # 0 0 0
+		cur2, i = readCurve(chunks, i)
+		c   , i = getConvexity(chunks, i)   # 0x0A = convex
+		rb  , i = getRenderBlend(chunks, i) # 0x0A = rb_envelope, 0x0B = rb_snapshop
 		if (inventor):
-			a, i = getIntegers(chunks, i, 3) # 0 0 0
-		if (r1 == 0xFFFFFFFF):
-			t,  i = getText(chunks, i)
-			s,  i = readSurface(self, chunks, i)
-			c,  i = readCurve(chunks, i)
-			b1, i = readBS3Curve(chunks, i)
-			p,  i = getPoint(chunks, i)
-			b2, i = readBS3Curve(chunks, i)  # nullbs
-			n,  i = getInteger(chunks, i)
-			b3, i = readBS2Curve(chunks, i)
-			e,  i = getEnum(chunks, i)
-		else:
-			curve, i = readCurve(chunks, i)
-			t, i     = getConvexity(chunks, i)   # 0x0A = convex
-			t, i     = getRenderBlend(chunks, i) # 0x0A = rb_envelope, 0x0B = rb_snapshop
-			if (inventor):
-				r, i  = getInterval(chunks, i, 0.0, 1.0, 1.0)
-				bs, i = readBS3Curve(chunks, i)
-				bs, i = readBS2Curve(chunks, i)  # nullbs
+			r, i  = getInterval(chunks, i, 0.0, 1.0, 1.0)
+			bc1, i = readBS3Curve(chunks, i)
+			bc2, i = readBS2Curve(chunks, i)  # nullbs
 		return i
 	def setClLoft(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
@@ -2802,17 +2800,26 @@ class SurfaceSpline(Surface):
 		scl2, i = self._readScaleClLoft(chunks, i)
 		scl3, i = self._readScaleClLoft(chunks, i)
 		scl4, i = self._readScaleClLoft(chunks, i)
-		e1, i = getEnum(chunks, i)
-		e2, i = getEnum(chunks, i)
-		n1, i = getInteger(chunks, i) # 7
-		e3, i = getEnum(chunks, i)
-		scl5, i = self._readScaleClLoft(chunks, i)
-		e4, i = getEnum(chunks, i)
-		scl6, i = self._readScaleClLoft(chunks, i)
-		n2, i = getInteger(chunks, i) # 0
-		v1, i = getVector(chunks, i)
+		e1, i = getEnum(chunks, i)    # 0x0B
+		e2, i = getEnum(chunks, i)    # 0x0B
+		n1, i = getInteger(chunks, i) # 0, 7
+		if (n1 > 0):
+			e3  , i = getEnum(chunks, i)    # 0x0B
+			scl5, i = self._readScaleClLoft(chunks, i)
+			e4  , i = getEnum(chunks, i)
+			scl6, i = self._readScaleClLoft(chunks, i)
+			n2  , i = getInteger(chunks, i) # 0
+			v1  , i = getVector(chunks, i)
+		else:
+			e3  , i = getEnum(chunks, i)    # 0x0B
+			e4  , i = getEnum(chunks, i)    # 0x0B
+			n2  , i = getInteger(chunks, i)
+			if (n2 == 0):
+				c3, i = getVector(chunks, i)
+			else:
+				c3, i = readBS3Curve(chunks, i)
+		e5, i = getEnum(chunks, i)
 		e6, i = getEnum(chunks, i)
-		e7, i = getEnum(chunks, i)
 		return i
 	def setCompound(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
@@ -3752,7 +3759,7 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 		self.a2, i = getIntegers(entity.chunks, i, len(entity.chunks) - i - 1)
 		color = getColor(self.name)
 		if (color is None):
-			logWarning(u"Color '%s' not defined in color table - using gray!" %(self.name))
+			logWarning(u"Color '%s' not defined in color table - using gray!", self.name)
 			setColor(self.name, self.red, self.green, self.blue) # ignore future complains...
 		else:
 			self.red   = color[0]
@@ -3971,6 +3978,21 @@ class AnnotationTolCreate(AnnotationTol):
 	def __init__(self): super(AnnotationTolCreate, self).__init__()
 class AnnotationTolRevert(AnnotationTol):
 	def __init__(self): super(AnnotationTolRevert, self).__init__()
+
+class AttribCt(Attrib):
+	def __init__(self): super(AttribCt, self).__init__()
+class AttribCtCellPtr(AttribCt):
+	def __init__(self): super(AttribCtCellPtr, self).__init__()
+class AttribCtCFace(AttribCt):
+	def __init__(self): super(AttribCtCFace, self).__init__()
+class Cell(Entity):
+	def __init__(self): super(Cell, self).__init__()
+class Cell3d(Cell):
+	def __init__(self): super(Cell3d, self).__init__()
+class CFace(Entity):
+	def __init__(self): super(CFace, self).__init__()
+class CShell(Entity):
+	def __init__(self): super(CShell, self).__init__()
 
 class _AcisChunk_(object):
 	def __init__(self, key, val = None):
@@ -4191,9 +4213,9 @@ class AcisEntity(object):
 		return "-%d %s %s" %(self.index, self.name, ''.join(u"%s" %(c) for c in self.chunks))
 
 class AcisRef(object):
-	def __init__(self, index):
+	def __init__(self, index, entity = None):
 		self.index = index
-		self.entity = None
+		self.entity = entity
 
 	def __str__(self):
 		if (self.entity is None or self.entity.index < 0):
@@ -4309,7 +4331,7 @@ SURFACE_TYPES = {
 	'sweep_spl_sur':        ('setSweep', 1, True),
 #	'':                     ('setSweepSpline', 0, False),
 	'sweep_sur':            ('setSweepSpline', 1, True),
-#	'':                     ('setSSSBend', 0, False),
+	'sssblndsur':           ('setSSSBend', 0, False),
 	'sss_blend_spl_sur':    ('setSSSBend', 1, True),
 #	'':                     ('setTSpline', 0, False),
 	't_spl_sur':            ('setTSpline', 1, True),
@@ -4317,8 +4339,6 @@ SURFACE_TYPES = {
 	'VBL_SURF':             ('setVertexBlend', 1, True),
 	'srfsrfblndsur':        ('setBlendSupply', 0, False),
 	'srf_srf_v_bl_spl_sur': ('setBlendSupply', 1, True),
-	'sssblndsur':           ('setBlendSupply', 0, False),
-	'sss_blend_spl_sur':    ('setBlendSupply', 1, True),
 	'sumsur':               ('setSum', 0, False),
 	'sum_spl_sur':          ('setSum', 1, True),
 	'ruledtapersur':        ('setRuledTaper', 0, False),
@@ -4520,4 +4540,11 @@ ENTITY_TYPES = {
 	"tvertex-vertex":                                                                              VertexTolerance,
 	"wcs":                                                                                         Wcs,
 	"wire":                                                                                        Wire,
+	"ct-attrib":                                                                                   AttribCt,
+	"cell_ptr-ct-attrib":                                                                          AttribCtCellPtr,
+	"cface_ptr-ct-attrib":                                                                         AttribCtCFace,
+	"cell":                                                                                        Cell,
+	"cell3d-cell":                                                                                 Cell3d,
+	"cface":                                                                                       CFace,
+	"cshell":                                                                                      CShell,
 }
