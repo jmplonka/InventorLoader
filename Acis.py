@@ -160,11 +160,16 @@ subtypeTableSurfaces    = {}
 invSubtypeTableSurfaces = {}
 nameMtchAttr            = {}
 references              = {}
-_refs                   = {}
+_refs                   = {} # dict of AcisRefs
+_dcIdxAttributes        = {} # dict of an attribute list
 
 def getSatRefs():
 	global _refs
 	return _refs
+
+def getDcAttributes():
+	global _dcIdxAttributes
+	return _dcIdxAttributes
 
 def _getStr_(data, offset, end):
 	txt = data[offset: end].decode('cp1252')
@@ -262,7 +267,7 @@ class Law(object):
 		return None
 
 def init():
-	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces, nameMtchAttr, _refs
+	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces, nameMtchAttr, _refs, _dcIdxAttributes
 
 	subtypeTableCurves      = []
 	subtypeTablePCurves     = []
@@ -271,6 +276,7 @@ def init():
 	nameMtchAttr            = {}
 	references              = {}
 	_refs                   = {}
+	_dcIdxAttributes        = {}
 
 def addSubtypeNodeCurve(curve):
 	global subtypeTableCurves
@@ -400,12 +406,20 @@ def getIntegers(chunks, index, count):
 		arr.append(n)
 	return arr, i
 
-def getIntegerMap(chunks, index):
+def getDcIndexMappings(chunks, index, attr):
+	global _dcIdxAttributes
 	m = []
 	count, i = getInteger(chunks, index)
 	for n in range(count):
-		a, i = getIntegers(chunks, i, 2)
-		m.append(a)
+		dcIdx, i = getInteger(chunks, i)
+		value, i = getInteger(chunks, i)
+		m.append((dcIdx, value))
+		try:
+			lst = _dcIdxAttributes[dcIdx]
+		except:
+			lst = []
+			_dcIdxAttributes[dcIdx] = lst
+		lst.append(attr)
 	return m, i
 
 def getLong(chunks, index):
@@ -3734,14 +3748,23 @@ class AttribNamingMatching(Attrib):
 			return i + 1 # since ASM 216 (Inventor 2011) there is an identifyer added!
 		return i
 class AttribNamingMatchingNMxMatchedEntity(AttribNamingMatching):
+	# [dxIdx, msk] n1, n2
 	def __init__(self): super(AttribNamingMatchingNMxMatchedEntity, self).__init__()
+	def set(self, entity):
+		i = super(AttribNamingMatchingNMxMatchedEntity, self).set(entity)
+		self.mapping, i = getDcIndexMappings(entity.chunks, i, self)
+		self.a      , i = getIntegers(entity.chunks, i, 2)
+		return i
 class AttribNamingMatchingNMxEdgeCurve(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxEdgeCurve, self).__init__()
 class AttribNamingMatchingNMxDup(AttribNamingMatching):
+	# n1, n2, n3, n4, n5
 	def __init__(self): super(AttribNamingMatchingNMxDup, self).__init__()
 class AttribNamingMatchingNMxOrderCount(AttribNamingMatching):
+	# n1, n2
 	def __init__(self): super(AttribNamingMatchingNMxOrderCount, self).__init__()
 class AttribNamingMatchingNMxPuchtoolBRep(AttribNamingMatching):
+	# n1, n2
 	def __init__(self): super(AttribNamingMatchingNMxPuchtoolBRep, self).__init__()
 class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 	def __init__(self):
@@ -3767,37 +3790,41 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 			self.blue  = color[2]
 		return i
 class AttribNamingMatchingNMxThreadEntity(AttribNamingMatching):
+	# x1, x2, V1, V2, n1, V2, [????]
 	def __init__(self): super(AttribNamingMatchingNMxThreadEntity, self).__init__()
 class AttribNamingMatchingNMxFeatureOrientation(AttribNamingMatching):
 	def __init__(self):
 		super(AttribNamingMatchingNMxFeatureOrientation, self).__init__()
 	def set(self, entity):
 		i = super(AttribNamingMatchingNMxFeatureOrientation, self).set(entity)
-		if (entity.chunks[i].tag != TAG_ENTITY_REF):
-			i += 1
+		if (entity.chunks[i].tag != TAG_ENTITY_REF): i += 1
 		self.ref1, i = getRefNode(entity, i, 'curve')
 		self.ref2, i = getRefNode(entity, i, 'curve')
 		return i
 class AttribNamingMatchingNMxGenTagDisambiguation(AttribNamingMatching):
+	# n1
 	def __init__(self): super(AttribNamingMatchingNMxGenTagDisambiguation, self).__init__()
 class AttribNamingMatchingNMxFeatureDependency(AttribNamingMatching):
+	# [a]
 	def __init__(self): super(AttribNamingMatchingNMxFeatureDependency, self).__init__()
 class AttribNamingMatchingNMxBrepTag(AttribNamingMatching):
 	def __init__(self):
 		super(AttribNamingMatchingNMxBrepTag, self).__init__()
-		self.mapping = []
-class AttribNamingMatchingNMxBrepTagFeature(AttribNamingMatchingNMxBrepTag):
-	def __init__(self): super(AttribNamingMatchingNMxBrepTagFeature, self).__init__()
-class AttribNamingMatchingNMxBrepTagSwitch(AttribNamingMatchingNMxBrepTag):
-	def __init__(self): super(AttribNamingMatchingNMxBrepTagSwitch, self).__init__()
-class AttribNamingMatchingNMxBrepTagName(AttribNamingMatchingNMxBrepTag):
-	def __init__(self): super(AttribNamingMatchingNMxBrepTagName, self).__init__()
 	def set(self, entity):
 		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
-		self.mapping, i = getIntegerMap(entity.chunks, i) # (DC-index, mask){n}
+		self.mapping, i = getDcIndexMappings(entity.chunks, i, self) # (DC-index, mask){n}
 		return i
+class AttribNamingMatchingNMxBrepTagFeature(AttribNamingMatchingNMxBrepTag):
+	# no more values
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagFeature, self).__init__()
+class AttribNamingMatchingNMxBrepTagSwitch(AttribNamingMatchingNMxBrepTag):
+	# no more values
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagSwitch, self).__init__()
+class AttribNamingMatchingNMxBrepTagName(AttribNamingMatchingNMxBrepTag):
+	# no more values
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagName, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBPatch(AttribNamingMatchingNMxBrepTagName):
-	# n1, n2, n3, n4, n5, 0
+	# n1, n2, n3, n4, n5, n6
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBPatch, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBlend(AttribNamingMatchingNMxBrepTagName):
 	# n1, [a1], [a2], [a3]
@@ -3867,11 +3894,13 @@ class AttribNamingMatchingNMxBrepTagNameModFace(AttribNamingMatchingNMxBrepTagNa
 	# no more values!
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameModFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBend(AttribNamingMatchingNMxBrepTagName):
+	# n1, n2, n3, n4, n5, n6, n7, n8
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBend, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameBendPart(AttribNamingMatchingNMxBrepTagName):
-	# 0, n2, n3, n4, n5, 0, 0, n8
+	# n1, n2, n3
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameBendPart, self).__init__()
 class AttribNamingMatchingNMxBrepTagBendLineFeature(AttribNamingMatchingNMxBrepTagName):
+	# [[a b]]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagBendLineFeature, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameCutXBendBottomFaceTag(AttribNamingMatchingNMxBrepTagName):
 	# n1, n2
@@ -3889,7 +3918,7 @@ class AttribNamingMatchingNMxBrepTagNameEmbossBottomFace(AttribNamingMatchingNMx
 	# 0, n2
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameEmbossBottomFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameEmbossRimFace(AttribNamingMatchingNMxBrepTagName):
-	# n1, n2, 2, 0, n5, [a, b, c]
+	# n1, n2, n3, n4, n5, n6
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameEmbossRimFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameEntityEntityBlend(AttribNamingMatchingNMxBrepTagName):
 	# [a]
@@ -3901,7 +3930,7 @@ class AttribNamingMatchingNMxBrepTagNameExtendSurf(AttribNamingMatchingNMxBrepTa
 	# [a], [b], 0
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameExtendSurf, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameFlange(AttribNamingMatchingNMxBrepTagName):
-	# n1, n2, n3, n4, n5, 0, flags
+	# n1, n2, n3, n4, n5, 0, n7
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameFlange, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameFoldFace(AttribNamingMatchingNMxBrepTagName):
 	# n1, [a]
@@ -3931,13 +3960,13 @@ class AttribNamingMatchingNMxBrepTagNameSweepGenerated(AttribNamingMatchingNMxBr
 	# n1, n2, n3, 0, [a], [b], [c], n8, n9, n10
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSweepGenerated, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameShellFace(AttribNamingMatchingNMxBrepTagName):
-	# n1, f2, 0, n3
+	# n1, x, 0, n3
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameShellFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSplitFace(AttribNamingMatchingNMxBrepTagName):
 	# n1, [a, 2, c, 0, x, f, g, h, 1, y, k, l]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSplitFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSplitVertex(AttribNamingMatchingNMxBrepTagName):
-	# n1, n2, 0, n4, 0, n6, [1, x, 1, 1]
+	# n1, n2, 0, n4, 0, n6, [a, x, 1, 1]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSplitVertex, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSplitEdge(AttribNamingMatchingNMxBrepTagName):
 	# n1, 3, 0, n4, 0, n6

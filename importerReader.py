@@ -752,7 +752,7 @@ def ReadRSeMetaDataB(dataB, seg):
 
 def ReadRSeMetaDataM(dataM, name):
 	i = 0
-	value = RSeMetaData()
+	value = Segment()
 	value.txt1, i = getLen32Text8(dataM, i)
 	value.ver, i = getUInt16(dataM, i)
 	value.arr1, i = getUInt16A(dataM, i, 8)

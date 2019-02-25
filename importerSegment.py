@@ -11,7 +11,7 @@ from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
 from importerUtils          import *
-from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, createNode, setHeader, getNameMatchAttributes
+from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, createNode, setHeader, getNameMatchAttributes, getDcAttributes
 from importerSAT            import readEntityBinary, int2version, Header, History
 from uuid                   import UUID
 
@@ -656,6 +656,7 @@ class SegmentReader(object):
 		node.set('SAT', [header, lst, history, getSatRefs()])
 		resolveEntityReferences(node, entities)
 		node.set('nameMatches', getNameMatchAttributes())
+		node.set('dcAttributes', getDcAttributes())
 		self.segment.AcisList.append(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'selectedKey')
@@ -665,6 +666,8 @@ class SegmentReader(object):
 		if (getFileVersion() > 2018): i += 1 # skip 00
 		i = node.ReadChildRef(i, 'history')
 		i += 4 # skip FF FF FF FF
+		if (self.segment.acis is None):
+			self.segment.acis = node
 		return i
 
 	def Read_F8A779F8(self, node):
