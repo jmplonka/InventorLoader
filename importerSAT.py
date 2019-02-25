@@ -520,7 +520,6 @@ def readText(doc, fileName):
 	_fileName = fileName
 	header    = Header()
 	history   = None
-	valid     = True
 	index     = 0
 	entities  = {}
 	map       = entities
@@ -565,11 +564,14 @@ def readText(doc, fileName):
 def readBinary(doc, fileName):
 	global _fileName
 	_fileName = fileName
-	header = Header()
+	header    = Header()
+	history   = None
+	index     = 0
+	entities  = {}
+	map       = entities
+	lst       = []
+
 	Acis.setHeader(header)
-	entities = {}
-	lst      = []
-	index    = 0
 	Acis.clearEntities()
 
 	with open(fileName, 'rU') as file:
@@ -581,12 +583,25 @@ def readBinary(doc, fileName):
 			entity, i = readEntityBinary(data, i, e)
 			entity.index = index
 			entities[index] = entity
-			lst.append(entity)
 			index += 1
-			if (entity.name == "End-of-ACIS-data"):
+			lst.append(entity)
+			if (entity.name == "Begin-of-ACIS-History-Data"):
+				del map[entity.index]
+				entityIdx = entity.index
+				entity.index = -1
+				history = History(entity)
+				index = 0
+				map = history.delta_states
+			elif (entity.name == "End-of-ACIS-History-Section"):
+				del map[entity.index]
+				entity.index = -1
+				index = entityIdx
+				map = entities
+			elif (entity.name == "End-of-ACIS-data"):
+				del map[entity.index]
 				entity.index = -1
 				break
-	resolveEntityReferences(entities, lst)
+	resolveEntityReferences(entities, lst, history)
 	setEntities(lst)
 	return
 
