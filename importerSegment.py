@@ -591,9 +591,10 @@ class SegmentReader(object):
 	def Read_F645595C(self, node):
 		# Spatial's (A)CIS (S)olid (M)odeling
 		i = node.Read_Header0('ASM')
-		i = node.ReadUInt32(i, 'u32_0') # allways 0x357
+		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'schema')
+		if (i == len(node.data)): return i
 		txt, i = getText8(node.data, i, 15) # 'ACIS BinaryFile' or from 20214 on 'ASM BinaryFile4'
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
@@ -636,6 +637,8 @@ class SegmentReader(object):
 			lst.append(entity)
 			convert2Version7(entity)
 			if (entity.name == "Begin-of-ACIS-History-Data"):
+				del map[entity.index]
+				entity.index = -1
 				history = History(entity)
 				entityIdx = index
 				index = 0
@@ -646,6 +649,7 @@ class SegmentReader(object):
 				index = entityIdx
 				map = entities
 			elif (entity.name == "End-of-ACIS-data"):
+				del map[entity.index]
 				entity.index = -1
 			else:
 				index += 1
