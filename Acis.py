@@ -2772,7 +2772,7 @@ class SurfaceSpline(Surface):
 				bv3 = None
 		elif (r1 == 'single_radius'):
 			if (chunks[i].val == 7): # ==> ..\Test\Fillets\Fillet_edge_2mm_Mixed_G1_noSmooth.ipt: convert to SAT!!!
-				ut1, i = getEnum(chunks, i)
+				ut1, i = getValue(chunks, i)
 				uv1, i = getFloats(chunks, i, 2)
 		rU, i   = getInterval(chunks, i, 0, 1, 1.0)
 		rV, i   = getInterval(chunks, i, 0, 1, 1.0)
