@@ -1299,6 +1299,9 @@ class Segment(object):
 		self.indexNodes   = {}
 		self.tree         = DataNode(None, False)
 		self.acis         = None
+	def getDcSatAttributes(self):
+		if (self.acis is None): return []
+		return self.acis.get('dcAttributes')
 	def __repr__(self):
 		return self.name
 

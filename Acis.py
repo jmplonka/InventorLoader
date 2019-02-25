@@ -415,11 +415,11 @@ def getDcIndexMappings(chunks, index, attr):
 		value, i = getInteger(chunks, i)
 		m.append((dcIdx, value))
 		try:
-			lst = _dcIdxAttributes[dcIdx]
+			indexMappings = _dcIdxAttributes[dcIdx]
 		except:
-			lst = []
-			_dcIdxAttributes[dcIdx] = lst
-		lst.append(attr)
+			indexMappings = IndexMappings()
+			_dcIdxAttributes[dcIdx] = indexMappings
+		indexMappings.append(attr)
 	return m, i
 
 def getLong(chunks, index):
@@ -1464,7 +1464,27 @@ class Intervall(object):
 	def getUpperType(self):  return self.upper.type
 	def getUpperLimit(self): return self.upper.getLimit()
 	def getLimit(self):      return self.getUpperLimit() - self.getLowerLimit()
-
+class IndexMappings(object):
+	def __init__(self):
+		self.attributes = []
+	def append(self, attr):
+		self.attributes.append(attr)
+	def getCurve(self):
+		curves = []
+		for a in self.attributes:
+			owner = a.getOwner()
+			if (isinstance(owner, Edge)):
+				curves.append(owner.getCurve())
+		assert len(curves) > 0
+		return curves[0]
+	def getPoints(self):
+		points = []
+		for a in self.attributes:
+			owner = a.getOwner()
+			if (isinstance(owner, Vertex)):
+				points.append(owner.getPosition())
+		assert len(points) > 0
+		return points[0]
 class AsmHeader(object): pass
 class BeginOfAcisHistoryData(object): pass
 class DeltaState(object): pass

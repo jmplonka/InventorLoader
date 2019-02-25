@@ -495,67 +495,36 @@ def getNameTableEntry(node):
 			resolveNameTableItem(node, vk)
 	return ntEntry.entry
 
-def getSatAttribute(segment, key, idx):
-	ntKeyDef = segment.ntKeys.get(key, None)
-	if (ntKeyDef is None): return None
-	asm = ntKeyDef.get('ref_1').get('refWrapper').get('asm')
-	nameMtchAttr = asm.get('nameMtchAttr')
-	atr = nameMtchAttr.get(idx, None)[0] # even if there are more than one...
-	return atr
-
-def getSatPoint(ntEntry, isStart):
-	if (ntEntry is None): return None
-	ntPoint = ntEntry.entry
-	if (ntPoint is None): return None
-	if (ntPoint.typeName in ('90F4820A','2E04A208')):
-		key, idx, typ  = ntPoint.get('a1')
-	elif (ntPoint.typeName in ('436D821A')):
-		satAtrs = ntPoint.get('satAtrs')
-		if (len(satAtrs) > 0):
-			key = satAtrs[0][0]
-			idx = satAtrs[0][1]
-			typ = satAtrs[0][2]
-			if (len(satAtrs) > 1):
-				logError(u"Can only handle one definition for %s", ntPoint.node)
-				return None
+def isEqualCurve(acisCurve, fcEdge):
+	if (fcCurve.Degenerated): return False
+	c = fcEdge.Curve
+	cn = c.__class__.__name__
+	if (isInstance(acisCurve, Acis.CurveEllipse)):
+		if (isEqual1D(acisCurve.ratio, 1)):
+			if (cn in ['Circle', 'Arc', 'ArcOfCircle']): pass
 		else:
-			logError(u"Don't know how to get Sat-Point from %s", ntPoint.node)
-			return None
-	else:
-		logError(u"Don't know how to get Sat-Point from %s", ntPoint.node)
-		return None
+			if (cn in ['Ellipse', 'ArcOfEllipse', 'ArcOfConic']): pass
+	elif (isInstance(acisCurve, Acis.CurveComp)):
+		if (cn in []): pass
+	elif (isInstance(acisCurve, Acis.CurveDegenerate)):
+		if (cn in []): pass
+	elif (isInstance(acisCurve, Acis.CurveInt)):
+		if (cn in []): pass
+	elif (isInstance(acisCurve, Acis.CurveP)):
+		if (cn in []): pass
+	elif (isInstance(acisCurve, Acis.CurveStraight)):
+		if (cn in ['Line', 'LineSegment']): pass
+	return False
 
-	atr = getSatAttribute(ntPoint.segment, key, idx)
-	if (atr is None):
-		logError(u"Can't find ntKey=%04X for %s", key, ntPoint.node)
-		return None
-	vtx = atr.getOwner()
-	if (isinstance(vtx, Acis.Vertex)):
-		return vtx.getPosition() * 10.0
-	if (isinstance(vtx, Acis.Edge)):
-		if (isStart):
-			return vtx.getStart() * 10.0
-		return vtx.getEnd() * 10.0
-	logError(u"Expected 'vertex' not '%s'!", vtx.entity.name)
-	return None
+def findFcCurve(doc, acisCurve, acisPoints):
+	for o in doc.Objects:
+		# get all edges from the document
+		if (hasattr(o, 'Shape')):
+			s = o.Shape
+			for e in s.Edges:
+				if (isEqualCurve(acisCurve, e)):
+					return e.Curve
 
-def _getSatCurveFromArray(segment, msk, key, idx):
-	if (msk == 0x0102):
-		atr = getSatAttribute(segment, key, idx)
-		edg = atr.getOwner()
-		assert isinstance(edg, Acis.Edge)
-		crv = edg.getCurve()
-		return crv
-
-def getSatCurve(ntEntry):
-	if (ntEntry is None): return None
-	if (ntEntry.typeName in ('22178C64','488C5309','9BB4281C','F4360D18','FF46726C')):
-		edge = ntEntry.get('edge')
-		if (edge is not None):
-			ntEdge = edge.entry
-			logError("CHAMFER\tPOINT\t%s" %(ntEdge.typeName))
-	else:
-		lst = ntEntry.get('entries')
 	return None
 
 class FreeCADImporter(object):
@@ -1044,38 +1013,30 @@ class FreeCADImporter(object):
 		edges = []
 
 		for idxRef in matchedEdge.get('indexRefs'):
-			ref  = matchedEdge.segment.indexNodes[idxRef]
-			assert (ref.typeName == 'EdgeId'),  u"found '%s'!" %(ref.typeName)
-			creator = ref.get('creator')
-			if (creator is not None):
-				idxCreator = creator.get('idxCreator')
-				creator = matchedEdge.segment.indexNodes[idxCreator]
-				self.getEntity(creator) # ensure that the creator is already available!
-			ntEntry = getNameTableEntry(ref)
-			if (ntEntry is not None):
-				pass
-				# ntEntry.typeName in [22178C64,488C5309,9BB4281C,BF32E0A6,F4360D18,FF46726C]
-#				pt1 = getSatPoint(ntEntry.get('from'), True)
-#				pt2 = getSatPoint(ntEntry.get('to'), False)
-#				crv = getSatCurve(ntEntry)
-				# # get all edges from the document
-				# for o in self.doc.Objects:
-				# 	if (hasattr(o, 'Shape')):
-				# 		s = o.Shape
-				# 		for e in s.Edges:
-				# 			v1 = e.firstVertex(True).Point
-				# 			v2 = e.secondVertex(True).Point
-				# 			logAlways("DEBUG> p1=(%s), p2=(%s), v1=(%s), p2=(%s)", pt1, pt2, v1, v2)
-				# 			if ((isEqual(pt1, v1) and isEqual(pt2, v2)) or (isEqual(pt1, v2) and isEqual(pt2, v1))):
-				# 				edges.append(e)
+			edgeId = matchedEdge.segment.indexNodes[idxRef]
+			assert (edgeId.typeName == 'EdgeId'),  u"found '%s'!" %(edgeId.typeName)
+			acis = getModel().getBRep().getDcSatAttributes() #  ref. importerSegment.Read_F645595C
+			edgeAttrs  = acis[edgeId.get('index')]
+			acisCurve  = edgeAttrs.getCurve()
+			acisPoints = edgeAttrs.getPoints()
+			
+			fcCurve = findFcCurve(self.doc, acisCurve, acisPoints)
 
-				# if more than one curve remains fillter according curve
-
+			### vvvvv old stuff vvvvv
+#				# 			v1 = e.firstVertex(True).Point
+#				# 			v2 = e.secondVertex(True).Point
+#				# 			logAlways("DEBUG> p1=(%s), p2=(%s), v1=(%s), p2=(%s)", pt1, pt2, v1, v2)
+#				# 			if ((isEqual(pt1, v1) and isEqual(pt2, v2)) or (isEqual(pt1, v2) and isEqual(pt2, v1))):
+#				# 				edges.append(e)
+#
+#				# if more than one curve remains fillter according curve
+			### ^^^^^ to be deleted ^^^^^
 		return edges
 
 	def getEdgesFromProxy(self, fxCreator, proxy):
 		all_edges   = []
 		if (proxy is not None):
+			self.getEntity(fxCreator) # ensure that the creator is already available!
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
 				edges = self.getIndexdEdges(matchedEdge)
@@ -2763,6 +2724,9 @@ class FreeCADImporter(object):
 		hide(coilGeo)
 
 		return
+	
+	def Create_FxCornerChamfer(self, chamferNode):
+		return self.Create_FxChamfer(chamferNode)
 
 	def Create_FxChamfer(self, chamferNode):
 		properties   = chamferNode.get('properties')
@@ -3417,10 +3381,6 @@ class FreeCADImporter(object):
 #		getProperty(properties, 3) # 299B2DCE
 #		getProperty(properties, 4) # FaceBoundOuterProxy
 #		getProperty(properties, 6) # ObjectCollection 'Solid1'
-		return notYetImplemented(cornerNode)
-
-	def Create_FxCornerChamfer(self, cornerNode):
-		properties = cornerNode.get('properties')
 		return notYetImplemented(cornerNode)
 
 	def Create_FxFace(self, faceNode):
