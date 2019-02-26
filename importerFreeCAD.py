@@ -86,8 +86,8 @@ def createConstructionPoint(sketchObj, point):
 def createLine(p1, p2):
 	return PART_LINE(p1, p2)
 
-def createCircle(c, x2, y2, z2, r):
-	return Part.Circle(p2v(c), VEC(x2, y2, z2), r)
+def createCircle(c, n, r):
+	return Part.Circle(p2v(c), n, r)
 
 def _initPreferences():
 	_enableConstraint('Sketch.Constraint.Geometric.AlignHorizontal', BIT_GEO_ALIGN_HORIZONTAL , True)
@@ -495,35 +495,45 @@ def getNameTableEntry(node):
 			resolveNameTableItem(node, vk)
 	return ntEntry.entry
 
-def isEqualCurve(acisCurve, fcEdge):
-	if (fcCurve.Degenerated): return False
+def checkPoints(fcEdge, acisPoints):
+	pt1 = fcEdge.firstVertex().Point
+	pt2 = fcEdge.lastVertex().Point
+	for pt in acisPoints:
+		if (not isEqual(pt, pt1)) and (not isEqual(pt, pt2)):
+			return False
+	return True
+
+def isEqualCurve(fcEdge, acisCurve, acisPoints):
+	if (fcEdge.Degenerated): return False
 	c = fcEdge.Curve
 	cn = c.__class__.__name__
-	if (isInstance(acisCurve, Acis.CurveEllipse)):
+	if (isinstance(acisCurve, Acis.CurveStraight)):
+		if (cn in ['Line', 'LineSegment']):
+			if (checkPoints(fcEdge, acisPoints)):
+				pass
+	elif (isinstance(acisCurve, Acis.CurveEllipse)):
 		if (isEqual1D(acisCurve.ratio, 1)):
-			if (cn in ['Circle', 'Arc', 'ArcOfCircle']): pass
+			if (cn in ['Circle', 'Arc', 'ArcOfCircle']):
+				if (checkPoints(fcEdge, acisPoints)):
+					pass
 		else:
 			if (cn in ['Ellipse', 'ArcOfEllipse', 'ArcOfConic']): pass
-	elif (isInstance(acisCurve, Acis.CurveComp)):
+	elif (isinstance(acisCurve, Acis.CurveComp)):
 		if (cn in []): pass
-	elif (isInstance(acisCurve, Acis.CurveDegenerate)):
+	elif (isinstance(acisCurve, Acis.CurveDegenerate)):
 		if (cn in []): pass
-	elif (isInstance(acisCurve, Acis.CurveInt)):
+	elif (isinstance(acisCurve, Acis.CurveInt)):
 		if (cn in []): pass
-	elif (isInstance(acisCurve, Acis.CurveP)):
+	elif (isinstance(acisCurve, Acis.CurveP)):
 		if (cn in []): pass
-	elif (isInstance(acisCurve, Acis.CurveStraight)):
-		if (cn in ['Line', 'LineSegment']): pass
 	return False
 
 def findFcCurve(doc, acisCurve, acisPoints):
-	for o in doc.Objects:
-		# get all edges from the document
-		if (hasattr(o, 'Shape')):
-			s = o.Shape
-			for e in s.Edges:
-				if (isEqualCurve(acisCurve, e)):
-					return e.Curve
+	shapes = [o.Shape for o in doc.Objects if hasattr(o, 'Shape')]
+	for s in shapes:
+		for e in s.Edges:
+			if (isEqualCurve(e, acisCurve, acisPoints)):
+				return e.Curve
 
 	return None
 
@@ -1019,7 +1029,7 @@ class FreeCADImporter(object):
 			edgeAttrs  = acis[edgeId.get('index')]
 			acisCurve  = edgeAttrs.getCurve()
 			acisPoints = edgeAttrs.getPoints()
-			
+
 			fcCurve = findFcCurve(self.doc, acisCurve, acisPoints)
 
 			### vvvvv old stuff vvvvv
@@ -1528,7 +1538,7 @@ class FreeCADImporter(object):
 				mode = (nextNode.typeName == '64DE16F3')
 		point1 = None
 		point2 = None
-		circle = createCircle(center, 0, 0, 1, r)
+		circle = createCircle(center, DIR_Z, r)
 		if (len(points) > 0): point1 = points[0]
 		if (len(points) > 1): point2 = points[1]
 
@@ -1554,7 +1564,7 @@ class FreeCADImporter(object):
 		normal = circleNode.get('normal')
 		points = circleNode.get('points')
 
-		part = createCircle(circleNode, normal[0], normal[1], normal[2], r)
+		part = createCircle(circleNode, normal, r)
 
 		# There has to be at least 2 points to draw an arc.
 		# Everything else will be handled as a circle!
@@ -2724,7 +2734,7 @@ class FreeCADImporter(object):
 		hide(coilGeo)
 
 		return
-	
+
 	def Create_FxCornerChamfer(self, chamferNode):
 		return self.Create_FxChamfer(chamferNode)
 

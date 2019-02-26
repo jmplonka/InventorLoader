@@ -1484,7 +1484,7 @@ class IndexMappings(object):
 			if (isinstance(owner, Vertex)):
 				points.append(owner.getPosition())
 		assert len(points) > 0
-		return points[0]
+		return points
 class AsmHeader(object): pass
 class BeginOfAcisHistoryData(object): pass
 class DeltaState(object): pass
