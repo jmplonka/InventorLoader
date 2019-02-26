@@ -503,8 +503,13 @@ def checkPoints(fcEdge, acisPoints):
 			return False
 	return True
 
+def checkCircles(fcCurve, acisCurve):
+	if (not isEqual1D(fcCurve.Radius, acisCurve.major.Length)): return False
+	if (not isEqual(fcCurve.Axis, acisCurve.normal)) and (not isEqual(fcCurve.Axis, -acisCurve.normal)): return False
+	if (not isEqual(fcCurve.Center, acisCurve.center)): return False
+	return True
+
 def isEqualCurve(fcEdge, acisCurve, acisPoints):
-	if (fcEdge.Degenerated): return False
 	c = fcEdge.Curve
 	cn = c.__class__.__name__
 	if (isinstance(acisCurve, Acis.CurveStraight)):
@@ -515,7 +520,8 @@ def isEqualCurve(fcEdge, acisCurve, acisPoints):
 		if (isEqual1D(acisCurve.ratio, 1)):
 			if (cn in ['Circle', 'Arc', 'ArcOfCircle']):
 				if (checkPoints(fcEdge, acisPoints)):
-					pass
+					if (checkCircles(fcEdge.Curve, acisCurve)):
+						return True
 		else:
 			if (cn in ['Ellipse', 'ArcOfEllipse', 'ArcOfConic']): pass
 	elif (isinstance(acisCurve, Acis.CurveComp)):
@@ -528,12 +534,11 @@ def isEqualCurve(fcEdge, acisCurve, acisPoints):
 		if (cn in []): pass
 	return False
 
-def findFcCurve(doc, acisCurve, acisPoints):
-	shapes = [o.Shape for o in doc.Objects if hasattr(o, 'Shape')]
-	for s in shapes:
-		for e in s.Edges:
-			if (isEqualCurve(e, acisCurve, acisPoints)):
-				return e.Curve
+def findFcEdgeIndex(fcShape, acisCurve, acisPoints):
+	for idx, fcEdge in enumerate(fcShape.Edges):
+		if (not fcEdge.Degenerated):
+			if (isEqualCurve(fcEdge, acisCurve, acisPoints)):
+				return idx
 
 	return None
 
@@ -1019,7 +1024,7 @@ class FreeCADImporter(object):
 				logWarning(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
-	def getIndexdEdges(self, matchedEdge):
+	def getIndexdEdges(self, fcShape, matchedEdge):
 		edges = []
 
 		for idxRef in matchedEdge.get('indexRefs'):
@@ -1030,17 +1035,10 @@ class FreeCADImporter(object):
 			acisCurve  = edgeAttrs.getCurve()
 			acisPoints = edgeAttrs.getPoints()
 
-			fcCurve = findFcCurve(self.doc, acisCurve, acisPoints)
+			edgeIdx = findFcEdgeIndex(fcShape, acisCurve, acisPoints)
+			if (edgeIdx is not None):
+				edges.append(edgeIdx)
 
-			### vvvvv old stuff vvvvv
-#				# 			v1 = e.firstVertex(True).Point
-#				# 			v2 = e.secondVertex(True).Point
-#				# 			logAlways("DEBUG> p1=(%s), p2=(%s), v1=(%s), p2=(%s)", pt1, pt2, v1, v2)
-#				# 			if ((isEqual(pt1, v1) and isEqual(pt2, v2)) or (isEqual(pt1, v2) and isEqual(pt2, v1))):
-#				# 				edges.append(e)
-#
-#				# if more than one curve remains fillter according curve
-			### ^^^^^ to be deleted ^^^^^
 		return edges
 
 	def getEdgesFromProxy(self, fxCreator, proxy):
@@ -1049,8 +1047,8 @@ class FreeCADImporter(object):
 			self.getEntity(fxCreator) # ensure that the creator is already available!
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-				edges = self.getIndexdEdges(matchedEdge)
-#				all_edges += edges
+				edges = self.getIndexdEdges(fxCreator.sketchEntity.Shape, matchedEdge)
+				all_edges += edges
 		return all_edges
 
 	def getCreatorsFromProxy(self, proxy):
@@ -2762,18 +2760,14 @@ class FreeCADImporter(object):
 		for i, creator in enumerate(creators):
 			fx = creators[creator]
 			edges = self.getEdgesFromProxy(fx, edgesProxies)
-			fillets = []
-			for edgeNode in edges:
-				for j, edge in enumerate(fx.Shape.Edges):
-					if (edgeNode.matches(edge)):
-						fillets.append((j+1, dist1, dist2))
-			chamfer = newObject(self.doc, 'Part::Chamfer', name)
-			chamfer.Base  = fx.sketchEntity
-			chamfer.Edges = fillets
+			chamfers = [(idx, dist1, dist2) for idx in edges]
+			chamferGeo = newObject(self.doc, 'Part::Chamfer', name)
+			chamferGeo.Base  = fx.sketchEntity
+			chamferGeo.Edges = chamfers
 			name = u"%s_%d" %(name, i + 1)
 			hide(fx.sketchEntity)
 
-		# self.addSolidBody(chamferNode, chamferGeo, body)
+		self.addSolidBody(chamferNode, chamferGeo, body)
 
 		return
 

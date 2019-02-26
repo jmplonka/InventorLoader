@@ -11,7 +11,7 @@ from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
 from importerUtils          import *
-from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, createNode, setHeader, getNameMatchAttributes, getDcAttributes
+from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, createNode, setHeader, getNameMatchAttributes, getDcAttributes, setScale
 from importerSAT            import readEntityBinary, int2version, Header, History
 from uuid                   import UUID
 
@@ -619,6 +619,8 @@ class SegmentReader(object):
 		header.resnor = c.val
 		self.version = int2version(header.version)
 		setVersion(7.0)
+		setScale(header.scale)
+
 		setHeader(header)
 		index = 0
 		clearEntities()
