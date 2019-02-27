@@ -18,7 +18,6 @@
 		* add Decal, Emboss
 
 	* Edge modeling
-		* add Chamfer (Variable, Constant),
 		* add (Rule-)Fillet
 
 	* combined
