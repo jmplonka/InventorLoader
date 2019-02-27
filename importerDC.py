@@ -1479,8 +1479,8 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_1B48E9DA(self, node): # FilletFeature {7DE603B3-DAA7-4364-BC8B-77295B53D1DB}
-		i = self.ReadCntHdr3S(node, 'FxFilletConstant')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'radiusEdgeSets')
+		i = self.ReadCntHdr3S(node, 'FxFilletConstantR')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'sets')
 		return i
 
 	def Read_1C0E2EA7(self, node): # new in 2019
@@ -3346,7 +3346,7 @@ class DCReader(EeDataReader):
 
 	def Read_53DCDF19(self, node):
 		i = self.ReadHeadersS32ss(node, 'FaceCollectionProxyDef')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'faces')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'properties')
 		return i
 
 	def Read_54829655(self, node): # NameTableKeyDef
@@ -6062,7 +6062,7 @@ class DCReader(EeDataReader):
 		i = self.ReadCntHdr3S(node, 'FilletConstantRadiusEdgeSet')
 		i = node.ReadCrossRef(i, 'edges')
 		i = node.ReadCrossRef(i, 'radius')
-		i = node.ReadCrossRef(i, 'allFillets')
+		i = node.ReadCrossRef(i, 'select')
 		i = node.ReadCrossRef(i, 'continuityG2')
 		if (getFileVersion() > 2018): i += 4
 		return i

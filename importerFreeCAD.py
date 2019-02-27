@@ -574,7 +574,6 @@ def findFcEdgeIndex(fcShape, acisEdges):
 
 	return None
 
-
 class FreeCADImporter(object):
 	FX_EXTRUDE_NEW          = 0x0001
 	FX_EXTRUDE_CUT          = 0x0002
@@ -1194,6 +1193,7 @@ class FreeCADImporter(object):
 		if (len(geometries) == 1):
 			return geometries[0]
 		return None
+
 ########################
 	def addSketch_Geometric_Fix2D(self, constraintNode, sketchObj):
 		'''
@@ -2785,7 +2785,13 @@ class FreeCADImporter(object):
 		for i, creator in enumerate(creators):
 			fx = creators[creator]
 			edges = self.getEdgesFromProxy(fx, edgesProxies)
-			chamfers = [(idx + 1, dist1, dist2) for idx in edges]
+			if (chamferType == 'Distance'):
+				chamfers = [(idx + 1, dist1, dist1) for idx in edges]
+			elif (chamferType == 'TwoDistances'):
+				chamfers = [(idx + 1, dist1, dist2) for idx in edges]
+			else:
+				logWarning("   Chamfer '%s': %s not supported - using 2nd distances", chamferNode.name, chamferType)
+				chamfers = [(idx + 1, dist1, dist2) for idx in edges]
 			name = chamferNode.name
 			if (len(creators) > 1):
 				name += u"_%d" %(i + 1)
@@ -2800,6 +2806,17 @@ class FreeCADImporter(object):
 			self.addSolidBody(chamferNode, chamferGeo, body)
 
 		return
+
+	def getFilletsContantR(self, fx, constantR):
+		fillets = []
+		sets = constantR.get('sets')
+		for set in sets:
+			edges        = self.getEdgesFromProxy(fx, set.get('edges'))# EdgeCollectionProxy
+			radius       = getMM(set.get('radius'))       # Parameter
+			# mode = set.get('select')                      # FilletConstantRSelectMode
+			# isG2 = set.get('continuityG2')	              # ParameterBoolean
+			fillets += [(idx + 1, radius, radius) for idx in edges]
+		return fillets
 
 	def Create_FxFillet(self, filletNode):
 		properties = filletNode.get('properties')
@@ -2820,6 +2837,17 @@ class FreeCADImporter(object):
 		# = getProperty(properties, 0x0E) # None (always)
 		# = getProperty(properties, 0x0F) # SolidBody 'Solid1'
 		# = getProperty(properties, 0x10) # SolidBody 'Solid1'
+
+		fillets = []
+		if (constantR is not None):
+			## collect all fillest with constant radius
+			fillets += self.getFilletsContantR(filletNode, constantR)
+#		if (variableR is not None):
+#		FreeCAD.ActiveDocument.addObject("Part::Fillet","Fillet")
+#		FreeCAD.ActiveDocument.Fillet.Base = FreeCAD.ActiveDocument.Revolution
+#		__fillets__.append((3,1.00,2.00))
+#		FreeCAD.ActiveDocument.Fillet.Edges = __fillets__
+		del fillets
 
 #		self.addSolidBody(filletNode, filletGeo, body)
 #		hide(bases)

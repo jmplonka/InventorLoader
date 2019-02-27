@@ -1049,7 +1049,7 @@ class FeatureNode(DataNode):
 				if (p3 == 'Enum'):                  return 'Split'
 				if (p2 == 'ParameterBoolean'):      return 'Fold'
 			if (p2 == 'ParameterBoolean'):          return 'SnapFit'
-		elif (p0 == 'FxFilletConstant'):
+		elif (p0 == 'FxFilletConstantR'):
 			p8 = self._getPropertyName(8)
 			if (p8 == 'ParameterBoolean'):          return 'Fillet'
 			if (p8 == 'Enum'):                      return 'Fillet'
