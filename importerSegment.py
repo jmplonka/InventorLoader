@@ -52,7 +52,7 @@ def dumpSat(nodeIdx, header, entities):
 			sat.write((u"%s " %(ntt.name)).encode('utf8'))
 			for c in ntt.chunks:
 				sat.write(c.__str__().encode('utf8'))
-			sat.write(u"\n")
+			sat.write(b'\n')
 
 def dumpHistory(nodeIdx, history, entities):
 	with open(u"%s/%04X_sat.history" %(getDumpFolder(), nodeIdx), 'wb') as dump:

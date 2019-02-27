@@ -62,7 +62,7 @@ def isFileValid(filename):
 
 def releaseMemory():
 	importerUtils._thumbnail = None
-	Acis.clearEntities()
+	Acis.releaseMemory()
 	importerClasses.releaseModel()
 
 def insert(filename, docname, skip = [], only = [], root = None):

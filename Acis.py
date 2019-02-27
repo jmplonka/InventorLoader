@@ -154,14 +154,15 @@ scale   = 1.0
 
 version = 7.0
 
-subtypeTableCurves      = []
-subtypeTablePCurves     = []
-subtypeTableSurfaces    = {}
-invSubtypeTableSurfaces = {}
-nameMtchAttr            = {}
-references              = {}
-_refs                   = {} # dict of AcisRefs
-_dcIdxAttributes        = {} # dict of an attribute list
+subtypeTableCurves   = []
+subtypeTablePCurves  = []
+subtypeTableSurfaces = {}
+references           = {}
+_invSubTypTblSurfLst = {}
+_nameMtchAttr        = {}
+_refs                = {} # dict of AcisRefs
+_dcIdxAttributes     = {} # dict of an attribute list
+_header              = None
 
 def getSatRefs():
 	global _refs
@@ -176,8 +177,6 @@ def _getStr_(data, offset, end):
 	if (sys.version_info.major < 3):
 		txt = txt.encode(ENCODING_FS).decode("utf8")
 	return txt, end
-
-_currentEntityId = -2
 
 def COS(x):        return (cos(x))
 def COSH(x):       return (cosh(x))
@@ -226,7 +225,6 @@ def MAX(*x):       return max(x)
 def DCUR(c, x):     return c.parameter(x)
 def DSURF(c, u, v): return c.parameter(u, v)
 
-_header = None
 def getHeader():
 	global _header
 	return _header
@@ -267,16 +265,16 @@ class Law(object):
 		return None
 
 def init():
-	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, invSubtypeTableSurfaces, nameMtchAttr, _refs, _dcIdxAttributes
+	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, _invSubTypTblSurfLst, _nameMtchAttr, _refs, _dcIdxAttributes
 
-	subtypeTableCurves      = []
-	subtypeTablePCurves     = []
-	subtypeTableSurfaces    = {}
-	invSubtypeTableSurfaces = {}
-	nameMtchAttr            = {}
-	references              = {}
-	_refs                   = {}
-	_dcIdxAttributes        = {}
+	subtypeTableCurves   = []
+	subtypeTablePCurves  = []
+	subtypeTableSurfaces = {}
+	_invSubTypTblSurfLst = {}
+	_nameMtchAttr        = {}
+	references           = {}
+	_refs                = {}
+	_dcIdxAttributes     = {}
 
 def addSubtypeNodeCurve(curve):
 	global subtypeTableCurves
@@ -288,11 +286,11 @@ def addSubtypeNodePCurve(pcurve):
 
 def addSubtypeNodeSurface(surface, index):
 	global subtypeTableSurfaces
-	global invSubtypeTableSurfaces
+	global _invSubTypTblSurfLst
 
 	entityID = surface.index
 	subtypeTableSurfaces[index] = surface
-	invSubtypeTableSurfaces[entityID] = index
+	_invSubTypTblSurfLst[entityID] = index
 
 def getSubtypeNodeCurve(index):
 	global subtypeTableCurves
@@ -313,13 +311,13 @@ def getSubtypeNodeSurfaces(index):
 	return subtypeTableSurfaces.get(index, None)
 
 def clearEntities():
-	global subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces
-	global references
+	global subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, _invSubTypTblSurfLst, _nameMtchAttr, references
+
 	subtypeTableCurves[:] = []
 	subtypeTablePCurves[:] = []
 	subtypeTableSurfaces.clear()
-	invSubtypeTableSurfaces.clear()
-	nameMtchAttr.clear()
+	_invSubTypTblSurfLst.clear()
+	_nameMtchAttr.clear()
 	references.clear()
 
 def setScale(value):
@@ -1202,11 +1200,11 @@ def getBlendValues(chunks, index):
 	raise Exception("Unknown BlendValue %s!" %(name))
 
 def addSurfaceDefs(surface, defs):
-	global invSubtypeTableSurfaces
+	global _invSubTypTblSurfLst
 
 	if (isinstance(surface, SurfaceSpline)):
 		if (not hasattr(surface, 'ref')):
-			if (surface.index not in invSubtypeTableSurfaces):
+			if (surface.index not in _invSubTypTblSurfLst):
 				defs.append(surface)
 		for srf in surface.surfaces:
 			addSurfaceDefs(srf, defs)
@@ -1219,8 +1217,17 @@ def addCurveSurfaceDefs(curve, defs):
 		addSurfaceDefs(srf, defs)
 
 def getNameMatchAttributes():
-	global nameMtchAttr
-	return nameMtchAttr
+	global _nameMtchAttr
+	return _nameMtchAttr
+
+def releaseMemory():
+	global _refs, _dcIdxAttributes, _header
+
+	clearEntities()
+
+	_refs.clear()
+	_dcIdxAttributes.clear()
+	_header  = None
 
 class BDY_GEOM(object):
 	def __init__(self, svId):
@@ -1469,22 +1476,14 @@ class IndexMappings(object):
 		self.attributes = []
 	def append(self, attr):
 		self.attributes.append(attr)
-	def getCurve(self):
-		curves = []
+	def getEdges(self):
+		edges = {}
 		for a in self.attributes:
 			owner = a.getOwner()
 			if (isinstance(owner, Edge)):
-				curves.append(owner.getCurve())
-		assert len(curves) > 0
-		return curves[0]
-	def getPoints(self):
-		points = []
-		for a in self.attributes:
-			owner = a.getOwner()
-			if (isinstance(owner, Vertex)):
-				points.append(owner.getPosition())
-		assert len(points) > 0
-		return points
+				if (owner.index not in edges):
+					edges[owner.index] = owner
+		return edges.values()
 class AsmHeader(object): pass
 class BeginOfAcisHistoryData(object): pass
 class DeltaState(object): pass
@@ -1499,9 +1498,6 @@ class Entity(object):
 		self.history = None
 
 	def set(self, entity):
-		global _currentEntityId
-		_currentEntityId = entity.index
-
 		try:
 			references[entity.index] = self
 			self._attrib, i = getRefNode(entity, 0, None)
@@ -1887,6 +1883,13 @@ class Edge(Topology):
 	def getEnd(self):    return None if (self._end   is None) else self._end.node.getPosition()
 	def getParent(self): return None if (self._owner is None) else self._owner.node
 	def getCurve(self):  return None if (self._curve is None) else self._curve.node
+	def getPoints(self):
+		points = []
+		ptStart = None if (self._start is None) else self._start.node
+		if (ptStart is not None): points.append(ptStart.getPosition())
+		ptEnd = None if (self._end   is None) else self._end.node
+		if ((ptEnd is not None) and (ptEnd.index != ptStart.index)): points.append(ptEnd.getPosition())
+		return points
 class EdgeTolerance(Edge):
 	def __init__(self):
 		super(EdgeTolerance, self).__init__()
@@ -2043,6 +2046,8 @@ class Curve(Geometry):
 			if (isinstance(start, VEC)):
 				self.shape = createLine(start, end)
 		return self.shape
+	def __str__(self):  return self.__class__.__name__
+
 class CurveComp(Curve):    # compound curve "compcurv-curve"
 	def __init__(self):
 		super(CurveComp, self).__init__('compcurv')
@@ -2064,7 +2069,6 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 		self.ratio  = MIN_0
 		self.range  = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 	def __str__(self): return "Curve-Ellipse: center=%s, dir=%s, major=%s, ratio=%g, range=%s" %(self.center, self.normal, self.major, self.ratio, self.range)
-	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i = getLocation(chunks, index)
 		self.normal, i = getVector(chunks, i)
@@ -2468,8 +2472,7 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 		self.root  = CENTER
 		self.dir   = CENTER
 		self.range = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
-	def __str__(self): return "Curve-Straight: root=%s, dir=%s, range=%s" %(self.root, self.dir, self.range)
-	def __repr__(self): return self.__str__()
+	def __str__(self): return "Line: root=%s, dir=%s, range=%s" %(self.root, self.dir, self.range)
 	def setSubtype(self, chunks, index):
 		self.root, i  = getLocation(chunks, index)
 		self.dir, i   = getVector(chunks, i)
@@ -2508,7 +2511,6 @@ class SurfaceCone(Surface):
 		self.urange = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 	def __str__(self): return "Surface-Cone: center=%s, axis=%s, radius=%g, ratio=%g, semiAngle=%g" %(self.center, self.axis, self.major.Length, self.ratio, degrees(asin(self.sine)))
-	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i = getLocation(chunks, index) # Cartesian Point 'Origin'
 		self.axis, i   = getVector(chunks, i)       # Direction 'Center Axis'
@@ -2561,7 +2563,6 @@ class SurfacePlane(Surface):
 		self.urange   = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.vrange   = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
 	def __str__(self): return "Surface-Plane: root=%s, normal=%s, uvorigin=%s" %(self.root, self.normal, self.uvorigin)
-	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.root, i     = getLocation(chunks, index)
 		self.normal, i   = getVector(chunks, i)
@@ -2586,7 +2587,6 @@ class SurfaceSphere(Surface):
 		self.urange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange   = Intervall(Range('I', MIN_PI2), Range('I', MAX_PI2))
 	def __str__(self): return "Surface-Sphere: center=%s, radius=%g, uvorigin=%s, pole=%s" %(self.center, self.radius, self.uvorigin, self.pole)
-	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i   = getLocation(chunks, index)
 		self.radius, i   = getLength(chunks, i)
@@ -3405,9 +3405,8 @@ class SurfaceSpline(Surface):
 		self.sense, i  = getSense(chunks, index)
 		block, i       = getBlock(chunks, i)
 		if (self.entity is None):
-			global _currentEntityId
 			self.entity = AcisEntity('spline')
-			self.entity.index = _currentEntityId
+			self.entity.index = self.index
 			if (self.sense == 'forward'):
 				self.entity.chunks = [ACIS_CONST_CHUNKS[TAG_FALSE]] + block
 			else:
@@ -3531,7 +3530,6 @@ class SurfaceTorus(Surface):
 		self.urange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
 	def __str__(self): return "Surface-Torus: center=%s, normal=%s, R=%g, r=%g, uvorigin=%s" %(self.center, self.axis, self.major, self.minor, self.uvorigin)
-	def __repr__(self): return self.__str__()
 	def setSubtype(self, chunks, index):
 		self.center, i   = getLocation(chunks, index)
 		self.axis, i     = getVector(chunks, i)
@@ -3959,15 +3957,15 @@ class AttribNamingMatchingNMxBrepTagNameGenerated(AttribNamingMatchingNMxBrepTag
 	# n1, n2, n3
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameGenerated, self).__init__()
 	def set(self, entity):
-		global nameMtchAttr
+		global _nameMtchAttr
 		i = super(AttribNamingMatchingNMxBrepTagNameGenerated, self).set(entity)
 		self.key, i = getInteger(entity.chunks, i)
 		self.n2,  i = getInteger(entity.chunks, i)
 		self.n3,  i = getInteger(entity.chunks, i)
-		lst = nameMtchAttr.get(self.key, None)
+		lst = _nameMtchAttr.get(self.key, None)
 		if (lst is None):
 			lst = []
-			nameMtchAttr[self.key] = lst
+			_nameMtchAttr[self.key] = lst
 		lst.append(self)
 		return i
 class AttribNamingMatchingNMxBrepTagNameGrillSplitFace(AttribNamingMatchingNMxBrepTagName):

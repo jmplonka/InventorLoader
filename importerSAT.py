@@ -16,10 +16,37 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 LENGTH_TEXT = re.compile('[ \t]*(\d+) +(.*)')
 NEXT_TOKEN  = re.compile('[ \t]*([^ \t]+) +(.*)')
+
+TokenTranslations = {
+	'0x0A':       0x0A,
+	'0x0B':       0x0B,
+	'reversed':   0x0A,
+	'forward':    0x0B,
+	'reverse_v':  0x0A,
+	'forward_v':  0x0B,
+	'in':         0x0A,
+	'out':        0x0B,
+	'double':     0x0A,
+	'single':     0x0B,
+	'rotate':     0x0A,
+	'no_rotate':  0x0B,
+	'reflect':    0x0A,
+	'no_reflect': 0x0B,
+	'shear':      0x0A,
+	'no_shear':   0x0B,
+	'F':          0x0A,
+	'I':          0x0B,
+	'{':          0x0F,
+	'}':          0x10,
+	'#':          0x11
+}
+
 lumps = 0
 wires = 0
 
 _fileName = None
+
+_entities = None
 
 class Tokenizer(object):
 	def __init__(self, content):
@@ -83,34 +110,10 @@ class Tokenizer(object):
 def int2version(num):
 	return float("%d.%d" %(num / 100, num % 100))
 
-TokenTranslations = {
-	'0x0A':       0x0A,
-	'0x0B':       0x0B,
-	'reversed':   0x0A,
-	'forward':    0x0B,
-	'reverse_v':  0x0A,
-	'forward_v':  0x0B,
-	'in':         0x0A,
-	'out':        0x0B,
-	'double':     0x0A,
-	'single':     0x0B,
-	'rotate':     0x0A,
-	'no_rotate':  0x0B,
-	'reflect':    0x0A,
-	'no_reflect': 0x0B,
-	'shear':      0x0A,
-	'no_shear':   0x0B,
-	'F':          0x0A,
-	'I':          0x0B,
-	'{':          0x0F,
-	'}':          0x10,
-	'#':          0x11
-}
-
-_entities = None
 def getEntities():
 	global _entities
 	return _entities
+
 def setEntities(entities):
 	global _entities
 	if (entities is None):

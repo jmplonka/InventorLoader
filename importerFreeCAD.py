@@ -505,12 +505,14 @@ def checkPoints(fcEdge, acisPoints):
 
 def checkCircles(fcCurve, acisCurve):
 	if (not isEqual1D(fcCurve.Radius, acisCurve.major.Length)): return False
-	if (not isEqual(fcCurve.Axis, acisCurve.normal)) and (not isEqual(fcCurve.Axis, -acisCurve.normal)): return False
+	if (not (isEqual(fcCurve.Axis, acisCurve.normal) or isEqual(fcCurve.Axis, acisCurve.normal.negative()))): return False
 	if (not isEqual(fcCurve.Center, acisCurve.center)): return False
 	return True
 
-def isEqualCurve(fcEdge, acisCurve, acisPoints):
+def isEqualCurve(fcEdge, acisEdge):
 	c = fcEdge.Curve
+	acisCurve = acisEdge.getCurve()
+	acisPoints = acisEdge.getPoints()
 	cn = c.__class__.__name__
 	if (isinstance(acisCurve, Acis.CurveStraight)):
 		if (cn in ['Line', 'LineSegment']):
@@ -534,12 +536,22 @@ def isEqualCurve(fcEdge, acisCurve, acisPoints):
 		if (cn in []): pass
 	return False
 
-def findFcEdgeIndex(fcShape, acisCurve, acisPoints):
+def findFcEdgeIndex(fcShape, acisEdges):
 	for idx, fcEdge in enumerate(fcShape.Edges):
 		if (not fcEdge.Degenerated):
-			if (isEqualCurve(fcEdge, acisCurve, acisPoints)):
-				return idx
+			for acisEdge in acisEdges:
+				if (isEqualCurve(fcEdge, acisEdge)):
+					return idx
 
+	return None
+
+def combineGeometries(geometries, fxNode):
+	if (len(geometries) > 1):
+		geometry = self.createEntity(fxNode, 'Part::MultiFuse')
+		geometry.Shapes = geometries
+		return geometry
+	if (len(geometries) == 1):
+		return geometries[0]
 	return None
 
 class FreeCADImporter(object):
@@ -1024,31 +1036,22 @@ class FreeCADImporter(object):
 				logWarning(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
-	def getIndexdEdges(self, fcShape, matchedEdge):
-		edges = []
-
-		for idxRef in matchedEdge.get('indexRefs'):
-			edgeId = matchedEdge.segment.indexNodes[idxRef]
-			assert (edgeId.typeName == 'EdgeId'),  u"found '%s'!" %(edgeId.typeName)
-			acis = getModel().getBRep().getDcSatAttributes() #  ref. importerSegment.Read_F645595C
-			edgeAttrs  = acis[edgeId.get('index')]
-			acisCurve  = edgeAttrs.getCurve()
-			acisPoints = edgeAttrs.getPoints()
-
-			edgeIdx = findFcEdgeIndex(fcShape, acisCurve, acisPoints)
-			if (edgeIdx is not None):
-				edges.append(edgeIdx)
-
-		return edges
-
 	def getEdgesFromProxy(self, fxCreator, proxy):
 		all_edges   = []
 		if (proxy is not None):
+			shape = fxCreator.sketchEntity.Shape
 			self.getEntity(fxCreator) # ensure that the creator is already available!
+			acis = getModel().getBRep().getDcSatAttributes() #  ref. importerSegment.Read_F645595C
 			for matchedEdge in proxy.get('edges'):
 				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-				edges = self.getIndexdEdges(fxCreator.sketchEntity.Shape, matchedEdge)
-				all_edges += edges
+				for idxRef in matchedEdge.get('indexRefs'):
+					edgeId = matchedEdge.segment.indexNodes[idxRef]
+					assert (edgeId.typeName == 'EdgeId'),  u"found '%s'!" %(edgeId.typeName)
+					edgeAttrs  = acis[idxRef]
+					acisEdges  = edgeAttrs.getEdges()
+					edgeIdx = findFcEdgeIndex(shape, acisEdges)
+					if (edgeIdx is not None):
+						all_edges.append(edgeIdx)
 		return all_edges
 
 	def getCreatorsFromProxy(self, proxy):
@@ -2183,7 +2186,6 @@ class FreeCADImporter(object):
 		countRef     = getProperty(properties, 0x0C)
 		angleRef     = getProperty(properties, 0x0D)
 		axisData     = getProperty(properties, 0x0E)
-		patternGeo   = None
 
 		if (len(participants) == 0):
 			participants = []
@@ -2219,9 +2221,7 @@ class FreeCADImporter(object):
 					setDefaultViewObjectValues(patternGeo)
 					geos.append(patternGeo)
 				namePart = '%s_%d' % (name, len(geos))
-			if (len(geos) > 1):
-				patternGeo = self.createEntity(patternNode, 'Part::MultiFuse')
-				patternGeo.Shapes = geos
+			patternGeo = combineGeometries(geos, patternNode)
 			if (patternGeo is not None):
 				if (cutGeo):
 					cutGeo.Tool = patternGeo
@@ -2256,7 +2256,6 @@ class FreeCADImporter(object):
 		adjustDir2Ref = getProperty(properties, 0x17 + offset)
 		midplane1Ref  = getProperty(properties, 0x18 + offset)
 		midplane2Ref  = getProperty(properties, 0x19 + offset)
-		patternGeo    = None
 
 		if (len(participants) == 0):
 			participants = []
@@ -2302,9 +2301,7 @@ class FreeCADImporter(object):
 					setDefaultViewObjectValues(patternGeo)
 					geos.append(patternGeo)
 				namePart = '%s_%d' % (name, len(geos))
-			if (len(geos) > 1):
-				patternGeo = self.createEntity(patternNode, 'Part::MultiFuse')
-				patternGeo.Shapes = geos
+			patternGeo = combineGeometries(geos, patternNode)
 			if (patternGeo is not None):
 				if (cutGeo):
 					cutGeo.Tool = patternGeo
@@ -2751,23 +2748,29 @@ class FreeCADImporter(object):
 		angle        = getProperty(properties, 0x0A) # Angle
 		body         = getProperty(properties, 0x0B) # SolidBody
 
-		dist1  = getMM(dim1) # 1st distance
-		dist2  = getMM(dim2) # 2nd distance
+		dist1    = getMM(dim1) # 1st distance
+		dist2    = getMM(dim2) # 2nd distance
 		creators = self.getCreatorsFromProxy(edgesProxies)
-		name     = chamferNode.name
+		geos     = []
+
 		if (len(creators) > 1): name = u"%s_0" %(name)
 
 		for i, creator in enumerate(creators):
 			fx = creators[creator]
 			edges = self.getEdgesFromProxy(fx, edgesProxies)
-			chamfers = [(idx, dist1, dist2) for idx in edges]
+			chamfers = [(idx + 1, dist1, dist2) for idx in edges]
+			name = chamferNode.name
+			if (len(creators) > 1):
+				name += u"_%d" %(i + 1)
 			chamferGeo = newObject(self.doc, 'Part::Chamfer', name)
 			chamferGeo.Base  = fx.sketchEntity
 			chamferGeo.Edges = chamfers
-			name = u"%s_%d" %(name, i + 1)
+			geos.append(chamferGeo)
 			hide(fx.sketchEntity)
 
-		self.addSolidBody(chamferNode, chamferGeo, body)
+		chamferGeo = combineGeometries(geos, chamferNode)
+		if (chamferGeo is not None):
+			self.addSolidBody(chamferNode, chamferGeo, body)
 
 		return
 
