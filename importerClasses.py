@@ -1011,7 +1011,6 @@ class FeatureNode(DataNode):
 			if (p4 == 'ChamferType'):               return 'Chamfer'
 			if (p1 == 'Parameter'):                 return 'Bend'
 			if (p1 == 'FxExtend'):                  return 'Extend'
-			if (p1 is None):                        return 'CornerChamfer'
 		elif (p0 == 'SurfaceBodies'):
 			if (p1 == 'ObjectCollection'):          return 'Combine'
 			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'

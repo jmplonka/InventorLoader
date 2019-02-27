@@ -3059,10 +3059,12 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_4949374A(self, node):
-		i = self.ReadCntHdr3S(node)
-		i = node.ReadUInt16(i, 'u32_0')
+		i = self.ReadCntHdr3S(node, 'Enum')
+		i = node.ReadUInt32(i, 'type')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'value')
+		node.set('Enum', 'FilletConstantRSelectMode')
+		node.set('Values', ['Edge', 'Loop', 'Feature'])
 		return i
 
 	def Read_4AC78A71(self, node):

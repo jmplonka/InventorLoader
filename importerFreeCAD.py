@@ -574,14 +574,6 @@ def findFcEdgeIndex(fcShape, acisEdges):
 
 	return None
 
-def combineGeometries(geometries, fxNode):
-	if (len(geometries) > 1):
-		geometry = self.createEntity(fxNode, 'Part::MultiFuse')
-		geometry.Shapes = geometries
-		return geometry
-	if (len(geometries) == 1):
-		return geometries[0]
-	return None
 
 class FreeCADImporter(object):
 	FX_EXTRUDE_NEW          = 0x0001
@@ -1194,6 +1186,14 @@ class FreeCADImporter(object):
 				geos.append(fxGeo)
 		return geos
 
+	def combineGeometries(self, geometries, fxNode):
+		if (len(geometries) > 1):
+			geometry = self.createEntity(fxNode, 'Part::MultiFuse')
+			geometry.Shapes = geometries
+			return geometry
+		if (len(geometries) == 1):
+			return geometries[0]
+		return None
 ########################
 	def addSketch_Geometric_Fix2D(self, constraintNode, sketchObj):
 		'''
@@ -2251,7 +2251,7 @@ class FreeCADImporter(object):
 					setDefaultViewObjectValues(patternGeo)
 					geos.append(patternGeo)
 				namePart = '%s_%d' % (name, len(geos))
-			patternGeo = combineGeometries(geos, patternNode)
+			patternGeo = self.combineGeometries(geos, patternNode)
 			if (patternGeo is not None):
 				if (cutGeo):
 					cutGeo.Tool = patternGeo
@@ -2331,7 +2331,7 @@ class FreeCADImporter(object):
 					setDefaultViewObjectValues(patternGeo)
 					geos.append(patternGeo)
 				namePart = '%s_%d' % (name, len(geos))
-			patternGeo = combineGeometries(geos, patternNode)
+			patternGeo = self.combineGeometries(geos, patternNode)
 			if (patternGeo is not None):
 				if (cutGeo):
 					cutGeo.Tool = patternGeo
@@ -2760,9 +2760,6 @@ class FreeCADImporter(object):
 
 		return
 
-	def Create_FxCornerChamfer(self, chamferNode):
-		return self.Create_FxChamfer(chamferNode)
-
 	def Create_FxChamfer(self, chamferNode):
 		properties   = chamferNode.get('properties')
 		edgesProxies = getProperty(properties, 0x00) # edge proxies
@@ -2798,7 +2795,7 @@ class FreeCADImporter(object):
 			geos.append(chamferGeo)
 			hide(fx.sketchEntity)
 
-		chamferGeo = combineGeometries(geos, chamferNode)
+		chamferGeo = self.combineGeometries(geos, chamferNode)
 		if (chamferGeo is not None):
 			self.addSolidBody(chamferNode, chamferGeo, body)
 
@@ -3598,8 +3595,11 @@ class FreeCADImporter(object):
 	def Create_DerivedPart(self, node):     return unsupportedNode(node)
 	def Create_Text2D(self, node):          return unsupportedNode(node)
 
-	def Create_FxUnknown(self, unknownNode):
-		logError(u"    Can't process unknown '%s' - %s is not supported!", unknownNode.name, unknownNode.getSubTypeName())
+	def Create_FxUnknown(self, fxNode):
+		logWarning(u"    Can't process unknown Feature '%s' - probably an unsupported iFeature:", fxNode.name)
+		for idx, property in enumerate(fxNode.get('properties')):
+			if (property is not None):
+				logWarning(u"[%02d] - %s", idx, property)
 		return
 
 	def Create_Feature(self, fxNode):
