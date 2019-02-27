@@ -509,31 +509,60 @@ def checkCircles(fcCurve, acisCurve):
 	if (not isEqual(fcCurve.Center, acisCurve.center)): return False
 	return True
 
+def checkEllipses(fcCurve, acisCurve):
+	if (not isEqual1D(fcCurve.MajorRadius, acisCurve.major.Length)): return False
+	if (not isEqual1D(fcCurve.MinorRadius, acisCurve.major.Length * acisCurve.ratio)): return False
+	if (not (isEqual(fcCurve.Axis, acisCurve.normal) or isEqual(fcCurve.Axis, acisCurve.normal.negative()))): return False
+	if (not isEqual(fcCurve.Center, acisCurve.center)): return False
+	return True
+
+def checkSplines(fcCurve, acisCurve):
+	# TODO
+	return False
+
+def checkProjectedCurves(fcCurve, acisCurve):
+	# TODO
+	return False
+
+def checkComposedCurves(fcCurve, acisCurve):
+	# TODO
+	return False
+
+def checkDegenerateCurves(fcCurve, acisCurve):
+	# TODO
+	return False
+
+def checkDegenerateCurves(fcCurve, acisCurve):
+	# TODO
+	return False
+
 def isEqualCurve(fcEdge, acisEdge):
 	c = fcEdge.Curve
-	acisCurve = acisEdge.getCurve()
 	acisPoints = acisEdge.getPoints()
+	if (not checkPoints(fcEdge, acisPoints)): return False
+	acisCurve = acisEdge.getCurve()
 	cn = c.__class__.__name__
 	if (isinstance(acisCurve, Acis.CurveStraight)):
-		if (cn in ['Line', 'LineSegment']):
-			if (checkPoints(fcEdge, acisPoints)):
-				pass
-	elif (isinstance(acisCurve, Acis.CurveEllipse)):
+		return (cn in ['Line', 'LineSegment'])
+	if (isinstance(acisCurve, Acis.CurveEllipse)):
 		if (isEqual1D(acisCurve.ratio, 1)):
 			if (cn in ['Circle', 'Arc', 'ArcOfCircle']):
-				if (checkPoints(fcEdge, acisPoints)):
-					if (checkCircles(fcEdge.Curve, acisCurve)):
-						return True
+				return (checkCircles(fcEdge.Curve, acisCurve))
 		else:
-			if (cn in ['Ellipse', 'ArcOfEllipse', 'ArcOfConic']): pass
-	elif (isinstance(acisCurve, Acis.CurveComp)):
-		if (cn in []): pass
-	elif (isinstance(acisCurve, Acis.CurveDegenerate)):
-		if (cn in []): pass
+			if (cn in ['Ellipse', 'ArcOfEllipse', 'ArcOfConic']):
+				return (checkEllipses(fcEdge.Curve, acisCurve))
 	elif (isinstance(acisCurve, Acis.CurveInt)):
-		if (cn in []): pass
+		if (cn in []):
+			return (checkSplines(fcEdge.Curve, acisCurve))
 	elif (isinstance(acisCurve, Acis.CurveP)):
-		if (cn in []): pass
+		if (cn in []):
+			return (checkProjectedCurves(fcEdge.Curve, acisCurve))
+	elif (isinstance(acisCurve, Acis.CurveComp)):
+		if (cn in []):
+			return (checkComposedCurves(fcEdge.Curve, acisCurve))
+	elif (isinstance(acisCurve, Acis.CurveDegenerate)):
+		if (cn in []):
+			return (checkDegenerateCurves(fcEdge.Curve, acisCurve))
 	return False
 
 def findFcEdgeIndex(fcShape, acisEdges):
@@ -1039,19 +1068,20 @@ class FreeCADImporter(object):
 	def getEdgesFromProxy(self, fxCreator, proxy):
 		all_edges   = []
 		if (proxy is not None):
-			shape = fxCreator.sketchEntity.Shape
-			self.getEntity(fxCreator) # ensure that the creator is already available!
-			acis = getModel().getBRep().getDcSatAttributes() #  ref. importerSegment.Read_F645595C
-			for matchedEdge in proxy.get('edges'):
-				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-				for idxRef in matchedEdge.get('indexRefs'):
-					edgeId = matchedEdge.segment.indexNodes[idxRef]
-					assert (edgeId.typeName == 'EdgeId'),  u"found '%s'!" %(edgeId.typeName)
-					edgeAttrs  = acis[idxRef]
-					acisEdges  = edgeAttrs.getEdges()
-					edgeIdx = findFcEdgeIndex(shape, acisEdges)
-					if (edgeIdx is not None):
-						all_edges.append(edgeIdx)
+			if (fxCreator.sketchEntity is not None):
+				shape = fxCreator.sketchEntity.Shape
+				self.getEntity(fxCreator) # ensure that the creator is already available!
+				acis = getModel().getBRep().getDcSatAttributes() #  ref. importerSegment.Read_F645595C
+				for matchedEdge in proxy.get('edges'):
+					assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
+					for idxRef in matchedEdge.get('indexRefs'):
+						edgeId = matchedEdge.segment.indexNodes[idxRef]
+						assert (edgeId.typeName == 'EdgeId'),  u"found '%s'!" %(edgeId.typeName)
+						edgeAttrs  = acis[idxRef]
+						acisEdges  = edgeAttrs.getEdges()
+						edgeIdx = findFcEdgeIndex(shape, acisEdges)
+						if (edgeIdx is not None):
+							all_edges.append(edgeIdx)
 		return all_edges
 
 	def getCreatorsFromProxy(self, proxy):
@@ -3569,7 +3599,7 @@ class FreeCADImporter(object):
 	def Create_Text2D(self, node):          return unsupportedNode(node)
 
 	def Create_FxUnknown(self, unknownNode):
-		logWarning(u"    Can't process unknown Feature '%s' - probably an unsupported iFeature!", unknownNode.name)
+		logError(u"    Can't process unknown '%s' - %s is not supported!", unknownNode.name, unknownNode.getSubTypeName())
 		return
 
 	def Create_Feature(self, fxNode):

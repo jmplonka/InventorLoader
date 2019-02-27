@@ -1007,7 +1007,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'FxExtend'):                  return 'Extend'
 			return 'Rip'
 		if (p0 == 'EdgeCollectionProxy'):
-			p4 = self._getPropertyName(4)
+			p4 = self._getPropertyEnumName(4)
 			if (p4 == 'ChamferType'):               return 'Chamfer'
 			if (p1 == 'Parameter'):                 return 'Bend'
 			if (p1 == 'FxExtend'):                  return 'Extend'

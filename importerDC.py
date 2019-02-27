@@ -4453,7 +4453,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_7DAA0032(self, node): # ChamferDefinitionType enum
-		i = self.ReadHeaderEnum(node, 'ChamferType', {0: 'Distance', 1: 'DistanceAnAngle', 2: 'TwoDistances'})
+		i = self.ReadHeaderEnum(node, 'ChamferType', {0: 'Distance', 1: 'DistanceAndAngle', 2: 'TwoDistances'})
 		i += 4 # skip 00 00 00 00
 		return i
 
