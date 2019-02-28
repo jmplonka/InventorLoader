@@ -1177,26 +1177,26 @@ def getBlendValues(chunks, index):
 		ct, i  = getChamferType(chunks, i)  # 0x0A = radius, 0x0B = const
 		bv, i  = getBlendValues(chunks, i)  # two_ends ...
 		return (name, c, t, a, [s], bsc, r, (vc, ct, bv)), i
-	if (name == 'interp'):
+	if (name == 'interp'): # Fillets variant radii
 		a, i   = getFloats(chunks, i, 1)
 		s, i   = getLength(chunks, i)
 		bsc, i = readBS2Curve(chunks, i)
-		n, i   = getInteger(chunks, i)
-		m, i   = getInteger(chunks, i)
-		r, i   = getFloat(chunks, i)
-		a1, i  = getFloats(chunks, i, 3)
-		v1, i  = getLocation(chunks, i)
-		d1, i  = getVector(chunks, i)
-		r1, i  = getFloat(chunks, i)
-		a2, i  = getFloats(chunks, i, 3)
-		v2, i  = getLocation(chunks, i)
-		d2, i  = getVector(chunks, i)
-		b1, i  = getInteger(chunks, i)     # enum value
-		if (b1):
+		n, i   = getInteger(chunks, i)   # Enum
+		k, i   = getInteger(chunks, i)   # number of points
+		lst = []
+		for j in range(k):
+			u_j, i = getFloat(chunks, i)     # u-value of the radius
+			r_j, i = getLength(chunks, i)    # Radius
+			t_j, i = getFloats(chunks, i, 2) # Doubles???
+			p_j, i = getLocation(chunks, i)  # Position
+			n_j, i = getVector(chunks, i)    # Axis
+			lst.append((u_j, r_j, t_j, p_j, n_j))
+		b, i  = getInteger(chunks, i)   # Enum
+		if (b):
 			a3, i = getFloats(chunks, i, 2)
 		else:
-			a3 = [0.0, 0.0]
-		return (name, c, t, a, [s], bsc, r, [(a1, v1, d1, r1),(a2, v2, d2, b1, a3)]), i
+			a3 = None
+		return (name, c, t, a, [s], bsc, r, lst, a3), i
 	raise Exception("Unknown BlendValue %s!" %(name))
 
 def addSurfaceDefs(surface, defs):
