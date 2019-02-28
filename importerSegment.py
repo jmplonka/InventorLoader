@@ -663,7 +663,7 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'selectedKey')
 		i += 1 # skip 00
-		i = node.ReadSInt32(i, 's32_0')
+		i = node.ReadSInt32(i, 'delta_state') # active delta-state
 		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2018): i += 1 # skip 00
 		i = node.ReadChildRef(i, 'history')

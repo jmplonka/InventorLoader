@@ -1478,17 +1478,61 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_1B48E9DA(self, node): # FilletFeature {7DE603B3-DAA7-4364-BC8B-77295B53D1DB}
-		i = self.ReadCntHdr3S(node, 'FxFilletConstantR')
+	def Read_1B48E9DA(self, node): # Fillet sets with constant radii
+		i = self.ReadCntHdr3S(node, 'FxFilletEdgeSetsConstantR')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'sets')
+		return i
+
+	def Read_CA7AA850(self, node): # Fillet sets with variable radii
+		i = self.ReadCntHdr3S(node, 'FxFilletEdgeSetsVariableR')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'sets')
+		return i
+
+	def Read_AAD64116(self, node): # Fillet set with constant radius
+		i = self.ReadCntHdr3S(node, 'FilletEdgeSetConstantR')
+		i = node.ReadCrossRef(i, 'edges')
+		i = node.ReadCrossRef(i, 'radius')
+		i = node.ReadCrossRef(i, 'select')
+		i = node.ReadCrossRef(i, 'continuityG1')
+		if (getFileVersion() > 2018): i += 4
+		return i
+
+	def Read_B799E9B2(self, node): # Fillet set with variable radiii
+		i = self.ReadHeaderContent(node, 'FilletVariableRadiusEdgeSet')
+		if (getFileVersion() > 2017): i += 4 # skip 0xFFFFFFFF (-1)
+		i = node.ReadCrossRef(i, 'edges')
+		i = node.ReadCrossRef(i, 'radii')
+		i = node.ReadCrossRef(i, 'continuityG1')
+		return i
+
+	def Read_BA6E3112(self, node): # Fillet edge with variable radii
+		i = self.ReadCntHdr3S(node, 'FilletEdgeVariableR')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'extrema') # start and end radius
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'additional') # additional radii -> FilletVariableRadius
+		return i
+
+	def Read_955501BC(self, node): # Fillets variable radius position
+		i = self.ReadHeaderContent(node, 'FilletIntermediateRadius')
+		if (getFileVersion() > 2018): i += 4 # ???
+		i = node.ReadCrossRef(i, 'edge')
+		i = node.ReadCrossRef(i, 'param')  # Parameter that controls the position of the point along the edge.
+		i = node.ReadCrossRef(i, 'radius')
+		return i
+
+	def Read_720E6C90(self, node):# Fillets variable radius position definition
+		i = self.ReadHeadersS32ss(node, 'FilletIntermediateRadiusDef')
+		i = node.ReadCrossRef(i, 'edge')
+		i = node.ReadCrossRef(i, 'param')  # Parameter that controls the position of the point along the edge.
+		i = node.ReadCrossRef(i, 'radius')
+		i = node.ReadCrossRef(i, 'def')    # -> FilletVariableRadius
 		return i
 
 	def Read_1C0E2EA7(self, node): # new in 2019
 		i = node.Read_Header0()
-		# AE,0B,00,80
+		# ref_2
 		# 00,00,00,00
 		# 09,02,00,00
-		# 63,04,00,80
+		# ref_1
 		# 00
 		return i
 
@@ -4066,14 +4110,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_B')
 		return i
 
-	def Read_720E6C90(self, node):
-		i = self.ReadHeadersS32ss(node)
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
-		i = node.ReadCrossRef(i, 'ref_4')
-		return i
-
 	def Read_723BA8B3(self, node):
 		i = node.Read_Header0()
 		return i
@@ -5534,14 +5570,6 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt16A(i, 9, 'a1')
 		return i
 
-	def Read_955501BC(self, node):
-		i = self.ReadHeaderContent(node)
-		if (getFileVersion() > 2018): i += 4 # ???
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadCrossRef(i, 'ref_3')
-		return i
-
 	def Read_9574000C(self, node): # Hole Annotation
 		i = self.ReadHeaderContent(node, 'AnnotationHole')
 		if (getFileVersion() > 2017): i += 4 # skip FF FF FF FF
@@ -6058,15 +6086,6 @@ class DCReader(EeDataReader):
 		i = self.ReadCntHdr3S(node)
 		return i
 
-	def Read_AAD64116(self, node): # FilletConstantRadiusEdgeSet
-		i = self.ReadCntHdr3S(node, 'FilletConstantRadiusEdgeSet')
-		i = node.ReadCrossRef(i, 'edges')
-		i = node.ReadCrossRef(i, 'radius')
-		i = node.ReadCrossRef(i, 'select')
-		i = node.ReadCrossRef(i, 'continuityG2')
-		if (getFileVersion() > 2018): i += 4
-		return i
-
 	def Read_ABD292FD(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'u32_0')
@@ -6478,14 +6497,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_1')
 		return i
 
-	def Read_B799E9B2(self, node): # FilletVariableRadiusEdgeSet
-		i = self.ReadHeaderContent(node, 'FilletVariableRadiusEdgeSet')
-		if (getFileVersion() > 2017): i += 4 # skip 0xFFFFFFFF (-1)
-		i = node.ReadCrossRef(i, 'edges')
-		i = node.ReadCrossRef(i, 'radii')
-		i = node.ReadCrossRef(i, 'value')
-		return i
-
 	def Read_B835A483(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUInt32A(i, 2, 'a0')
@@ -6523,12 +6534,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadCrossRef(i, 'ref_3')
 		i = self.skipBlockSize(i)
-		return i
-
-	def Read_BA6E3112(self, node): # FilletVariableRadiusEdges
-		i = self.ReadCntHdr3S(node, 'FilletVariableRadiusEdges')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'intermediateRadii')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
 	def Read_BB1DD5DF(self, node): # RDxVar
@@ -6782,11 +6787,6 @@ class DCReader(EeDataReader):
 
 	def Read_CA70D2C6(self, node): # ThreadType
 		i = self.ReadHeaderEnum(node, 'ThreadType', ['Depth','Full Depth','Through'])
-		return i
-
-	def Read_CA7AA850(self, node): # FxFilletVariable
-		i = self.ReadCntHdr3S(node, 'FxFilletVariable')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'radiusEdgeSets')
 		return i
 
 	def Read_CADC79F0(self, node):

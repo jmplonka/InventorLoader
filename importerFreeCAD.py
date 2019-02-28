@@ -8,7 +8,7 @@ import sys, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, impor
 from importerUtils   import *
 from importerClasses import *
 from importerSegNode import SecNode, SecNodeRef
-from math            import sqrt, fabs, tan, degrees, pi
+from math            import sqrt, tan, degrees, pi
 from FreeCAD         import Vector as VEC, Rotation as ROT, Placement as PLC, Version, ParamGet
 
 __author__     = 'Jens M. Plonka'
@@ -87,7 +87,10 @@ def createLine(p1, p2):
 	return PART_LINE(p1, p2)
 
 def createCircle(c, n, r):
-	return Part.Circle(p2v(c), n, r)
+	return Part.Circle(p2v(c), VEC(n), r)
+
+def createArc(p1, p2, p3):
+	return Part.ArcOfCircle(p2v(p1), p2v(p2), p2v(p3))
 
 def _initPreferences():
 	_enableConstraint('Sketch.Constraint.Geometric.AlignHorizontal', BIT_GEO_ALIGN_HORIZONTAL , True)
@@ -297,7 +300,7 @@ def getNominalValue(node):
 def getDirection(node, name, distance):
 	dir = node.get(name)
 	if (dir == 0): return 0.0
-	return distance * dir/fabs(dir)
+	return distance * dir/abs(dir)
 
 def getCountDir(length, count, direction, fitted):
 	if (length is None):    return 1, VEC()
@@ -1056,40 +1059,37 @@ class FreeCADImporter(object):
 				logWarning(u"    Error:  boundaryPatch (%04X): %s has no 'profile' property!", boundaryPatch.index, boundaryPatch.typeName)
 		return None
 
-	def getEdgesFromProxy(self, fxCreator, proxy):
-		all_edges   = []
-		if (proxy is not None):
-			if (fxCreator.sketchEntity is not None):
-				shape = fxCreator.sketchEntity.Shape
-				self.getEntity(fxCreator) # ensure that the creator is already available!
-				acis = getModel().getBRep().getDcSatAttributes() #  ref. importerSegment.Read_F645595C
-				for matchedEdge in proxy.get('edges'):
-					assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-					for idxRef in matchedEdge.get('indexRefs'):
-						edgeId = matchedEdge.segment.indexNodes[idxRef]
-						assert (edgeId.typeName == 'EdgeId'),  u"found '%s'!" %(edgeId.typeName)
-						edgeAttrs  = acis[idxRef]
-						acisEdges  = edgeAttrs.getEdges()
-						edgeIdx = findFcEdgeIndex(shape, acisEdges)
-						if (edgeIdx is not None):
-							all_edges.append(edgeIdx)
-		return all_edges
+	def getEdgeFromProxy(self, matchedEdge):
+		assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
+		acis = getModel().getBRep().getDcSatAttributes() #  ref. importerSegment.Read_F645595C
+		for idxRef in matchedEdge.get('indexRefs'):
+			edgeId = matchedEdge.segment.indexNodes[idxRef]
+			assert (edgeId.typeName == 'EdgeId'),  u"found '%s'!" %(edgeId.typeName)
+			creator = edgeId.get('creator')
+			if (creator is not None):
+				idxCreator = creator.get('idxCreator')
+				creator    = matchedEdge.segment.indexNodes[idxCreator]
+				geometry   = self.getEntity(creator) # ensure that the creator is already available!
+				if (geometry is not None):
+					edgeAttrs  = acis[idxRef]
+					acisEdges  = edgeAttrs.getEdges()
+					return idxCreator, findFcEdgeIndex(geometry.Shape, acisEdges)
+		return None
 
-	def getCreatorsFromProxy(self, proxy):
-		creators = {}
-		if (proxy is not None):
-			for matchedEdge in proxy.get('edges'):
-				assert matchedEdge.typeName in ['MatchedEdge', '3BA63938'], u"found '%s'!" %(matchedEdge.typeName)
-				for idxRef in matchedEdge.get('indexRefs'):
-					ref  = matchedEdge.segment.indexNodes[idxRef]
-					creator = ref.get('creator')
-					if (creator is not None):
-						idxCreator = creator.get('idxCreator')
-						if (idxCreator not in creators):
-							creator = matchedEdge.segment.indexNodes[idxCreator]
-							self.getEntity(creator) # ensure that the creator is already available!
-							creators[idxCreator] = creator
-		return creators
+	def getEdgesFromSet(self, edgeSet):
+		all_edges = {} #
+		if (edgeSet is not None):
+			for matchedEdge in edgeSet.get('edges'):
+				edge = self.getEdgeFromProxy(matchedEdge)
+				if (edge is not None):
+					idxEdge    = edge[1]
+					if (idxEdge is not None):
+						idxCreator = edge[0]
+						if (idxCreator in all_edges):
+							all_edges[idxCreator].append(idxEdge)
+						else:
+							all_edges[idxCreator] = [idxEdge]
+		return all_edges
 
 	def collectSections(self, fxNode, action): #
 		participants = fxNode.getParticipants()
@@ -1128,7 +1128,7 @@ class FreeCADImporter(object):
 	def createCone(self, name, diameter2, angle, diameter1):
 		R1 = getMM(diameter1) / 2
 		R2 = getMM(diameter2) / 2
-		h  = fabs(R1 - R2) / tan(angle.getValue().getRAD() / 2)
+		h  = abs(R1 - R2) / tan(angle.getValue().getRAD() / 2)
 		conGeo = newObject(self.doc, 'Part::Cone', name)
 		conGeo.Radius1 = R1
 		conGeo.Radius2 = R2
@@ -1548,11 +1548,8 @@ class FreeCADImporter(object):
 
 		# There shell be 3 points to draw a 2D arc.
 		# the 3rd point defines the a point on the circle between start and end! -> scip, as it is a redundant information to calculate the radius!
-		p1 = p2v(points[0])
-		p2 = p2v(points[1])
-		p3 = p2v(points[2])
-		arc = Part.ArcOfCircle(p1, p3, p2)
-		logInfo(u"        ... added Arc-Circle start=%s, end=%s and %s ...", p1, p2, p3)
+		arc = createArc(points[0], points[1], points[2])
+		logInfo(u"        ... added Arc-Circle start=%s, end=%s and %s ...", points[0], points[1], points[2])
 		addSketch2D(sketchObj, arc, mode, arcNode)
 		return
 
@@ -2558,13 +2555,13 @@ class FreeCADImporter(object):
 		#= getProperty(properties, 0x0C) # FeatureDimensions
 		#= getProperty(properties, 0x0D) # A96B5992
 		#= getProperty(properties, 0x0E) # 90B64134
-		edgeProxies    = getProperty(properties, 0x0F) # EdgeCollectionProxy
+#		edgeSet        = getProperty(properties, 0x0F) # EdgeCollectionProxy
 
 		self.resolveParticiants(fxNode) # no further action necessary
 
 		boundary1 = self.createBoundary(proxy1)
 		boundary2 = self.createBoundary(proxy2)
-		edges     = self.getEdgesFromProxy(fxNode, edgeProxies)
+#		edges     = self.getEdgesFromSet(edgeSet)
 
 		sections         = [boundary1, boundary2]
 		loftGeo          = self.createEntity(defNode, 'Part::Loft')
@@ -2761,45 +2758,45 @@ class FreeCADImporter(object):
 		return
 
 	def Create_FxChamfer(self, chamferNode):
-		properties   = chamferNode.get('properties')
-		edgesProxies = getProperty(properties, 0x00) # edge proxies
-		faceProxies  = getProperty(properties, 0x01) # base faces for the edges
-		dim1         = getProperty(properties, 0x02) # first distance
-		dim2         = getProperty(properties, 0x03) # second distance
-		chamferType  = getProperty(properties, 0x04) # chamfer type
-		flip         = getProperty(properties, 0x05) # flip directions
-		#            = getProperty(properties, 0x06) # corner setback (boolean) => not supported!
-		#            = getProperty(properties, 0x07) # !!!never seen!!!
-		dimensions   = getProperty(properties, 0x08) # FeatureDimensions
-		preserve     = getProperty(properties, 0x09) # preserve all features
-		angle        = getProperty(properties, 0x0A) # Angle
-		body         = getProperty(properties, 0x0B) # SolidBody
+		properties  = chamferNode.get('properties')
+		edgeSet     = getProperty(properties, 0x00) # edge proxies
+		faceProxies = getProperty(properties, 0x01) # base faces for the edges
+		dim1        = getProperty(properties, 0x02) # first distance
+		dim2        = getProperty(properties, 0x03) # second distance
+		chamferType = getProperty(properties, 0x04) # chamfer type
+		flip        = getProperty(properties, 0x05) # flip directions
+		#           = getProperty(properties, 0x06) # corner setback (boolean) => not supported!
+		#           = getProperty(properties, 0x07) # !!!never seen!!!
+		dimensions  = getProperty(properties, 0x08) # FeatureDimensions
+		preserve    = getProperty(properties, 0x09) # preserve all features
+		angle       = getProperty(properties, 0x0A) # Angle
+		body        = getProperty(properties, 0x0B) # SolidBody
 
-		dist1    = getMM(dim1) # 1st distance
-		dist2    = getMM(dim2) # 2nd distance
-		creators = self.getCreatorsFromProxy(edgesProxies)
-		geos     = []
-
-		if (len(creators) > 1): name = u"%s_0" %(name)
-
-		for i, creator in enumerate(creators):
-			fx = creators[creator]
-			edges = self.getEdgesFromProxy(fx, edgesProxies)
-			if (chamferType == 'Distance'):
-				chamfers = [(idx + 1, dist1, dist1) for idx in edges]
-			elif (chamferType == 'TwoDistances'):
-				chamfers = [(idx + 1, dist1, dist2) for idx in edges]
+		dist1 = getMM(dim1) # 1st distance
+		dist2 = getMM(dim2) # 2nd distance
+		geos  = []
+		edges = self.getEdgesFromSet(edgeSet)
+		value = chamferType.node.getValueText()
+		i = 0
+		for idxCreator in edges:
+			i += 1
+			if (value == 'Distance'):
+				chamfers = [(idx + 1, dist1, dist1) for idx in edges[idxCreator]]
+			elif (value == 'TwoDistances'):
+				chamfers = [(idx + 1, dist1, dist2) for idx in edges[idxCreator]]
 			else:
-				logWarning("   Chamfer '%s': %s not supported - using 2nd distances", chamferNode.name, chamferType)
-				chamfers = [(idx + 1, dist1, dist2) for idx in edges]
+				logWarning("   Chamfer '%s': %s not supported - using 2nd distances", chamferNode.name, value)
+				chamfers = [(idx + 1, dist1, dist2) for idx in edges[idxCreator]]
 			name = chamferNode.name
-			if (len(creators) > 1):
-				name += u"_%d" %(i + 1)
+			if (len(edges) > 1):
+				name += u"_%d" %(i)
+
+			fx = chamferNode.segment.indexNodes[idxCreator].sketchEntity
 			chamferGeo = newObject(self.doc, 'Part::Chamfer', name)
-			chamferGeo.Base  = fx.sketchEntity
+			chamferGeo.Base  = fx
 			chamferGeo.Edges = chamfers
 			geos.append(chamferGeo)
-			hide(fx.sketchEntity)
+			hide(fx)
 
 		chamferGeo = self.combineGeometries(geos, chamferNode)
 		if (chamferGeo is not None):
@@ -2807,15 +2804,40 @@ class FreeCADImporter(object):
 
 		return
 
-	def getFilletsContantR(self, fx, constantR):
-		fillets = []
-		sets = constantR.get('sets')
-		for set in sets:
-			edges        = self.getEdgesFromProxy(fx, set.get('edges'))# EdgeCollectionProxy
-			radius       = getMM(set.get('radius'))       # Parameter
-			# mode = set.get('select')                      # FilletConstantRSelectMode
-			# isG2 = set.get('continuityG2')	              # ParameterBoolean
-			fillets += [(idx + 1, radius, radius) for idx in edges]
+	def getFilletsContantR(self, fillets, constantR):
+		if (constantR is not None):
+			sets = constantR.get('sets')
+			for set in sets:
+				edges  = self.getEdgesFromSet(set.get('edges')) # EdgeCollectionProxy
+				radius = getMM(set.get('radius'))               # Parameter
+				# mode = set.get('select')                      # FilletConstantRSelectMode
+				# isG2 = set.get('continuityG1')	            # boolean - not supported by FreeCAD
+				for creator in edges:
+					if creator not in fillets:
+						fillets[creator] = [(idx + 1, radius, radius) for idx in edges[creator]]
+					else:
+						lst = fillets[creator]
+						lst += [(idx + 1, radius, radius) for idx in edges[creator]]
+		return fillets
+
+	def getFilletsVariableR(self, fillets, variableR):
+		if (variableR is not None):
+			sets = variableR.get('sets')
+			for set in sets:
+				edges = self.getEdgesFromSet(set.get('edges'))# EdgeCollectionProxy
+				radii = set.get('radii')
+				extrema = radii.get('extrema')
+				if (len(radii.get('additional')) > 0):
+					logWarning("Fillet: intermediate radii are not supported by FreeCAD - IGNORED!")
+				radius1 = getMM(extrema[0].get('radius'))
+				radius2 = getMM(extrema[-1].get('radius'))
+				for creator in edges:
+					if creator not in fillets:
+						fillets[creator] = [(idx + 1, radius1, radius2) for idx in edges[creator]]
+					else:
+						lst = fillets[creator]
+						lst += [(idx + 1, radius1, radius2) for idx in edges[creator]]
+
 		return fillets
 
 	def Create_FxFillet(self, filletNode):
@@ -2838,19 +2860,27 @@ class FreeCADImporter(object):
 		# = getProperty(properties, 0x0F) # SolidBody 'Solid1'
 		# = getProperty(properties, 0x10) # SolidBody 'Solid1'
 
-		fillets = []
-		if (constantR is not None):
-			## collect all fillest with constant radius
-			fillets += self.getFilletsContantR(filletNode, constantR)
-#		if (variableR is not None):
-#		FreeCAD.ActiveDocument.addObject("Part::Fillet","Fillet")
-#		FreeCAD.ActiveDocument.Fillet.Base = FreeCAD.ActiveDocument.Revolution
-#		__fillets__.append((3,1.00,2.00))
-#		FreeCAD.ActiveDocument.Fillet.Edges = __fillets__
-		del fillets
+		geos  = []
+		fillets = {} # key = creator_index, values = index of the edges
+		self.getFilletsContantR(fillets, constantR)
+		self.getFilletsVariableR(fillets, variableR)
 
-#		self.addSolidBody(filletNode, filletGeo, body)
-#		hide(bases)
+		i = 0
+		for idxCreator in fillets:
+			i += 1
+			name = chamferNode.name
+			if (len(fillets) > 1):
+				name += u"_%d" %(i)
+			fx = chamferNode.segment.indexNodes[idxCreator].sketchEntity
+			filletGeo = newObject(self.doc, 'Part::Fillet', name)
+			filletGeo.Base  = fx
+			filletGeo.Edges = fillets[idxCreator]
+			geos.append(filletGeo)
+			hide(fx)
+
+		filletGeo = self.combineGeometries(geos, filletNode)
+		if (filletGeo is not None):
+			self.addSolidBody(filletNode, filletGeo, body)
 
 		return
 
@@ -2906,16 +2936,16 @@ class FreeCADImporter(object):
 		angle = getProperty(properties, 0x0D) # angle
 
 	def Create_FxExtend(self, extendNode):
-		properties   = extendNode.get('properties')
-		edgesProxies = getProperty(properties, 0x00) # EdgeCollectionProxy
+		properties = extendNode.get('properties')
+#		edgeSet    = getProperty(properties, 0x00) # EdgeCollectionProxy
 		# = getProperty(properties, 0x01) # FxExtend
-		fxType       = getProperty(properties, 0x02) # ExtentType=To
-		dist         = getProperty(properties, 0x03) # Parameter 'd2'=1.75mm
-		face         = getProperty(properties, 0x04) # Face <=> extendType == to
+		fxType     = getProperty(properties, 0x02) # ExtentType=To
+		dist       = getProperty(properties, 0x03) # Parameter 'd2'=1.75mm
+		face       = getProperty(properties, 0x04) # Face <=> extendType == to
 		# = getProperty(properties, 0x06) # bool
-		surf         = getProperty(properties, 0x07) # SurfaceBody 'Fläche2'
+		surf       = getProperty(properties, 0x07) # SurfaceBody 'Fläche2'
 
-		#edges = self.getEdgesFromProxy(extendNode, edgesProxies)
+#		edges = self.getEdgesFromSet(edgeSet)
 
 		return notYetImplemented(extendNode)
 
@@ -3006,24 +3036,24 @@ class FreeCADImporter(object):
 		return notYetImplemented(faceNode)
 
 	def Create_FxFaceDraft(self, faceNode):
-		properties   = faceNode.get('properties')
-		dir          = getProperty(properties,  0) #  Direction - (-2.96059e-16,1,0)
-		faces        = getProperty(properties,  1) #  FaceCollection
-		edgesProxies = getProperty(properties,  2) #  EdgeCollectionProxy
-		angle        = getProperty(properties,  3) #  Parameter (opt.)
-		bodies       = getProperty(properties,  4) #  SurfaceBodies 'Solid1'
-		fxDim        = getProperty(properties,  5) #  FeatureDimensions
-		draft        = getProperty(properties,  6) #  FaceDraft
+		properties = faceNode.get('properties')
+		dir        = getProperty(properties,  0) #  Direction - (-2.96059e-16,1,0)
+		faces      = getProperty(properties,  1) #  FaceCollection
+#		edgeSet    = getProperty(properties,  2) #  EdgeCollectionProxy
+		angle      = getProperty(properties,  3) #  Parameter (opt.)
+		bodies     = getProperty(properties,  4) #  SurfaceBodies 'Solid1'
+		fxDim      = getProperty(properties,  5) #  FeatureDimensions
+		draft      = getProperty(properties,  6) #  FaceDraft
 #		getProperty(properties,  7) #  Boolean
 #		getProperty(properties,  9) #  0B85010C
 #		getProperty(properties, 14) #  Boolean
-		splitType    = getProperty(properties, 15) #  SplitToolType='Path'
+		splitType  = getProperty(properties, 15) #  SplitToolType='Path'
 #		getProperty(properties, 16) #  1A1C8265
 #		getProperty(properties, 17) #  Boolean
 #		getProperty(properties, 18) #  Boolean
 #		getProperty(properties, 20) #  Boolean
 
-#		edges = self.getEdgesFromProxy(faceNode, edgesProxies)
+#		edges = self.getEdgesFromSet(edgeSet)
 
 		return notYetImplemented(faceNode)
 
@@ -3280,22 +3310,22 @@ class FreeCADImporter(object):
 		return notYetImplemented(grillNode)
 
 	def Create_FxLip(self, lipNode):
-		properties   = lipNode.get('properties')
-		dir          = getProperty(properties, 0)  # Direction - (0,1,0)
-		edgesProxies = getProperty(properties, 1)  # EdgeCollectionProxy
+		properties = lipNode.get('properties')
+		dir        = getProperty(properties, 0)  # Direction - (0,1,0)
+#		edgeSet    = getProperty(properties, 1)  # EdgeCollectionProxy
 #		getProperty(properties, 2)  # Boolean
-		faces        = getProperty(properties, 3)  # FaceCollection
+		faces      = getProperty(properties, 3)  # FaceCollection
 #		getProperty(properties, 4)  # 7414D5CA -> Workplanes ?!?
-		width        = getProperty(properties, 5)  # Parameter 'd424'=6.35mm
-		height       = getProperty(properties, 6)  # Parameter 'd425'=6.35mm
-		outerOffset  = getProperty(properties, 7)  # Parameter 'd426'=0mm
-		innerAngle   = getProperty(properties, 8)  # Parameter 'd427'=0°
-		outerAngle   = getProperty(properties, 9)  # Parameter 'd428'=0°
-		grooveDepth  = getProperty(properties, 10) # Parameter 'd429'=0mm
-		bottom       = getProperty(properties, 11) # Boolean
-		bodies       = getProperty(properties, 12) # SurfaceBodies 'Solid63'
+		width      = getProperty(properties, 5)  # Parameter 'd424'=6.35mm
+		height     = getProperty(properties, 6)  # Parameter 'd425'=6.35mm
+		outerOffset= getProperty(properties, 7)  # Parameter 'd426'=0mm
+		innerAngle = getProperty(properties, 8)  # Parameter 'd427'=0°
+		outerAngle = getProperty(properties, 9)  # Parameter 'd428'=0°
+		grooveDepth= getProperty(properties, 10) # Parameter 'd429'=0mm
+		bottom     = getProperty(properties, 11) # Boolean
+		bodies     = getProperty(properties, 12) # SurfaceBodies 'Solid63'
 
-		edges = self.getEdgesFromProxy(lipNode, edgesProxies)
+#		edges = self.getEdgesFromSet(edgeSet)
 
 		return notYetImplemented(lipNode)
 
@@ -3366,19 +3396,19 @@ class FreeCADImporter(object):
 #		getProperty(properties, 2) # ParameterBoolean=False
 #		getProperty(properties, 3) # Parameter 'Thickness'=1.524mm
 #		getProperty(properties, 4) # PlateDef
-		edgesProxies1 = getProperty(properties, 5) # EdgeCollectionProxy
+#		edgeSet1 = getProperty(properties, 5) # EdgeCollectionProxy
 #		getProperty(properties, 6) # SurfaceBody 'Solid1'
-		edgesProxies2 = getProperty(properties, 7) # EdgeCollectionProxy
+#		edgeSet2 = getProperty(properties, 7) # EdgeCollectionProxy
 #		getProperty(properties, 8) # FeatureDimensions
 
-#		edges1 = self.getEdgesFromProxy(trimNode, edgesProxies1)
-#		edges2 = self.getEdgesFromProxy(trimNode, edgesProxies2)
+#		edges1 = self.getEdgesFromSet(edgeSet1)
+#		edges2 = self.getEdgesFromSet(edgeSet2)
 
 		return notYetImplemented(trimNode)
 
 	def Create_FxBend(self, bendNode):
-		properties   = bendNode.get('properties')
-		edgesProxies = getProperty(properties, 0) # EdgeCollectionProxy
+		properties = bendNode.get('properties')
+#		edgeSet    = getProperty(properties, 0) # EdgeCollectionProxy
 #		getProperty(properties, 1) # Parameter 'd9'=1.524mm
 #		getProperty(properties, 2) # Parameter 'Thickness'=1.524mm
 #		getProperty(properties, 3) # PlateDef, 0455B440
@@ -3388,7 +3418,7 @@ class FreeCADImporter(object):
 #		getProperty(properties, 7) # BendTransition
 #		getProperty(properties, 8) # 90B64134
 
-#		edges = self.getEdgesFromProxy(bendNode, edgesProxies)	# for what is it good for??
+#		edges = self.getEdgesFromSet(edgeSet)	# for what is it good for??
 
 		return notYetImplemented(bendNode)
 
@@ -3486,19 +3516,19 @@ class FreeCADImporter(object):
 		return notYetImplemented(foldNode)
 
 	def Create_FxHem(self, hemNode):
-		properties   = hemNode.get('properties')
+		properties = hemNode.get('properties')
 #		getProperty(properties, 0) # FaceBoundOuterProxy
 #		getProperty(properties, 1) # Direction - (9.15804e-17,-1,2.51846e-16)
 #		getProperty(properties, 2) # Parameter 'd227'=1mm
 #		getProperty(properties, 3) # HemDef
-		edgesProxies = getProperty(properties, 4) # EdgeCollectionProxy
+#		edgeSet    = getProperty(properties, 4) # EdgeCollectionProxy
 #		getProperty(properties, 5) # 96058864
 #		getProperty(properties, 6) # SurfaceBodies 'Solid1'
 #		getProperty(properties, 7) # FeatureDimensions
 #		getProperty(properties, 8) # BendTransition
 #		getProperty(properties, 9) # 90B64134
 
-		edges = self.getEdgesFromProxy(hemNode, edgesProxies)
+#		edges = self.getEdgesFromSet(edgeSet)
 
 		return notYetImplemented(hemNode)
 
@@ -3564,7 +3594,7 @@ class FreeCADImporter(object):
 			self.getEntity(refold)
 
 	def Create_FxLoftedFlangeDefinition(self, fxNode):
-		properties   = fxNode.get('properties')
+		properties = fxNode.get('properties')
 #		getProperty(properties, 0)  # SurfaceBody 'Solid1'
 #		getProperty(properties, 1)  # A477243B
 #		getProperty(properties, 2)  # A477243B
@@ -3578,9 +3608,9 @@ class FreeCADImporter(object):
 #		getProperty(properties, 12) # FeatureDimensions
 #		getProperty(properties, 13) # PlateDef
 #		getProperty(properties, 14) # 90B64134
-		edgesProxies = getProperty(properties, 15) # EdgeCollectionProxy
+#		edgeSet    = getProperty(properties, 15) # EdgeCollectionProxy
 
-		edges = self.getEdgesFromProxy(fxNode, edgesProxies)
+#		edges = self.getEdgesFromSet(edgeSet)
 
 		return notYetImplemented(fxNode)
 
@@ -3602,18 +3632,18 @@ class FreeCADImporter(object):
 
 	# not supported features as too much work to implement additional readers or workarounds
 	def Create_FxThread(self, threadNode):
-		properties   = threadNode.get('properties')
-		faces        = getProperty(properties, 0) # FaceCollection
+		properties = threadNode.get('properties')
+#		faces      = getProperty(properties, 0) # FaceCollection
 #		getProperty(properties, 1) # ParameterBoolean=True
 #		getProperty(properties, 2) # ParameterBoolean=True
 #		getProperty(properties, 3) # Parameter 'd16'=0mm
 #		getProperty(properties, 4) # Parameter 'd17'=0mm
-		edgesProxies = getProperty(properties, 5) # EdgeCollectionProxy
+#		edgeSet    = getProperty(properties, 5) # EdgeCollectionProxy
 #		getProperty(properties, 6) # ParameterBoolean=False
 #		getProperty(properties, 7) # SurfaceBodies 'Solid1'
 #		getProperty(properties, 8) # FeatureDimensions
 
-		edges = self.getEdgesFromProxy(threadNode, edgesProxies)
+#		edges = self.getEdgesFromSet(edgeSet)
 
 		return unsupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
 
