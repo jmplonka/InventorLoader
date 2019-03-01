@@ -80,6 +80,9 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
+- 0.13.0 (2019-03-01): Added support for Fillets and Chamfers. Segmented variable radius
+	chamfers are not supported by FreeCAD. In such cases please import as STEP instead.
+
 - 0.12.0 (2019-01-08): Added support for Surface Features "BoundaryPatch" and "Knit". Both
          features will be displayed with their own icon in the model browser.
 
