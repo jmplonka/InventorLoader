@@ -558,8 +558,8 @@ class DataNode(object):
 		if (self.data): self.data.valid = valid
 
 	@property
-	def sketchEntity(self):
-		if (self.data): return self.data.sketchEntity
+	def geometry(self):
+		if (self.data): return self.data.geometry
 		return None
 
 	@property
@@ -583,10 +583,10 @@ class DataNode(object):
 		if (self.data): return self.data.sketchIndex
 		return None
 
-	def setSketchEntity(self, index, entity):
+	def setGeometry(self, geometry, index=1):
 		if (self.data):
+			self.data.geometry = geometry
 			self.data.sketchIndex = index
-			self.data.sketchEntity = entity
 
 	def append(self, node):
 		self.children.append(node)
@@ -1504,7 +1504,7 @@ class AbstractData(object):
 		self.visible      = False
 		self.construction = False
 		self.segment      = None
-		self.sketchEntity = None
+		self.geometry     = None
 		self.sketchIndex  = None
 		self.sketchPos    = None
 		self.valid        = True

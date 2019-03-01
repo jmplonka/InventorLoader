@@ -135,7 +135,7 @@ def unsupportedNode(node):
 		logWarning(u"        ... %s '%s' not supported (yet?) - please use SAT or STEP instead!", node.typeName, node.getSubTypeName())
 	else:
 		logWarning(u"        ... %s not supported (yet?) - please use SAT or STEP instead!", node.typeName)
-	node.setSketchEntity(-1, None)
+	node.setGeometry(None)
 	return None
 
 def notYetImplemented(node):
@@ -143,7 +143,7 @@ def notYetImplemented(node):
 		logWarning(u"        ... %s '%s' not implemented yet - please use SAT or STEP instead!", node.typeName, node.getSubTypeName())
 	else:
 		logWarning(u"        ... %s not implemented yet - please use SAT or STEP instead!", node.typeName)
-	node.setSketchEntity(-1, None)
+	node.setGeometry(None)
 	return None
 
 def newObject(doc, className, name):
@@ -232,13 +232,13 @@ def addSketch2D(sketchObj, geometry, mode, entityNode):
 	geometry.Construction = mode
 	index = sketchObj.addGeometry(geometry, mode)
 	newGeo = sketchObj.Geometry[index]
-	entityNode.setSketchEntity(index, newGeo)
+	entityNode.setGeometry(newGeo, index)
 	return newGeo
 
 def addSketch3D(edges, geometry, mode, entityNode):
 	geometry.Construction = mode
 	edges[entityNode.index] = geometry
-	entityNode.setSketchEntity(-1, geometry)
+	entityNode.setGeometry(geometry)
 	return geometry
 
 def addEqualRadius2d(sketchObj, arc1, arc2):
@@ -400,17 +400,17 @@ def setPlacement(geo, placement, base):
 	if (base is not None): geo.Placement.Base = base
 	return
 
-def replaceEntity(edges, node, geo):
-	node.data.sketchEntity = geo
+def replaceGeometry(edges, node, geo):
+	node.data.geometry = geo
 	edges[node.index] = geo
 	return geo
 
 def replacePoint(edges, pOld, line, pNew):
-	l = line.sketchEntity
+	l = line.geometry
 	if (l is None): return None
 	if (isEqual(p2v(pOld), l.StartPoint)):
-		return replaceEntity(edges, line, createLine(p2v(pNew), l.EndPoint))
-	return replaceEntity(edges, line, createLine(l.StartPoint, p2v(pNew)))
+		return replaceGeometry(edges, line, createLine(p2v(pNew), l.EndPoint))
+	return replaceGeometry(edges, line, createLine(l.StartPoint, p2v(pNew)))
 
 def int2col(c):
 	m = c // 26
@@ -434,18 +434,17 @@ def setTableValue(table, c, row, val):
 			table.set(u"%s%d" %(col, row), str(val))
 
 def setAssociatedSketchEntity(sketchNode, node, ai, entityType):
-	idMap = sketchNode.data.associativeIDs.get(ai)
-	if (idMap is None):
+	if (not ai in sketchNode.data.associativeIDs):
 		idMap = {}
 		sketchNode.data.associativeIDs[ai] = idMap
+	idMap = sketchNode.data.associativeIDs[ai]
 	idMap[entityType] = node
-	return
 
 def getAssociatedSketchEntity(sketchNode, ai, entityType):
-	idMap = sketchNode.data.associativeIDs.get(ai)
-	if (idMap is None):
+	if (not ai in sketchNode.data.associativeIDs):
 		return None
-	return idMap.get(entityType)
+	idMap = sketchNode.data.associativeIDs[ai]
+	return idMap.get(entityType, None)
 
 def getBodyColor(bodyNode):
 	attributes = bodyNode.get('attrs')
@@ -620,7 +619,7 @@ class FreeCADImporter(object):
 						importObject(node)
 
 						# apply colors stored in graphics segment
-						entity = node.sketchEntity
+						entity = node.geometry
 						if (entity is not None):
 							gr = getModel().getGraphics()
 							grNode = gr.indexNodes.get(node.get('index'), None)
@@ -631,7 +630,7 @@ class FreeCADImporter(object):
 				logError(u"Error in creating (%04X): %s - %s", node.index, node.typeName, e)
 				logError(traceback.format_exc())
 				node.valid = False
-			return node.sketchEntity
+			return node.geometry
 		return None
 
 	def addConstraint(self, sketchObj, constraint, key):
@@ -640,19 +639,19 @@ class FreeCADImporter(object):
 		return index
 
 	def addSolidBody(self, fxNode, obj3D, solid):
-		fxNode.setSketchEntity(-1, obj3D)
+		fxNode.setGeometry(obj3D)
 
 		if (solid is not None):
 			bodies = solid.get('bodies')
 			body = bodies[0]
-			body.setSketchEntity(-1, obj3D)
+			body.setGeometry(obj3D)
 			# overwrite previously added solids with the same name!
 			self.bodyNodes[body.name] = fxNode
 			self.lastActiveBody = fxNode
 		return
 
 	def addSurfaceBody(self, fxNode, obj3D, surface):
-		fxNode.setSketchEntity(-1, obj3D)
+		fxNode.setGeometry(obj3D)
 		if (surface is not None):
 			# overwrite previously added sourfaces with the same name!
 			self.bodyNodes[surface.name] = fxNode
@@ -869,7 +868,7 @@ class FreeCADImporter(object):
 
 				if (constraint):
 					index = self.addDimensionConstraint(sketchObj, dimension, constraint, key, (pos1 != 3) and (pos2 != 3))
-					dimensionNode.setSketchEntity(index, constraint)
+					dimensionNode.setGeometry(constraint, index)
 					logInfo(u"        ... added %sdistance '%s' = %s", prefix, constraint.Name, dimension.getValue())
 				else:
 					logWarning(u"        ... can't create dimension constraint between (%04X): %s and (%04X): %s - not supported by FreeCAD!", entity1.index, entity1.typeName[0:-2], entity2.index, entity2.typeName[0:-2])
@@ -943,7 +942,7 @@ class FreeCADImporter(object):
 		if (p2 is None): p2 = getAssociatedSketchEntity(sketch, sketchEdge.get('point2AI'), sketchEdge.get('typPt2'))
 		if (e is None):  return
 		edge   = None
-		entity = e.sketchEntity
+		entity = e.geometry
 		if (isinstance(entity, Part.Line) or isinstance(entity, Part.LineSegment)):
 			if (isSamePoint(p1, p2) == False):
 				edge = createLine(p2v(p1), p2v(p2))
@@ -1010,7 +1009,7 @@ class FreeCADImporter(object):
 			if (hasattr(boundarySketch, 'addGeometry')):
 				boundarySketch.addGeometry(edge)
 			else:
-				sketchEdge.setSketchEntity(-1, edge)
+				sketchEdge.setGeometry(edge)
 				boundarySketch.Shape = Part.Shape(boundarySketch.Shape.Edges + [edge])
 		return
 
@@ -1022,11 +1021,11 @@ class FreeCADImporter(object):
 					if (sketchNode is not None):
 						if (sketchNode.typeName == 'Sketch2D'):
 							boundarySketch = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketchNode.name))
-							boundarySketch.Placement = sketchNode.sketchEntity.Placement
+							boundarySketch.Placement = sketchNode.geometry.Placement
 						elif (sketchNode.typeName == 'Sketch3D'):
 							boundarySketch = newObject(self.doc, 'Part::Feature', u"%s_bp" %(sketchNode.name))
 							boundarySketch.Shape = Part.Shape()
-							boundarySketch.Placement = sketchNode.sketchEntity.Placement
+							boundarySketch.Placement = sketchNode.geometry.Placement
 				if (boundarySketch is not None):
 					self.addGeometryFromNode(boundarySketch, sketchEdge)
 		else:
@@ -1042,8 +1041,8 @@ class FreeCADImporter(object):
 					boundary = None
 					if (sketch is not None):
 						boundary = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketch.name))
-						boundary.Placement = sketch.sketchEntity.Placement
-						hide(sketch.sketchEntity)
+						boundary.Placement = sketch.geometry.Placement
+						hide(sketch.geometry)
 					# create all parts of the profile
 					parts = profile.get('parts')
 					if (len(parts) == 1):
@@ -1175,7 +1174,7 @@ class FreeCADImporter(object):
 		lx, ly, lz = 0, 0, 0
 		node = self.getBodyNode(body)
 		if (node):
-			box = node.sketchEntity.Shape.BoundBox
+			box = node.geometry.Shape.BoundBox
 			if (not isEqual1D(dirX, 0)): lx = box.XLength
 			if (not isEqual1D(dirY, 0)): ly = box.YLength
 			if (not isEqual1D(dirZ, 0)): lz = box.ZLength
@@ -1247,7 +1246,7 @@ class FreeCADImporter(object):
 			if (not key in self.mapConstraints):
 				constraint = Sketcher.Constraint('Symmetric', lineIdx, 1, lineIdx, 2, symmetryIdx, symmetryPos)
 				index = self.addConstraint(sketchObj, constraint, key)
-				constraintNode.setSketchEntity(index, constraint)
+				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added symmetric constraint between Point %s and %s %s", symmetryIdx, moving.typeName[0:-2], lineIdx)
 		return
 
@@ -1276,7 +1275,7 @@ class FreeCADImporter(object):
 			if (not key in self.mapConstraints):
 				constraint = Sketcher.Constraint('Symmetric',idx1, pos1, idx2, pos2, idxSym)
 				index = self.addConstraint(sketchObj, constraint, key)
-				constraintNode.setSketchEntity(index, constraint)
+				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added symmetric line constraint between %s %d/%d and %s %d/%d, symmetry is %s %d", entity1.typeName[0:-2], idx1, pos1, entity2.typeName[0:-2], idx2, pos2, symmetry.typeName[0:-2], idxSym)
 		return
 
@@ -1294,7 +1293,7 @@ class FreeCADImporter(object):
 		if (not key in self.mapConstraints):
 			constraint = Sketcher.Constraint('Parallel', index1, index2)
 			index = self.addConstraint(sketchObj, constraint, key)
-			constraintNode.setSketchEntity(index, constraint)
+			constraintNode.setGeometry(constraint, index)
 			logInfo(u"        ... added parallel constraint between lines %s and %s", index1, index2)
 		return
 
@@ -1315,7 +1314,7 @@ class FreeCADImporter(object):
 			if (not key in self.mapConstraints):
 				constraint = Sketcher.Constraint('Perpendicular', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
-				constraintNode.setSketchEntity(index, constraint)
+				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added perpendicular constraint between lines %s and %s", index1, index2)
 		return
 
@@ -1336,7 +1335,7 @@ class FreeCADImporter(object):
 			if (not key in self.mapConstraints):
 				constraint = Sketcher.Constraint('Tangent', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
-				constraintNode.setSketchEntity(index, constraint)
+				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added collinear constraint between Line %s and Line %s", index1, index2)
 		return
 
@@ -1361,7 +1360,7 @@ class FreeCADImporter(object):
 			if (not key in self.mapConstraints):
 				constraint = Sketcher.Constraint('Tangent', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
-				constraintNode.setSketchEntity(index, constraint)
+				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added tangential constraint between %s %s and %s %s", entity1Name, index1, entity2Name, index2)
 		return
 
@@ -1376,7 +1375,7 @@ class FreeCADImporter(object):
 			if (not key in self.mapConstraints):
 				constraint = Sketcher.Constraint('Vertical', index)
 				index = self.addConstraint(sketchObj, constraint, key)
-				constraintNode.setSketchEntity(index, constraint)
+				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added vertical constraint to line %s", index)
 		return
 
@@ -1393,7 +1392,7 @@ class FreeCADImporter(object):
 				if (not key in self.mapConstraints):
 					constraint = Sketcher.Constraint('Horizontal', index)
 					index = self.addConstraint(sketchObj, constraint, key)
-					constraintNode.setSketchEntity(index, constraint)
+					constraintNode.setGeometry(constraint, index)
 					logInfo(u"        ... added horizontal constraint to line %s", index)
 		else:
 			logWarning(u"        ... can't add a horizontal constraint to (%04x): %s", entity.index, entity.typeName)
@@ -1415,7 +1414,7 @@ class FreeCADImporter(object):
 			if (not key in self.mapConstraints):
 				constraint = Sketcher.Constraint('Equal', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
-				constraintNode.setSketchEntity(index, constraint)
+				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added equal length constraint between line %s and %s", index1, index2)
 		return
 
@@ -1435,7 +1434,7 @@ class FreeCADImporter(object):
 			if (not key in self.mapConstraints):
 				constraint = Sketcher.Constraint('Equal', index1, index2)
 				index = self.addConstraint(sketchObj, constraint, key)
-				constraintNode.setSketchEntity(index, constraint)
+				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added equal radius constraint between circle %s and %s", index1, index2)
 		return
 
@@ -1729,10 +1728,10 @@ class FreeCADImporter(object):
 		if (index is not None):
 			key = 'Radius_%s' %(index)
 			if (not key in self.mapConstraints):
-				radius = circle.sketchEntity.Radius
+				radius = circle.geometry.Radius
 				constraint = Sketcher.Constraint('Radius',  index, radius)
 				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
-				dimensionNode.setSketchEntity(index, constraint)
+				dimensionNode.setGeometry(constraint, index)
 				logInfo(u"        ... added radius '%s' = %s", constraint.Name, dimension.getValue())
 		return
 
@@ -1768,11 +1767,11 @@ class FreeCADImporter(object):
 			key = 'Diameter_%s' %(index)
 			if (not key in self.mapConstraints):
 				#TODO: add a 2D-construction-line, pin both ends to the circle, pin circle's center on this 2D-line and add dimension constraint to 2D-construction-line
-				radius = circle.sketchEntity.Radius
+				radius = circle.geometry.Radius
 				constraint = Sketcher.Constraint('Radius',  index, radius)
 				dimension = getDimension(dimensionNode, 'parameter')
 				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key, False)
-				dimensionNode.setSketchEntity(index, constraint)
+				dimensionNode.setGeometry(constraint, index)
 				logInfo(u"        ... added diameter '%s' = %s (r = %s mm)", constraint.Name, dimension.getValue(), radius)
 		return
 
@@ -1833,7 +1832,7 @@ class FreeCADImporter(object):
 				angle      = dimension.getValue()
 				constraint = Sketcher.Constraint('Angle', index1, pos1, index2, pos2, angle.getRAD())
 				index      = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
-				dimensionNode.setSketchEntity(index, constraint)
+				dimensionNode.setGeometry(constraint, index)
 				logInfo(u"        ... added dimension angle '%s' = %s (%s)", constraint.Name, angle, key)
 		return
 
@@ -1842,26 +1841,26 @@ class FreeCADImporter(object):
 		Create distance constraint for an offset spline.
 		'''
 		if (SKIP_CONSTRAINTS & BIT_DIM_OFFSET_SPLINE == 0): return
-		dimensionNode.setSketchEntity(-1, None)
+		dimensionNode.setGeometry(None)
 		return
 
 	def addSketch_OffsetSpline2D(self, offsetSplineNode, sketchObj):
-		offsetSplineNode.setSketchEntity(-1, None)
+		offsetSplineNode.setGeometry(None)
 		return
 	def addSketch_SplineHandle2D(self, splineHandleNode, sketchObj):
-		splineHandleNode.setSketchEntity(-1, None)
+		splineHandleNode.setGeometry(None)
 		return
 	def addSketch_SplineHandle3D(self, splineHandleNode, edges):
-		splineHandleNode.setSketchEntity(-1, None)
+		splineHandleNode.setGeometry(None)
 		return
 	def addSketch_Block2D(self, blockNode, sketchObj):
 		sourceSketch = blockNode.get('source')
 		transformation = blockNode.get('transformation')
-		for geo in sourceSketch.sketchEntity.Geometry:
+		for geo in sourceSketch.geometry.Geometry:
 			entity = geo.copy()
 			entity.transform(transformation.getMatrix())
 			sketchObj.addGeometry(geo, geo.Construction)
-		blockNode.setSketchEntity(-1, None)
+		blockNode.setGeometry(None)
 		logInfo(u"        ... added Block '%s'", blockNode.name)
 		return
 
@@ -1885,7 +1884,7 @@ class FreeCADImporter(object):
 		return
 
 	def addSketch_Picture(self, imageNode, sketchObj):
-		imageNode.setSketchEntity(-1, None)
+		imageNode.setGeometry(None)
 		return
 
 	def addSketch_BlockInserts(self, node, sketchObj): return
@@ -1904,7 +1903,7 @@ class FreeCADImporter(object):
 		if (label.typeName == 'Styles'):
 			id = label.get('associativeID')
 			sketch = node.get('sketch')
-			entity = node.sketchEntity
+			entity = node.geometry
 			if ((entity is not None) and (entity.Construction == False)):
 				sketch.data.sketchEdges[id]  = entity
 			setAssociatedSketchEntity(sketch, node, id, label.get('typEntity'))
@@ -1949,7 +1948,7 @@ class FreeCADImporter(object):
 	def createSketch(self, sketchNode, strType):
 		sketch = self.createEntity(sketchNode, 'Sketcher::SketchObject')
 		logInfo(u"    adding %s '%s' ...", strType, sketch.Label)
-		sketchNode.setSketchEntity(-1, sketch)
+		sketchNode.setGeometry(sketch)
 		geos = []
 		dims = []
 		self.pointDataDict = {}
@@ -1979,13 +1978,13 @@ class FreeCADImporter(object):
 	def Create_Point3D(self, ptNode):
 		pt = p2v(ptNode)
 		point = InventorViewProviders.makePoint(self.doc, pt, u"Point_%04X" %(ptNode.index))
-		ptNode.setSketchEntity(-1, point.Shape)
+		ptNode.setGeometry(point)
 
 	def Create_Line3D(self, lnNode):
 		pt1 = p2v(lnNode)
 		pt2 = p2v(lnNode, 'dirX', 'dirY', 'dirZ')
 		line = InventorViewProviders.makeLine(self.doc, pt1, pt2, u"Line_%04X" %(lnNode.index))
-		lnNode.setSketchEntity(-1, line.Shape)
+		lnNode.setGeometry(line)
 
 	def Create_SketchBlock(self, sketchNode):
 		sketchBlock = self.createSketch(sketchNode, 'Sketch-Block')
@@ -2004,7 +2003,7 @@ class FreeCADImporter(object):
 	def Create_Sketch3D(self, sketchNode):
 		sketch3D = self.createEntity(sketchNode, 'Part::Feature')
 		logInfo(u"    adding 3D-Sketch '%s' ...", sketch3D.Label)
-		sketchNode.setSketchEntity(-1, sketch3D)
+		sketchNode.setGeometry(sketch3D)
 		geos = []
 		dims = []
 		edges = {}
@@ -2797,7 +2796,7 @@ class FreeCADImporter(object):
 			if (len(edges) > 1):
 				name += u"_%d" %(i)
 
-			fx = chamferNode.segment.indexNodes[idxCreator].sketchEntity
+			fx = chamferNode.segment.indexNodes[idxCreator].geometry
 			chamferGeo = newObject(self.doc, 'Part::Chamfer', name)
 			chamferGeo.Base  = fx
 			chamferGeo.Edges = chamfers
@@ -2877,7 +2876,7 @@ class FreeCADImporter(object):
 			name = chamferNode.name
 			if (len(fillets) > 1):
 				name += u"_%d" %(i)
-			fx = chamferNode.segment.indexNodes[idxCreator].sketchEntity
+			fx = chamferNode.segment.indexNodes[idxCreator].geometry
 			filletGeo = newObject(self.doc, 'Part::Fillet', name)
 			filletGeo.Base  = fx
 			filletGeo.Edges = fillets[idxCreator]
@@ -2980,7 +2979,7 @@ class FreeCADImporter(object):
 				edges += boundary.Shape.Edges
 		if (len(edges) > 0):
 			boundaryPatch = InventorViewProviders.makeBoundaryPatch(self.doc, edges, fxNode.name)
-			fxNode.setSketchEntity(-1, boundaryPatch.Shape)
+			fxNode.setGeometry(boundaryPatch.Shape)
 			self.addSurfaceBody(fxNode, boundaryPatch.Shape, surface)
 
 	def Create_FxCoreCavity(self, coreCavityNode):
@@ -3528,13 +3527,13 @@ class FreeCADImporter(object):
 		tolerance  = getProperty(properties, 4) # Parameter 'd317'=0.0254
 #		getProperty(properties, 5) # ParameterBoolean=False
 
-		faces = [self.bodyNodes[face.name].sketchEntity for face in collection.get('bodies') if face.name in self.bodyNodes]
+		faces = [self.bodyNodes[face.name].geometry for face in collection.get('bodies') if face.name in self.bodyNodes]
 		stitch = InventorViewProviders.makeStitch(self.doc, faces, fxNode.name, not surface)
-		fxNode.setSketchEntity(-1, stitch.Shape)
+		fxNode.setGeometry(stitch)
 		if (surface):
-			self.addSurfaceBody(fxNode, stitch.Shape, result)
+			self.addSurfaceBody(fxNode, stitch, result)
 		else:
-			self.addSolidBody(fxNode, stitch.Shape, result)
+			self.addSolidBody(fxNode, stitch, result)
 
 	def Create_FxRip(self, ripNode):
 		properties = ripNode.get('properties')
@@ -3648,7 +3647,7 @@ class FreeCADImporter(object):
 		createFxObj = getattr(self, 'Create_Fx%s' %(name))
 		createFxObj(fxNode)
 
-		adjustFxColor(fxNode.sketchEntity, fxNode.get('fxColor'))
+		adjustFxColor(fxNode.geometry, fxNode.get('fxColor'))
 
 		self.doc.recompute()
 		return
@@ -3676,7 +3675,7 @@ class FreeCADImporter(object):
 		bspline.interpolate(points, False)
 		addSketch3D(edges, bspline, isConstructionMode(bsplineNode), bsplineNode)
 		bezierNode = bsplineNode.get('bezier')
-		bezierNode.setSketchEntity(-1, bspline)
+		bezierNode.setGeometry(bspline)
 		return
 
 	def addSketch_Bezier3D(self, bezierNode, edges):
@@ -3701,11 +3700,11 @@ class FreeCADImporter(object):
 
 		replacePoint(edges, p1, l1, p2)
 		replacePoint(edges, p1, l2, p3)
-		entity = arc.sketchEntity
+		entity = arc.geometry
 		circle = Part.Circle(entity.Center, entity.Axis, entity.Radius)
 		a = circle.parameter(p2v(p2))
 		b = circle.parameter(p2v(p2))
-		replaceEntity(edges, arc, Part.ArcOfCircle(circle, a, b))
+		replaceGeometry(edges, arc, Part.ArcOfCircle(circle, a, b))
 		return
 
 	def addSketch_Geometric_Custom3D(self, geometricNode, edges):        return None # notSupportedNode(geometricNode)
@@ -3897,10 +3896,10 @@ class FreeCADImporter(object):
 			gr = getModel().getGraphics()
 			for indexDC in gr.indexNodes:
 				dcNode = dc.indexNodes[indexDC]
-				entity = dcNode.sketchEntity
-				if (entity is not None):
+				geometry = dcNode.geometry
+				if (geometry is not None):
 					grNode = gr.indexNodes[indexDC]
 					color  = getBodyColor(grNode)
-					adjustColor(entity, color)
+					adjustColor(geometry, color)
 		else:
 			logWarning(u">>>No content to be displayed for DC<<<")

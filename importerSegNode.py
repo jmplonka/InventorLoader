@@ -1383,8 +1383,8 @@ class SecNodeRef(object):
 		if (self._data): self._data.set(name, value)
 
 	@property
-	def sketchEntity(self):
-		if (self._data): return self._data.sketchEntity
+	def geometry(self):
+		if (self._data): return self._data.geometry
 		return None
 
 	@property
@@ -1402,10 +1402,10 @@ class SecNodeRef(object):
 		if (self._data): return self._data.segment
 		return None
 
-	def setSketchEntity(self, index, entity):
+	def setGeometry(self, geometry, index = -1):
 		if (self._data):
+			self._data.geometry = geometry
 			self._data.sketchIndex = index
-			self._data.sketchEntity = entity
 
 	def getValue(self):
 		node = self.node
