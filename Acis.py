@@ -991,7 +991,7 @@ def createBSplinesCurve(nubs, sense):
 			logError(u"ERROR> %s", e)
 			logError(traceback.format_exc())
 	if (shape is not None):
-		shape.Orientation = 'Reversed' if (sense == 'reversed') else 'Forward'
+		shape.Orientation = u"Reversed" if (sense == 'reversed') else u"Forward"
 	return shape
 
 def createBSplinesSurface(nubs):

@@ -3,7 +3,7 @@
 from importerUtils import getUInt16, getUInt32, getLen32Text8, getLen32Text16
 
 def getText(data, offset):
-	e = data.index('\x00', offset)
+	e = data.index(b'\x00', offset)
 	return data[offset:e], e + 1
 
 class olenative(object):
