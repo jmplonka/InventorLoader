@@ -7,6 +7,7 @@ GUI representations for objectec imported from Inventor
 
 import re, sys, Part
 from importerUtils import logInfo
+from FreeCAD       import Vector as VEC
 
 INVALID_NAME = re.compile('^[0-9].*')
 
@@ -19,18 +20,30 @@ def getObjectName(name):
 		return "_%s" %(v)
 	return v
 
-class _ViewProviderBoundaryPatch(object):
+class _ViewProvider(object):
 	def __init__(self, vp):
 		self.attach(vp)
 
 	def attach(self, vp):
-		vp.Proxy = self
+		self.fp   = vp.Object
 
-	def getDisplayModes(self, vp):
-		return ["Shaded", "Wireframe"]
+	def onChanged(self, vp, prop):   return
 
-	def getDefaultDisplayMode(self):
-		return "Shaded"
+	def setEdit(self, vp, mode):     return False
+
+	def unsetEdit(self, vp, mode):   return
+
+	def __getstate__(self):          return None
+
+	def __setstate__(self, state):   return
+
+	def getDisplayModes(self, vp):   return ["Shaded", "Wireframe", "Flat Lines"]
+
+	def getDefaultDisplayMode(self): return "Shaded"
+
+class _ViewProviderBoundaryPatch(_ViewProvider):
+	def __init__(self, vp):
+		super(_ViewProviderBoundaryPatch, self).__init__(vp)
 
 	def getIcon(self):
 		return """
@@ -60,16 +73,6 @@ class _ViewProviderBoundaryPatch(object):
 			"                "};
 			"""
 
-	def onChanged(self, vp, prop): return
-
-	def setEdit(self, vp, mode):   return False
-
-	def unsetEdit(self, vp, mode): return
-
-	def __getstate__(self):        return None
-
-	def __setstate__(self, state): return
-
 def makeBoundaryPatch(doc, edges, name):
 	fp = doc.addObject("Part::FeaturePython", getObjectName(name))
 	fp.Label = name
@@ -77,10 +80,10 @@ def makeBoundaryPatch(doc, edges, name):
 	_ViewProviderBoundaryPatch(fp.ViewObject)
 	return fp
 
-class _Knit(object):
+class _Stich(object):
 	def __init__(self, fp):
-		fp.addProperty("App::PropertyLinkList", "Faces", "Knit", "List of faces to knit together")
-		fp.addProperty("App::PropertyBool", "Solid", "Knit", "Create a solid if possible")
+		fp.addProperty("App::PropertyLinkList", "Faces", "Stitch", "List of faces to stitch together")
+		fp.addProperty("App::PropertyBool", "Solid", "Stitch", "Create a solid if possible")
 		fp.Proxy = self
 
 	def execute(self, fp):
@@ -90,25 +93,9 @@ class _Knit(object):
 			if (fp.Shape.isClosed()):
 				fp.Shape = Part.Solid(fp.Shape)
 
-class _ViewProviderKnit(object):
+class _ViewProviderStitch(_ViewProvider):
 	def __init__(self, vp):
-		self.attach(vp)
-
-	def attach(self, vp):
-		vp.Proxy = self
-		self.fp   = vp.Object
-
-	def getDisplayModes(self, vp):
-		return ["Shaded", "Wireframe", "Flat Lines"]
-
-	def getDefaultDisplayMode(self):
-		return "Shaded"
-
-	def onChanged(self, vp, prop): return
-
-	def setEdit(self, vp, mode):   return False
-
-	def unsetEdit(self, vp, mode): return
+		super(_ViewProviderStitch, self).__init__(vp)
 
 	def claimChildren(self):
 		return self.fp.Faces
@@ -146,17 +133,91 @@ class _ViewProviderKnit(object):
 			};
 			"""
 
-	def __getstate__(self): return None
-
-	def __setstate__(self,state): return None
-
-def makeKnit(doc, faces, name, solid):
+def makeStitch(doc, faces, name, solid):
 	fp = doc.addObject("Part::FeaturePython", getObjectName(name))
 	fp.Label = name
-	knit = _Knit(fp)
+	stitch = _Stich(fp)
 	fp.Solid = solid
 	fp.Faces = faces
-	_ViewProviderKnit(fp.ViewObject)
+	_ViewProviderStitch(fp.ViewObject)
 	for face in faces:
 		face.ViewObject.Visibility = False
+	stitch.execute(fp)
+	return fp
+
+class _Point(object):
+	def __init__(self, fp, pt):
+		fp.addProperty("App::PropertyVector", "Point", "Draft", "Location")
+		fp.Point = pt
+		fp.Proxy = self
+
+	def execute(self, fp):
+		vec = VEC(fp.Point)
+		fp.Shape = Part.Vertex(vec)
+
+class _ViewProviderPoint(_ViewProvider):
+	def __init__(self, vp):
+		super(_ViewProviderPoint, self).__init__(vp)
+
+	def getIcon(self):
+		return """
+			/* XPM */
+			static char * ViewProviderBox_xpm[] = {
+			"16 16 9 1",
+			" 	c None",
+			".	c #92B6B6",
+			"+	c #496D92",
+			"@	c #246D92",
+			"#	c #6D9292",
+			"$	c #4992DB",
+			"%	c #246DB6",
+			"&	c #2492B6",
+			"*	c #4992B6",
+			"                ",
+			"                ",
+			"                ",
+			"     .+@@+.     ",
+			"    #@$$$$@#    ",
+			"   .@$$$$$$%.   ",
+			"   +$$$$$$&$+   ",
+			"   @$*%%%%%%@   ",
+			"   @$%%%%%%%@   ",
+			"   +$%%%%%%*+   ",
+			"   .@%%%%%%%.   ",
+			"    #@&%%%%#    ",
+			"     .+@@+.     ",
+			"                ",
+			"                ",
+			"                "};
+			"""
+
+def makePoint(doc, pt, name):
+	fp = doc.addObject("Part::FeaturePython", name)
+	point = _Point(fp, pt)
+	_ViewProviderPoint(fp.ViewObject)
+	point.execute(fp)
+	return fp
+
+class _Line(object):
+	def __init__(self, fp,pt1, pt2):
+		fp.addProperty("App::PropertyVector", "Start", "Line", "start point")
+		fp.addProperty("App::PropertyVector", "End", "Line", "end point")
+		fp.Start = pt1
+		fp.End   = pt2
+		fp.Proxy = self
+
+	def execute(self, fp):
+		pt1 = fp.Start
+		pt2 = fp.End
+		fp.Shape = Part.makeLine(pt1, pt2)
+
+class _ViewProviderLine(_ViewProvider):
+	def __init__(self, vp):
+		super(_ViewProviderLine, self).__init__(vp)
+
+def makeLine(doc, pt1, pt2, name):
+	fp = doc.addObject("Part::FeaturePython", name)
+	line = _Line(fp, pt1, pt2)
+	_ViewProviderLine(fp.ViewObject)
+	line.execute(fp)
 	return fp

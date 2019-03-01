@@ -1085,7 +1085,7 @@ class FeatureNode(DataNode):
 		elif (p0 == 'ObjectCollection'):
 			p2 = self._getPropertyName(2)
 			if (p2 == 'FeatureDimensions'):         return 'Move'
-			if (p2 == 'SurfaceBody'):               return 'Knit'
+			if (p2 == 'SurfaceBody'):               return 'Stitch'
 			if (p1 == 'SurfaceBodies'):             return 'Stitch'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'TrimType'):                    return 'Trim'
@@ -1109,7 +1109,9 @@ class FeatureNode(DataNode):
 			if (p10 == 'FilletFullRoundSet'):       return 'Fillet'
 		elif (p0 == 'D70E9DDA'):                    return 'FilletRule'
 		elif (p0 == 'ParameterBoolean'):            return 'Boss'
-
+		elif (p0 == 'Parameter'):
+			if (p1 == 'Parameter'):
+				return 'Unknown' # "BoundaryPatch" 2nd Type
 		# Missing Features:
 		# - (Cosmetic-)Weld - only IAM files???
 		# - SurfaceMid -> FEM!
