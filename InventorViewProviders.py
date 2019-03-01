@@ -221,3 +221,74 @@ def makeLine(doc, pt1, pt2, name):
 	_ViewProviderLine(fp.ViewObject)
 	line.execute(fp)
 	return fp
+
+class _Plane(object):
+	def __init__(self, fp, c, n):
+		fp.addProperty("App::PropertyVector", "Center", "Plane", "center position")
+		fp.addProperty("App::PropertyVector", "Normal", "Plane", "normal vector of the plane")
+		fp.Center = c
+		fp.Normal = n
+		fp.Proxy = self
+
+	def execute(self, fp):
+		c = fp.Center
+		n = fp.Normal
+		fp.Shape = Part.Plane(c, n).toShape()
+
+class _ViewProviderPlane(_ViewProvider):
+	def __init__(self, vp):
+		super(_ViewProviderPlane, self).__init__(vp)
+	def getIcon(self):
+		return """
+		    /* XPM */
+			static const char * ViewProviderBox_xpm[] = {
+			"16 16 25 1",
+			" 	c None",
+			".	c #E9D5C9",
+			"+	c #BC683B",
+			"@	c #BA673A",
+			"#	c #B96435",
+			"$	c #FFAF72",
+			"%	c #AD450C",
+			"&	c #FFFFFF",
+			"*	c #3A4049",
+			"=	c #132F59",
+			"-	c #D0CBCB",
+			";	c #E1BCA7",
+			">	c #425575",
+			",	c #CBD0D9",
+			"'	c #B55D2B",
+			")	c #AF5D2E",
+			"!	c #C7C7C7",
+			"~	c #374E6F",
+			"{	c #B45C2B",
+			"]	c #C0AB9F",
+			"^	c #D1D1D1",
+			"/	c #B45D2C",
+			"(	c #D2D2D2",
+			"_	c #DCDCDC",
+			":	c #B35C2B",
+			"         .+     ",
+			"       @#$%     ",
+			"     @$$$$%     ",
+			"   @$$$$$$%     ",
+			" @$$$$$$$$%     ",
+			"%$$$$$$$$$%     ",
+			"%$$$$$$$$$%     ",
+			"%$$$$&*$$$%     ",
+			"%$$$$&*$$$%     ",
+			"%$$$$$$==-;     ",
+			"%$$$$$$$$>=,    ",
+			"%$$$$$$')!!~=,  ",
+			"%$$$${]     ^~=,",
+			"%$$/]         (_",
+			"%:]             ",
+			"                "};
+			"""
+
+def makePlane(doc, c, n, name):
+	fp = doc.addObject("Part::FeaturePython", name)
+	plane = _Plane(fp, c, n)
+	_ViewProviderPlane(fp.ViewObject)
+	plane.execute(fp)
+	return fp

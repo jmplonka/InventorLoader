@@ -6760,7 +6760,7 @@ class DCReader(EeDataReader):
 		if (node.get('label') is None):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		else:
-			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
+			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 		return i
 
 	def Read_CA674C90(self, node):

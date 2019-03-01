@@ -622,7 +622,7 @@ class DataNode(object):
 
 	def getRefText(self): # return unicode
 		name = self.name
-		if ((name) and (len(name) > 0)):
+		if (name):
 			return u'(%04X): %s \'%s\'' %(self.index, self.typeName, name)
 		return u'(%04X): %s' %(self.index, self.typeName)
 
@@ -1137,10 +1137,10 @@ class ValueNode(DataNode):
 		except:
 			value = None
 		name = self.data.name
-		if (name is None or len(name) == 0):
-			name = ''
-		else:
+		if (name):
 			name = ' ' + name
+		else:
+			name = ''
 		if (value is not None):
 			if (type(value) is int):
 				return u'(%04X): %s%s=%X' %(self.index, self.typeName, name, value)
