@@ -733,7 +733,7 @@ class FreeCADImporter(object):
 		number = sketchObj.ConstraintCount
 		index = self.addConstraint(sketchObj, constraint, key)
 		name = dimension.name
-		if (len(name)):
+		if (name):
 			constraint.Name = str(name)
 			sketchObj.renameConstraint(index, name)
 			if (useExpression):
@@ -1019,6 +1019,7 @@ class FreeCADImporter(object):
 				sketchNode = sketchEdge.get('sketch')
 				if (boundarySketch is None):
 					if (sketchNode is not None):
+						if (sketchNode.geometry is None): self.getGeometry(sketchNode)
 						if (sketchNode.typeName == 'Sketch2D'):
 							boundarySketch = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketchNode.name))
 							boundarySketch.Placement = sketchNode.geometry.Placement
@@ -1041,6 +1042,7 @@ class FreeCADImporter(object):
 					boundary = None
 					if (sketch is not None):
 						boundary = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketch.name))
+						if (sketch.geometry is None): self.getGeometry(sketch)
 						boundary.Placement = sketch.geometry.Placement
 						hide(sketch.geometry)
 					# create all parts of the profile
@@ -1158,7 +1160,7 @@ class FreeCADImporter(object):
 
 	def createEntity(self, node, className):
 		name = node.name
-		if (len(name) == 0): name = node.typeName
+		if ((name is None) or (len(name) == 0)): name = node.typeName
 		entity = newObject(self.doc, className, name)
 		return entity
 
@@ -1856,6 +1858,7 @@ class FreeCADImporter(object):
 	def addSketch_Block2D(self, blockNode, sketchObj):
 		sourceSketch = blockNode.get('source')
 		transformation = blockNode.get('transformation')
+		if (sourceSketch.geometry is None): self.getGeometry(sourceSketch)
 		for geo in sourceSketch.geometry.Geometry:
 			entity = geo.copy()
 			entity.transform(transformation.getMatrix())
@@ -1951,7 +1954,6 @@ class FreeCADImporter(object):
 		sketchNode.setGeometry(sketch)
 		geos = []
 		dims = []
-		self.pointDataDict = {}
 
 		for child in sketchNode.get('entities'):
 			if (child.typeName.startswith('Geometric_')):
@@ -1972,7 +1974,6 @@ class FreeCADImporter(object):
 
 		self.addSketch_PostCreateCoincidences(sketch)
 
-		self.pointDataDict = None
 		return sketch
 
 	def Create_Point3D(self, ptNode):
@@ -1986,13 +1987,26 @@ class FreeCADImporter(object):
 		line = InventorViewProviders.makeLine(self.doc, pt1, pt2, u"Line_%04X" %(lnNode.index))
 		lnNode.setGeometry(line)
 
+	def Create_Plane(self, plnNode):
+		c = p2v(plnNode, 'b_x', 'b_y', 'b_z')
+		n = VEC(plnNode.get('n_x'), plnNode.get('n_y'), plnNode.get('n_z'))
+		part = InventorViewProviders.makePlane(self.doc, c, n, u"Plane_%04X" %(plnNode.index))
+		plnNode.setGeometry(part)
+
 	def Create_SketchBlock(self, sketchNode):
-		sketchBlock = self.createSketch(sketchNode, 'Sketch-Block')
-		hide(sketchBlock)
+		if (self.pointDataDict is None):
+			self.pointDataDict = {}
+			sketch2D = self.createSketch(sketchNode, '2D-Sketch')
+			self.pointDataDict = None
+		else:
+			sketchBlock = self.createSketch(sketchNode, 'Sketch-Block')
+			hide(sketchBlock)
 		return
 
 	def Create_Sketch2D(self, sketchNode):
+		self.pointDataDict = {}
 		sketch2D = self.createSketch(sketchNode, '2D-Sketch')
+		self.pointDataDict = None
 
 		if (self.root): self.root.addObject(sketch2D)
 
@@ -2004,6 +2018,7 @@ class FreeCADImporter(object):
 		sketch3D = self.createEntity(sketchNode, 'Part::Feature')
 		logInfo(u"    adding 3D-Sketch '%s' ...", sketch3D.Label)
 		sketchNode.setGeometry(sketch3D)
+		sketch3D.Placement = PLC()
 		geos = []
 		dims = []
 		edges = {}
@@ -2323,10 +2338,9 @@ class FreeCADImporter(object):
 
 			for baseRef in participants:
 				cutGeo = None
-				baseGeo = self.getGeometry(baseRef)
 				logInfo(u"        .... Base = '%s'", baseRef.name)
-				if (baseGeo is None):
-					baseGeo = self.findBase(baseRef)
+				baseGeo = self.getGeometry(baseRef)
+				if (baseGeo is None): baseGeo = self.findBase(baseRef)
 				if (baseGeo is not None):
 					if (baseGeo.isDerivedFrom('Part::Cut')):
 						cutGeo = baseGeo
@@ -2497,7 +2511,7 @@ class FreeCADImporter(object):
 	def Create_FxClient(self, clientNode):
 		# create a subfolder
 		name = InventorViewProviders.getObjectName(clientNode.name)
-		if (len(name) == 0):
+		if ((name is None) or (len(name) == 0)):
 			name = node.typeName
 
 		fx = createGroup(self.doc, name)
@@ -2862,8 +2876,9 @@ class FreeCADImporter(object):
 		faceRadius  = getProperty(properties, 0x0C) # Parameter 'd144'=54.1mm
 		# noOptimice          = getProperty(properties, 0x0D) # boolean
 		# = getProperty(properties, 0x0E) # None (always)
-		# = getProperty(properties, 0x0F) # SolidBody 'Solid1'
-		# = getProperty(properties, 0x10) # SolidBody 'Solid1'
+		body = getProperty(properties, 0x0F) # SolidBody 'Solid1'
+		if (body is None):
+			body = getProperty(properties, 0x10) # SolidBody 'Solid1'
 
 		geos  = []
 		fillets = {} # key = creator_index, values = index of the edges
@@ -2873,10 +2888,10 @@ class FreeCADImporter(object):
 		i = 0
 		for idxCreator in fillets:
 			i += 1
-			name = chamferNode.name
+			name = filletNode.name
 			if (len(fillets) > 1):
 				name += u"_%d" %(i)
-			fx = chamferNode.segment.indexNodes[idxCreator].geometry
+			fx = filletNode.segment.indexNodes[idxCreator].geometry
 			filletGeo = newObject(self.doc, 'Part::Fillet', name)
 			filletGeo.Base  = fx
 			filletGeo.Edges = fillets[idxCreator]
@@ -3107,9 +3122,6 @@ class FreeCADImporter(object):
 		base = getProperty(properties, 0) # Feature, CA02411F
 #		 = getProperty(properties, 1) # CA02411F 'Srf2'
 #		 = getProperty(properties, 2) # ParameterBoolean=False
-
-		entity = self.getGeometry(base)
-
 		return notYetImplemented(nonParametricBaseNode)
 
 	def Create_FxPatternSketchDriven(self, patternNode):
@@ -3725,18 +3737,19 @@ class FreeCADImporter(object):
 		# create a iPart Table
 		table = newObject(self.doc, 'Spreadsheet::Sheet', iPartNode.name)
 		excel = iPartNode.get('excelWorkbook')
-		wb = excel.get('workbook')
-		if (wb is not None):
-			sheet = wb.sheet_by_index(0)
-			cols = range(0, sheet.ncols)
-			for row in range(0, sheet.ncols):    # Iterate through rows
-				for col in cols:    # Iterate through cols
-					try:
-						cell = sheet.cell(row, col)  # Get cell object by row, col
-						setTableValue(table, col, row + 1, cell.value)
-						# TODO: Add iPart feature to FreeCAD!!!
-					except:
-						pass
+		if (excel is not None):
+			wb = excel.get('workbook')
+			if (wb is not None):
+				sheet = wb.sheet_by_index(0)
+				cols = range(0, sheet.ncols)
+				for row in range(0, sheet.ncols):    # Iterate through rows
+					for col in cols:    # Iterate through cols
+						try:
+							cell = sheet.cell(row, col)  # Get cell object by row, col
+							setTableValue(table, col, row + 1, cell.value)
+							# TODO: Add iPart feature to FreeCAD!!!
+						except:
+							pass
 		return
 
 	def Create_Blocks(self, blocksNode):

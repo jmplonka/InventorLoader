@@ -955,7 +955,7 @@ def createBSplinesPCurve(pcurve, surface, sense):
 		)
 	shape = bsc.toShape(surf, bsc.FirstParameter, bsc.LastParameter)
 	if (shape is not None):
-		shape.Orientation = 'Reversed' if (sense == 'reversed') else 'Forward'
+		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
 	return shape
 
 def createBSplinesCurve(nubs, sense):
@@ -991,7 +991,7 @@ def createBSplinesCurve(nubs, sense):
 			logError(u"ERROR> %s", e)
 			logError(traceback.format_exc())
 	if (shape is not None):
-		shape.Orientation = u"Reversed" if (sense == 'reversed') else u"Forward"
+		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
 	return shape
 
 def createBSplinesSurface(nubs):
