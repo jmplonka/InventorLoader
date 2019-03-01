@@ -1019,7 +1019,7 @@ class FreeCADImporter(object):
 				sketchNode = sketchEdge.get('sketch')
 				if (boundarySketch is None):
 					if (sketchNode is not None):
-						if (sketchNode.geometry is None): self.getGeometry(sketchNode)
+						if (sketchNode.geometry is None):  self.getGeometry(sketchNode)
 						if (sketchNode.typeName == 'Sketch2D'):
 							boundarySketch = newObject(self.doc, 'Sketcher::SketchObject', u"%s_bp" %(sketchNode.name))
 							boundarySketch.Placement = sketchNode.geometry.Placement
