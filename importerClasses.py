@@ -1110,8 +1110,7 @@ class FeatureNode(DataNode):
 		elif (p0 == 'D70E9DDA'):                    return 'FilletRule'
 		elif (p0 == 'ParameterBoolean'):            return 'Boss'
 		elif (p0 == 'Parameter'):
-			if (p1 == 'Parameter'):
-				return 'Unknown' # "BoundaryPatch" 2nd Type
+			if (p1 == 'Parameter'):                 return 'ExtrudeSurface' # 'ExtrusionSurface'
 		# Missing Features:
 		# - (Cosmetic-)Weld - only IAM files???
 		# - SurfaceMid -> FEM!

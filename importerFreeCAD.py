@@ -2140,6 +2140,22 @@ class FreeCADImporter(object):
 		logWarning(u"        FxExtrude '%s': can't find/create base object - executing %s!", name, className)
 		return tool
 
+	def Create_FxExtrudeSurface(self, fxNode):
+		properties = fxNode.get('properties')
+		#= getProperty(properties, 0x00) # Parameter 'RDxVar3'=0002
+		idxFx1 = getProperty(properties, 0x01) # Parameter 'RDxVar4'=0350
+		idxFx2 = getProperty(properties, 0x02) # Parameter 'RDxVar5'=0351
+		body   = getProperty(properties, 0x03) # SurfaceBody 'Fläche5'
+
+		fx1 = fxNode.segment.indexNodes[idxFx1.getValue().x]
+		fx2 = fxNode.segment.indexNodes[idxFx2.getValue().x]
+
+		surface = None
+		if (surface is not None):
+			self.addSurfaceBody(fxNode, surface, body)
+
+		return surface
+
 	def Create_FxRevolve(self, revolveNode):
 		participants = revolveNode.getParticipants()
 		revolution = None
