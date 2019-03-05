@@ -955,7 +955,7 @@ def createBSplinesPCurve(pcurve, surface, sense):
 		)
 	shape = bsc.toShape(surf, bsc.FirstParameter, bsc.LastParameter)
 	if (shape is not None):
-		shape.Orientation = 'Reversed' if (sense == 'reversed') else 'Forward'
+		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
 	return shape
 
 def createBSplinesCurve(nubs, sense):
@@ -991,7 +991,7 @@ def createBSplinesCurve(nubs, sense):
 			logError(u"ERROR> %s", e)
 			logError(traceback.format_exc())
 	if (shape is not None):
-		shape.Orientation = 'Reversed' if (sense == 'reversed') else 'Forward'
+		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
 	return shape
 
 def createBSplinesSurface(nubs):
@@ -1734,14 +1734,14 @@ class Face(Topology):
 	def getLoop(self):    return None if (self._loop is None)    else self._loop.node
 	def getParent(self):  return None if (self._parent is None)  else self._parent.node
 	def getSurface(self): return None if (self._surface is None) else self._surface.node
-	def buildCoEdges(self, doc):
+	def buildCoEdges(self):
 		edges = []
 		loop = self.getLoop()
 		while (loop is not None):
 			coedges = loop.getCoEdges()
 			for index in coedges:
 				coEdge = coedges[index]
-				edge = coEdge.build(doc)
+				edge = coEdge.build()
 				if (edge is not None):
 					edges.append(edge)
 			loop = loop.getNext()
@@ -1750,8 +1750,8 @@ class Face(Topology):
 		for edge in edges:
 			Part.show(edge)
 		return None
-	def build(self, doc):
-		edges = self.buildCoEdges(doc)
+	def build(self):
+		edges = self.buildCoEdges()
 		s     = self.getSurface()
 		face = None
 		surface = s.build() if (s is not None) else None
@@ -1925,7 +1925,7 @@ class CoEdge(Topology):
 	def getEdge(self):     return None if (self._edge is None)     else self._edge.node
 	def getOwner(self):    return None if (self._owner is None)    else self._owner.node
 	def getCurve(self):    return None if (self._curve is None)    else self._curve.node
-	def build(self, doc):
+	def build(self, ):
 		e = self.getEdge()
 		c = e.getCurve()
 		if (c is not None):
@@ -2805,7 +2805,7 @@ class SurfaceSpline(Surface):
 				ct  = False
 				bv3 = None
 		elif (r1 == 'single_radius'):
-			if (chunks[i].val == 7): # ==> ..\Test\Fillets\Fillet_edge_2mm_Mixed_G1_noSmooth.ipt: convert to SAT!!!
+			if (chunks[i].val == 7): # ???
 				ut1, i = getValue(chunks, i)
 				uv1, i = getFloats(chunks, i, 2)
 		rU, i   = getInterval(chunks, i, 0, 1, 1.0)
