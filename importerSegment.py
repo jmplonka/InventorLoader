@@ -198,9 +198,9 @@ def resolveReferencNodes(nodes):
 		elif (node.typeName == 'NMx_FFColor_Entity'):
 			refFx = node.get('fx')
 			refFx.set('fxColor', node)
-		elif (node.typeName == 'FaceCollectionProxy'):
-			proxy = node.get('proxyDef')
-			proxy.set('faceCollection', node)
+		elif (node.typeName == 'ObjectCollectionDef'):
+			definition = node.get('definition')
+			definition.set('objectCollection', node)
 	return
 
 def isParent(ref, parent):
