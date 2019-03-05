@@ -10,15 +10,12 @@
 		* add CounterRoll, Rip
 
 	* Solids modeling
-		* add Shell, Split, (Presentation-)Mesh
+		* add Shell, Split
 
 	* Surfaces
 		* add Trim, Sculpt, Extend
 		* add RuledSurface
 		* add Decal, Emboss
-
-	* Edge modeling
-		* add (Rule-)Fillet
 
 	* combined
 		* add Boss, Rib, Grill, Lip, Rest, SnapFit
