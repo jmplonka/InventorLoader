@@ -71,3 +71,6 @@ if (not importerUtils.canImport()):
 	msgBox.setText("Dependencies updated!!")
 	msgBox.setInformativeText("To use Inventor-AddOn, restart of FreeCAD is required!")
 	ret = msgBox.exec_()
+else:
+	from InventorWorkbench import InventorWorkbench
+	Gui.addWorkbench(InventorWorkbench)
