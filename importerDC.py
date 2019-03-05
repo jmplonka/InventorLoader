@@ -5063,7 +5063,7 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt16A(i, 6,  'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i,    'elements')
+		i = node.ReadChildRef(i,    'component')
 		i = node.ReadChildRef(i,    'nameTable')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i,    'ref_2')
@@ -5165,7 +5165,7 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt32A(i, 3,  'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i,    'elements')
+		i = node.ReadChildRef(i,    'component')
 		i = node.ReadChildRef(i,    'nameTable')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i,    'ref_2')
@@ -5193,7 +5193,7 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderContent(node, 'SurfaceBody')
 		i = self.skipBlockSize(i, 8)
 		if (getFileVersion() > 2018): i += 4
-		i = node.ReadCrossRef(i, 'satWrapper')
+		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_90874D48(self, node): # BodySet
@@ -5366,11 +5366,12 @@ class DCReader(EeDataReader):
 #					i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'entities')
 #					i = node.ReadSInt32(i, 'u32_4')
 		else:
+			typeName = 'PartComponent'
 			i = node.ReadChildRef(i, 'cld_0')
 			i = node.ReadUInt16A(i, 2, 'a0')
 			i = self.skipBlockSize(i)
 			i = node.ReadParentRef(i)
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'objects')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_TEXT16_X_REF_, 'parameters')
 			i = node.ReadUInt32A(i, 2, 'a1')
 			if (getFileVersion() > 2012): i += 4
@@ -5387,10 +5388,10 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_90874D74(self, node): # FaceCollectionProxy
-		i = self.ReadHeadersS32ss(node, 'FaceCollectionProxy')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'faces')
-		i = node.ReadCrossRef(i, 'proxyDef')
+	def Read_90874D74(self, node): # ObjectCollectionDef
+		i = self.ReadHeadersS32ss(node, 'ObjectCollectionDef')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'bodies')
+		i = node.ReadCrossRef(i, 'definition') # -> ObjectCollection
 		return i
 
 	def Read_90874D91(self, node): # Feature
@@ -6759,7 +6760,7 @@ class DCReader(EeDataReader):
 		if (node.get('label') is None):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		else:
-			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
+			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 		return i
 
 	def Read_CA674C90(self, node):
