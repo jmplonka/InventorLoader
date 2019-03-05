@@ -161,7 +161,7 @@ def getProperty(properties, key):
 def getPropertySetName(properties, path):
 	name = getProperty(properties, KEY_SET_NAME)
 
-	if (len(name)==0):
+	if ((name is None ) or (len(name)==0)):
 		name = path[-1][1:]
 
 	languageCode = properties[KEY_LANGUAGE_CODE] if (KEY_LANGUAGE_CODE in properties) else 1031 # en_EN
