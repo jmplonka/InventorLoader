@@ -38,10 +38,10 @@ def read(doc, filename, readProperties):
 		if (Import_IPT.read(doc, filename, readProperties)):
 			return Import_IPT
 	elif (ext == '.sat'):
-		if (importerSAT.readText(doc, filename)):
+		if (importerSAT.readText(filename)):
 			return importerSAT
 	elif (ext == '.sab'):
-		if (importerSAT.readBinary(doc, filename)):
+		if (importerSAT.readBinary(filename)):
 			return importerSAT
 	elif (ext == '.iam'):
 		logError(u"Sorry, AUTODESK assembly files not yet supported!")
