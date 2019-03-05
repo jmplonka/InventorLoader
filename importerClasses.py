@@ -558,8 +558,8 @@ class DataNode(object):
 		if (self.data): self.data.valid = valid
 
 	@property
-	def sketchEntity(self):
-		if (self.data): return self.data.sketchEntity
+	def geometry(self):
+		if (self.data): return self.data.geometry
 		return None
 
 	@property
@@ -583,10 +583,10 @@ class DataNode(object):
 		if (self.data): return self.data.sketchIndex
 		return None
 
-	def setSketchEntity(self, index, entity):
+	def setGeometry(self, geometry, index=1):
 		if (self.data):
+			self.data.geometry = geometry
 			self.data.sketchIndex = index
-			self.data.sketchEntity = entity
 
 	def append(self, node):
 		self.children.append(node)
@@ -622,7 +622,7 @@ class DataNode(object):
 
 	def getRefText(self): # return unicode
 		name = self.name
-		if ((name) and (len(name) > 0)):
+		if (name):
 			return u'(%04X): %s \'%s\'' %(self.index, self.typeName, name)
 		return u'(%04X): %s' %(self.index, self.typeName)
 
@@ -1085,7 +1085,7 @@ class FeatureNode(DataNode):
 		elif (p0 == 'ObjectCollection'):
 			p2 = self._getPropertyName(2)
 			if (p2 == 'FeatureDimensions'):         return 'Move'
-			if (p2 == 'SurfaceBody'):               return 'Knit'
+			if (p2 == 'SurfaceBody'):               return 'Stitch'
 			if (p1 == 'SurfaceBodies'):             return 'Stitch'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'TrimType'):                    return 'Trim'
@@ -1109,7 +1109,8 @@ class FeatureNode(DataNode):
 			if (p10 == 'FilletFullRoundSet'):       return 'Fillet'
 		elif (p0 == 'D70E9DDA'):                    return 'FilletRule'
 		elif (p0 == 'ParameterBoolean'):            return 'Boss'
-
+		elif (p0 == 'Parameter'):
+			if (p1 == 'Parameter'):                 return 'Link2Body' # link between Feature and Body
 		# Missing Features:
 		# - (Cosmetic-)Weld - only IAM files???
 		# - SurfaceMid -> FEM!
@@ -1135,10 +1136,10 @@ class ValueNode(DataNode):
 		except:
 			value = None
 		name = self.data.name
-		if (name is None or len(name) == 0):
-			name = ''
-		else:
+		if (name):
 			name = ' ' + name
+		else:
+			name = ''
 		if (value is not None):
 			if (type(value) is int):
 				return u'(%04X): %s%s=%X' %(self.index, self.typeName, name, value)
@@ -1502,7 +1503,7 @@ class AbstractData(object):
 		self.visible      = False
 		self.construction = False
 		self.segment      = None
-		self.sketchEntity = None
+		self.geometry     = None
 		self.sketchIndex  = None
 		self.sketchPos    = None
 		self.valid        = True
