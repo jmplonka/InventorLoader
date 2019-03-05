@@ -867,3 +867,7 @@ class Color(object):
 
 	def __repr__(self):
 		return self.__str__()
+
+def getIconPath(fileName):
+	return os.path.join(os.path.dirname(__file__), "Resources", "icons", fileName)
+
