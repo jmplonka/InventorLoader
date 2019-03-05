@@ -424,50 +424,50 @@ def setCurrentColor(entity):
 			global _currentColor
 			_currentColor = color
 
-def createBody(doc, root, name, shape, transform):
+def createBody(root, name, shape, transform):
 	if (shape is not None):
-		body = doc.addObject("Part::Feature", name)
+		body = FreeCAD.ActiveDocument.addObject("Part::Feature", name)
 		if (root is not None):
 			root.addObject(body)
 		body.Shape = shape
 		if (transform is not None):
 			body.Placement = transform.getPlacement()
 
-def buildFaces(shells, doc, root, name, transform):
+def buildFaces(shells, root, name, transform):
 	faces = []
 	i = 1
 	for shell in shells:
 		for face in shell.getFaces():
-			surface = face.build(doc)
+			surface = face.build()
 			if (surface is not None):
 				faces.append(surface)
-				createBody(doc, root, "%s_%d" %(name, i), surface, transform)
+				createBody(root, "%s_%d" %(name, i), surface, transform)
 				i += 1
 		for wire in shell.getWires():
-			buildWire(root, doc, wire, transform)
+			buildWire(root, wire, transform)
 
 	if (len(faces) > 0):
 		logInfo(u"    ... %d face(s)!", len(faces))
 #		shell = faces[0] if (len(faces) == 1) else Part.Shell(faces)
-#		createBody(doc, root, name, shell, transform)
+#		createBody(root, name, shell, transform)
 
 	return
 
-def buildWires(coedges, doc, root, name, transform):
+def buildWires(coedges, root, name, transform):
 	edges = []
 
 	for index in coedges:
 		coedge = coedges[index]
-		edge = coedge.build(doc)
+		edge = coedge.build()
 		if (edge is not None):
 			edges.append(edge)
 
 	if (len(edges) > 0):
 		logInfo(u"        ... %d edges!", len(edges))
-		createBody(doc, root, name, edges[0].fuse(edges[1:]) if (len(edges) > 1) else edges[0], transform)
+		createBody(root, name, edges[0].fuse(edges[1:]) if (len(edges) > 1) else edges[0], transform)
 	return
 
-def buildLump(root, doc, lump, transform):
+def buildLump(root, lump, transform):
 	global lumps
 	lumps += 1
 	name = "Lump%02d" %lumps
@@ -475,50 +475,50 @@ def buildLump(root, doc, lump, transform):
 
 	setCurrentColor(lump)
 
-	buildFaces(lump.getShells(), doc, root, name, transform)
+	buildFaces(lump.getShells(), root, name, transform)
 
 	return True
 
-def buildWire(root, doc, wire, transform):
+def buildWire(root, wire, transform):
 	global wires
 	wires += 1
 	name = "Wire%02d" %wires
 	logInfo(u"    building wire '%s'...", name)
 
-	buildWires(wire.getCoEdges(), doc, root, name, transform)
-	buildFaces(wire.getShells(), doc, root, name, transform)
+	buildWires(wire.getCoEdges(), root, name, transform)
+	buildFaces(wire.getShells(), root, name, transform)
 
 	return True
 
-def buildBody(root, doc, node):
+def buildBody(root, node):
 	if (node.index >= 0 ):
 		transform = node.getTransform()
 		setCurrentColor(node)
 
 		for lump in node.getLumps():
-			buildLump(root, doc, lump, transform)
+			buildLump(root, lump, transform)
 		for wire in node.getWires():
-			buildWire(root, doc, wire, transform)
+			buildWire(root, wire, transform)
 	return
 
-def importModel(root, doc):
+def importModel(root):
 	global lumps, wires
 	wires = 0
 	lumps = 0
 	bodies = resolveNodes()
 	for body in bodies:
-		buildBody(root, doc, body)
+		buildBody(root, body)
 
 	return
 
-def convertModel(group, doc):
+def convertModel(group, docName):
 	global _fileName
 	header = Acis.getHeader()
 	bodies = resolveNodes()
 	stepfile = export(_fileName, header, bodies)
-	ImportGui.insert(stepfile, doc.Name)
+	ImportGui.insert(stepfile, docName)
 
-def readText(doc, fileName):
+def readText(fileName):
 	global _fileName
 	_fileName = fileName
 	header    = Header()
@@ -564,7 +564,7 @@ def readText(doc, fileName):
 	setEntities(lst)
 	return True
 
-def readBinary(doc, fileName):
+def readBinary(fileName):
 	global _fileName
 	_fileName = fileName
 	header    = Header()
@@ -611,9 +611,9 @@ def readBinary(doc, fileName):
 def create3dModel(group, doc):
 	strategy = chooseImportStrategyAcis()
 	if (strategy == STRATEGY_SAT):
-		importModel(group, doc)
+		importModel(group)
 	else:
-		convertModel(group, doc)
+		convertModel(group, doc.Name)
 	setEntities(None)
 	Acis.setHeader(None)
 	return
