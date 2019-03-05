@@ -239,7 +239,7 @@ def create3dModel(root, doc):
 	strategy = getStrategy()
 	if (strategy == STRATEGY_NATIVE):
 		creator = FreeCADImporter()
-		creator.importModel(root, doc)
+		creator.importModel(root)
 	else:
 		brep = getModel().getBRep()
 		importerSAT._fileName = getInventorFile()
