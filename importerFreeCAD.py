@@ -3738,21 +3738,26 @@ class FreeCADImporter(object):
 
 	def Create_iPart(self, iPartNode):
 		# create a iPart Table
-		table = newObject('Spreadsheet::Sheet', iPartNode.name)
 		excel = iPartNode.get('excelWorkbook')
 		if (excel is not None):
 			wb = excel.get('workbook')
 			if (wb is not None):
 				sheet = wb.sheet_by_index(0)
 				cols = range(0, sheet.ncols)
-				for row in range(0, sheet.ncols):    # Iterate through rows
+				variants = [str(sheet.cell(row, 0).value) for row in range(1, sheet.nrows)]
+				iPart = InventorViewProviders.makePartVariants(iPartNode.name, variants)
+				table = iPart.Values
+
+				for row in range(0, sheet.nrows):    # Iterate through rows
+					iPartValue = []
 					for col in cols:    # Iterate through cols
 						try:
 							cell = sheet.cell(row, col)  # Get cell object by row, col
+							iPartValue.append(cell.value)
 							setTableValue(table, col, row + 1, cell.value)
-							# TODO: Add iPart feature to FreeCAD!!!
 						except:
 							pass
+
 		return
 
 	def Create_Blocks(self, blocksNode):

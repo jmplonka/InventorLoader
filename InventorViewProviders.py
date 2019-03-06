@@ -11,6 +11,14 @@ from FreeCAD       import Vector as VEC
 
 INVALID_NAME = re.compile('^[0-9].*')
 
+def createPartFeature(doctype, name, default):
+	if (name is None):
+		fp = FreeCAD.ActiveDocument.addObject(doctype, default)
+	else:
+		fp = FreeCAD.ActiveDocument.addObject(doctype, getObjectName(name))
+		fp.Label = name
+	return fp
+
 def getObjectName(name):
 	if (sys.version_info.major < 3):
 		v = re.sub(r'[^\x00-\x7f]', r'_', name)
@@ -53,11 +61,7 @@ class _ViewProviderBoundaryPatch(_ViewProvider):
 		return getIconPath('FxBoundaryPatch.xpm')
 
 def makeBoundaryPatch(edges, name = None):
-	if (name is None):
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "BoundaryPatch")
-	else:
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", getObjectName(name))
-		fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "BoundaryPatch")
 	fp.Shape = Part.Face(Part.Wire(edges))
 	if FreeCAD.GuiUp:
 		_ViewProviderBoundaryPatch(fp.ViewObject)
@@ -90,11 +94,7 @@ class _ViewProviderStitch(_ViewProvider):
 		return getIconPath('FxStitch.xpm')
 
 def makeStitch(faces, name = None, solid = False):
-	if (name is None):
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "FxStitch")
-	else:
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", getObjectName(name))
-		fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "FxStitch")
 	_Stich(fp, solid, faces)
 	if FreeCAD.GuiUp:
 		_ViewProviderStitch(fp.ViewObject)
@@ -150,8 +150,7 @@ class _ViewProviderPoint(_ViewProvider):
 			"""
 
 def makePoint(pt, name):
-	fp = FreeCAD.ActiveDocument.addObject("Part::Feature", getObjectName(name))
-	fp.Label = name
+	fp = createPartFeature("Part::Feature", name, "Point")
 	_Point(fp, pt)
 	if FreeCAD.GuiUp:
 		_ViewProviderPoint(fp.ViewObject)
@@ -176,8 +175,7 @@ class _ViewProviderLine(_ViewProvider):
 		super(_ViewProviderLine, self).__init__(vp)
 
 def makeLine(pt1, pt2, name):
-	fp = FreeCAD.ActiveDocument.addObject("Part::Feature", getObjectName(name))
-	fp.Label = name
+	fp = createPartFeature("Part::Feature", name, "Line")
 	line = _Line(fp, pt1, pt2)
 	if FreeCAD.GuiUp:
 		_ViewProviderLine(fp.ViewObject)
@@ -249,8 +247,7 @@ class _ViewProviderPlane(_ViewProvider):
 			"""
 
 def makePlane(c, n, name):
-	fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", getObjectName(name))
-	fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "Plane")
 	plane = _Plane(fp, c, n)
 	if FreeCAD.GuiUp:
 		_ViewProviderPlane(fp.ViewObject)
@@ -296,13 +293,52 @@ class _ViewProviderSketch3D(_ViewProvider):
 		return getIconPath("Sketch3D.xpm")
 
 def makeSketch3D(name = None):
-	if (name is None):
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Sketch3D")
-	else:
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", getObjectName(name))
-		fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "Sketch3D")
 	sketch3D = _Sketch3D(fp)
 	if (FreeCAD.GuiUp):
 		_ViewProviderSketch3D(fp.ViewObject)
+	FreeCAD.ActiveDocument.recompute()
+	return fp
+
+class _PartVariants(object):
+	def __init__(self, fp, variants):
+		fp.addProperty("App::PropertyLink", "Parameters", "iPart", "table that holds the values for the actual part")
+		fp.addProperty("App::PropertyLink", "Values", "iPart", "table that holds the values for the part variants")
+		fp.addProperty("App::PropertyEnumeration", "Variants", "iPart").Variants = variants
+		fp.addProperty("App::PropertyPythonObject", "addVariant").addVariant = self.addVariant
+		fp.Values     = createPartFeature('Spreadsheet::Sheet', fp.Name + '_VALUES', 'iPart_VALUES')
+		fp.Parameters = FreeCAD.ActiveDocument.getObject(u'T_Parameters')
+		self.fp = fp
+		fp.Proxy = self
+
+	def addVariant(self, variant):
+		index = len(self.fp.Variants)
+		self.fp.Variants.append(variant)
+		return index
+
+	def execute(self, fp):
+		print("setting parameters according to variant '" + fp.Variants + "'")
+		return
+
+class _ViewProviderPartVariants(_ViewProvider):
+	def __init__(self, vp):
+		super(_ViewProviderPartVariants, self).__init__(vp)
+
+	def claimChildren(self):
+		children = []
+		if (not self.fp.Parameters is None):
+			children.append(self.fp.Parameters)
+		if (not self.fp.Values is None):
+			children.append(self.fp.Values)
+		return children
+
+	def getIcon(self):
+		return getIconPath("iPart-VO.png")
+
+def makePartVariants(name = None, variants = []):
+	fp = createPartFeature("Part::FeaturePython", name, "Variations")
+	iPart = _PartVariants(fp, variants)
+	if (FreeCAD.GuiUp):
+		_ViewProviderPartVariants(fp.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
 	return fp
