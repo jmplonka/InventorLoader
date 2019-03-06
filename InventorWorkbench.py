@@ -26,6 +26,15 @@ _FX_SWEEP_            = PREFIX + 'FxSweep'
 _FX_RIB_              = PREFIX + 'FxRib'             # FX missing
 _FX_COIL_             = PREFIX + 'FxCoil'            # FX missing
 _FX_EMBOSS_           = PREFIX + 'FxEmboss'          # FX missing
+_PRIMITIVE_BOX_       = PREFIX + 'PrimitiveBox'
+_PRIMITIVE_CYLINDER_  = PREFIX + 'PrimitiveCylinder'
+_PRIMITIVE_SPHERE_    = PREFIX + 'PrimitiveShpere'
+_PRIMITIVE_CONE_      = PREFIX + 'PrimitiveCone'
+_PRIMITIVE_ELLIPSOID_ = PREFIX + 'PrimitiveEllipsoid'
+_PRIMITIVE_TORUS_     = PREFIX + 'PrimitiveTorus'
+_PRIMITIVE_PRISM_     = PREFIX + 'PrimitivePrism'
+_PRIMITIVE_WEDGE_     = PREFIX + 'PrimitiveWedge'
+_PRIMITIVES_          = PREFIX + 'Primitives'
 # Modify
 _FX_HOLE_             = PREFIX + 'FxHole'
 _FX_FILLET_           = PREFIX + 'FxFillet'
@@ -88,6 +97,37 @@ _SHEET_METAL_REFOLD_  = PREFIX + 'FxRefold'        # FX missing
 _I_PART_              = PREFIX + 'iPart'
 _FX_DIRECT_EDIT_      = PREFIX + 'FxDirectEdit'      # FX missing
 
+def runPartDesignCommand(cmd):
+	import PartDesign
+	doc  = FreeCAD.ActiveDocument
+	if (doc):
+		view = FreeCADGui.ActiveDocument
+		if (len(doc.findObjects('PartDesign::Body')) < 1):
+			body = doc.addObject('PartDesign::Body','Body')
+			view .setActiveObject('pdbody', body)
+			FreeCADGui.Selection.clearSelection()
+			Gui.Selection.addSelection(body)
+			doc.recompute()
+			FreeCADGui.runCommand(cmd)
+	return
+
+def createPrimitive(name):
+	import PartDesign
+	doc = FreeCAD.ActiveDocument
+	if (doc):
+		view = FreeCADGui.ActiveDocument
+		body = doc.addObject('PartDesign::Body', 'Body')
+		view.setActiveObject('pdbody', body)
+		box = doc.addObject('PartDesign::Additive' + name, name)
+		doc.Body.addObject(box)
+		doc.recompute()
+		box.ViewObject.ShapeColor  =body.ViewObject.ShapeColor
+		box.ViewObject.LineColor   =body.ViewObject.LineColor
+		box.ViewObject.PointColor  =body.ViewObject.PointColor
+		box.ViewObject.Transparency=body.ViewObject.Transparency
+		box.ViewObject.DisplayMode =body.ViewObject.DisplayMode
+		view.setEdit(box.Name)
+
 class _CmdAbstract(object):
 	def __init__(self, menuText = None, toolTip = None, pixmap = None, accel=None):
 		super(_CmdAbstract, self).__init__()
@@ -104,9 +144,9 @@ class _CmdAbstract(object):
 	def IsActive(self):
 		return not (FreeCAD.ActiveDocument is None)
 	def Activated(self):
-		diag = QMessageBox(QMessageBox.Information, 'FreeCAD: Inventor workbench...', 'Command not ' + self.__class__.__name__ + ' yet implemented!')
-		diag.setWindowModality(Qt.ApplicationModal)
-		diag.exec_()
+		dlg = QMessageBox(QMessageBox.Information, 'FreeCAD: Inventor workbench...', 'Command not ' + self.__class__.__name__ + ' yet implemented!')
+		dlg.setWindowModality(Qt.ApplicationModal)
+		dlg.exec_()
 
 # Sketch
 class _CmdSketch2D(_CmdAbstract):
@@ -114,7 +154,7 @@ class _CmdSketch2D(_CmdAbstract):
 		super(_CmdSketch2D, self).__init__(menuText="&2D Sketch", toolTip="Creates an 2D sketch", pixmap=getIconPath("Sketch2D.png"), accel="I, 2")
 	def Activated(self):
 		if FreeCAD.ActiveDocument:
-			import SketcherGui
+			import Sketcher
 			FreeCADGui.runCommand("Sketcher_NewSketch")
 class _CmdSketch3D(_CmdAbstract):
 	def __init__(self):
@@ -138,30 +178,22 @@ class _CmdFxExtrude(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxExtrude, self).__init__(menuText="&Extrude", toolTip="extrude a profile", pixmap=getIconPath("FxExtrude.png"), accel="I, E")
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Part_Extrude")
+		runPartDesignCommand("PartDesign_Pad")
 class _CmdFxRevolve(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRevolve, self).__init__(menuText="&Revolve", toolTip="revolve a profile", pixmap=getIconPath("FxRevolve.png"), accel="I, R")
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Part_Revolve")
+		runPartDesignCommand("PartDesign_Revolution")
 class _CmdFxLoft(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxLoft, self).__init__(menuText="&Loft", toolTip="loft profiles", pixmap=getIconPath("FxLoft.png"), accel="I, L")
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Part_Loft")
+		runPartDesignCommand("PartDesign_AdditiveLoft")
 class _CmdFxSweep(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxSweep, self).__init__(menuText="&Sweep", toolTip="sweep profile along path", pixmap=getIconPath("FxSweep.png"), accel="I, W")
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Part_Sweep")
+		runPartDesignCommand("PartDesign_AdditivePipe")
 class _CmdFxRib(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRib, self).__init__(menuText="Ri&b", toolTip="Create ribs", pixmap=getIconPath("FxRib.png"))
@@ -180,26 +212,22 @@ class _CmdFxFillet(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxFillet, self).__init__(menuText="&Fillet", toolTip="Create fillets", pixmap=getIconPath("FxFillet.png"))
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Part_Fillet")
+		runPartDesignCommand("PartDesign_Fillet")
 class _CmdFxChamfer(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxChamfer, self).__init__(menuText="&Chamfer", toolTip="Create chamfers", pixmap=getIconPath("FxChamfer.png"))
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Part_Chamfer")
+		runPartDesignCommand("PartDesign_Chamfer")
 class _CmdFxShell(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxShell, self).__init__(menuText="&Shell", toolTip="Create a shell", pixmap=getIconPath("FxShell.png"))
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Part_Thickness")
+		runPartDesignCommand("PartDesign_Thickness")
 class _CmdFxDraft(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxDraft, self).__init__(menuText="&Draft", toolTip="Create a draft", pixmap=getIconPath("FxDraft.png"))
+	def Activated(self):
+		runPartDesignCommand("PartDesign_Draft")
 class _CmdFxThread(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxThread, self).__init__(menuText="&Thread", toolTip="Create threads", pixmap=getIconPath("FxThread.png"))
@@ -210,9 +238,7 @@ class _CmdFxCombine(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxCombine, self).__init__(menuText="C&ombine", toolTip="", pixmap=getIconPath("FxCombine.png"))
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Part_Boolean")
+		runPartDesignCommand("PartDesign_Boolean")
 class _CmdFxMoveFace(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxMoveFace, self).__init__(menuText="&Move Face", toolTip="", pixmap=getIconPath("FxMoveFace.png"))
@@ -221,7 +247,7 @@ class _CmdFxCopyObject(_CmdAbstract):
 		super(_CmdFxCopyObject, self).__init__(menuText="Copy O&bject", toolTip="", pixmap=getIconPath("FxCopyObject.png"))
 	def Activated(self):
 		if FreeCAD.ActiveDocument:
-			import SketcherGui
+			import Part
 			FreeCADGui.runCommand("Part_SimpleCopy")
 class _CmdFxMoveBody(_CmdAbstract):
 	def __init__(self):
@@ -232,18 +258,18 @@ class _CmdFxRectangular(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRectangular, self).__init__(menuText="&Rectangular Pattern", toolTip="Arrange objects in rectangular pattern", pixmap=getIconPath("FxRectangular.png"))
 	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			import SketcherGui
-			FreeCADGui.runCommand("Draft_Array")
+		runPartDesignCommand("PartDesign_LinearPattern")
 class _CmdFxCircular(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxCircular, self).__init__(menuText="&Circular Pattern", toolTip="Arrange objects in circular pattern", pixmap=getIconPath("FxCircular.png"))
+	def Activated(self):
+		runPartDesignCommand("PartDesign_PolarPattern")
 class _CmdFxSketchDriven(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxSketchDriven, self).__init__(menuText="&Sketcht driven", toolTip="Arrange objects according sketch points", pixmap=getIconPath("FxSketchDriven.png"))
 	def Activated(self):
 		if FreeCAD.ActiveDocument:
-			import SketcherGui
+			import Draft
 			FreeCADGui.runCommand("Draft_PointArray")
 class _CmdFxPatterns(_CmdAbstract):
 	def __init__(self):
@@ -257,7 +283,7 @@ class _CmdFxMirror(_CmdAbstract):
 		super(_CmdFxMirror, self).__init__(menuText="&Mirror Pattern", toolTip="Arrange objects in a mirror pattern", pixmap=getIconPath("FxMirror.png"))
 	def Activated(self):
 		if FreeCAD.ActiveDocument:
-			import SketcherGui
+			import Part
 			FreeCADGui.runCommand("Part_Mirror")
 
 # Surface
@@ -266,7 +292,7 @@ class _CmdFxThicken(_CmdAbstract):
 		super(_CmdFxThicken, self).__init__(menuText="T&hicken", toolTip="", pixmap=getIconPath("FxThicken.png"))
 	def Activated(self):
 		if FreeCAD.ActiveDocument:
-			import SketcherGui
+			import Part
 			FreeCADGui.runCommand("Part_Offset")
 class _CmdFxStitch(_CmdAbstract):
 	def __init__(self):
@@ -353,6 +379,53 @@ class _CmdFreeforms(_CmdAbstract):
 		return tuple([_FREEFORM_BOX_, _FREEFORM_PLANE_, _FREEFORM_CYLINDER, _FREEFORM_SPHERE, _FREEFORM_TORUS, _FREEFORM_QUAD_BALL])
 	def GetDefaultCommand(self):
 		return 0 # by default 'Box'
+class  _CmdPrimitiveBox(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitiveBox, self).__init__(menuText="&Box", toolTip="Create a primitive box", pixmap=getIconPath("Primitive_Box.svg"))
+	def Activated(self):
+		createPrimitive('Box')
+class  _CmdPrimitiveCylinder(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitiveCylinder, self).__init__(menuText="&Cylinder", toolTip="Create a primitive cylinder", pixmap=getIconPath("Primitive_Cylinder.svg"))
+	def Activated(self):
+		createPrimitive('Cylinder')
+class  _CmdPrimitiveShpere(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitiveShpere, self).__init__(menuText="&Shpere", toolTip="Create a primitive hpere", pixmap=getIconPath("Primitive_Sphere.svg"))
+	def Activated(self):
+		createPrimitive('Sphere')
+class  _CmdPrimitiveCone(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitiveCone, self).__init__(menuText="C&one", toolTip="Create a primitive cone", pixmap=getIconPath("Primitive_Cone.svg"))
+	def Activated(self):
+		createPrimitive('Cone')
+class  _CmdPrimitiveEllipsoid(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitiveEllipsoid, self).__init__(menuText="&Ellipsoid", toolTip="Create a primitive ellipsoid", pixmap=getIconPath("Primitive_Ellipsoid.svg"))
+	def Activated(self):
+		createPrimitive('Ellipsoid')
+class  _CmdPrimitiveTorus(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitiveTorus, self).__init__(menuText="&Torus", toolTip="Create a primitive torus", pixmap=getIconPath("Primitive_Torus.svg"))
+	def Activated(self):
+		createPrimitive('Torus')
+class  _CmdPrimitivePrism(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitivePrism, self).__init__(menuText="&Prism", toolTip="Create a primitive prism", pixmap=getIconPath("Primitive_Prism.svg"))
+	def Activated(self):
+		createPrimitive('Prism')
+class  _CmdPrimitiveWedge(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitiveWedge, self).__init__(menuText="&Wedge", toolTip="Create a primitive wedge", pixmap=getIconPath("Primitive_Wedge.svg"))
+	def Activated(self):
+		createPrimitive('Wedge')
+class  _CmdPrimitives(_CmdAbstract):
+	def __init__(self):
+		super(_CmdPrimitives, self).__init__(menuText='Create Freeform', toolTip='Create a freeform')
+	def GetCommands(self):
+		return tuple([_PRIMITIVE_BOX_, _PRIMITIVE_CYLINDER_, _PRIMITIVE_SPHERE_, _PRIMITIVE_CONE_, _PRIMITIVE_ELLIPSOID_, _PRIMITIVE_TORUS_, _PRIMITIVE_PRISM_, _PRIMITIVE_WEDGE_])
+	def GetDefaultCommand(self):
+		return 0 # by default 'Box'
 
 # Sheet-Metal
 class _CmdSheetMetalFace(_CmdAbstract):
@@ -415,26 +488,22 @@ class InventorWorkbench(Workbench):
 	Icon     = getIconPath("Workbench.xpm")
 
 	def Initialize(self):
-		TB_CREATE      = [_SKETCHES_, _SKETCH_BLOCK_, _SEPARATOR_,_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_, _SEPARATOR_, _FREEFORMS_ , _SEPARATOR_, _I_PART_]
-		TB_MODIFY      = [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_SPLIT_, _FX_COMBINE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _FX_DIRECT_EDIT_]
-		TB_PATTERNS    = [_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_, _FX_MIRROR_]
-		TB_SURFACE     = [_FX_THICKEN_, _FX_STITCH_, _FX_SCULPT_, _FX_PATCH_, _FX_TRIM_, _FX_DELETE_FACE_, _FX_REPLACE_FACE_, _FX_RULED_SURFACE_]
-		TB_PLASTIC     = [_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_]
-		TB_SHEET_METAL = [_SHEET_METAL_FACE_, _SHEET_METAL_FLANGES_, _SHEET_METAL_ROLL_, _SHEET_METAL_HEM_, _SHEET_METAL_BEND_, _SHEET_METAL_FOLD_, _SHEET_METAL_UNFOLD_, _SHEET_METAL_REFOLD_, _SHEET_METAL_CUT_, _SHEET_METAL_CORNER_, _SHEET_METAL_RIP_]
-		self.appendToolbar('Inventor-Create'  , TB_CREATE)
-		self.appendToolbar('Inventor-Modify', TB_MODIFY)
-		self.appendToolbar('Inventor-Patterns', TB_PATTERNS)
-		self.appendToolbar('Inventor-Surfaces', TB_SURFACE)
-		self.appendToolbar('Inventor-Plastic', TB_PLASTIC)
-		self.appendToolbar('Inventor-Sheet-Metal', TB_SHEET_METAL)
-		self.appendMenu(["&Inventor", "create &Sketch"], [_SKETCH_2D_, _SKETCH_3D_, _SKETCH_BLOCK_])
-		self.appendMenu(["&Inventor", "&create Model" ], [_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_])
-		self.appendMenu(["&Inventor", "&modify Model" ], [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_SPLIT_, _FX_COMBINE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _FX_DIRECT_EDIT_])
-		self.appendMenu(["&Inventor", "&Pattern"      ], [_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_, _SEPARATOR_, _FX_MIRROR_])
-		self.appendMenu(["&Inventor", "Sur&face"      ], [_FX_THICKEN_, _FX_STITCH_, _FX_SCULPT_, _FX_PATCH_, _FX_TRIM_, _FX_DELETE_FACE_, _FX_REPLACE_FACE_, _FX_RULED_SURFACE_])
-		self.appendMenu(["&Inventor", "Plas&tic"      ], [_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_])
-		self.appendMenu(["&Inventor", "&Freeform"     ], [_FREEFORM_BOX_, _FREEFORM_PLANE_, _FREEFORM_CYLINDER, _FREEFORM_SPHERE, _FREEFORM_TORUS, _FREEFORM_QUAD_BALL])
-		self.appendMenu(["&Inventor", "Sheet-M&etal"  ], [_SHEET_METAL_FACE_, _SHEET_METAL_FLANGE_, _SHEET_METAL_CONTOUR_, _SHEET_METAL_LOFTED_, _SHEET_METAL_ROLL_, _SHEET_METAL_HEM_, _SHEET_METAL_BEND_, _SHEET_METAL_FOLD_, _SHEET_METAL_UNFOLD_, _SHEET_METAL_REFOLD_, _SEPARATOR_, _SHEET_METAL_CUT_, _SHEET_METAL_CORNER_, _SHEET_METAL_RIP_])
+		self.appendToolbar('Inventor-Create'     , [_SKETCHES_, _SKETCH_BLOCK_, _SEPARATOR_,_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_, _SEPARATOR_, _FREEFORMS_ , _PRIMITIVES_, _SEPARATOR_, _I_PART_])
+		self.appendToolbar('Inventor-Modify'     , [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_SPLIT_, _FX_COMBINE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _FX_DIRECT_EDIT_])
+		self.appendToolbar('Inventor-Patterns'   , [_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_, _FX_MIRROR_])
+		self.appendToolbar('Inventor-Surfaces'   , [_FX_THICKEN_, _FX_STITCH_, _FX_SCULPT_, _FX_PATCH_, _FX_TRIM_, _FX_DELETE_FACE_, _FX_REPLACE_FACE_, _FX_RULED_SURFACE_])
+		self.appendToolbar('Inventor-Plastic'    , [_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_])
+		self.appendToolbar('Inventor-Sheet-Metal', [_SHEET_METAL_FACE_, _SHEET_METAL_FLANGES_, _SHEET_METAL_ROLL_, _SHEET_METAL_HEM_, _SHEET_METAL_BEND_, _SHEET_METAL_FOLD_, _SHEET_METAL_UNFOLD_, _SHEET_METAL_REFOLD_, _SHEET_METAL_CUT_, _SHEET_METAL_CORNER_, _SHEET_METAL_RIP_])
+
+		self.appendMenu(["&Inventor", "create &Sketch"    ], [_SKETCH_2D_, _SKETCH_3D_, _SKETCH_BLOCK_])
+		self.appendMenu(["&Inventor", "create &Primitives"], [_PRIMITIVE_BOX_, _PRIMITIVE_CYLINDER_, _PRIMITIVE_SPHERE_, _PRIMITIVE_CONE_, _PRIMITIVE_ELLIPSOID_, _PRIMITIVE_TORUS_, _PRIMITIVE_PRISM_, _PRIMITIVE_WEDGE_])
+		self.appendMenu(["&Inventor", "&create Model"     ], [_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_])
+		self.appendMenu(["&Inventor", "&modify Model"     ], [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_SPLIT_, _FX_COMBINE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _FX_DIRECT_EDIT_])
+		self.appendMenu(["&Inventor", "&Pattern"          ], [_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_, _SEPARATOR_, _FX_MIRROR_])
+		self.appendMenu(["&Inventor", "Sur&face"          ], [_FX_THICKEN_, _FX_STITCH_, _FX_SCULPT_, _FX_PATCH_, _FX_TRIM_, _FX_DELETE_FACE_, _FX_REPLACE_FACE_, _FX_RULED_SURFACE_])
+		self.appendMenu(["&Inventor", "Plas&tic"          ], [_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_])
+		self.appendMenu(["&Inventor", "&Freeform"         ], [_FREEFORM_BOX_, _FREEFORM_PLANE_, _FREEFORM_CYLINDER, _FREEFORM_SPHERE, _FREEFORM_TORUS, _FREEFORM_QUAD_BALL])
+		self.appendMenu(["&Inventor", "Sheet-M&etal"      ], [_SHEET_METAL_FACE_, _SHEET_METAL_FLANGE_, _SHEET_METAL_CONTOUR_, _SHEET_METAL_LOFTED_, _SHEET_METAL_ROLL_, _SHEET_METAL_HEM_, _SHEET_METAL_BEND_, _SHEET_METAL_FOLD_, _SHEET_METAL_UNFOLD_, _SHEET_METAL_REFOLD_, _SEPARATOR_, _SHEET_METAL_CUT_, _SHEET_METAL_CORNER_, _SHEET_METAL_RIP_])
 		self.appendMenu(["&Inventor"], [_I_PART_])
 
 if (FreeCAD.GuiUp):
@@ -449,6 +518,15 @@ if (FreeCAD.GuiUp):
 	addCommand(_FX_RIB_             , _CmdFxRib())
 	addCommand(_FX_COIL_            , _CmdFxCoil())
 	addCommand(_FX_EMBOSS_          , _CmdFxEmboss())
+	addCommand(_PRIMITIVE_BOX_      , _CmdPrimitiveBox())
+	addCommand(_PRIMITIVE_CYLINDER_ , _CmdPrimitiveCylinder())
+	addCommand(_PRIMITIVE_SPHERE_   , _CmdPrimitiveShpere())
+	addCommand(_PRIMITIVE_CONE_     , _CmdPrimitiveCone())
+	addCommand(_PRIMITIVE_ELLIPSOID_, _CmdPrimitiveEllipsoid())
+	addCommand(_PRIMITIVE_TORUS_    , _CmdPrimitiveTorus())
+	addCommand(_PRIMITIVE_PRISM_    , _CmdPrimitivePrism())
+	addCommand(_PRIMITIVE_WEDGE_    , _CmdPrimitiveWedge())
+	addCommand(_PRIMITIVES_         , _CmdPrimitives())
 	addCommand(_FX_HOLE_            , _CmdFxHole())
 	addCommand(_FX_FILLET_          , _CmdFxFillet())
 	addCommand(_FX_CHAMFER_         , _CmdFxChamfer())
