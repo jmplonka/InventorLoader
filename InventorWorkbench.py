@@ -12,61 +12,81 @@ from PySide.QtGui          import QMessageBox
 from PySide.QtCore         import Qt
 
 _SEPARATOR_  = 'Separator'
+PREFIX = 'InventorLoader_'
 # Sketch
-_SKETCH_2D_         = 'Sketch2D'
-_SKETCH_3D_         = 'Sketch3D'
-_SKETCH_BLOCK_      = 'SketchBlock'      # FX missing
-_SKETCHES_          = 'Sketches'
+_SKETCH_2D_           = PREFIX + 'Sketch2D'
+_SKETCH_3D_           = PREFIX + 'Sketch3D'
+_SKETCH_BLOCK_        = PREFIX + 'SketchBlock'      # FX missing
+_SKETCHES_            = PREFIX + 'Sketches'
 # Create
-_FX_EXTRUDE_        = 'FxExtrude'
-_FX_REVOLVE_        = 'FxRevolve'
-_FX_LOFT_           = 'FxLoft'
-_FX_SWEEP_          = 'FxSweep'
-_FX_RIB_            = 'FxRib'            # FX missing
-_FX_COIL_           = 'FxCoil'           # FX missing
-_FX_EMBOSS_         = 'FxEmboss'         # FX missing
+_FX_EXTRUDE_          = PREFIX + 'FxExtrude'
+_FX_REVOLVE_          = PREFIX + 'FxRevolve'
+_FX_LOFT_             = PREFIX + 'FxLoft'
+_FX_SWEEP_            = PREFIX + 'FxSweep'
+_FX_RIB_              = PREFIX + 'FxRib'             # FX missing
+_FX_COIL_             = PREFIX + 'FxCoil'            # FX missing
+_FX_EMBOSS_           = PREFIX + 'FxEmboss'          # FX missing
 # Modify
-_FX_HOLE_           = 'FxHole'
-_FX_FILLET_         = 'FxFillet'
-_FX_CHAMFER_        = 'FxChamfer'
-_FX_SHELL_          = 'FxShell'          # FX Missing
-_FX_DRAFT_          = 'FxDraft'          # FX Missing
-_FX_THREAD_         = 'FxThread'         # FX Missing
-_FX_SPLIT_          = 'FxSplit'          # FX Missing
-_FX_COMBINE_        = 'FxCombine'
-_FX_MOVE_FACE_      = 'FxMoveFace'       # FX missing
-_FX_COPY_OBJECT_    = 'FxCopyObject'     # FX missing
-_FX_MOVE_BODY_      = 'FxMoveBody'       # FX missing
+_FX_HOLE_             = PREFIX + 'FxHole'
+_FX_FILLET_           = PREFIX + 'FxFillet'
+_FX_CHAMFER_          = PREFIX + 'FxChamfer'
+_FX_SHELL_            = PREFIX + 'FxShell'           # FX Missing
+_FX_DRAFT_            = PREFIX + 'FxDraft'           # FX Missing
+_FX_THREAD_           = PREFIX + 'FxThread'          # FX Missing
+_FX_SPLIT_            = PREFIX + 'FxSplit'           # FX Missing
+_FX_COMBINE_          = PREFIX + 'FxCombine'
+_FX_MOVE_FACE_        = PREFIX + 'FxFaceMove'        # FX missing
+_FX_COPY_OBJECT_      = PREFIX + 'FxCopyObject'      # FX missing
+_FX_MOVE_BODY_        = PREFIX + 'FxMove'            # FX missing
 # Pattern
-_FX_RECTANGULAR_    = 'FxRectangular'
-_FX_CIRCULAR_       = 'FxCircular'
-_FX_SKETCH_DRIVEN_  = 'FxSketchDriven'
-_FX_PATTERNS_       = 'FxPatterns'
-_FX_MIRROR_         = 'FxMirror'
+_FX_RECTANGULAR_      = PREFIX + 'FxPatternRectangular'
+_FX_CIRCULAR_         = PREFIX + 'FxPatternPolar'
+_FX_SKETCH_DRIVEN_    = PREFIX + 'FxPatternSketchDriven'
+_FX_MIRROR_           = PREFIX + 'FxMirror'
 # Surface
-_FX_THICKEN_        = 'FxThicken'
-_FX_STITCH_         = 'FxStitch'
-_FX_SCULPT_         = 'FxSculpt'         # FX missing
-_FX_PATCH_          = 'FxPatch'
-_FX_TRIM_           = 'FxTrim'           # FX missing
-_FX_DELETE_FACE_    = 'FxDeleteFace'     # FX missing
+_FX_THICKEN_          = PREFIX + 'FxThicken'
+_FX_STITCH_           = PREFIX + 'FxStitch'
+_FX_SCULPT_           = PREFIX + 'FxSculpt'          # FX missing
+_FX_PATCH_            = PREFIX + 'FxBoundaryPatch'
+_FX_TRIM_             = PREFIX + 'FxTrim'            # FX missing
+_FX_DELETE_FACE_      = PREFIX + 'FxFaceDelete'      # FX missing
+_FX_REPLACE_FACE_     = PREFIX + 'FxFaceReplace'     # FX missing
+_FX_EXTEND_FACE_      = PREFIX + 'FxFaceExtend'      # FX missing
+_FX_RULED_SURFACE_    = PREFIX + 'FxRuledSurface'    # FX missing
 # Plastic parts
-_FX_GRILL_          = 'FxGrill'          # FX missing
-_FX_BOSS_           = 'FxBoss'           # FX missing
-_FX_REST_           = 'FxRest'           # FX missing
-_FX_SNAP_FIT_       = 'FxSnapFit'        # FX missing
-_FX_RULE_FILLET_    = 'FxRuleFillet'     # FX missing
-_FX_LIP_            = 'FxLip'            # FX missing
+_FX_GRILL_            = PREFIX + 'FxGrill'           # FX missing
+_FX_BOSS_             = PREFIX + 'FxBoss'            # FX missing
+_FX_REST_             = PREFIX + 'FxRest'            # FX missing
+_FX_SNAP_FIT_         = PREFIX + 'FxSnapFit'         # FX missing
+_FX_RULE_FILLET_      = PREFIX + 'FxFilletRule'      # FX missing
+_FX_LIP_              = PREFIX + 'FxLip'             # FX missing
 # Freeform
-_FREEFORM_BOX_      = 'FreeformBox'      # FX missing
-_FREEFORM_PLANE_    = 'FreeformPlane'    # FX missing
-_FREEFORM_CYLINDER  = 'FreeformCylinder' # FX missing
-_FREEFORM_SPHERE    = 'FreeformSphere'   # FX missing
-_FREEFORM_TORUS     = 'FreeformTorus'    # FX missing
-_FREEFORM_QUAD_BALL = 'FreeformQuadBall' # FX missing
-_FREEFORMS_         = 'Freeforms'
-# iPart
-_I_PART_            = 'iPart'
+_FREEFORM_BOX_        = PREFIX + 'FreeformBox'       # FX missing
+_FREEFORM_PLANE_      = PREFIX + 'FreeformPlane'     # FX missing
+_FREEFORM_CYLINDER    = PREFIX + 'FreeformCylinder'  # FX missing
+_FREEFORM_SPHERE      = PREFIX + 'FreeformSphere'    # FX missing
+_FREEFORM_TORUS       = PREFIX + 'FreeformTorus'     # FX missing
+_FREEFORM_QUAD_BALL   = PREFIX + 'FreeformQuadBall'  # FX missing
+_FREEFORMS_           = PREFIX + 'Freeforms'
+# Sheet-Metal
+_SHEET_METAL_FACE_    = PREFIX + 'FxFace'          # FX missing
+_SHEET_METAL_FLANGE_  = PREFIX + 'FxFlange'        # FX missing
+_SHEET_METAL_CONTOUR_ = PREFIX + 'FxFlangeContour' # FX missing
+_SHEET_METAL_LOFTED_  = PREFIX + 'FxLoftedFlange'  # FX missing
+_SHEET_METAL_FLANGES_ = PREFIX + 'FxFlanges'
+_SHEET_METAL_ROLL_    = PREFIX + 'FxContourRoll'   # FX missing
+_SHEET_METAL_HEM_     = PREFIX + 'FxHem'           # FX missing
+_SHEET_METAL_BEND_    = PREFIX + 'FxBend'          # FX missing
+_SHEET_METAL_FOLD_    = PREFIX + 'FxFold'          # FX missing
+_SHEET_METAL_CUT_     = PREFIX + 'FxCut'           # FX missing
+_SHEET_METAL_CORNER_  = PREFIX + 'FxCorner'        # FX missing
+_SHEET_METAL_RIP_     = PREFIX + 'FxRip'           # FX missing
+_SHEET_METAL_UNFOLD_  = PREFIX + 'FxUnfold'        # FX missing
+_SHEET_METAL_REFOLD_  = PREFIX + 'FxRefold'        # FX missing
+
+# others
+_I_PART_              = PREFIX + 'iPart'
+_FX_DIRECT_EDIT_      = PREFIX + 'FxDirectEdit'      # FX missing
 
 class _CmdAbstract(object):
 	def __init__(self, menuText = None, toolTip = None, pixmap = None, accel=None):
@@ -82,7 +102,7 @@ class _CmdAbstract(object):
 	def GetResources(self):
 		return self.resources
 	def IsActive(self):
-		return not (FreeCAD.ActiveDocument is None) # as using default buttons
+		return not (FreeCAD.ActiveDocument is None)
 	def Activated(self):
 		diag = QMessageBox(QMessageBox.Information, 'FreeCAD: Inventor workbench...', 'Command not ' + self.__class__.__name__ + ' yet implemented!')
 		diag.setWindowModality(Qt.ApplicationModal)
@@ -117,15 +137,31 @@ class _CmdSketches(_CmdAbstract):
 class _CmdFxExtrude(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxExtrude, self).__init__(menuText="&Extrude", toolTip="extrude a profile", pixmap=getIconPath("FxExtrude.png"), accel="I, E")
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Extrude")
 class _CmdFxRevolve(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRevolve, self).__init__(menuText="&Revolve", toolTip="revolve a profile", pixmap=getIconPath("FxRevolve.png"), accel="I, R")
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Revolve")
 class _CmdFxLoft(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxLoft, self).__init__(menuText="&Loft", toolTip="loft profiles", pixmap=getIconPath("FxLoft.png"), accel="I, L")
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Loft")
 class _CmdFxSweep(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxSweep, self).__init__(menuText="&Sweep", toolTip="sweep profile along path", pixmap=getIconPath("FxSweep.png"), accel="I, W")
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Sweep")
 class _CmdFxRib(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRib, self).__init__(menuText="Ri&b", toolTip="Create ribs", pixmap=getIconPath("FxRib.png"))
@@ -143,12 +179,24 @@ class _CmdFxHole(_CmdAbstract):
 class _CmdFxFillet(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxFillet, self).__init__(menuText="&Fillet", toolTip="Create fillets", pixmap=getIconPath("FxFillet.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Fillet")
 class _CmdFxChamfer(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxChamfer, self).__init__(menuText="&Chamfer", toolTip="Create chamfers", pixmap=getIconPath("FxChamfer.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Chamfer")
 class _CmdFxShell(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxShell, self).__init__(menuText="&Shell", toolTip="Create a shell", pixmap=getIconPath("FxShell.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Thickness")
 class _CmdFxDraft(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxDraft, self).__init__(menuText="&Draft", toolTip="Create a draft", pixmap=getIconPath("FxDraft.png"))
@@ -161,12 +209,20 @@ class _CmdFxSplit(_CmdAbstract):
 class _CmdFxCombine(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxCombine, self).__init__(menuText="C&ombine", toolTip="", pixmap=getIconPath("FxCombine.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Boolean")
 class _CmdFxMoveFace(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxMoveFace, self).__init__(menuText="&Move Face", toolTip="", pixmap=getIconPath("FxMoveFace.png"))
 class _CmdFxCopyObject(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxCopyObject, self).__init__(menuText="Copy O&bject", toolTip="", pixmap=getIconPath("FxCopyObject.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_SimpleCopy")
 class _CmdFxMoveBody(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxMoveBody, self).__init__(menuText="Move Ob&jects", toolTip="", pixmap=getIconPath("FxMoveBody.png"))
@@ -175,12 +231,20 @@ class _CmdFxMoveBody(_CmdAbstract):
 class _CmdFxRectangular(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRectangular, self).__init__(menuText="&Rectangular Pattern", toolTip="Arrange objects in rectangular pattern", pixmap=getIconPath("FxRectangular.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Draft_Array")
 class _CmdFxCircular(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxCircular, self).__init__(menuText="&Circular Pattern", toolTip="Arrange objects in circular pattern", pixmap=getIconPath("FxCircular.png"))
 class _CmdFxSketchDriven(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxSketchDriven, self).__init__(menuText="&Sketcht driven", toolTip="Arrange objects according sketch points", pixmap=getIconPath("FxSketchDriven.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Draft_PointArray")
 class _CmdFxPatterns(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxPatterns, self).__init__(menuText='Create Patterns', toolTip='Arrange part in patterns')
@@ -191,11 +255,19 @@ class _CmdFxPatterns(_CmdAbstract):
 class _CmdFxMirror(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxMirror, self).__init__(menuText="&Mirror Pattern", toolTip="Arrange objects in a mirror pattern", pixmap=getIconPath("FxMirror.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Mirror")
 
 # Surface
 class _CmdFxThicken(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxThicken, self).__init__(menuText="T&hicken", toolTip="", pixmap=getIconPath("FxThicken.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			import SketcherGui
+			FreeCADGui.runCommand("Part_Offset")
 class _CmdFxStitch(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxStitch, self).__init__(menuText="&Stitch faces", toolTip="Stitches selected faces", pixmap=getIconPath("FxStitch.png"), accel="I, S")
@@ -219,20 +291,21 @@ class _CmdFxPatch(_CmdAbstract):
 					edges += obj.Edges
 			if (len(edges) > 0):
 				makeBoundaryPatch(edges)
-class _CmdFxStitch(_CmdAbstract):
-	def __init__(self):
-		super(_CmdFxStitch, self).__init__(menuText="&Stitch faces", toolTip="Stitches selected faces", pixmap=getIconPath("FxStitch.png"), accel="I, S")
-	def Activated(self):
-		if FreeCAD.ActiveDocument:
-			boundaries = FreeCADGui.Selection.getSelection(FreeCAD.ActiveDocument.Name)
-			if (len(boundaries) > 1):
-				makeStitch(boundaries)
 class _CmdFxTrim(_CmdAbstract):
 	def __init__(self):
-		super(_CmdFxTrim, self).__init__(menuText="&Trim", toolTip="", pixmap=getIconPath("FxTrim.png"))
-class _CmdFxDeleteFace(_CmdAbstract):
+		super(_CmdFxTrim, self).__init__(menuText="&Trim face", toolTip="", pixmap=getIconPath("FxTrim.png"))
+class _CmdFxFaceDelete(_CmdAbstract):
 	def __init__(self):
-		super(_CmdFxDeleteFace, self).__init__(menuText="Delete face", toolTip="", pixmap=getIconPath("FxDeleteFace.png"))
+		super(_CmdFxFaceDelete, self).__init__(menuText="&Delete face", toolTip="", pixmap=getIconPath("FxFaceDelete.png"))
+class _CmdFxFaceReplace(_CmdAbstract):
+	def __init__(self):
+		super(_CmdFxFaceReplace, self).__init__(menuText="&Replace face", toolTip="", pixmap=getIconPath("FxFaceReplace.png"))
+class _CmdFxFaceExtend(_CmdAbstract):
+	def __init__(self):
+		super(_CmdFxFaceExtend, self).__init__(menuText="&Extend face", toolTip="", pixmap=getIconPath("FxFaceExtend.png"))
+class _CmdFxRuledSurface(_CmdAbstract):
+	def __init__(self):
+		super(_CmdFxRuledSurface, self).__init__(menuText="Ruled sur&face", toolTip="", pixmap=getIconPath("FxRuledSurface.png"))
 
 # Plastic parts
 class _CmdFxGrill(_CmdAbstract):
@@ -281,10 +354,60 @@ class _CmdFreeforms(_CmdAbstract):
 	def GetDefaultCommand(self):
 		return 0 # by default 'Box'
 
-# iPart
+# Sheet-Metal
+class _CmdSheetMetalFace(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalFace, self).__init__(menuText="Plate", toolTip="Face for sheet metal", pixmap=getIconPath("SheetMetalFace.png"))
+class _CmdSheetMetalFlange(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalFlange, self).__init__(menuText="Flange", toolTip="Flange sheet metal", pixmap=getIconPath("SheetMetalFlange.png"))
+class _CmdSheetMetalFlangeContour(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalFlangeContour, self).__init__(menuText="Contour Flange", toolTip="Contour flange sheet metal", pixmap=getIconPath("SheetMetalFlangeContour.png"))
+class _CmdSheetMetalFlangeLofted(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalFlangeLofted, self).__init__(menuText="Lofted Flange", toolTip="Lofted flange sheet metal", pixmap=getIconPath("SheetMetalFlangeLofted.png"))
+class _CmdSheetMetalFlanges(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalFlanges, self).__init__(menuText='Create Flange', toolTip='Create flanges for sheet metal')
+	def GetCommands(self):
+		return tuple([_SHEET_METAL_FLANGE_, _SHEET_METAL_CONTOUR_, _SHEET_METAL_LOFTED_])
+	def GetDefaultCommand(self):
+		return 0 # by default normal Flange
+class _CmdSheetMetalContourRoll(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalContourRoll, self).__init__(menuText="Contour Roll", toolTip="Contour Rolll sheet metal", pixmap=getIconPath("SheetMetalContourRoll.png"))
+class _CmdSheetMetalHem(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalHem, self).__init__(menuText="Hem", toolTip="Hem sheet metal", pixmap=getIconPath("SheetMetalHem.png"))
+class _CmdSheetMetalBend(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalBend, self).__init__(menuText="Bend", toolTip="Bend sheet metal", pixmap=getIconPath("SheetMetalBend.png"))
+class _CmdSheetMetalFold(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalFold, self).__init__(menuText="Fold", toolTip="Fold sheet metal", pixmap=getIconPath("SheetMetalFold.png"))
+class _CmdSheetMetalUnfold(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalUnfold, self).__init__(menuText="Unfold", toolTip="Unfold sheet metal", pixmap=getIconPath("SheetMetalUnfold.png"))
+class _CmdSheetMetalRefold(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalRefold, self).__init__(menuText="Refold", toolTip="Refold sheet metal", pixmap=getIconPath("SheetMetalRefold.png"))
+class _CmdSheetMetalCut(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalCut, self).__init__(menuText="Cut", toolTip="Cut sheet metal", pixmap=getIconPath("SheetMetalCut.png"))
+class _CmdSheetMetalCorner(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalCorner, self).__init__(menuText="Corner", toolTip="Corner sheet metal", pixmap=getIconPath("SheetMetalCorner.png"))
+class _CmdSheetMetalRip(_CmdAbstract):
+	def __init__(self):
+		super(_CmdSheetMetalRip, self).__init__(menuText="Rip", toolTip="Rip sheet metal", pixmap=getIconPath("SheetMetalRip.png"))
+# others
 class _CmdiPart(_CmdAbstract):
 	def __init__(self):
 		super(_CmdiPart, self).__init__(menuText="iPart", toolTip="Create an iPart factory", pixmap=getIconPath("iPart.png"))
+class _CmdFxDirectEdit(_CmdAbstract):
+	def __init__(self):
+		super(_CmdFxDirectEdit, self).__init__(menuText="Direct edit", toolTip="Applies direct edits to bodies", pixmap=getIconPath("FxDirectEdit.png"))
 
 class InventorWorkbench(Workbench):
 	MenuText = "like Inventor"
@@ -292,72 +415,90 @@ class InventorWorkbench(Workbench):
 	Icon     = getIconPath("Workbench.xpm")
 
 	def Initialize(self):
-		toolbar = [
-			_SKETCHES_, _SKETCH_BLOCK_, _SEPARATOR_,
-			_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_, _SEPARATOR_,
-			_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_SPLIT_, _FX_COMBINE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _SEPARATOR_,
-			_FX_PATTERNS_, _FX_MIRROR_, _SEPARATOR_,
-			_FX_THICKEN_, _FX_STITCH_, _FX_SCULPT_, _FX_PATCH_, _FX_TRIM_, _FX_DELETE_FACE_, _SEPARATOR_,
-			_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_, _SEPARATOR_,
-			_FREEFORMS_, _SEPARATOR_,
-			_I_PART_
-		]
-		self.appendToolbar('Inventor', toolbar)
+		TB_CREATE      = [_SKETCHES_, _SKETCH_BLOCK_, _SEPARATOR_,_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_, _SEPARATOR_, _FREEFORMS_ , _SEPARATOR_, _I_PART_]
+		TB_MODIFY      = [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_SPLIT_, _FX_COMBINE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _FX_DIRECT_EDIT_]
+		TB_PATTERNS    = [_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_, _FX_MIRROR_]
+		TB_SURFACE     = [_FX_THICKEN_, _FX_STITCH_, _FX_SCULPT_, _FX_PATCH_, _FX_TRIM_, _FX_DELETE_FACE_, _FX_REPLACE_FACE_, _FX_RULED_SURFACE_]
+		TB_PLASTIC     = [_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_]
+		TB_SHEET_METAL = [_SHEET_METAL_FACE_, _SHEET_METAL_FLANGES_, _SHEET_METAL_ROLL_, _SHEET_METAL_HEM_, _SHEET_METAL_BEND_, _SHEET_METAL_FOLD_, _SHEET_METAL_UNFOLD_, _SHEET_METAL_REFOLD_, _SHEET_METAL_CUT_, _SHEET_METAL_CORNER_, _SHEET_METAL_RIP_]
+		self.appendToolbar('Inventor-Create'  , TB_CREATE)
+		self.appendToolbar('Inventor-Modify', TB_MODIFY)
+		self.appendToolbar('Inventor-Patterns', TB_PATTERNS)
+		self.appendToolbar('Inventor-Surfaces', TB_SURFACE)
+		self.appendToolbar('Inventor-Plastic', TB_PLASTIC)
+		self.appendToolbar('Inventor-Sheet-Metal', TB_SHEET_METAL)
 		self.appendMenu(["&Inventor", "create &Sketch"], [_SKETCH_2D_, _SKETCH_3D_, _SKETCH_BLOCK_])
 		self.appendMenu(["&Inventor", "&create Model" ], [_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_])
-		self.appendMenu(["&Inventor", "&modify Model" ], [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_SPLIT_, _FX_COMBINE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_])
+		self.appendMenu(["&Inventor", "&modify Model" ], [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_SPLIT_, _FX_COMBINE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _FX_DIRECT_EDIT_])
 		self.appendMenu(["&Inventor", "&Pattern"      ], [_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_, _SEPARATOR_, _FX_MIRROR_])
-		self.appendMenu(["&Inventor", "Sur&face"      ], [_FX_THICKEN_, _FX_STITCH_, _FX_SCULPT_, _FX_PATCH_, _FX_TRIM_, _FX_DELETE_FACE_])
+		self.appendMenu(["&Inventor", "Sur&face"      ], [_FX_THICKEN_, _FX_STITCH_, _FX_SCULPT_, _FX_PATCH_, _FX_TRIM_, _FX_DELETE_FACE_, _FX_REPLACE_FACE_, _FX_RULED_SURFACE_])
 		self.appendMenu(["&Inventor", "Plas&tic"      ], [_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_])
 		self.appendMenu(["&Inventor", "&Freeform"     ], [_FREEFORM_BOX_, _FREEFORM_PLANE_, _FREEFORM_CYLINDER, _FREEFORM_SPHERE, _FREEFORM_TORUS, _FREEFORM_QUAD_BALL])
-		self.appendMenu(["&Inventor", "&iPart"        ], [_I_PART_])
+		self.appendMenu(["&Inventor", "Sheet-M&etal"  ], [_SHEET_METAL_FACE_, _SHEET_METAL_FLANGE_, _SHEET_METAL_CONTOUR_, _SHEET_METAL_LOFTED_, _SHEET_METAL_ROLL_, _SHEET_METAL_HEM_, _SHEET_METAL_BEND_, _SHEET_METAL_FOLD_, _SHEET_METAL_UNFOLD_, _SHEET_METAL_REFOLD_, _SEPARATOR_, _SHEET_METAL_CUT_, _SHEET_METAL_CORNER_, _SHEET_METAL_RIP_])
+		self.appendMenu(["&Inventor"], [_I_PART_])
 
 if (FreeCAD.GuiUp):
-	addCommand(_SKETCH_2D_         , _CmdSketch2D())
-	addCommand(_SKETCH_3D_         , _CmdSketch3D())
-	addCommand(_SKETCH_BLOCK_      , _CmdSketchBlock())
-	addCommand(_SKETCHES_          , _CmdSketches())
-	addCommand(_FX_EXTRUDE_        , _CmdFxExtrude())
-	addCommand(_FX_REVOLVE_        , _CmdFxRevolve())
-	addCommand(_FX_LOFT_           , _CmdFxLoft())
-	addCommand(_FX_SWEEP_          , _CmdFxSweep())
-	addCommand(_FX_RIB_            , _CmdFxRib())
-	addCommand(_FX_COIL_           , _CmdFxCoil())
-	addCommand(_FX_EMBOSS_         , _CmdFxEmboss())
-	addCommand(_FX_HOLE_           , _CmdFxHole())
-	addCommand(_FX_FILLET_         , _CmdFxFillet())
-	addCommand(_FX_CHAMFER_        , _CmdFxChamfer())
-	addCommand(_FX_SHELL_          , _CmdFxShell())
-	addCommand(_FX_DRAFT_          , _CmdFxDraft())
-	addCommand(_FX_THREAD_         , _CmdFxThread())
-	addCommand(_FX_SPLIT_          , _CmdFxSplit())
-	addCommand(_FX_COMBINE_        , _CmdFxCombine())
-	addCommand(_FX_MOVE_FACE_      , _CmdFxMoveFace())
-	addCommand(_FX_COPY_OBJECT_    , _CmdFxCopyObject())
-	addCommand(_FX_MOVE_BODY_      , _CmdFxMoveBody())
-	addCommand(_FX_RECTANGULAR_    , _CmdFxRectangular())
-	addCommand(_FX_CIRCULAR_       , _CmdFxCircular())
-	addCommand(_FX_SKETCH_DRIVEN_  , _CmdFxSketchDriven())
-	addCommand(_FX_PATTERNS_       , _CmdFxPatterns())
-	addCommand(_FX_MIRROR_         , _CmdFxMirror())
-	addCommand(_FX_THICKEN_        , _CmdFxThicken())
-	addCommand(_FX_STITCH_         , _CmdFxStitch())
-	addCommand(_FX_SCULPT_         , _CmdFxSculpt())
-	addCommand(_FX_PATCH_          , _CmdFxPatch())
-	addCommand(_FX_TRIM_           , _CmdFxTrim())
-	addCommand(_FX_DELETE_FACE_    , _CmdFxDeleteFace())
-	addCommand(_FX_GRILL_          , _CmdFxGrill())
-	addCommand(_FX_BOSS_           , _CmdFxBoss())
-	addCommand(_FX_REST_           , _CmdFxRest())
-	addCommand(_FX_SNAP_FIT_       , _CmdFxSnapFit())
-	addCommand(_FX_RULE_FILLET_    , _CmdFxRuleFillet())
-	addCommand(_FX_LIP_            , _CmdFxLip())
-	addCommand(_FREEFORM_BOX_      , _CmdFreeformBox())
-	addCommand(_FREEFORM_PLANE_    , _CmdFreeformPlane())
-	addCommand(_FREEFORM_CYLINDER  , _CmdFreeformCylinder())
-	addCommand(_FREEFORM_SPHERE    , _CmdFreeformSphere())
-	addCommand(_FREEFORM_TORUS     , _CmdFreeformTorus())
-	addCommand(_FREEFORM_QUAD_BALL , _CmdFreeformQuadBall())
-	addCommand(_FREEFORMS_         , _CmdFreeforms())
-	addCommand(_I_PART_            , _CmdiPart())
-
+	addCommand(_SKETCH_2D_          , _CmdSketch2D())
+	addCommand(_SKETCH_3D_          , _CmdSketch3D())
+	addCommand(_SKETCH_BLOCK_       , _CmdSketchBlock())
+	addCommand(_SKETCHES_           , _CmdSketches())
+	addCommand(_FX_EXTRUDE_         , _CmdFxExtrude())
+	addCommand(_FX_REVOLVE_         , _CmdFxRevolve())
+	addCommand(_FX_LOFT_            , _CmdFxLoft())
+	addCommand(_FX_SWEEP_           , _CmdFxSweep())
+	addCommand(_FX_RIB_             , _CmdFxRib())
+	addCommand(_FX_COIL_            , _CmdFxCoil())
+	addCommand(_FX_EMBOSS_          , _CmdFxEmboss())
+	addCommand(_FX_HOLE_            , _CmdFxHole())
+	addCommand(_FX_FILLET_          , _CmdFxFillet())
+	addCommand(_FX_CHAMFER_         , _CmdFxChamfer())
+	addCommand(_FX_SHELL_           , _CmdFxShell())
+	addCommand(_FX_DRAFT_           , _CmdFxDraft())
+	addCommand(_FX_THREAD_          , _CmdFxThread())
+	addCommand(_FX_SPLIT_           , _CmdFxSplit())
+	addCommand(_FX_COMBINE_         , _CmdFxCombine())
+	addCommand(_FX_MOVE_FACE_       , _CmdFxMoveFace())
+	addCommand(_FX_COPY_OBJECT_     , _CmdFxCopyObject())
+	addCommand(_FX_MOVE_BODY_       , _CmdFxMoveBody())
+	addCommand(_FX_RECTANGULAR_     , _CmdFxRectangular())
+	addCommand(_FX_CIRCULAR_        , _CmdFxCircular())
+	addCommand(_FX_SKETCH_DRIVEN_   , _CmdFxSketchDriven())
+	addCommand(_FX_MIRROR_          , _CmdFxMirror())
+	addCommand(_FX_THICKEN_         , _CmdFxThicken())
+	addCommand(_FX_STITCH_          , _CmdFxStitch())
+	addCommand(_FX_SCULPT_          , _CmdFxSculpt())
+	addCommand(_FX_PATCH_           , _CmdFxPatch())
+	addCommand(_FX_TRIM_            , _CmdFxTrim())
+	addCommand(_FX_DELETE_FACE_     , _CmdFxFaceDelete())
+	addCommand(_FX_REPLACE_FACE_    , _CmdFxFaceReplace())
+	addCommand(_FX_EXTEND_FACE_     , _CmdFxFaceExtend())
+	addCommand(_FX_RULED_SURFACE_   , _CmdFxRuledSurface())
+	addCommand(_FX_GRILL_           , _CmdFxGrill())
+	addCommand(_FX_BOSS_            , _CmdFxBoss())
+	addCommand(_FX_REST_            , _CmdFxRest())
+	addCommand(_FX_SNAP_FIT_        , _CmdFxSnapFit())
+	addCommand(_FX_RULE_FILLET_     , _CmdFxRuleFillet())
+	addCommand(_FX_LIP_             , _CmdFxLip())
+	addCommand(_FREEFORM_BOX_       , _CmdFreeformBox())
+	addCommand(_FREEFORM_PLANE_     , _CmdFreeformPlane())
+	addCommand(_FREEFORM_CYLINDER   , _CmdFreeformCylinder())
+	addCommand(_FREEFORM_SPHERE     , _CmdFreeformSphere())
+	addCommand(_FREEFORM_TORUS      , _CmdFreeformTorus())
+	addCommand(_FREEFORM_QUAD_BALL  , _CmdFreeformQuadBall())
+	addCommand(_FREEFORMS_          , _CmdFreeforms())
+	addCommand(_I_PART_             , _CmdiPart())
+	addCommand(_FX_DIRECT_EDIT_     , _CmdFxDirectEdit())
+	addCommand(_SHEET_METAL_FACE_   , _CmdSheetMetalFace())
+	addCommand(_SHEET_METAL_FLANGE_ , _CmdSheetMetalFlange())
+	addCommand(_SHEET_METAL_CONTOUR_, _CmdSheetMetalFlangeContour())
+	addCommand(_SHEET_METAL_LOFTED_ , _CmdSheetMetalFlangeLofted())
+	addCommand(_SHEET_METAL_FLANGES_, _CmdSheetMetalFlanges())
+	addCommand(_SHEET_METAL_ROLL_   , _CmdSheetMetalContourRoll())
+	addCommand(_SHEET_METAL_HEM_    , _CmdSheetMetalHem())
+	addCommand(_SHEET_METAL_BEND_   , _CmdSheetMetalBend())
+	addCommand(_SHEET_METAL_FOLD_   , _CmdSheetMetalFold())
+	addCommand(_SHEET_METAL_UNFOLD_ , _CmdSheetMetalUnfold())
+	addCommand(_SHEET_METAL_REFOLD_ , _CmdSheetMetalRefold())
+	addCommand(_SHEET_METAL_CUT_    , _CmdSheetMetalCut())
+	addCommand(_SHEET_METAL_CORNER_ , _CmdSheetMetalCorner())
+	addCommand(_SHEET_METAL_RIP_    , _CmdSheetMetalRip())
