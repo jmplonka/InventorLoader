@@ -14,7 +14,7 @@
    height="68px"
    id="svg2816"
    version="1.1"
-   inkscape:version="0.92.0 r15299"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
    sodipodi:docname="Inventor-WB.svg">
   <defs
      id="defs2818">
@@ -255,16 +255,16 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="7.9999996"
-     inkscape:cx="33.976832"
+     inkscape:cx="13.164331"
      inkscape:cy="35.428063"
      inkscape:current-layer="layer1"
      showgrid="true"
      inkscape:document-units="px"
      inkscape:grid-bbox="true"
-     inkscape:window-width="1600"
-     inkscape:window-height="1201"
-     inkscape:window-x="-9"
-     inkscape:window-y="60"
+     inkscape:window-width="1920"
+     inkscape:window-height="1137"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
      inkscape:window-maximized="1"
      showguides="false" />
   <metadata
@@ -275,7 +275,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -285,40 +285,45 @@
      inkscape:groupmode="layer"
      transform="matrix(0.53992752,0,0,0.54612395,15.182416,15.213398)"
      style="stroke-width:1.84156334">
-    <path
-       style="opacity:0.98799995;fill:#cd4500;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 23,0.40337863 52,0.02772813 V 16 H 40 v 31 h 12 c 0.01455,6.363961 -1.516392,13.711549 -2,15 -2.56787,0.333333 -12.416731,1.108608 -27.005418,1 z"
-       id="path6342"
-       inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccccccc"
-       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
-       inkscape:export-xdpi="121.55234"
-       inkscape:export-ydpi="121.55234" />
-    <path
-       style="opacity:0.8;fill:#ff6000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 11,16 15,0 h 8 l 17,16 z"
-       id="polygon49"
-       inkscape:connector-curvature="0"
-       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
-       inkscape:export-xdpi="121.55234"
-       inkscape:export-ydpi="121.55234" />
-    <path
-       style="opacity:0.8;fill:#ff6000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 10,47 H 40 L 22.994582,63 H 10 Z"
-       id="polygon51"
-       inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccc"
-       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
-       inkscape:export-xdpi="121.55234"
-       inkscape:export-ydpi="121.55234" />
-    <path
-       style="opacity:0.22099998;fill:black;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;filter:url(#filter878)"
-       d="m 54,2.0273438 -2,0.025391 V 16 H 40 v 31 h 2 V 18 H 54 Z M 13.5,16 13,18 h 9.998047 V 16 Z M 51.949219,49 C 51.700576,54.820848 50.433607,60.844764 50,62 47.43213,62.333333 37.582828,63.108608 22.994141,63 H 12 v 2 H 24.994141 C 39.582828,65.108608 49.43213,64.333333 52,64 c 0.483608,-1.288451 2.01455,-8.636039 2,-15 z"
-       id="path58"
-       inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccccccccccccccccccccc"
-       inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
-       inkscape:export-xdpi="121.55234"
-       inkscape:export-ydpi="121.55234" />
+    <g
+       id="g3755"
+       transform="translate(-2.1886387,-1.8655814)">
+      <path
+         inkscape:export-ydpi="121.55234"
+         inkscape:export-xdpi="121.55234"
+         inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+         sodipodi:nodetypes="ccccccccc"
+         inkscape:connector-curvature="0"
+         id="path6342"
+         d="m 18.836744,-24.017438 52.79118,-0.683828 V 4.374427 H 49.783297 v 56.431952 h 21.844627 c 0.02649,11.584862 -2.760418,24.960305 -3.640771,27.305783 -4.674513,0.606794 -22.603238,2.018094 -49.160272,1.820385 z"
+         style="opacity:0.98799995;fill:#cd4500;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:3.35235524px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         inkscape:export-ydpi="121.55234"
+         inkscape:export-xdpi="121.55234"
+         inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+         inkscape:connector-curvature="0"
+         id="polygon49"
+         d="m -3.0078826,4.374427 7.281542,-29.126169 H 18.836744 L 49.783297,4.374427 Z"
+         style="opacity:0.8;fill:#ff6000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:3.35235524px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         inkscape:export-ydpi="121.55234"
+         inkscape:export-xdpi="121.55234"
+         inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+         sodipodi:nodetypes="ccccc"
+         inkscape:connector-curvature="0"
+         id="polygon51"
+         d="M -4.8282686,60.806379 H 49.783297 L 18.826881,89.932547 H -4.8282686 Z"
+         style="opacity:0.8;fill:#ff6000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:3.35235524px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         transform="matrix(1.8203855,0,0,1.8203855,44.820058,23.99752)"
+         inkscape:export-ydpi="121.55234"
+         inkscape:export-xdpi="121.55234"
+         inkscape:export-filename="D:\Inventor\InventorLoader\Icon.png"
+         sodipodi:nodetypes="ccccccccccccccccccccccc"
+         inkscape:connector-curvature="0"
+         id="path58"
+         d="m 16.726477,-24.752292 -2,0.02539 v 13.947265 H 2.7264767 v 31 h 2 V -8.7796363 H 16.726477 Z m -40.5,13.972656 -0.5,1.9999997 h 9.998047 v -1.9999997 z m 38.449219,33 c -0.248643,5.820848 -1.515612,11.844764 -1.949219,13 -2.56787,0.333333 -12.41717232,1.108608 -27.005859,1 h -10.994141 v 2 h 12.994141 c 14.5886867,0.108608 24.437989,-0.666667 27.005859,-1 0.483608,-1.288451 2.01455,-8.636039 2,-15 z"
+         style="opacity:0.22099998;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1.84156334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;filter:url(#filter878)" />
+    </g>
   </g>
 </svg>
