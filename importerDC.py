@@ -2448,7 +2448,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_34FAB548(self, node):
-		i = self.ReadHeadersss2S16s(node, 'FxExtend')
+		i = self.ReadHeadersss2S16s(node, 'FaceExtend')
 		return i
 
 	def Read_3683FF40(self, node): # TwoPointDistanceDimConstraint {C173A079-012F-11D5-8DEA-0010B541CAA8}

@@ -1004,13 +1004,13 @@ class FeatureNode(DataNode):
 		p4 = self._getPropertyName(4)
 
 		if (p4 == 'Face'):
-			if (p1 == 'FxExtend'):                  return 'Extend'
+			if (p1 == 'FaceExtend'):                return 'FaceExtend'
 			return 'Rip'
 		if (p0 == 'EdgeCollectionProxy'):
 			p4 = self._getPropertyEnumName(4)
 			if (p4 == 'ChamferType'):               return 'Chamfer'
 			if (p1 == 'Parameter'):                 return 'Bend'
-			if (p1 == 'FxExtend'):                  return 'Extend'
+			if (p1 == 'FaceExtend'):                return 'FaceExtend'
 		elif (p0 == 'SurfaceBodies'):
 			if (p1 == 'ObjectCollection'):          return 'Combine'
 			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'

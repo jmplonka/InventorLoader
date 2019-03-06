@@ -2384,7 +2384,7 @@ class FreeCADImporter(object):
 		elif (operation == FreeCADImporter.FX_EXTRUDE_INTERSECTION):
 			className = 'MultiCommon'
 		else:
-			logWarning(u"        FxCombine: don't know how to '%s' - (%04X): %s!", operationData.node.getValueText(), combineNode.index, combineNode.typeName)
+			logWarning(u"        FxCombine: don't know how to %s - (%04X): %s!", operationData.node.getValueText(), combineNode.index, combineNode.typeName)
 			return
 		baseGeo       = self.findBase(bodyRef)
 		toolGeos      = self.findGeometries(sourceData.get('objectCollection'))
@@ -2638,7 +2638,7 @@ class FreeCADImporter(object):
 			sweepGeo.Sections = sections
 			sweepGeo.Spine    = (path, edges)
 			sweepGeo.Solid    = solid
-			#sweepGeo.Frenet   = (frenet.getValueText() == 'ParallelToOriginalProfile')
+			#sweepGeo.Frenet   = (frenet.getValueText() == u"'ParallelToOriginalProfile'")
 			hide(sections)
 			hide(path)
 			setDefaultViewObjectValues(sweepGeo)
@@ -2807,12 +2807,12 @@ class FreeCADImporter(object):
 		i = 0
 		for idxCreator in edges:
 			i += 1
-			if (value == 'Distance'):
+			if (value == u"'Distance'"):
 				chamfers = [(idx + 1, dist1, dist1) for idx in edges[idxCreator]]
-			elif (value == 'TwoDistances'):
+			elif (value == u"'TwoDistances'"):
 				chamfers = [(idx + 1, dist1, dist2) for idx in edges[idxCreator]]
 			else:
-				logWarning("   Chamfer '%s': %s not supported - using 2nd distances", chamferNode.name, value)
+				logWarning("   Chamfer %s: %s not supported - using 2nd distances", chamferNode.name, value)
 				chamfers = [(idx + 1, dist1, dist2) for idx in edges[idxCreator]]
 			name = chamferNode.name
 			if (len(edges) > 1):
@@ -2963,10 +2963,10 @@ class FreeCADImporter(object):
 		# = getProperty(properties, 0x0C)     # param
 		angle = getProperty(properties, 0x0D) # angle
 
-	def Create_FxExtend(self, extendNode):
+	def Create_FxFaceExtend(self, extendNode):
 		properties = extendNode.get('properties')
 #		edgeSet    = getProperty(properties, 0x00) # EdgeCollectionProxy
-		# = getProperty(properties, 0x01) # FxExtend
+		# = getProperty(properties, 0x01) # FaceExtend
 		fxType     = getProperty(properties, 0x02) # ExtentType=To
 		dist       = getProperty(properties, 0x03) # Parameter 'd2'=1.75mm
 		face       = getProperty(properties, 0x04) # Face <=> extendType == to
@@ -3113,10 +3113,6 @@ class FreeCADImporter(object):
 #		getProperty(properties, 1) # EB9E49B0
 #		getProperty(properties, 2) # Boolean
 		return notYetImplemented(freeformNode)
-
-	def Create_FxMidSurface(self, midSurfaceNode):
-		properties = midSurfaceNode.get('properties')
-		return notYetImplemented(midSurfaceNode)
 
 	def Create_FxMove(self, moveNode):
 		properties = moveNode.get('properties')
