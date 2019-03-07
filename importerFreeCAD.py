@@ -3,7 +3,7 @@
 '''
 importerFreeCAD.py
 '''
-import sys, FreeCAD, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, importerSAT, Acis
+import sys, FreeCAD, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, importerSAT, Acis, re
 
 from importerUtils   import *
 from importerClasses import *
@@ -410,27 +410,6 @@ def replacePoint(edges, pOld, line, pNew):
 	if (isEqual(p2v(pOld), l.StartPoint)):
 		return replaceGeometry(edges, line, createLine(p2v(pNew), l.EndPoint))
 	return replaceGeometry(edges, line, createLine(l.StartPoint, p2v(pNew)))
-
-def int2col(c):
-	m = c // 26
-	n = c % 26
-	if (m > 0):
-		return chr(ord('A') + (m - 1)) + chr(ord('A') + n)
-	return chr(ord('A') + n)
-
-def setTableValue(table, c, row, val):
-	if (type(c) is int):
-		col = int2col(c)
-	else:
-		col = c
-
-	if (type(val) == str):
-		table.set(u"%s%d" %(col, row), val)
-	else:
-		if ((sys.version_info.major <= 2) and (type(val) == unicode)):
-			table.set(u"%s%d" %(col, row), "%s" %(val.encode("utf8")))
-		else:
-			table.set(u"%s%d" %(col, row), str(val))
 
 def setAssociatedSketchEntity(sketchNode, node, ai, entityType):
 	if (not ai in sketchNode.data.associativeIDs):
@@ -3737,27 +3716,49 @@ class FreeCADImporter(object):
 	def addSketch_4F240E1C(self, node, sketchObj): return
 
 	def Create_iPart(self, iPartNode):
-		# create a iPart Table
-		excel = iPartNode.get('excelWorkbook')
-		if (excel is not None):
-			wb = excel.get('workbook')
-			if (wb is not None):
-				sheet = wb.sheet_by_index(0)
-				cols = range(0, sheet.ncols)
-				variants = [str(sheet.cell(row, 0).value) for row in range(1, sheet.nrows)]
-				iPart = InventorViewProviders.makePartVariants(iPartNode.name, variants)
-				table = iPart.Values
-
-				for row in range(0, sheet.nrows):    # Iterate through rows
-					iPartValue = []
-					for col in cols:    # Iterate through cols
-						try:
-							cell = sheet.cell(row, col)  # Get cell object by row, col
-							iPartValue.append(cell.value)
-							setTableValue(table, col, row + 1, cell.value)
-						except:
-							pass
-
+		# create a iPart Table if it's not a sub-group.
+		parent = iPartNode.get('refParent')
+		if (parent is None):
+			excel = iPartNode.get('excelWorkbook')
+			if (excel is not None):
+				wb = excel.get('workbook')
+				if (wb is not None):
+					sheet = wb.sheet_by_index(0)
+					cols = range(0, sheet.ncols)
+					# get member column
+					colMember = 0
+					for col in range(0, sheet.ncols):
+						header = sheet.cell(0, col).value
+						if (re.search("Member", header)):
+							colMember = col
+							break;
+					variants = [str(sheet.cell(row, colMember).value) for row in range(1, sheet.nrows)]
+					iPart = InventorViewProviders.makePartVariants(iPartNode.name, variants)
+					table = iPart.Values
+					# get selected part variant
+					defRow = sheet.cell(0, 0).value # Series<defaultRow>2</defaultRow>
+					match = re.search(u"<defaultRow>(\d+)</defaultRow>", defRow)
+					selValue = variants[0]
+					if (match):
+						defRow   = int(match.group(1))
+						selValue = variants[defRow]
+					# build the header for the variants table
+					for col in range(0, sheet.ncols):
+						header = sheet.cell(0, col).value
+						xml = header.find('<')
+						if (xml>0):
+							header = header[0:xml]
+						setTableValue(table, col+1, 1, header)
+					for row in range(1, sheet.nrows):
+						iPartValue = []
+						for col in cols:
+							try:
+								value = sheet.cell(row, col).value
+								iPartValue.append(value)
+								setTableValue(table, col+1, row + 1, value)
+							except:
+								pass
+					iPart.Variant = selValue
 		return
 
 	def Create_Blocks(self, blocksNode):

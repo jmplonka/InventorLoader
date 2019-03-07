@@ -6,7 +6,7 @@ GUI representations for objectec imported from Inventor
 '''
 
 import re, sys, Part, FreeCAD
-from importerUtils import logInfo, getIconPath
+from importerUtils import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning
 from FreeCAD       import Vector as VEC
 
 INVALID_NAME = re.compile('^[0-9].*')
@@ -302,23 +302,64 @@ def makeSketch3D(name = None):
 
 class _PartVariants(object):
 	def __init__(self, fp, variants):
-		fp.addProperty("App::PropertyLink", "Parameters", "iPart", "table that holds the values for the actual part")
-		fp.addProperty("App::PropertyLink", "Values", "iPart", "table that holds the values for the part variants")
-		fp.addProperty("App::PropertyEnumeration", "Variants", "iPart").Variants = variants
-		fp.addProperty("App::PropertyPythonObject", "addVariant").addVariant = self.addVariant
-		fp.Values     = createPartFeature('Spreadsheet::Sheet', fp.Name + '_VALUES', 'iPart_VALUES')
+		fp.addProperty("App::PropertyEnumeration" , "Variant", "iPart").Variant = variants
+		fp.addProperty("App::PropertyPythonObject", "Parameters")
+		fp.addProperty("App::PropertyPythonObject", "Values").Values = createPartFeature('Spreadsheet::Sheet', 'Variants', 'Variants')
+		fp.addProperty("App::PropertyPythonObject", "Rows").Rows = {}
+		fp.addProperty("App::PropertyPythonObject", "Mapping").Mapping = {}
+		fp.addProperty("App::PropertyPythonObject", "Proxy").Proxy = self
+		for row, variant in enumerate(variants):
+			fp.Rows[variant] = row + 2
 		fp.Parameters = FreeCAD.ActiveDocument.getObject(u'T_Parameters')
-		self.fp = fp
-		fp.Proxy = self
 
-	def addVariant(self, variant):
-		index = len(self.fp.Variants)
-		self.fp.Variants.append(variant)
-		return index
+	def _getHeadersByRow_(self, table):
+		headers = {}
+		row = 2 # Skip header row
+		header = getTableValue(table, 'A', row)
+		while (header):
+			headers[header] = row
+			row += 1
+			header = getTableValue(table, 'A', row)
 
-	def execute(self, fp):
-		print("setting parameters according to variant '" + fp.Variants + "'")
-		return
+		return headers
+
+	def _updateMapping_(self, fp):
+		if (fp.Values is None): return False
+		if (fp.Parameters is None): return False
+
+		fp.Mapping.clear()
+		parameter  = self._getHeadersByRow_(fp.Parameters)
+		col = 1
+		hdr = getTableValue(fp.Values, col, 1)
+		while(hdr):
+			try:
+				cell = parameter[hdr]
+				fp.Mapping[col] = cell
+			except:
+				pass # nothing to map
+			col += 1
+			hdr = getTableValue(fp.Values, col, 1)
+		return True
+
+	def _updateVariant_(self, fp):
+		if (not self._updateMapping_(fp)):
+			return False
+		row = fp.Rows[fp.Variant]
+		FreeCAD.Console.PrintMessage("Set parameters according to variant '%s' (row %d):\n" %(fp.Variant, row))
+		for col in fp.Mapping:
+			prm = getTableValue(fp.Values, col, 1)
+			val = getTableValue(fp.Values, col, row)
+			col = fp.Mapping[col]
+			setTableValue(fp.Parameters, 'B', col, val)
+			FreeCAD.Console.PrintMessage("    '%s' = %s\n" %(prm, val))
+		if (FreeCAD.ActiveDocument):
+			FreeCAD.ActiveDocument.recompute()
+
+		return True
+
+	def onChanged(self, fp, prop):
+		if (prop == 'Variant'):
+			self._updateVariant_(fp)
 
 class _ViewProviderPartVariants(_ViewProvider):
 	def __init__(self, vp):

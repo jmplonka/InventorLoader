@@ -871,3 +871,29 @@ class Color(object):
 def getIconPath(fileName):
 	return os.path.join(os.path.dirname(__file__), "Resources", "icons", fileName)
 
+def int2col(c):
+	m = c // 26
+	n = c % 26
+	if (m > 0):
+		return chr(ord('A') + (m - 1)) + chr(ord('A') + n - 1)
+	return chr(ord('A') + n - 1)
+
+def getCellRef(col, row):
+	if (isString(col)):
+		return u"%s%d" %(col, row)
+	return u"%s%d" %(int2col(col), row)
+
+def getTableValue(table, col, row):
+	try:
+		return table.get(getCellRef(col, row))
+	except:
+		return None
+
+def setTableValue(table, col, row, val):
+	if (type(val) == str):
+		table.set(getCellRef(col, row), val)
+	else:
+		if ((sys.version_info.major <= 2) and (type(val) == unicode)):
+			table.set(getCellRef(col, row), "%s" %(val.encode("utf8")))
+		else:
+			table.set(getCellRef(col, row), str(val))
