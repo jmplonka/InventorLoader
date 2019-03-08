@@ -77,7 +77,7 @@ class _Stich(object):
 		fp.Proxy    = self
 
 	def execute(self, fp):
-		faces = [f.Shape for f in fp.FaceList]
+		faces = [f.Shape for f in fp.FaceList if not f.Shape is None]
 		fp.Shape = Part.Shell(faces)
 		if (fp.Solid):
 			if (fp.Shape.isClosed()):
@@ -150,7 +150,7 @@ class _ViewProviderPoint(_ViewProvider):
 			"""
 
 def makePoint(pt, name):
-	fp = createPartFeature("Part::Feature", name, "Point")
+	fp = createPartFeature("Part::FeaturePython", name, "Point")
 	_Point(fp, pt)
 	if FreeCAD.GuiUp:
 		_ViewProviderPoint(fp.ViewObject)
@@ -175,7 +175,7 @@ class _ViewProviderLine(_ViewProvider):
 		super(_ViewProviderLine, self).__init__(vp)
 
 def makeLine(pt1, pt2, name):
-	fp = createPartFeature("Part::Feature", name, "Line")
+	fp = createPartFeature("Part::FeaturePython", name, "Line")
 	line = _Line(fp, pt1, pt2)
 	if FreeCAD.GuiUp:
 		_ViewProviderLine(fp.ViewObject)

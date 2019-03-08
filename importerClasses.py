@@ -444,6 +444,24 @@ class AbstractValue(object):
 	def __str__(self):  return u"%g%s" %(self.x / self.factor - self.offset, self.unit)
 	def __repr__(self): return self.toStandard()
 	def toStandard(self):  return self.__str__()
+	def getNominalValue(self):
+		return self.x / self.factor + self.offset
+	def __sub__(self):
+		return self.__class__(-self.x, self.factor, self.unit)
+	def __neg__(self):
+		return self.__class__(-self.x, self.factor, self.unit)
+	def __sub__(self, other):
+		if (isinstance(other, AbstractValue)):
+			return self.__class__(self.x - other.x, self.factor, self.unit)
+		return self.__class__(self.x - other, self.factor, self.unit)
+	def __add__(self, other):
+		if (isinstance(other, AbstractValue)):
+			return self.__class__(self.x + other.x, self.factor, self.unit)
+		return self.__class__(self.x + other, self.factor, self.unit)
+	def __mul__(self, other):
+		if (isinstance(other, AbstractValue)):
+			return self.__class__(self.x * other.x, self.factor, self.unit)
+		return self.__class__(self.x * other, self.factor, self.unit)
 
 class Length(AbstractValue):
 	def __init__(self, x, factor = 0.1, unit = 'mm'):
@@ -672,7 +690,6 @@ class DataNode(object):
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
 		super(ParameterNode, self).__init__(data, isRef)
-		self.asText  = False
 
 	def getValueRaw(self):
 		return self.get('valueNominal')
@@ -686,14 +703,14 @@ class ParameterNode(DataNode):
 		except Exception as e:
 			return u'(%04X): %s \'%s\'=%s - %s' %(self.index, self.typeName, self.name, x, e)
 
-	def getParameterFormula(self, parameterData, withUnits):
+	def getParameterFormula(self, parameterData, asText):
 		subFormula = ''
 		typeName   = parameterData.typeName
 
 		if (typeName == 'ParameterValue'):
 			type   = parameterData.get('type')
 			unitName = ''
-			if (self.asText or withUnits):
+			if (asText):
 				unitName = parameterData.getUnitName()
 				if (len(unitName) > 0): unitName = ' ' + unitName
 			if (type == 0xFFFF):
@@ -707,44 +724,37 @@ class ParameterNode(DataNode):
 				else: # floating point value!
 					subFormula = '%g%s' %((value / factor) - offset, unitName)
 		elif (typeName == 'ParameterUnaryMinus'):
-			subFormula = '-' + self.getParameterFormula(parameterData.get('value'), withUnits)
+			subFormula = '-' + self.getParameterFormula(parameterData.get('value'), asText)
 		elif (typeName == 'ParameterConstant'):
 			unitName = ''
-			if (self.asText or withUnits):
+			if (asText):
 				unitName = parameterData.getUnitName()
 				if (len(unitName) > 0): unitName = ' ' + unitName
 			subFormula = '%s%s' %(parameterData.name, unitName)
 		elif (typeName == 'ParameterRef'):
 			target = parameterData.get('target')
-			if (self.asText):
+			if (asText):
 				subFormula = target.name
 			else:
 				subFormula = '%s_' %(target.name)
 		elif (typeName == 'ParameterFunction'):
 			function          = parameterData.name
-			functionSupported = (function not in FunctionsNotSupported)
-			if (self.asText or functionSupported):
-				operandRefs = parameterData.get('operands')
-				# WORKAROUND:
-				# There seems to be a bug in the 'tanh' function regarding units! => ignore units!
-				ignoreUnits = (parameterData.name == 'tanh')
-				subFormula = "(%s)" %(';'.join(["%s" %(self.getParameterFormula(ref, withUnits and not ignoreUnits)) for ref in operandRefs]))
-
-			else:
-				# Modulo operation not supported by FreeCAD
-				raise UserWarning('Function \'%s\' not supported' %function)
+			operandRefs = parameterData.get('operands')
+			subFormula = "%s(%s)" %(function, ';'.join(["%s" %(self.getParameterFormula(ref, asText)) for ref in operandRefs]))
+			if ((function in FunctionsNotSupported) and (not asText)):
+				nominalValue = self.getValue().getNominalValue()
+				logError(u"Function \'%s\' not supported in formula of '%s' using nominal value %g!", function, self.name, nominalValue)
+				subFormula = '%g' %(nominalValue)
 		elif (typeName == 'ParameterOperationPowerIdent'):
-			operand1 = self.getParameterFormula(parameterData.get('operand1'), withUnits)
+			operand1 = self.getParameterFormula(parameterData.get('operand1'), asText)
 			subFormula = operand1
 		elif (typeName.startswith('ParameterOperation')):
 			operation = parameterData.name
-			if (self.asText or (operation != '%')):
-				operand1 = self.getParameterFormula(parameterData.get('operand1'), withUnits)
-				operand2 = self.getParameterFormula(parameterData.get('operand2'), withUnits)
-				subFormula = '(%s %s %s)' %(operand1, operation, operand2)
-			else:
-				# Modulo operation not supported by FreeCAD
-				raise UserWarning('Modulo operator not supported')
+			operand1 = self.getParameterFormula(parameterData.get('operand1'), asText)
+			operand2 = self.getParameterFormula(parameterData.get('operand2'), asText)
+			subFormula = '(%s %s %s)' %(operand1, operation, operand2)
+			if ((not asText) and (operation == '%')):
+				subFormula = 'mod(%s, %s)' %(operand1, operand2)
 		else:
 			logError(u"    Don't now how to build formula for %s: %s!", typeName, parameterData)
 
@@ -752,14 +762,13 @@ class ParameterNode(DataNode):
 
 	def getFormula(self, asText):
 		data = self.data
-		self.asText = asText
 		if (data):
 			refValue = data.get('value')
 			if (refValue):
 				if (asText):
-					return u'\'' + self.getParameterFormula(refValue, True)
+					return u'\'' + self.getParameterFormula(refValue, asText)
 				try:
-					return u'=' + self.getParameterFormula(refValue, True)
+					return u'=' + self.getParameterFormula(refValue, asText)
 				except BaseException as be:
 					# replace by nominal value and unit!
 					value = self.getValue()
@@ -1594,11 +1603,14 @@ def createNewModel():
 
 def getModel():
 	global model
-	return model
+	if ('model' in globals()):
+		return model
+	return None
 
 def releaseModel():
 	global model
-	del model
+	if ('model' in globals()):
+		del model
 
 class NtEntry(object):
 	def __init__(self, nameTable, key):

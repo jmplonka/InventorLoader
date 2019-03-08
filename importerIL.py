@@ -6,9 +6,10 @@ Collection of 3D Mesh importers
 '''
 
 import os, sys, FreeCAD, importerSAT, Import_IPT
-from importerUtils import canImport, logWarning, logError, logAlways, viewAxonometric
-from olefile       import isOleFile
 import importerUtils, Acis, importerClasses
+from importerUtils   import canImport, logWarning, logError, logAlways, viewAxonometric
+from olefile         import isOleFile
+from importerFreeCAD import createGroup
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'

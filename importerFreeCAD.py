@@ -5,9 +5,9 @@ importerFreeCAD.py
 '''
 import sys, FreeCAD, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, importerSAT, Acis, re
 
-from importerUtils   import *
 from importerClasses import *
-from importerSegNode import SecNode, SecNodeRef
+from importerUtils   import *
+from importerSegNode import SecNode, SecNodeRef, setParameter
 from math            import sqrt, tan, degrees, pi
 from FreeCAD         import Vector as VEC, Rotation as ROT, Placement as PLC, Version, ParamGet
 
@@ -39,7 +39,12 @@ BIT_DIM_DIAMETER            = 1 << 20 # Workaround required: radius constraint
 BIT_DIM_DISTANCE            = 1 << 21
 BIT_DIM_OFFSET_SPLINE       = 1 << 22 # not supported
 
-DIR_Z = VEC(0, 0, 1)
+CENTER = VEC(0.0, 0.0, 0.0)
+DIR_X  = VEC(1.0, 0.0, 0.0)
+DIR_Y  = VEC(0.0, 1.0, 0.0)
+DIR_Z  = VEC(0.0, 0.0, 1.0)
+
+IS_CELL_REF = re.compile('^[a-z](\d+)?$', re.IGNORECASE)
 
 # x 10                      2   2   1   1   0   0   0
 # x  1                      4   0   6   2   8   4   0
@@ -312,19 +317,19 @@ def getDirection(node, name, distance):
 	return distance * dir/abs(dir)
 
 def getCountDir(length, count, direction, fitted):
-	if (length is None):    return 1, VEC()
-	if (count is None):     return 1, VEC()
-	if (direction is None): return 1, VEC()
+	if (length is None):    return 1, CENTER
+	if (count is None):     return 1, CENTER
+	if (direction is None): return 1, CENTER
 
 	distance = getMM(length)
 
 	if (direction.typeName == 'D2D440C0'):
 		logWarning(u"    ... don't know how to apply pattern along curve - ignored!")
 		# have to calculate the normal vector for each point of the curve!
-		return 1, VEC() # 1: no pattern copy!
+		return 1, CENTER # 1: no pattern copy!
 	if (direction.typeName not in ['Direction', 'A244457B', 'A5977BAA']):
 		logWarning(u"    ... don't know how to get direction from (%04X) %s (pattern along curves are not supported) - ignoring pattern!", direction.index, direction.typeName)
-		return 1, VEC() # 1 means: no pattern copy.
+		return 1, CENTER # 1 means: no pattern copy.
 
 	x = getDirection(direction, 'dirX', distance)
 	y = getDirection(direction, 'dirY', distance)
@@ -371,21 +376,33 @@ def adjustViewObject(newGeo, baseGeo):
 
 def getMM(length):
 	if (length is None): return 0.0
-	val = length.getValue()
+	if (type(length) == float): return length
+	if (isinstance(length, AbstractValue)):
+		val = length
+	else:
+		val = length.getValue()
 	if (isinstance(val, Length)): return val.getMM()
 	if (isinstance(val, Scalar)): return val.x * 10
 	return val * 10.0
 
 def getGRAD(angle):
 	if (angle is None): return 0.0
-	val = angle.getValue()
+	if (type(angle) == float): return angle
+	if (isinstance(angle, AbstractValue)):
+		val = angle
+	else:
+		val = angle.getValue()
 	if (isinstance(val, Angle)): return val.getGRAD()
 	if (isinstance(val, Scalar)): return val.x
 	return val
 
 def getRAD(angle):
 	if (angle is None): return 0.0
-	val = angle.getValue()
+	if (type(angle) == float): return angle
+	if (isinstance(angle, AbstractValue)):
+		val = angle
+	else:
+		val = angle.getValue()
 	if (isinstance(val, Angle)): return val.getRAD()
 	if (isinstance(val, Scalar)): return val.x
 	return val
@@ -399,17 +416,17 @@ def setPlacement(geo, placement, base):
 	if (base is not None): geo.Placement.Base = base
 	return
 
-def replaceGeometry(edges, node, geo):
+def replaceGeometry(sketchObj, node, geo):
 	node.data.geometry = geo
-	edges[node.index] = geo
+	sketchObj.Geometry[node.sketchIndex] = geo
 	return geo
 
-def replacePoint(edges, pOld, line, pNew):
+def replacePoint(sketchObj, pOld, line, pNew):
 	l = line.geometry
 	if (l is None): return None
 	if (isEqual(p2v(pOld), l.StartPoint)):
-		return replaceGeometry(edges, line, createLine(p2v(pNew), l.EndPoint))
-	return replaceGeometry(edges, line, createLine(l.StartPoint, p2v(pNew)))
+		return replaceGeometry(sketchObj, line, createLine(p2v(pNew), l.EndPoint))
+	return replaceGeometry(sketchObj, line, createLine(l.StartPoint, p2v(pNew)))
 
 def setAssociatedSketchEntity(sketchNode, node, ai, entityType):
 	if (not ai in sketchNode.data.associativeIDs):
@@ -896,7 +913,7 @@ class FreeCADImporter(object):
 				if (node is not None):
 					if (wireIndex < len(node.Shape.Wires)):
 						edge = node.Shape.Wires[wireIndex]
-						edges.appe(edge)
+						edges.append(edge)
 
 		if (len(edges) > 0):
 			section = newObject('Part::Feature', matchedEdge.name)
@@ -1110,22 +1127,18 @@ class FreeCADImporter(object):
 		return booleanGeo
 
 	def createCone(self, name, diameter2, angle, diameter1):
-		R1 = getMM(diameter1) / 2
-		R2 = getMM(diameter2) / 2
-		h  = abs(R1 - R2) / tan(angle.getValue().getRAD() / 2)
 		conGeo = newObject('Part::Cone', name)
-		conGeo.Radius1 = R1
-		conGeo.Radius2 = R2
-		conGeo.Height = h
+		R1 = setParameter(conGeo, 'Radius1', diameter1, getMM, 0.5)
+		R2 = setParameter(conGeo, 'Radius2', diameter2, getMM, 0.5)
+		h  = abs(R1 - R2) / tan(angle.getValue().getRAD() / 2)
+		conGeo.setExpression('Height', "abs(Radius2 - Radius1)/tan(%s*pi/180)/2" %(angle.get('alias')))
 		conGeo.Placement.Base.z = -h
 		return conGeo, h
 
 	def createCylinder(self, name, diameter, height, drillPoint):
-		r  = getMM(diameter) / 2
-		h1 = getMM(height)
 		cylGeo = newObject('Part::Cylinder', name)
-		cylGeo.Radius = r
-		cylGeo.Height = h1
+		r  = setParameter(cylGeo, 'Radius', diameter, getMM, 0.5)
+		h1 = setParameter(cylGeo, 'Height', height)
 		cylGeo.Placement.Base.z = -h1
 
 		if (drillPoint):
@@ -1151,15 +1164,15 @@ class FreeCADImporter(object):
 
 		return []
 
-	def getLength(self, body, dirX, dirY, dirZ):
+	def getLength(self, body, dir):
 		lx, ly, lz = 0, 0, 0
 		node = self.getBodyNode(body)
 		if (node):
 			box = node.geometry.Shape.BoundBox
-			if (not isEqual1D(dirX, 0)): lx = box.XLength
-			if (not isEqual1D(dirY, 0)): ly = box.YLength
-			if (not isEqual1D(dirZ, 0)): lz = box.ZLength
-		return sqrt(lx*lx + ly*ly + lz*lz)
+			if (not isEqual1D(dir.x, 0)): lx = box.XLength * box.XLength
+			if (not isEqual1D(dir.y, 0)): ly = box.YLength * box.YLength
+			if (not isEqual1D(dir.z, 0)): lz = box.ZLength * box.ZLength
+		return sqrt(lx + ly + lz)
 
 	def resolveParticiants(self, fxNode):
 		geos = []
@@ -1443,7 +1456,6 @@ class FreeCADImporter(object):
 
 	def invalidateLine2D(self, lineNode):
 		lineNode.valid = False
-		index = lineNode.index
 		points = lineNode.get('points')
 		self.removeFromPointRef(points[0], lineNode.index)
 		self.removeFromPointRef(points[1], lineNode.index)
@@ -1463,14 +1475,17 @@ class FreeCADImporter(object):
 		addSketch3D(sketchObj, part, isConstructionMode(line), line)
 		return True
 
-	def createRevolve(self, name, alpha, beta, source, axis, base, solid):
+	def createRevolve(self, name, angle1, angle2, source, axis, base, solid, positive):
 		revolution = newObject('Part::Revolution', name)
-		revolution.Angle = alpha + beta
+		setParameter(revolution, 'Angle', (angle1, angle2), getGRAD)
 		revolution.Source = source
-		revolution.Axis = axis
+		if (positive):
+			revolution.Axis = axis
+		else:
+			revolution.Axis = -axis
 		revolution.Base = base
 		revolution.Solid = solid and source.Shape.isClosed()
-		revolution.Placement = PLC(VEC(), ROT(axis, -beta), base)
+		revolution.Placement = PLC(CENTER, ROT(axis, -getGRAD(angle2)), base)
 		setDefaultViewObjectValues(revolution)
 		source.ViewObject.Visibility = False
 		return revolution
@@ -1556,7 +1571,7 @@ class FreeCADImporter(object):
 
 		# There has to be at least 2 points to draw an arc.
 		# Everything else will be handled as a circle!
-		if ((point1 is None) and (point2 is None)):
+		if ((point1 is None) and (point2 is None) or (isSamePoint(point1, point2))):
 			addSketch2D(sketchObj, circle, mode, circleNode)
 			logInfo(u"        ... added Circle M=(%g,%g) R=%g...", x, y, r)
 		else:
@@ -1998,7 +2013,7 @@ class FreeCADImporter(object):
 		sketch3D = InventorViewProviders.makeSketch3D(sketchNode.name)
 		logInfo(u"    adding 3D-Sketch '%s' ...", sketch3D.Label)
 		sketchNode.setGeometry(sketch3D)
-		sketch3D.Placement = PLC()
+		sketch3D.Placement = PLC(CENTER, ROT(DIR_Z, 0.0), CENTER)
 		geos = []
 		dims = []
 		self.pointDataDict = {}
@@ -2027,10 +2042,10 @@ class FreeCADImporter(object):
 
 	def Create_FxExtrude_New(self, padNode, sectionNode, name):
 		properties = padNode.get('properties')
-		boundary   = getProperty(properties, 0x01)               # The selected edges from a sketch
+		patch      = getProperty(properties, 0x01)               # The selected edges from a sketch
 		direction  = getProperty(properties, 0x02)               # The direction of the extrusion
 		reversed   = getPropertyValue(properties, 0x03, 'value') # If the extrusion direction is inverted
-		dimLength  = getProperty(properties, 0x04)               # The length of the extrusion in direction 1
+		dimLength1 = getProperty(properties, 0x04)               # The length of the extrusion in direction 1
 		dimAngle   = getProperty(properties, 0x05)               # The taper outward angle  (doesn't work properly in FreeCAD)
 		extend     = getPropertyValue(properties, 0x06, 'value') #
 		midplane   = getPropertyValue(properties, 0x07, 'value')
@@ -2046,49 +2061,46 @@ class FreeCADImporter(object):
 
 		# Extends 1x distance, 2x distance, to, to next, between, all
 
-		dirX = direction.get('dirX')
-		dirY = direction.get('dirY')
-		dirZ = direction.get('dirZ')
+		dir = VEC(direction.get('dirX'), direction.get('dirY'), direction.get('dirZ'))
 
-		len1 = getMM(dimLength)
+		len1 = getMM(dimLength1)
+		len2 = getMM(dimLength2)
 		pad = None
 		if (extend == 5): # 'ALL'
 			if (solid is not None):
-				len1 = self.getLength(solid, dirX, dirY, dirZ)
+				len1 = self.getLength(solid, dir)
 			else:
-				len1 = self.getLength(surface, dirX, dirY, dirZ)
+				len1 = self.getLength(surface, dir)
 		if (len1 > 0):
 			baseName = sectionNode.name
-			base     = self.createBoundary(boundary)
-			if (midplane): len1 = len1 / 2.0
-
 			pad = newObject('Part::Extrusion', name)
-			pad.Base = base
-			pad.Solid = solid is not None # FIXME!!
-			pad.TaperAngle = getGRAD(dimAngle)
-
-			setDefaultViewObjectValues(pad)
 
 			if (midplane):
+				len1 = len1 / 2.0
 				len2 = len1
-				logInfo(u"        ... based on '%s' (symmetric len=%s) ...", baseName, len1)
-			elif (dimLength2 is not None):
-				len2 = getMM(dimLength2)
-				logInfo(u"        ... based on '%s' (rev=%s, len=%s, len2=%s) ...", baseName, reversed, len1, len2)
+				logInfo(u"        ... based on '%s' (symmetric len=%s mm) ...", baseName, len1)
+			elif (len2 > 0):
+				logInfo(u"        ... based on '%s' (rev=%s, len=%s mm, len2=%s mm) ...", baseName, reversed, len1, len2)
 			else:
-				len2 = 0.0
-				logInfo(u"        ... based on '%s' (rev=%s, len=%s) ...", baseName, reversed, len1)
+				logInfo(u"        ... based on '%s' (rev=%s, len=%s mm) ...", baseName, reversed, len1)
 
-			x    = dirX * (len1 + len2)
-			y    = dirY * (len1 + len2)
-			z    = dirZ * (len1 + len2)
-			pad.Dir = (x, y, z)
-			if (reversed):
-				pad.Dir = (-x, -y, -z)
-			pad.Placement.Base.x -= dirX * len2
-			pad.Placement.Base.y -= dirY * len2
-			pad.Placement.Base.z -= dirZ * len2
-			hide(base)
+			pad.Base      = self.createBoundary(patch)
+			pad.Solid     = solid is not None # FIXME!!
+			pad.Reversed  = reversed
+			pad.Dir       = dir
+			pad.Symmetric = midplane
+			angle = setParameter(pad, 'TaperAngle', dimAngle, getGRAD)
+			if (extend == 5):
+				pad.LengthFwd = len1
+				pad.LengthRev = len2
+			else:
+				len1  = setParameter(pad, 'LengthFwd',  dimLength1, getMM)
+				len2  = setParameter(pad, 'LengthRev',  dimLength2, getMM)
+			setDefaultViewObjectValues(pad)
+
+			pad.Placement.Base -= dir * len2
+
+			hide(pad.Base)
 		else:
 			logWarning(u"        can't create new extrusion '%s' - (%04X): %s properties[04] is None!", name, padNode.index, padNode.typeName)
 		return pad
@@ -2163,24 +2175,23 @@ class FreeCADImporter(object):
 			if (boundary):
 				FreeCAD.ActiveDocument.recompute()
 				if (extend1.get('value') == 1): # 'Direction' => AngleExtent
-					alpha = getGRAD(angle1)
 					if (angle2 is None):
 						if (direction.get('value') == 0): # positive
 							logInfo(u"    ... based on '%s' (alpha=%s) ...", pathName, angle1.getValue())
-							revolution = self.createRevolve(revolveNode.name, alpha, 0.0, boundary, axis, base, solid)
+							revolution = self.createRevolve(revolveNode.name, angle1, 0.0, boundary, axis, base, solid, True)
 						elif (direction.get('value') == 1): # negative
 							logInfo(u"    ... based on '%s' (alpha=%s, inverted) ...", pathName, angle1.getValue())
-							revolution = self.createRevolve(revolveNode.name, 0.0, alpha, boundary, axis, base, solid)
+							revolution = self.createRevolve(revolveNode.name, 0.0, angle1, boundary, axis, base, solid, False)
 						elif (direction.get('value') == 2): # symmetric
+							alpha = getGRAD(angle1) / 2
 							logInfo(u"    ... based on '%s' (alpha=%s, symmetric) ...", pathName, angle1.getValue())
-							revolution = self.createRevolve(revolveNode.name, alpha / 2.0, alpha / 2.0, boundary, axis, base, solid)
+							revolution = self.createRevolve(revolveNode.name, alpha, alpha, boundary, axis, base, solid, True)
 					else:
 						logInfo(u"    ... based on '%s' (alpha=%s, beta=%s) ...", pathName, angle1.getValue(), angle2.getValue())
-						beta = getGRAD(angle2)
-						revolution = self.createRevolve(revolveNode.name, alpha, beta, boundary, axis, base, solid)
+						revolution = self.createRevolve(revolveNode.name, angle1, angle2, boundary, axis, base, solid, True)
 				elif (extend1.get('value') == 3): # 'Path' => FullSweepExtend
 					logInfo(u"    ... based on '%s' (full) ...", pathName)
-					revolution = self.createRevolve(revolveNode.name, 360.0, 0.0, boundary, axis, base, solid)
+					revolution = self.createRevolve(revolveNode.name, 360.0, 0.0, boundary, axis, base, solid, True)
 			else:
 				logError(u"    Can't create revolution '%s' out of boundary (%04X)!", revolveNode.name,  profile1.index)
 			if (revolution is not None): self.addBody(revolveNode, revolution, 0x11, 0x08)
@@ -2222,11 +2233,11 @@ class FreeCADImporter(object):
 		name         = patternNode.name
 		properties   = patternNode.get('properties')
 		participants = patternNode.get('participants')
-		fxDimData    = getProperty(properties, 0x05)
-		solidRef     = getProperty(properties, 0x09)
-		countRef     = getProperty(properties, 0x0C)
-		angleRef     = getProperty(properties, 0x0D)
-		axisData     = getProperty(properties, 0x0E)
+		fxDimData    = getProperty(properties, 0x05) # FeatureDimensions
+		solidRef     = getProperty(properties, 0x09) # ObjectCollection
+		countRef     = getProperty(properties, 0x0C) # Parameter
+		angleRef     = getProperty(properties, 0x0D) # Parameter
+		axisData     = getProperty(properties, 0x0E) # AxisEntity
 
 		if (len(participants) == 0):
 			participants = []
@@ -2258,6 +2269,8 @@ class FreeCADImporter(object):
 						cutGeo = baseGeo
 						baseGeo = cutGeo.Tool
 					patternGeo = Draft.makeArray(baseGeo, center, angle.getGRAD(), count, None, namePart)
+					setParameter(patternGeo, 'NumberPolar', countRef)
+					setParameter(patternGeo, 'Angle', angle, getGRAD)
 					patternGeo.Axis = axis
 					setDefaultViewObjectValues(patternGeo)
 					geos.append(patternGeo)
@@ -2333,6 +2346,8 @@ class FreeCADImporter(object):
 						cutGeo = baseGeo
 						if (cutGeo.Tool): baseGeo = cutGeo.Tool
 					patternGeo = Draft.makeArray(baseGeo, dir1, dir2, count1, count2, namePart)
+					setParameter(patternGeo, 'NumberX', count1Ref)
+					setParameter(patternGeo, 'NumberY', count2Ref)
 
 					if (isTrue(midplane1Ref)): self.adjustMidplane(patternGeo, dir1Ref, distance1Ref, fitted1Ref, count1Ref)
 					if (isTrue(midplane2Ref)): self.adjustMidplane(patternGeo, dir2Ref, distance2Ref, fitted2Ref, count2Ref)
@@ -2410,12 +2425,12 @@ class FreeCADImporter(object):
 		definition     = holeNode.get('label')
 		properties     = holeNode.get('properties')
 		holeType       = getProperty(properties, 0x00)
-		holeDiam_1     = getProperty(properties, 0x01)
-		holeDepth_1    = getProperty(properties, 0x02)
-		holeDiam_2     = getProperty(properties, 0x03)
-		holeDepth_2    = getProperty(properties, 0x04)
-		holeAngle_2    = getProperty(properties, 0x05)
-		pointAngle     = getProperty(properties, 0x06)
+		holeDiam_1     = getProperty(properties, 0x01) # Parameter
+		holeDepth_1    = getProperty(properties, 0x02) # Parameter
+		holeDiam_2     = getProperty(properties, 0x03) # Parameter
+		holeDepth_2    = getProperty(properties, 0x04) # Parameter
+		holeAngle_2    = getProperty(properties, 0x05) # Parameter
+		pointAngle     = getProperty(properties, 0x06) # Parameter
 		centerPoints   = getProperty(properties, 0x07)	# <=> HoleCenterPoints == "by Sketch"
 		transformation = getProperty(properties, 0x08)
 		termination    = getProperty(properties, 0x09)
@@ -2429,7 +2444,7 @@ class FreeCADImporter(object):
 		#    = getProperty(properties, 0x11)    # boolParam
 		# 0x12 ???
 		fxDimensions  = getProperty(properties, 0x13)
-		threadDiam    = getProperty(properties, 0x14)
+		threadDiam    = getProperty(properties, 0x14) # Parameter
 		#    = getProperty(properties, 0x15)	# <=> placement == "linear"
 		#    = getProperty(properties, 0x16)	#
 		# 0x17 ???
@@ -2444,6 +2459,7 @@ class FreeCADImporter(object):
 			if (base is None):
 				logWarning(u"    Can't find base info for (%04X): %s - not yet created!", holeNode.index, name)
 			else:
+				#TODO: InventorViewProviders.makeHole()
 				placement = getPlacement(transformation)
 				holeGeo   = None
 				if (centerPoints):
@@ -2666,10 +2682,10 @@ class FreeCADImporter(object):
 			thickenGeo = self.createEntity(thickenNode, 'Part::Offset')
 			thickenGeo.Source = source
 			if (isTrue(negativeDir)):
-				thickenGeo.Value = - getCoord(distance, 'valueNominal')
+				setParameter(thickenGeo, 'Value', distance, getMM, -1.0)
 			else:
 				#TODO: symmetricDir - create a fusion of two thicken geometries
-				thickenGeo.Value = getCoord(distance, 'valueNominal')
+				setParameter(thickenGeo, 'Value', distance, getMM)
 			thickenGeo.Mode = 'Skin'          # {Skin, Pipe, RectoVerso}
 			thickenGeo.Join = 'Intersection'  # {Arc, Tangent, Intersection}
 			thickenGeo.Intersection = False
@@ -2678,9 +2694,7 @@ class FreeCADImporter(object):
 			offset = -sourceOffsets[key]
 			if ((offset != 0.0) and (len(source.Shape.Faces)>0)):
 				normal = source.Shape.Faces[0].normalAt(0,0)
-				thickenGeo.Placement.Base.x += source.Placement.Base.x - normal.x * offset
-				thickenGeo.Placement.Base.y += source.Placement.Base.y - normal.y * offset
-				thickenGeo.Placement.Base.z += source.Placement.Base.z - normal.z * offset
+				thickenGeo.Placement.Base += source.Placement.Base - normal * offset
 			adjustViewObject(thickenGeo, source)
 			if (isTrue(verticalSurface)):
 				self.addBody(thickenNode, thickenGeo, 0x0F, 0x08)
@@ -2721,30 +2735,34 @@ class FreeCADImporter(object):
 		r = revolutions.getValue().x
 		if (coilType.get('value') == 3):
 			coilGeo = newObject('Part::Spiral', sweepGeo.Name + '_coil')
-			coilGeo.Growth = getMM(pitch)
-			coilGeo.Rotations = revolutions.getValue().x
+			setParameter(coilGeo, 'Growth', pitch, getMM)
+			setParameter(coilGeo, 'Rotations', revolutions)
 			if (isTrue(rotate)): dir = dir.negative()
 		else:
 			coilGeo = newObject('Part::Helix', sweepGeo.Name + '_coil')
-			coilGeo.Pitch  = getMM(pitch)
-			coilGeo.Height = getMM(height)
 			if (coilType.get('value') == 0):   # PitchAndRevolution
+				setParameter(coilGeo, 'Pitch', pitch, getMM)
 				coilGeo.Height = getMM(pitch) * revolutions.getValue().x
+				coilGeo.setExpression('Height', "%s * %s" %(pitch.get('alias'), revolutions.get('alias')))
 			elif (coilType.get('value') == 1): # RevolutionAndHeight
-				coilGeo.Pitch  = getMM(height) /  revolutions.getValue().x
+				coilGeo.Pitch  = height.getNominalValue() /  revolutions.getNominalValue()
+				coilGeo.setExpression("Pitch", "%s / %s" %(height.get('alias'), revolutions.get('alias')))
+				setParameter(coilGeo, 'Height', height, getMM)
+			else:
+				setParameter(coilGeo, 'Pitch', pitch, getMM)
+				setParameter(coilGeo, 'Height', height, getMM)
 			coilGeo.LocalCoord = 1 - rotate.get('clockwise') # 0 = "Left handed"; 1= "Right handed"
-			coilGeo.Angle      = getGRAD(taperAngle)
+			setParameter(coilGeo, 'Angle', taperAngle, getGRAD)
 		c   = boundary.Shape.BoundBox.Center
 		r   = c.distanceToLine(base, dir) # Helix-Radius
-		b   = VEC().projectToLine(c-base, dir).normalize()
-		z   = VEC(0,0,1) # zAxis
+		b   = CENTER.projectToLine(c-base, dir).normalize()
+		z   = DIR_Z
 		rot = ROT(z.cross(dir), degrees(z.getAngle(dir)))
-		p1  = PLC((c + b*r), rot)
-		x   = rot.multVec(VEC(-1, 0, 0))
-		p2  = PLC(VEC(), ROT(z, degrees(x.getAngle(b))))
-		coilGeo.Radius     = r
-
-		coilGeo.Placement  = p1.multiply(p2)
+		p1  = PLC((c + b*r), rot, CENTER)
+		x   = rot.multVec(-DIR_X)
+		p2  = PLC(CENTER, ROT(z, degrees(x.getAngle(b))), CENTER)
+		coilGeo.Radius    = r
+		coilGeo.Placement = p1.multiply(p2)
 
 		#TODO: add flat start / end to coil wire
 		if (isTrue(startIsFlat)):
@@ -2752,10 +2770,10 @@ class FreeCADImporter(object):
 		if (isTrue(endIsFlat)):
 			pass
 
-		sweepGeo.Sections  = [boundary]
-		sweepGeo.Spine     = (coilGeo, [])
-		sweepGeo.Solid     = surface is None
-		sweepGeo.Frenet    = True
+		sweepGeo.Sections = [boundary]
+		sweepGeo.Spine    = (coilGeo, [])
+		sweepGeo.Solid    = surface is None
+		sweepGeo.Frenet   = True
 		setDefaultViewObjectValues(sweepGeo)
 
 		self.addBody(coilNode, sweepGeo, 0x13, 0x11)
@@ -2772,7 +2790,6 @@ class FreeCADImporter(object):
 		chamferType = getProperty(properties, 0x04) # chamfer type
 		flip        = getProperty(properties, 0x05) # flip directions
 		#           = getProperty(properties, 0x06) # corner setback (boolean) => not supported!
-		#           = getProperty(properties, 0x07) # !!!never seen!!!
 		dimensions  = getProperty(properties, 0x08) # FeatureDimensions
 		preserve    = getProperty(properties, 0x09) # preserve all features
 		angle       = getProperty(properties, 0x0A) # Angle
@@ -2941,6 +2958,7 @@ class FreeCADImporter(object):
 		# = getProperty(properties, 0x0B)     # ???
 		# = getProperty(properties, 0x0C)     # param
 		angle = getProperty(properties, 0x0D) # angle
+		return notYetImplemented(extendNode)
 
 	def Create_FxFaceExtend(self, extendNode):
 		properties = extendNode.get('properties')
@@ -3697,7 +3715,7 @@ class FreeCADImporter(object):
 		entity = arc.geometry
 		circle = Part.Circle(entity.Center, entity.Axis, entity.Radius)
 		a = circle.parameter(p2v(p2))
-		b = circle.parameter(p2v(p2))
+		b = circle.parameter(p2v(p3))
 		replaceGeometry(sketchObj, arc, Part.ArcOfCircle(circle, a, b))
 		return
 
@@ -3834,18 +3852,11 @@ class FreeCADImporter(object):
 			mdlValue = u''
 			tlrValue = u''
 			remValue = u''
-			valueNode.set('alias', 'T_Parameters.%s_' %(key))
 			typeName = valueNode.typeName
 
 			if (typeName == 'Parameter'):
 				r = self.addReferencedParameters(table, r, valueNode)
-				#nominalValue = getNominalValue(valueNode)
-				#nominalFactor = valueNode.getUnitFactor()
-				#nominalOffset = valueNode.getUnitOffset()
-				#nominalUnit  = valueNode.data.getUnitName()
-				#if (len(nominalUnit) > 0): nominalUnit = ' ' + nominalUnit
-				#formula = '%s%s' %((nominalValue / nominalFactor)  - nominalOffset, nominalUnit)
-				value   = valueNode.getValue().__str__()
+				value   = valueNode.getFormula(False)
 				formula = valueNode.getFormula(True)
 				setTableValue(table, 'A', r, key)
 				setTableValue(table, 'B', r, value)
@@ -3871,10 +3882,15 @@ class FreeCADImporter(object):
 
 			if (key.find('RDxVar') != 0):
 				try:
-					aliasValue = '%s_' %(key.replace(':', '_'))
-					table.setAlias(u"B%d" %(r), aliasValue)
+					aliasName = key.replace(':', '_')
+					if (IS_CELL_REF.search(key)):
+						aliasName = '%s_' %(aliasName)
+					else:
+						aliasName = ''.join([i if (ord(i) < 128) and (ord(i) > 32) else '_' for i in aliasName])
+					table.setAlias(u"B%d" %(r), aliasName)
+					valueNode.set('alias', 'T_Parameters.%s' %(aliasName))
 				except Exception as e:
-					logError(u"    Can't set alias name for B%d - invalid name '%s' - %s!", r, aliasValue, e)
+					logError(u"    Can't set alias name for B%d - invalid name '%s' - %s!", r, aliasName, e)
 
 				logInfo(u"        A%d='%s'; B%d='%s'%s'%s%s", r, key, r, value, mdlValue, tlrValue, remValue)
 				return r + 1

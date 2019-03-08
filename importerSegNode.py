@@ -6,7 +6,7 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerClasses import AbstractData, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry
+from importerClasses import AbstractData, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry, ParameterNode, AbstractValue
 from importerUtils   import *
 from math            import log10, pi
 import numpy as np
@@ -1440,3 +1440,54 @@ class SecNodeRef(object):
 	def __repr__(self):
 		if (self.node is None): return self.__str__()
 		return self.node.getRefText()
+
+def getParameterValue(parameter, formula = None):
+	prm   = parameter
+	value = None
+	if (isinstance(prm, SecNodeRef)):
+		prm = prm.node
+	if (isinstance(prm, ParameterNode)):
+		prm = prm.getValue()
+	if (isinstance(prm, AbstractValue)):
+		if (formula is None):
+			return prm.getNominalValue()
+		return formula(prm)
+
+	if (formula):
+		return formula(prm)
+	return prm
+
+def getExpression(parameter):
+	alias = None
+	if (hasattr(parameter, 'get')):
+		alias = parameter.get('alias')
+	return alias
+
+def setParameter(geometry, attribute, parameter, formula = None, factor=1.0):
+
+	aliases = []
+	if (type(parameter) in [list, tuple]):
+		value   = 0
+		for p in parameter:
+			value += getParameterValue(p, formula)
+			alias = getExpression(p)
+			if (alias):
+				aliases.append(alias)
+		if (len(aliases) > 0):
+			expression = "+".join(aliases)
+		else:
+			expression = None
+	else:
+		value = getParameterValue(parameter, formula)
+		expression = getExpression(parameter)
+
+	try:
+		setattr(geometry, attribute, value * factor)
+	except:
+		pass
+	if (expression is not None):
+		if (isEqual1D(factor, 1.0)):
+			geometry.setExpression(attribute, expression)
+		else:
+			geometry.setExpression(attribute, "(%s) * %s" %(expression, factor))
+	return value

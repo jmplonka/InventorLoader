@@ -738,8 +738,8 @@ def isEmbeddings(names):
 	return 'RSeEmbeddings' in names
 
 def isEqual(a, b):
-	if (a is None): return isEqual(b, VEC())
-	if (b is None): return isEqual(a, VEC())
+	if (a is None): return isEqual(b, CENTER)
+	if (b is None): return isEqual(a, CENTER)
 	return ((a - b).Length < 0.0001)
 
 def isEqual1D(a, b):

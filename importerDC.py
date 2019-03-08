@@ -4838,7 +4838,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_8B2BE62E(self, node):
-		i = self.ReadHeaderEnum(node)
+		i = self.ReadHeaderEnum(node, 'ComputeType', {1: 'Identical', 2: 'AdjustToModel', 3: 'Optimized'})
 		return i
 
 	def Read_8B3E95F7(self, node):
