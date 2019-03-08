@@ -349,6 +349,8 @@ class _PartVariants(object):
 		for col in fp.Mapping:
 			prm = getTableValue(fp.Values, col, 1)
 			val = getTableValue(fp.Values, col, row)
+			if (hasattr(val, 'Value')):
+				val = val.Value
 			col = fp.Mapping[col]
 			setTableValue(fp.Parameters, 'B', col, val)
 			FreeCAD.Console.PrintMessage("    '%s' = %s\n" %(prm, val))

@@ -1047,7 +1047,7 @@ class FreeCADImporter(object):
 						boundary = self.addBoundaryPart(boundary, parts[0])
 					else:
 						for part in parts:
-							if (part.get('operation') & 0x08):
+							if (part.get('operation') & 0x18):
 								boundary = self.addBoundaryPart(boundary, part)
 					return boundary
 				else:
