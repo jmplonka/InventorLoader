@@ -6,7 +6,7 @@ GUI representations for objectec imported from Inventor
 '''
 
 import re, sys, Part, FreeCAD
-from importerUtils import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning
+from importerUtils import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef
 from FreeCAD       import Vector as VEC
 
 INVALID_NAME = re.compile('^[0-9].*')
@@ -301,16 +301,13 @@ def makeSketch3D(name = None):
 	return fp
 
 class _PartVariants(object):
-	def __init__(self, fp, variants):
-		fp.addProperty("App::PropertyEnumeration" , "Variant", "iPart").Variant = variants
-		fp.addProperty("App::PropertyPythonObject", "Parameters")
-		fp.addProperty("App::PropertyPythonObject", "Values").Values = createPartFeature('Spreadsheet::Sheet', 'Variants', 'Variants')
+	def __init__(self, fp):
+		fp.addProperty("App::PropertyEnumeration" , "Variant", "iPart")
+		fp.addProperty("App::PropertyLink", "Parameters")
+		fp.addProperty("App::PropertyLink", "Values")
 		fp.addProperty("App::PropertyPythonObject", "Rows").Rows = {}
 		fp.addProperty("App::PropertyPythonObject", "Mapping").Mapping = {}
 		fp.addProperty("App::PropertyPythonObject", "Proxy").Proxy = self
-		for row, variant in enumerate(variants):
-			fp.Rows[variant] = row + 2
-		fp.Parameters = FreeCAD.ActiveDocument.getObject(u'T_Parameters')
 
 	def _getHeadersByRow_(self, table):
 		headers = {}
@@ -356,12 +353,41 @@ class _PartVariants(object):
 			FreeCAD.Console.PrintMessage("    '%s' = %s\n" %(prm, val))
 		if (FreeCAD.ActiveDocument):
 			FreeCAD.ActiveDocument.recompute()
-
 		return True
+
+	def _updateValues_(self, fp):
+		colMember = -1
+		values = fp.Values
+		FreeCAD.ActiveDocument.recompute()
+		col = 1
+		try:
+			# get member column
+			while (True):
+				hdr = values.get(getCellRef(col, 1))
+				if (re.search("Member", hdr)):
+					colMember = col
+					break
+				col += 1
+			variants = []
+			row = 2
+			while (colMember > 0):
+				var = values.get(getCellRef(colMember, row))
+				variants.append(str(var))
+				row += 1
+		except:
+			if (colMember == -1):
+				logWarning("Coudn't find column 'Member' in variants table!")
+			else:
+				fp.Rows.clear()
+				for row, variant in enumerate(variants):
+					fp.Rows[variant] = row + 2
+				fp.Variant = variants
 
 	def onChanged(self, fp, prop):
 		if (prop == 'Variant'):
 			self._updateVariant_(fp)
+		elif (prop == 'Values'):
+			self._updateValues_(fp)
 
 class _ViewProviderPartVariants(_ViewProvider):
 	def __init__(self, vp):
@@ -378,9 +404,9 @@ class _ViewProviderPartVariants(_ViewProvider):
 	def getIcon(self):
 		return getIconPath("iPart-VO.png")
 
-def makePartVariants(name = None, variants = []):
+def makePartVariants(name = None):
 	fp = createPartFeature("Part::FeaturePython", name, "Variations")
-	iPart = _PartVariants(fp, variants)
+	iPart = _PartVariants(fp)
 	if (FreeCAD.GuiUp):
 		_ViewProviderPartVariants(fp.ViewObject)
 	FreeCAD.ActiveDocument.recompute()

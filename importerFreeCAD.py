@@ -3742,26 +3742,14 @@ class FreeCADImporter(object):
 				wb = excel.get('workbook')
 				if (wb is not None):
 					sheet = wb.sheet_by_index(0)
-					cols = range(0, sheet.ncols)
-					# get member column
-					colMember = 0
-					for col in range(0, sheet.ncols):
-						header = sheet.cell(0, col).value
-						if (re.search("Member", header)):
-							colMember = col
-							break;
-					variants = [str(sheet.cell(row, colMember).value) for row in range(1, sheet.nrows)]
-					iPart = InventorViewProviders.makePartVariants(iPartNode.name, variants)
-					table = iPart.Values
+					iPart = InventorViewProviders.makePartVariants(iPartNode.name)
+					table = newObject('Spreadsheet::Sheet', 'Variants')
 					# get selected part variant
 					defRow = sheet.cell(0, 0).value # Series<defaultRow>2</defaultRow>
 					match = re.search(u"<defaultRow>(\d+)</defaultRow>", defRow)
-					selValue = variants[0]
-					if (match):
-						defRow   = int(match.group(1))
-						selValue = variants[defRow]
 					# build the header for the variants table
-					for col in range(0, sheet.ncols):
+					cols = range(0, sheet.ncols)
+					for col in cols:
 						header = sheet.cell(0, col).value
 						xml = header.find('<')
 						if (xml>0):
@@ -3776,7 +3764,9 @@ class FreeCADImporter(object):
 								setTableValue(table, col+1, row + 1, value)
 							except:
 								pass
-					iPart.Variant = selValue
+					iPart.Values = table
+					iPart.Parameters = FreeCAD.ActiveDocument.getObject(u'Parameters')
+					iPart.Proxy._updateValues_(iPart)
 		return
 
 	def Create_Blocks(self, blocksNode):
@@ -3888,7 +3878,7 @@ class FreeCADImporter(object):
 					else:
 						aliasName = ''.join([i if (ord(i) < 128) and (ord(i) > 32) else '_' for i in aliasName])
 					table.setAlias(u"B%d" %(r), aliasName)
-					valueNode.set('alias', 'T_Parameters.%s' %(aliasName))
+					valueNode.set('alias', 'Parameters.%s' %(aliasName))
 				except Exception as e:
 					logError(u"    Can't set alias name for B%d - invalid name '%s' - %s!", r, aliasName, e)
 
@@ -3898,7 +3888,7 @@ class FreeCADImporter(object):
 
 	def createParameterTable(self, partNode):
 		parameters = partNode.get('parameters')
-		table = newObject('Spreadsheet::Sheet', u'T_Parameters')
+		table = newObject('Spreadsheet::Sheet', u'Parameters')
 		logInfo(u"    adding parameters table...")
 		setTableValue(table, 'A', 1, 'Parameter')
 		setTableValue(table, 'B', 1, 'Value')
