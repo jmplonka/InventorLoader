@@ -5,9 +5,10 @@ InventorViewProviders.py
 GUI representations for objectec imported from Inventor
 '''
 
-import re, sys, Part, FreeCAD
+import os, re, sys, Part, FreeCAD, FreeCADGui
 from importerUtils import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef
 from FreeCAD       import Vector as VEC
+from PySide        import QtGui, QtCore
 
 INVALID_NAME = re.compile('^[0-9].*')
 
@@ -389,6 +390,28 @@ class _PartVariants(object):
 		elif (prop == 'Values'):
 			self._updateValues_(fp)
 
+class DlgIPartVariants(object):
+	def __init__(self):
+		res = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources")
+		ui  = os.path.join(res, "ui", "iPartVariants.ui")
+		self.form = FreeCADGui.PySideUic.loadUi(ui)
+		self.form.btnPartAdd.setIcon(QtGui.QIcon(os.path.join(res, "icons", "iPart_Part_add.svg")))
+		self.form.btnPartDel.setIcon(QtGui.QIcon(os.path.join(res, "icons", "iPart_Part_del.svg")))
+		self.form.btnParamAdd.setIcon(QtGui.QIcon(os.path.join(res, "icons", "iPart_Param_add.svg")))
+		self.form.btnParamDel.setIcon(QtGui.QIcon(os.path.join(res, "icons", "iPart_Param_del.svg")))
+		QtCore.QObject.connect(self.form.btnPartAdd, QtCore.SIGNAL("clicked()"), self.addPart)
+		QtCore.QObject.connect(self.form.btnPartDel, QtCore.SIGNAL("clicked()"), self.delPart)
+		QtCore.QObject.connect(self.form.btnParamAdd, QtCore.SIGNAL("clicked()"), self.addParam)
+		QtCore.QObject.connect(self.form.btnParamDel, QtCore.SIGNAL("clicked()"), self.delParam)
+	def addPart(self):
+		return
+	def delPart(self):
+		return
+	def addParam(self):
+		return
+	def delParam(self):
+		return
+
 class _ViewProviderPartVariants(_ViewProvider):
 	def __init__(self, vp):
 		super(_ViewProviderPartVariants, self).__init__(vp)
@@ -400,6 +423,24 @@ class _ViewProviderPartVariants(_ViewProvider):
 		if (not self.fp.Values is None):
 			children.append(self.fp.Values)
 		return children
+
+	def setEdit(self, vobj=None, mode=0):
+		if mode == 0:
+#			if vobj is None:
+#				vobj = self.vobj
+#			FreeCADGui.Control.closeDialog()
+#			taskd = TaskPanel(vobj.Object)
+#			FreeCADGui.Control.showDialog(taskd)
+#			taskd.setupUi()
+
+			FreeCAD.ActiveDocument.recompute()
+
+			return True
+		return False
+
+	def unsetEdit(self, vobj, mode):
+		# this is executed when the user cancels or terminates edit mode
+		return False
 
 	def getIcon(self):
 		return getIconPath("iPart-VO.png")
