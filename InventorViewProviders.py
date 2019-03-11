@@ -453,14 +453,14 @@ def getTableValues():
 						value = constraint.Value
 						if (constraint.Type == 'Angle'):
 							value = degrees(value)
-						values.append([False, '%s.Constraints[%d]' %(obj.Name, c), 'd_%d' %(d), value, DIM_CONSTRAINTS[constraint.Type]])
+						values.append([False, '%s.Constraints[%d]' %(obj.Name, c), 'd_%d' %(d), str(value), DIM_CONSTRAINTS[constraint.Type]])
 						d += 1
 					c += 1
 			else:
 				for prp in obj.PropertiesList:
 					if (obj.getTypeIdOfProperty(prp) in XPR_PROPERTIES):
 						value = getattr(obj, prp)
-						values.append([False, '%s.%s' %(obj.Name, prp), 'd_%d' %(d), value, XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
+						values.append([False, '%s.%s' %(obj.Name, prp), 'd_%d' %(d), str(value), XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
 						d += 1
 	return values
 
@@ -475,7 +475,7 @@ def createIPart():
 		parameters = ParameterTableModel(form.tableView, values)
 		form.tableView.setModel(parameters)
 		if (not form.exec_()):
-			
+
 			return None
 		table = doc.addObject('Spreadsheet::Sheet', 'Parameters')
 		setTableValue(table, 'A', 1, 'Parameter')

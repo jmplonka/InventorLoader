@@ -1678,6 +1678,6 @@ class ParameterTableModel(TableModel):
 	def flags(self, index):
 		if (index.column() == 0):
 			return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsUserCheckable
-		if (index.column() == 1): # make object's property column read only!
+		if (index.column() in [1, 4]): # make object's property and unit column read only!
 			return Qt.ItemIsEnabled
 		return Qt.ItemIsEnabled |Qt.ItemIsEditable
