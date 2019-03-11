@@ -9,7 +9,7 @@ import os, re, sys, Part, FreeCAD, FreeCADGui
 from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef, setTableValue, calcAliasname
 from FreeCAD         import Vector as VEC
 from PySide          import QtGui, QtCore
-from importerClasses import ParameterTableModel
+from importerClasses import ParameterTableModel, VariantTableModel
 from math            import degrees
 
 INVALID_NAME   = re.compile('^[0-9].*')
@@ -325,7 +325,7 @@ def makeSketch3D(name = None):
 class _PartVariants(object):
 	def __init__(self, fp):
 		fp.addProperty("App::PropertyEnumeration" , "Variant", "iPart")
-		fp.addProperty("App::PropertyLink", "Parameters")
+		fp.addProperty("App::PropertyLink"        , "Parameters")
 		fp.addProperty("App::PropertyPythonObject", "Values")
 		fp.addProperty("App::PropertyPythonObject", "Rows").Rows = {}
 		fp.addProperty("App::PropertyPythonObject", "Mapping").Mapping = {}
@@ -347,6 +347,7 @@ class _PartVariants(object):
 		if (fp.Parameters is None): return False
 
 		fp.Mapping.clear()
+		FreeCAD.ActiveDocument.recompute()
 		parameter  = self._getHeadersByRow_(fp.Parameters)
 		for col in range(1, len(fp.Values[0])):
 			hdr = fp.Values[0][col]
@@ -356,6 +357,8 @@ class _PartVariants(object):
 		return True
 
 	def _updateVariant_(self, fp):
+		if (not hasattr(fp, 'Variant')):
+			return False
 		if (not self._updateMapping_(fp)):
 			return False
 		r = fp.Rows[fp.Variant]
@@ -372,13 +375,14 @@ class _PartVariants(object):
 		return True
 
 	def _updateValues_(self, fp):
-		colMember = -1
-		values = fp.Values
-		variants = [row[0] for row in values[1:]]
-		fp.Rows.clear()
-		for row, variant in enumerate(variants):
-			fp.Rows[variant] = row + 1
-		fp.Variant = variants
+		if (hasattr(fp, 'Variant')):
+			colMember = -1
+			values = fp.Values
+			variants = [row[0] for row in values[1:]]
+			fp.Rows.clear()
+			for row, variant in enumerate(variants):
+				fp.Rows[variant] = row + 1
+			fp.Variant = variants
 
 	def onChanged(self, fp, prop):
 		if (prop == 'Variant'):
@@ -387,7 +391,7 @@ class _PartVariants(object):
 			self._updateValues_(fp)
 
 class DlgIPartVariants(object):
-	def __init__(self):
+	def __init__(self, fp):
 		res = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources")
 		ui  = os.path.join(res, "ui", "iPartVariants.ui")
 		self.form = FreeCADGui.PySideUic.loadUi(ui)
@@ -399,6 +403,9 @@ class DlgIPartVariants(object):
 		QtCore.QObject.connect(self.form.btnPartDel, QtCore.SIGNAL("clicked()"), self.delPart)
 		QtCore.QObject.connect(self.form.btnParamAdd, QtCore.SIGNAL("clicked()"), self.addParam)
 		QtCore.QObject.connect(self.form.btnParamDel, QtCore.SIGNAL("clicked()"), self.delParam)
+
+		variants = VariantTableModel(self.form.tableView, fp.Values)
+
 	def addPart(self):
 		return
 	def delPart(self):
@@ -422,14 +429,11 @@ class _ViewProviderPartVariants(_ViewProvider):
 
 	def setEdit(self, vobj=None, mode=0):
 		if mode == 0:
-#			if vobj is None:
-#				vobj = self.vobj
-#			FreeCADGui.Control.closeDialog()
-#			panel = IPartPanel(vobj.Object)
-#			FreeCADGui.Control.showDialog(panel)
-#			taskd.setupUi()
-
-			FreeCAD.ActiveDocument.recompute()
+			if vobj is None:
+				vobj = self.vobj
+			fp = vobj.Object
+			FreeCADGui.Control.closeDialog()
+			FreeCADGui.Control.showDialog(DlgIPartVariants(fp))
 
 			return True
 		return False
@@ -472,8 +476,7 @@ def createIPart():
 	if (table is None):
 		form       = FreeCADGui.PySideUic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui"))
 		values     = getTableValues()
-		parameters = ParameterTableModel(form.tableView, values)
-		form.tableView.setModel(parameters)
+		ParameterTableModel(form.tableView, values)
 		if (not form.exec_()):
 
 			return None
@@ -495,7 +498,7 @@ def createIPart():
 			setTableValue(table, 'A', row, prmName)   # parameter's name
 			setTableValue(table, 'B', row, prmValue)  # parameter's value
 			setTableValue(table, 'C', row, prmUnit)
-			setTableValue(table, 'D', row, "'%s" % prmSource) # parameter's source
+			setTableValue(table, 'D', row, "'<-> %s" % prmSource) # parameter's source
 			# replace value by expression
 			aliasName = calcAliasname(prmName)
 			table.setAlias(u"B%d" %(row), aliasName)

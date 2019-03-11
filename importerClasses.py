@@ -1629,6 +1629,7 @@ class TableModel(QAbstractTableModel):
 		QAbstractTableModel.__init__(self, parent, *args)
 		self.mylist = mylist
 		self.header = header
+		parent.setModel(self)
 	def rowCount(self, parent):
 		return len(self.mylist)
 	def columnCount(self, parent):
@@ -1680,4 +1681,10 @@ class ParameterTableModel(TableModel):
 			return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsUserCheckable
 		if (index.column() in [1, 4]): # make object's property and unit column read only!
 			return Qt.ItemIsEnabled
+		return Qt.ItemIsEnabled |Qt.ItemIsEditable
+
+class VariantTableModel(TableModel):
+	def __init__(self, parent, values, *args):
+		TableModel.__init__(self, parent, values[1:], values[0], *args)
+	def flags(self, index):
 		return Qt.ItemIsEnabled |Qt.ItemIsEditable
