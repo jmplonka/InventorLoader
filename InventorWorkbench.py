@@ -4,13 +4,20 @@
 InventorWorkbench.py
 '''
 
-import os, FreeCAD, FreeCADGui
+import os, sys, FreeCAD, FreeCADGui
 from InventorViewProviders import *
 from FreeCADGui            import Workbench, addCommand
 from importerUtils         import getIconPath
-from importerClasses       import CheckBoxDelegate
 from PySide.QtGui          import QMessageBox
 from PySide.QtCore         import Qt
+import InventorViewProviders, importerClasses
+
+if (sys.version_info.major < 3):
+	import imp
+	_reload = imp.reload
+else:
+	import importlib
+	_reload = importlib.reload
 
 _SEPARATOR_  = 'Separator'
 PREFIX = 'InventorLoader_'
@@ -491,6 +498,8 @@ class _CmdiPart(_CmdAbstract):
 		super(_CmdiPart, self).__init__(menuText="iPart", toolTip="Create an iPart factory", pixmap=getIconPath("iPart.png"))
 
 	def Activated(self):
+		_reload(importerClasses)
+		_reload(InventorViewProviders)
 		FreeCAD.ActiveDocument.openTransaction("Create iPart")
 		FreeCADGui.addModule("InventorViewProviders")
 		FreeCADGui.doCommand("InventorViewProviders.createIPart()")

@@ -9,7 +9,7 @@ import os, re, sys, Part, FreeCAD, FreeCADGui
 from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef
 from FreeCAD         import Vector as VEC
 from PySide          import QtGui, QtCore
-from importerClasses import ParameterTableModel, CheckBoxDelegate
+from importerClasses import ParameterTableModel
 
 INVALID_NAME   = re.compile('^[0-9].*')
 TID_SKIPPABLE  = [
@@ -23,6 +23,13 @@ XPR_PROPERTIES = [
 	'App::PropertyDistance',
 	'App::PropertyLength',
 	'App::PropertyPercent'
+]
+DIM_CONSTRAINTS = [
+	'Angle',
+	'Distance',
+	'DistanceX',
+	'DistanceY',
+	'Radius'
 ]
 
 def createPartFeature(doctype, name, default):
@@ -464,9 +471,11 @@ def getTableValues():
 	for obj in FreeCAD.ActiveDocument.Objects:
 		if (not obj.TypeId in TID_SKIPPABLE):
 			if (obj.TypeId == 'Sketcher::SketchObject'):
+				c = 0
 				for constraint in obj.Constraints:
-					if (constraint.Name):
-						values.append([True, '%s.%s' %(obj.Label, constraint.Name), 'd_%d' %(d), constraint.Value])
+					c += 1
+					if (constraint.Type in DIM_CONSTRAINTS):
+						values.append([True, '%s.Constraint[%d]' %(obj.Label, c), 'd_%d' %(d), constraint.Value])
 						d += 1
 			else:
 				for prp in obj.PropertiesList:
@@ -481,7 +490,6 @@ def createIPart():
 	form = FreeCADGui.PySideUic.loadUi(ui)
 	parameters = ParameterTableModel(form.tableView, getTableValues())
 	form.tableView.setModel(parameters)
-	form.tableView.setItemDelegateForColumn(0, CheckBoxDelegate(form.tableView))
 	ret = form.exec_()
 	if (ret == QtGui.QMessageBox.Cancel):
 		return

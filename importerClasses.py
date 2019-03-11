@@ -1632,13 +1632,41 @@ class TableModel(QAbstractTableModel):
 	def rowCount(self, parent):
 		return len(self.mylist)
 	def columnCount(self, parent):
-		return len(self.mylist[0])
+		return max([len(row) for row in self.mylist])
 	def data(self, index, role):
-		if (not index.isValid()):
-			return None
-		if (role != Qt.DisplayRole):
-			return None
-		return self.mylist[index.row()][index.column()]
+		if (index.isValid()):
+			value = self.mylist[index.row()][index.column()]
+			if (hasattr(value, 'Value')):
+				value = value.Value
+			if (type(value) == bool):
+				if (role == Qt.CheckStateRole):
+					if value:
+						return Qt.Checked
+					return Qt.Unchecked
+			else:
+				if (role in [Qt.EditRole, Qt.DisplayRole]):
+					return value
+		return None
+
+	def setData(self, index, value, role):
+		orgVal = self.mylist[index.row()][index.column()]
+		if (role == Qt.CheckStateRole):
+			value = (value == Qt.Checked)
+		if (hasattr(orgVal, 'Value')):
+			orgVal.Value = value
+		else:
+			self.mylist[index.row()][index.column()] = value
+		return True
+
+	def flags (self, index):
+		'''
+		Returns the item flags for the given index.
+		The base class implementation returns a combination of flags that enables the item
+		and allows it to be selected.
+		'''
+		if not index.isValid():
+			return Qt.NoItemFlags
+		return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 	def headerData(self, col, orientation, role):
 		if ((role == Qt.DisplayRole) and (orientation == Qt.Horizontal)):
 			return self.header[col]
@@ -1648,100 +1676,8 @@ class ParameterTableModel(TableModel):
 	def __init__(self, parent, mylist, *args):
 		TableModel.__init__(self, parent, mylist, ['Variant', 'Source', 'Parameter', 'Value'], *args)
 	def flags(self, index):
+		if (index.column() == 0):
+			return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsUserCheckable
 		if (index.column() == 1): # make object's property column read only!
 			return Qt.ItemIsEnabled
-		return Qt.ItemIsEditable | Qt.ItemIsEnabled
-	def data(self, index, role):
-		if (not index.isValid()):
-			return None
-		if (role != Qt.DisplayRole):
-			return None
-		value = self.mylist[index.row()][index.column()]
-		if (hasattr(value, 'Value')):
-			return value.Value
-		return value
-
-class CheckBoxDelegate(QStyledItemDelegate):
-	"""
-	A delegate that places a fully functioning QCheckBox in every
-	cell of the column to which it's applied
-	"""
-	def __init__(self, parent):
-		QStyledItemDelegate.__init__(self, parent)
-
-	def createEditor(self, parent, option, index):
-		'''
-		Important, otherwise an editor is created if the user clicks in this cell.
-		** Need to hook up a signal to the model
-		'''
-		return None
-
-	def paint(self, painter, option, index):
-		'''
-		Paint a checkbox without the label.
-		'''
-		checked = index.model().data(index, Qt.DisplayRole) == 'True'
-		check_box_style_option = QStyleOptionButton()
-
-		if (index.flags() & Qt.ItemIsEditable) > 0:
-			check_box_style_option.state |= QStyle.State_Enabled
-		else:
-			check_box_style_option.state |= QStyle.State_ReadOnly
-
-		if checked:
-			check_box_style_option.state |= QStyle.State_On
-		else:
-			check_box_style_option.state |= QStyle.State_Off
-
-		check_box_style_option.rect = self.getCheckBoxRect(option)
-
-		# this will not run - hasFlag does not exist
-		#if not index.model().hasFlag(index, Qt.ItemIsEditable):
-			#check_box_style_option.state |= QStyle.State_ReadOnly
-
-		check_box_style_option.state |= QStyle.State_Enabled
-
-		QApplication.style().drawControl(QStyle.CE_CheckBox, check_box_style_option, painter)
-
-	def editorEvent(self, event, model, option, index):
-		'''
-		Change the data in the model and the state of the checkbox
-		if the user presses the left mousebutton or presses
-		Key_Space or Key_Select and this cell is editable. Otherwise do nothing.
-		'''
-		if not (index.flags() & Qt.ItemIsEditable) > 0:
-			return False
-
-		# Do not change the checkbox-state
-		if event.type() == QEvent.MouseButtonRelease or event.type() == QEvent.MouseButtonDblClick:
-			if event.button() != Qt.LeftButton or not self.getCheckBoxRect(option).contains(event.pos()):
-				return False
-			if event.type() == QEvent.MouseButtonDblClick:
-				return True
-		elif event.type() == QEvent.KeyPress:
-			if event.key() != Qt.Key_Space and event.key() != Qt.Key_Select:
-				return False
-			else:
-				return False
-
-		# Change the checkbox-state
-		self.setModelData(None, model, index)
-		return True
-
-	def setModelData (self, editor, model, index):
-		'''
-		The user wanted to change the old state in the opposite.
-		'''
-		newValue = not (index.model().data(index, Qt.DisplayRole) == 'True')
-		model.setData(index, newValue, Qt.EditRole)
-
-	def getCheckBoxRect(self, option):
-		check_box_style_option = QStyleOptionButton()
-		check_box_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, check_box_style_option, None)
-		check_box_point = QPoint (option.rect.x() +
-							 option.rect.width() / 2 -
-							 check_box_rect.width() / 2,
-							 option.rect.y() +
-							 option.rect.height() / 2 -
-							 check_box_rect.height() / 2)
-		return QRect(check_box_point, check_box_rect.size())
+		return Qt.ItemIsEnabled |Qt.ItemIsEditable
