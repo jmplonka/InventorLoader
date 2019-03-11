@@ -44,8 +44,6 @@ DIR_X  = VEC(1.0, 0.0, 0.0)
 DIR_Y  = VEC(0.0, 1.0, 0.0)
 DIR_Z  = VEC(0.0, 0.0, 1.0)
 
-IS_CELL_REF = re.compile('^[a-z](\d+)?$', re.IGNORECASE)
-
 # x 10                      2   2   1   1   0   0   0
 # x  1                      4   0   6   2   8   4   0
 #SKIP_CONSTRAINTS_DEFAULT = 0b11111111111111111111111
@@ -3871,12 +3869,8 @@ class FreeCADImporter(object):
 				remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
 
 			if (key.find('RDxVar') != 0):
+				aliasName = calcAliasname(key)
 				try:
-					aliasName = key.replace(':', '_')
-					if (IS_CELL_REF.search(key)):
-						aliasName = '%s_' %(aliasName)
-					else:
-						aliasName = ''.join([i if (ord(i) < 128) and (ord(i) > 32) else '_' for i in aliasName])
 					table.setAlias(u"B%d" %(r), aliasName)
 					valueNode.set('alias', 'Parameters.%s' %(aliasName))
 				except Exception as e:

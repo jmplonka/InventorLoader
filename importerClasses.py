@@ -543,7 +543,7 @@ class Derived(AbstractValue):
 
 class DataNode(object):
 	def __init__(self, data, isRef):
-		## data must bean instance of AbstractData!
+		## data must be an instance of AbstractData!
 		if (data):
 			assert isinstance(data, AbstractData), 'Data is not a AbstractData (%s)!' %(data.__class__.__name__)
 			if (isRef == False): data.node = self

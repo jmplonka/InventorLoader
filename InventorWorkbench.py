@@ -10,7 +10,7 @@ from FreeCADGui            import Workbench, addCommand
 from importerUtils         import getIconPath
 from PySide.QtGui          import QMessageBox
 from PySide.QtCore         import Qt
-import InventorViewProviders, importerClasses
+import InventorViewProviders
 
 if (sys.version_info.major < 3):
 	import imp
@@ -498,7 +498,6 @@ class _CmdiPart(_CmdAbstract):
 		super(_CmdiPart, self).__init__(menuText="iPart", toolTip="Create an iPart factory", pixmap=getIconPath("iPart.png"))
 
 	def Activated(self):
-		_reload(importerClasses)
 		_reload(InventorViewProviders)
 		FreeCAD.ActiveDocument.openTransaction("Create iPart")
 		FreeCADGui.addModule("InventorViewProviders")

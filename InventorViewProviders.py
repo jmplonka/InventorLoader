@@ -6,10 +6,11 @@ GUI representations for objectec imported from Inventor
 '''
 
 import os, re, sys, Part, FreeCAD, FreeCADGui
-from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef
+from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef, setTableValue, calcAliasname
 from FreeCAD         import Vector as VEC
 from PySide          import QtGui, QtCore
 from importerClasses import ParameterTableModel
+from math            import degrees
 
 INVALID_NAME   = re.compile('^[0-9].*')
 TID_SKIPPABLE  = [
@@ -473,26 +474,54 @@ def getTableValues():
 			if (obj.TypeId == 'Sketcher::SketchObject'):
 				c = 0
 				for constraint in obj.Constraints:
-					c += 1
 					if (constraint.Type in DIM_CONSTRAINTS):
-						values.append([True, '%s.Constraint[%d]' %(obj.Label, c), 'd_%d' %(d), constraint.Value])
+						value = constraint.Value
+						if (constraint.Type == 'Angle'):
+							value = degrees(value)
+						values.append([True, '%s.Constraints[%d]' %(obj.Name, c), 'd_%d' %(d), value])
 						d += 1
+					c += 1
 			else:
 				for prp in obj.PropertiesList:
 					if (obj.getTypeIdOfProperty(prp) in XPR_PROPERTIES):
 						value = getattr(obj, prp)
-						values.append([True, '%s.%s' %(obj.Label, prp), 'd_%d' %(d), value])
+						values.append([True, '%s.%s' %(obj.Name, prp), 'd_%d' %(d), value])
 						d += 1
 	return values
 
 def createIPart():
-	ui = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui")
-	form = FreeCADGui.PySideUic.loadUi(ui)
-	parameters = ParameterTableModel(form.tableView, getTableValues())
-	form.tableView.setModel(parameters)
-	ret = form.exec_()
-	if (ret == QtGui.QMessageBox.Cancel):
-		return
+	doc = FreeCAD.ActiveDocument
+	table = doc.getObject('Parameters')
+	if (table is None):
+		form       = FreeCADGui.PySideUic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui"))
+		values     = getTableValues()
+		parameters = ParameterTableModel(form.tableView, values)
+		form.tableView.setModel(parameters)
+		if (form.exec_()):
+			table = doc.addObject('Spreadsheet::Sheet', 'Parameters')
+			setTableValue(table, 'A', 1, 'Parameter')
+			setTableValue(table, 'B', 1, 'Value')
+			setTableValue(table, 'C', 1, 'Comment')
+
+			for r, data in enumerate(values):
+				row = r + 2
+				prmSource = data[1]
+				prmName   = data[2]
+				prmValue  = data[3]
+				dot   = data[1].find('.')
+				lable = data[1][0:dot] # obj.Name can never contain a DOT!
+				expr  = data[1][dot+1:]
+				setTableValue(table, 'A', row, prmName)   # parameter's name
+				setTableValue(table, 'B', row, prmValue)  # parameter's value
+				setTableValue(table, 'C', row, "'%s" % prmSource) # parameter's source
+				# replace value by expression
+				aliasName = calcAliasname(prmName)
+				table.setAlias(u"B%d" %(row), aliasName)
+				doc.recompute()
+				obj = doc.getObject(lable)
+				print("%s=>%s.%s = %s" %(expr, table.Name, aliasName, prmValue))
+				obj.setExpression(expr, "%s.%s" %(table.Name, aliasName))
+			doc.recompute()
 	return
 
 def makePartVariants(name = None):
