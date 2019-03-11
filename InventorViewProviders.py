@@ -6,11 +6,24 @@ GUI representations for objectec imported from Inventor
 '''
 
 import os, re, sys, Part, FreeCAD, FreeCADGui
-from importerUtils import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef
-from FreeCAD       import Vector as VEC
-from PySide        import QtGui, QtCore
+from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef
+from FreeCAD         import Vector as VEC
+from PySide          import QtGui, QtCore
+from importerClasses import ParameterTableModel, CheckBoxDelegate
 
-INVALID_NAME = re.compile('^[0-9].*')
+INVALID_NAME   = re.compile('^[0-9].*')
+TID_SKIPPABLE  = [
+	'Spreadsheet::Sheet'
+]
+XPR_PROPERTIES = [
+	'App::PropertyInteger',
+	'App::PropertyFloat',
+	'App::PropertyQuantity',
+	'App::PropertyAngle',
+	'App::PropertyDistance',
+	'App::PropertyLength',
+	'App::PropertyPercent'
+]
 
 def createPartFeature(doctype, name, default):
 	if (name is None):
@@ -429,8 +442,8 @@ class _ViewProviderPartVariants(_ViewProvider):
 #			if vobj is None:
 #				vobj = self.vobj
 #			FreeCADGui.Control.closeDialog()
-#			taskd = TaskPanel(vobj.Object)
-#			FreeCADGui.Control.showDialog(taskd)
+#			panel = IPartPanel(vobj.Object)
+#			FreeCADGui.Control.showDialog(panel)
 #			taskd.setupUi()
 
 			FreeCAD.ActiveDocument.recompute()
@@ -444,6 +457,35 @@ class _ViewProviderPartVariants(_ViewProvider):
 
 	def getIcon(self):
 		return getIconPath("iPart-VO.png")
+
+def getTableValues():
+	values = []
+	d = 0
+	for obj in FreeCAD.ActiveDocument.Objects:
+		if (not obj.TypeId in TID_SKIPPABLE):
+			if (obj.TypeId == 'Sketcher::SketchObject'):
+				for constraint in obj.Constraints:
+					if (constraint.Name):
+						values.append([True, '%s.%s' %(obj.Label, constraint.Name), 'd_%d' %(d), constraint.Value])
+						d += 1
+			else:
+				for prp in obj.PropertiesList:
+					if (obj.getTypeIdOfProperty(prp) in XPR_PROPERTIES):
+						value = getattr(obj, prp)
+						values.append([True, '%s.%s' %(obj.Label, prp), 'd_%d' %(d), value])
+						d += 1
+	return values
+
+def createIPart():
+	ui = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui")
+	form = FreeCADGui.PySideUic.loadUi(ui)
+	parameters = ParameterTableModel(form.tableView, getTableValues())
+	form.tableView.setModel(parameters)
+	form.tableView.setItemDelegateForColumn(0, CheckBoxDelegate(form.tableView))
+	ret = form.exec_()
+	if (ret == QtGui.QMessageBox.Cancel):
+		return
+	return
 
 def makePartVariants(name = None):
 	fp = createPartFeature("Part::FeaturePython", name, "Variations")

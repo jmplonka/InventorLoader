@@ -8,7 +8,7 @@ import os, FreeCAD, FreeCADGui
 from InventorViewProviders import *
 from FreeCADGui            import Workbench, addCommand
 from importerUtils         import getIconPath
-from importerClasses       import ParameterTableMode, CheckBoxDelegate
+from importerClasses       import CheckBoxDelegate
 from PySide.QtGui          import QMessageBox
 from PySide.QtCore         import Qt
 
@@ -490,34 +490,11 @@ class _CmdiPart(_CmdAbstract):
 	def __init__(self):
 		super(_CmdiPart, self).__init__(menuText="iPart", toolTip="Create an iPart factory", pixmap=getIconPath("iPart.png"))
 
-	def getTableValues(self):
-		# App::PropertyFloat
-		# App::PropertyQuantity
-		# App::PropertyAngle
-		# App::PropertyDistance
-		# App::PropertyLength
-		# App::PropertySpeed
-		# App::PropertyAcceleration
-		# App::PropertyForce
-		# App::PropertyPressure
-		# App::PropertyInteger
-		# App::PropertyPercent
-		values = []
-		values.append([True, 'Extend01.lengthFwd', 'd_0', 10.0])
-		values.append([False, 'Extend01.lengthRev', 'd_1', 0.0])
-		values.append([False, 'Revolution01.Angle', 'd_2', 360.0])
-		return values
-
 	def Activated(self):
-		ui = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui")
-		form = FreeCADGui.PySideUic.loadUi(ui)
-		parameters = ParameterTableMode(form.tableView, self.getTableValues())
-		form.tableView.setModel(parameters)
-		form.tableView.setItemDelegateForColumn(0, CheckBoxDelegate(form.tableView))
-		r = form.exec_()
-		if ((r is False) or (r == 0)):
-			return None
-		return None
+		FreeCAD.ActiveDocument.openTransaction("Create iPart")
+		FreeCADGui.addModule("InventorViewProviders")
+		FreeCADGui.doCommand("InventorViewProviders.createIPart()")
+		FreeCAD.ActiveDocument.commitTransaction()
 
 class _CmdFxDirectEdit(_CmdAbstract):
 	def __init__(self):

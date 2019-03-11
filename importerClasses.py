@@ -1644,13 +1644,22 @@ class TableModel(QAbstractTableModel):
 			return self.header[col]
 		return QAbstractTableModel.headerData(self, col, orientation, role)
 
-class ParameterTableMode(TableModel):
+class ParameterTableModel(TableModel):
 	def __init__(self, parent, mylist, *args):
 		TableModel.__init__(self, parent, mylist, ['Variant', 'Source', 'Parameter', 'Value'], *args)
 	def flags(self, index):
 		if (index.column() == 1): # make object's property column read only!
 			return Qt.ItemIsEnabled
 		return Qt.ItemIsEditable | Qt.ItemIsEnabled
+	def data(self, index, role):
+		if (not index.isValid()):
+			return None
+		if (role != Qt.DisplayRole):
+			return None
+		value = self.mylist[index.row()][index.column()]
+		if (hasattr(value, 'Value')):
+			return value.Value
+		return value
 
 class CheckBoxDelegate(QStyledItemDelegate):
 	"""
