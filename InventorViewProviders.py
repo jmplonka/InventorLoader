@@ -17,20 +17,20 @@ TID_SKIPPABLE  = [
 	'Spreadsheet::Sheet'
 ]
 XPR_PROPERTIES = {
-	'App::PropertyInteger' : '',
-	'App::PropertyFloat'   : '',
-	'App::PropertyQuantity': '',
-	'App::PropertyAngle'   : '°',
-	'App::PropertyDistance': 'mm',
-	'App::PropertyLength'  : 'mm',
-	'App::PropertyPercent' : '%',
+	'App::PropertyInteger' : u'',
+	'App::PropertyFloat'   : u'',
+	'App::PropertyQuantity': u'',
+	'App::PropertyAngle'   : u'°',
+	'App::PropertyDistance': u'mm',
+	'App::PropertyLength'  : u'mm',
+	'App::PropertyPercent' : u'%',
 }
 DIM_CONSTRAINTS = {
-	'Angle'    : '°',
-	'Distance' : 'mm',
-	'DistanceX': 'mm',
-	'DistanceY': 'mm',
-	'Radius'   : 'mm',
+	'Angle'    : u'°',
+	'Distance' : u'mm',
+	'DistanceX': u'mm',
+	'DistanceY': u'mm',
+	'Radius'   : u'mm',
 }
 
 def createPartFeature(doctype, name, default):
@@ -414,6 +414,13 @@ class DlgIPartVariants(object):
 		return
 	def delParam(self):
 		return
+	def reject(self):
+		FreeCADGui.ActiveDocument.resetEdit()
+		return True
+	def accept(self):
+		FreeCADGui.ActiveDocument.resetEdit()
+		FreeCAD.ActiveDocument.recompute()
+		return True
 
 class _ViewProviderPartVariants(_ViewProvider):
 	def __init__(self, vp):
