@@ -1674,7 +1674,7 @@ class TableModel(QAbstractTableModel):
 
 class ParameterTableModel(TableModel):
 	def __init__(self, parent, mylist, *args):
-		TableModel.__init__(self, parent, mylist, ['Variant', 'Source', 'Parameter', 'Value'], *args)
+		TableModel.__init__(self, parent, mylist, ['Variant', 'Source', 'Parameter', 'Value', 'Units'], *args)
 	def flags(self, index):
 		if (index.column() == 0):
 			return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsUserCheckable

@@ -16,22 +16,22 @@ INVALID_NAME   = re.compile('^[0-9].*')
 TID_SKIPPABLE  = [
 	'Spreadsheet::Sheet'
 ]
-XPR_PROPERTIES = [
-	'App::PropertyInteger',
-	'App::PropertyFloat',
-	'App::PropertyQuantity',
-	'App::PropertyAngle',
-	'App::PropertyDistance',
-	'App::PropertyLength',
-	'App::PropertyPercent'
-]
-DIM_CONSTRAINTS = [
-	'Angle',
-	'Distance',
-	'DistanceX',
-	'DistanceY',
-	'Radius'
-]
+XPR_PROPERTIES = {
+	'App::PropertyInteger' : '',
+	'App::PropertyFloat'   : '',
+	'App::PropertyQuantity': '',
+	'App::PropertyAngle'   : '°',
+	'App::PropertyDistance': 'mm',
+	'App::PropertyLength'  : 'mm',
+	'App::PropertyPercent' : '%',
+}
+DIM_CONSTRAINTS = {
+	'Angle'    : '°',
+	'Distance' : 'mm',
+	'DistanceX': 'mm',
+	'DistanceY': 'mm',
+	'Radius'   : 'mm',
+}
 
 def createPartFeature(doctype, name, default):
 	if (name is None):
@@ -326,7 +326,7 @@ class _PartVariants(object):
 	def __init__(self, fp):
 		fp.addProperty("App::PropertyEnumeration" , "Variant", "iPart")
 		fp.addProperty("App::PropertyLink", "Parameters")
-		fp.addProperty("App::PropertyLink", "Values")
+		fp.addProperty("App::PropertyPythonObject", "Values")
 		fp.addProperty("App::PropertyPythonObject", "Rows").Rows = {}
 		fp.addProperty("App::PropertyPythonObject", "Mapping").Mapping = {}
 		fp.addProperty("App::PropertyPythonObject", "Proxy").Proxy = self
@@ -348,30 +348,24 @@ class _PartVariants(object):
 
 		fp.Mapping.clear()
 		parameter  = self._getHeadersByRow_(fp.Parameters)
-		col = 1
-		hdr = getTableValue(fp.Values, col, 1)
-		while(hdr):
-			try:
-				cell = parameter[hdr]
-				fp.Mapping[col] = cell
-			except:
-				pass # nothing to map
-			col += 1
-			hdr = getTableValue(fp.Values, col, 1)
+		for col in range(1, len(fp.Values[0])):
+			hdr = fp.Values[0][col]
+			cell = parameter[hdr]
+			fp.Mapping[col] = cell
+
 		return True
 
 	def _updateVariant_(self, fp):
 		if (not self._updateMapping_(fp)):
 			return False
-		row = fp.Rows[fp.Variant]
-		FreeCAD.Console.PrintMessage("Set parameters according to variant '%s' (row %d):\n" %(fp.Variant, row))
+		r = fp.Rows[fp.Variant]
+		FreeCAD.Console.PrintMessage("Set parameters according to variant '%s' (row %d):\n" %(fp.Variant, r))
 		for col in fp.Mapping:
-			prm = getTableValue(fp.Values, col, 1)
-			val = getTableValue(fp.Values, col, row)
+			prm = fp.Values[0][col]
+			val = fp.Values[r][col]
 			if (hasattr(val, 'Value')):
 				val = val.Value
-			col = fp.Mapping[col]
-			setTableValue(fp.Parameters, 'B', col, val)
+			setTableValue(fp.Parameters, 'B', fp.Mapping[col], val)
 			FreeCAD.Console.PrintMessage("    '%s' = %s\n" %(prm, val))
 		if (FreeCAD.ActiveDocument):
 			FreeCAD.ActiveDocument.recompute()
@@ -380,30 +374,11 @@ class _PartVariants(object):
 	def _updateValues_(self, fp):
 		colMember = -1
 		values = fp.Values
-		FreeCAD.ActiveDocument.recompute()
-		col = 1
-		try:
-			# get member column
-			while (True):
-				hdr = values.get(getCellRef(col, 1))
-				if (re.search("Member", hdr)):
-					colMember = col
-					break
-				col += 1
-			variants = []
-			row = 2
-			while (colMember > 0):
-				var = values.get(getCellRef(colMember, row))
-				variants.append(str(var))
-				row += 1
-		except:
-			if (colMember == -1):
-				logWarning("Coudn't find column 'Member' in variants table!")
-			else:
-				fp.Rows.clear()
-				for row, variant in enumerate(variants):
-					fp.Rows[variant] = row + 2
-				fp.Variant = variants
+		variants = [row[0] for row in values[1:]]
+		fp.Rows.clear()
+		for row, variant in enumerate(variants):
+			fp.Rows[variant] = row + 1
+		fp.Variant = variants
 
 	def onChanged(self, fp, prop):
 		if (prop == 'Variant'):
@@ -478,51 +453,63 @@ def getTableValues():
 						value = constraint.Value
 						if (constraint.Type == 'Angle'):
 							value = degrees(value)
-						values.append([True, '%s.Constraints[%d]' %(obj.Name, c), 'd_%d' %(d), value])
+						values.append([False, '%s.Constraints[%d]' %(obj.Name, c), 'd_%d' %(d), value, DIM_CONSTRAINTS[constraint.Type]])
 						d += 1
 					c += 1
 			else:
 				for prp in obj.PropertiesList:
 					if (obj.getTypeIdOfProperty(prp) in XPR_PROPERTIES):
 						value = getattr(obj, prp)
-						values.append([True, '%s.%s' %(obj.Name, prp), 'd_%d' %(d), value])
+						values.append([False, '%s.%s' %(obj.Name, prp), 'd_%d' %(d), value, XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
 						d += 1
 	return values
 
 def createIPart():
 	doc = FreeCAD.ActiveDocument
 	table = doc.getObject('Parameters')
+	headers = ['Member'] # Fixed Key for part variant name!
+	variants = [headers]
 	if (table is None):
 		form       = FreeCADGui.PySideUic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui"))
 		values     = getTableValues()
 		parameters = ParameterTableModel(form.tableView, values)
 		form.tableView.setModel(parameters)
-		if (form.exec_()):
-			table = doc.addObject('Spreadsheet::Sheet', 'Parameters')
-			setTableValue(table, 'A', 1, 'Parameter')
-			setTableValue(table, 'B', 1, 'Value')
-			setTableValue(table, 'C', 1, 'Comment')
-
-			for r, data in enumerate(values):
-				row = r + 2
-				prmSource = data[1]
-				prmName   = data[2]
-				prmValue  = data[3]
-				dot   = data[1].find('.')
-				lable = data[1][0:dot] # obj.Name can never contain a DOT!
-				expr  = data[1][dot+1:]
-				setTableValue(table, 'A', row, prmName)   # parameter's name
-				setTableValue(table, 'B', row, prmValue)  # parameter's value
-				setTableValue(table, 'C', row, "'%s" % prmSource) # parameter's source
-				# replace value by expression
-				aliasName = calcAliasname(prmName)
-				table.setAlias(u"B%d" %(row), aliasName)
-				doc.recompute()
-				obj = doc.getObject(lable)
-				print("%s=>%s.%s = %s" %(expr, table.Name, aliasName, prmValue))
-				obj.setExpression(expr, "%s.%s" %(table.Name, aliasName))
+		if (not form.exec_()):
+			
+			return None
+		table = doc.addObject('Spreadsheet::Sheet', 'Parameters')
+		setTableValue(table, 'A', 1, 'Parameter')
+		setTableValue(table, 'B', 1, 'Value')
+		setTableValue(table, 'D', 1, 'Comment')
+		variant = ['Part-01']
+		variants.append(variant)
+		for r, data in enumerate(values):
+			row = r + 2
+			prmSource = data[1]
+			prmName   = data[2]
+			prmValue  = data[3]
+			prmUnit   = data[4]
+			dot   = data[1].find('.')
+			lable = data[1][0:dot] # obj.Name can never contain a DOT!
+			expr  = data[1][dot+1:]
+			setTableValue(table, 'A', row, prmName)   # parameter's name
+			setTableValue(table, 'B', row, prmValue)  # parameter's value
+			setTableValue(table, 'C', row, prmUnit)
+			setTableValue(table, 'D', row, "'%s" % prmSource) # parameter's source
+			# replace value by expression
+			aliasName = calcAliasname(prmName)
+			table.setAlias(u"B%d" %(row), aliasName)
 			doc.recompute()
-	return
+			obj = doc.getObject(lable)
+			obj.setExpression(expr, "%s.%s" %(table.Name, aliasName))
+			if (data[0]):
+				variant.append(prmValue)
+				headers.append(prmName)
+	fp = makePartVariants()
+	fp.Parameters = table
+	fp.Values     = variants
+	doc.recompute()
+	return fp
 
 def makePartVariants(name = None):
 	fp = createPartFeature("Part::FeaturePython", name, "Variations")
