@@ -6,11 +6,12 @@ GUI representations for objectec imported from Inventor
 '''
 
 import os, re, sys, Part, FreeCAD, FreeCADGui
-from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, getCellRef, setTableValue, calcAliasname
+from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, logError, getCellRef, setTableValue, calcAliasname
 from FreeCAD         import Vector as VEC
-from PySide          import QtGui, QtCore
 from importerClasses import ParameterTableModel, VariantTableModel
 from math            import degrees
+from PySide.QtCore   import *
+from PySide.QtGui    import *
 
 INVALID_NAME   = re.compile('^[0-9].*')
 TID_SKIPPABLE  = [
@@ -324,12 +325,12 @@ def makeSketch3D(name = None):
 
 class _PartVariants(object):
 	def __init__(self, fp):
-		fp.addProperty("App::PropertyEnumeration" , "Variant", "iPart")
-		fp.addProperty("App::PropertyLink"        , "Parameters")
 		fp.addProperty("App::PropertyPythonObject", "Values")
 		fp.addProperty("App::PropertyPythonObject", "Rows").Rows = {}
 		fp.addProperty("App::PropertyPythonObject", "Mapping").Mapping = {}
 		fp.addProperty("App::PropertyPythonObject", "Proxy").Proxy = self
+		fp.addProperty("App::PropertyLink"        , "Parameters")
+		fp.addProperty("App::PropertyEnumeration" , "Variant", "iPart")
 
 	def _getHeadersByRow_(self, table):
 		headers = {}
@@ -357,25 +358,26 @@ class _PartVariants(object):
 		return True
 
 	def _updateVariant_(self, fp):
-		if (not hasattr(fp, 'Variant')):
+		try:
+			if (not self._updateMapping_(fp)):
+				return False
+			r = fp.Rows[fp.Variant]
+			FreeCAD.Console.PrintMessage("Set parameters according to variant '%s' (row %d):\n" %(fp.Variant, r))
+			for col in fp.Mapping:
+				prm = fp.Values[0][col]
+				val = fp.Values[r][col]
+				if (hasattr(val, 'Value')):
+					val = val.Value
+				setTableValue(fp.Parameters, 'B', fp.Mapping[col], val)
+				FreeCAD.Console.PrintMessage("    '%s' = %s\n" %(prm, val))
+			if (FreeCAD.ActiveDocument):
+				FreeCAD.ActiveDocument.recompute()
+			return True
+		except:
 			return False
-		if (not self._updateMapping_(fp)):
-			return False
-		r = fp.Rows[fp.Variant]
-		FreeCAD.Console.PrintMessage("Set parameters according to variant '%s' (row %d):\n" %(fp.Variant, r))
-		for col in fp.Mapping:
-			prm = fp.Values[0][col]
-			val = fp.Values[r][col]
-			if (hasattr(val, 'Value')):
-				val = val.Value
-			setTableValue(fp.Parameters, 'B', fp.Mapping[col], val)
-			FreeCAD.Console.PrintMessage("    '%s' = %s\n" %(prm, val))
-		if (FreeCAD.ActiveDocument):
-			FreeCAD.ActiveDocument.recompute()
-		return True
 
 	def _updateValues_(self, fp):
-		if (hasattr(fp, 'Variant')):
+		try:
 			colMember = -1
 			values = fp.Values
 			variants = [row[0] for row in values[1:]]
@@ -383,6 +385,8 @@ class _PartVariants(object):
 			for row, variant in enumerate(variants):
 				fp.Rows[variant] = row + 1
 			fp.Variant = variants
+		except:
+			pass
 
 	def onChanged(self, fp, prop):
 		if (prop == 'Variant'):
@@ -395,31 +399,109 @@ class DlgIPartVariants(object):
 		res = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources")
 		ui  = os.path.join(res, "ui", "iPartVariants.ui")
 		self.form = FreeCADGui.PySideUic.loadUi(ui)
-		self.form.btnPartAdd.setIcon(QtGui.QIcon(os.path.join(res, "icons", "iPart_Part_add.svg")))
-		self.form.btnPartDel.setIcon(QtGui.QIcon(os.path.join(res, "icons", "iPart_Part_del.svg")))
-		self.form.btnParamAdd.setIcon(QtGui.QIcon(os.path.join(res, "icons", "iPart_Param_add.svg")))
-		self.form.btnParamDel.setIcon(QtGui.QIcon(os.path.join(res, "icons", "iPart_Param_del.svg")))
-		QtCore.QObject.connect(self.form.btnPartAdd, QtCore.SIGNAL("clicked()"), self.addPart)
-		QtCore.QObject.connect(self.form.btnPartDel, QtCore.SIGNAL("clicked()"), self.delPart)
-		QtCore.QObject.connect(self.form.btnParamAdd, QtCore.SIGNAL("clicked()"), self.addParam)
-		QtCore.QObject.connect(self.form.btnParamDel, QtCore.SIGNAL("clicked()"), self.delParam)
-
-		variants = VariantTableModel(self.form.tableView, fp.Values)
-
+		table = self.form.tableView
+		table.setSelectionMode(QAbstractItemView.SingleSelection)
+		self.form.btnPartAdd.setIcon(QIcon(os.path.join(res, "icons", "iPart_Part_add.svg")))
+		self.form.btnPartDel.setIcon(QIcon(os.path.join(res, "icons", "iPart_Part_del.svg")))
+		self.form.btnParamAdd.setIcon(QIcon(os.path.join(res, "icons", "iPart_Param_add.svg")))
+		self.form.btnParamDel.setIcon(QIcon(os.path.join(res, "icons", "iPart_Param_del.svg")))
+		QObject.connect(self.form.btnPartAdd, SIGNAL("clicked()"), self.addPart)
+		QObject.connect(self.form.btnPartDel, SIGNAL("clicked()"), self.delPart)
+		QObject.connect(self.form.btnParamAdd, SIGNAL("clicked()"), self.addParam)
+		QObject.connect(self.form.btnParamDel, SIGNAL("clicked()"), self.delParam)
+		VariantTableModel(table, fp.Values)
+		self.fp = fp
+	def getParameters(self):
+		parameters = []
+		table = self.fp.Parameters
+		row = 2
+		parameter = getTableValue(table, 'A', row)
+		while (parameter):
+			parameters.append(parameter)
+			row += 1
+			parameter = getTableValue(table, 'A', row)
+		return parameters
 	def addPart(self):
+		table = self.form.tableView
+		model = table.model()
+		rows  = model.rowCount(table)
+		index = table.currentIndex()
+		if (index.isValid()):
+			row = index.row() + 1
+		else:
+			row = rows
+		if (model.insertRow(row)):
+			index = model.index(row, 0)
+			model.setData(index, 'Part-%02d' %(rows+1), Qt.EditRole)
+			FreeCAD.ActiveDocument.recompute()
+		else:
+			logError("Failed to insert row %d", row)
 		return
 	def delPart(self):
+		table = self.form.tableView
+		model = table.model()
+		index = table.currentIndex()
+		if (index.isValid()):
+			row   = index.row()
+			ret   =  QMessageBox.question(self.form, "FreeCAD - remove part variant",
+				   u"Do you really want to remove '%s'?" %(model.data(model.index(row, 0), Qt.DisplayRole)),
+				   QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+			if (ret == QMessageBox.Yes):
+				model.removeRow(row)
+		FreeCAD.ActiveDocument.recompute()
 		return
 	def addParam(self):
+		parameters = self.getParameters()
+		(prmName, ok) = QInputDialog.getItem(None, u"FreeCAD - add iPart parameter", u"Name of the parameter:", parameters)
+		if (ok):
+			table = self.form.tableView
+			model = table.model()
+			cols  = model.columnCount(table)
+			index = table.currentIndex()
+			if (index.isValid()):
+				col = index.column() + 1
+			else:
+				col = cols
+			if (model.insertColumn(col)):
+				model.setHeaderData(col, Qt.Horizontal, prmName, Qt.DisplayRole)
+				FreeCAD.ActiveDocument.recompute()
+			else:
+				logError("Failed to insert column %d", row)
 		return
 	def delParam(self):
+		table = self.form.tableView
+		model = table.model()
+		index = table.currentIndex()
+		if (index.isValid()):
+			col = index.column()
+			ret =  QMessageBox.question(self.form, "FreeCAD - remove iPart parameter",
+				   u"Do you really want to remove '%s'?" %(model.headerData(col, Qt.Horizontal, Qt.DisplayRole)),
+				   QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+			if (ret == QMessageBox.Yes):
+				model.removeColumn(col)
 		return
 	def reject(self):
 		FreeCADGui.ActiveDocument.resetEdit()
 		return True
 	def accept(self):
+		table  = self.form.tableView
+		model  = table.model()
+		values = []
+		cols   = model.columnCount(table)
+		rows   = model.rowCount(table)
+		hdrLst = []
+		for col in range(cols):
+			hdrLst.append(model.headerData(col, Qt.Horizontal, Qt.DisplayRole))
+		values.append(hdrLst)
+		for row in range(rows):
+			rowLst = []
+			for col in range(cols):
+				index = model.index(row, col)
+				rowLst.append(model.data(index, Qt.DisplayRole))
+			values.append(rowLst)
+		self.fp.Values = values
 		FreeCADGui.ActiveDocument.resetEdit()
-		FreeCAD.ActiveDocument.recompute()
+		FreeCADGui.ActiveDocument.recompute()
 		return True
 
 class _ViewProviderPartVariants(_ViewProvider):
@@ -441,12 +523,11 @@ class _ViewProviderPartVariants(_ViewProvider):
 			fp = vobj.Object
 			FreeCADGui.Control.closeDialog()
 			FreeCADGui.Control.showDialog(DlgIPartVariants(fp))
-
 			return True
 		return False
 
 	def unsetEdit(self, vobj, mode):
-		# this is executed when the user cancels or terminates edit mode
+		FreeCADGui.Control.closeDialog()
 		return False
 
 	def getIcon(self):

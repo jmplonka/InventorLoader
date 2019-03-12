@@ -1630,10 +1630,16 @@ class TableModel(QAbstractTableModel):
 		self.mylist = mylist
 		self.header = header
 		parent.setModel(self)
+
 	def rowCount(self, parent):
 		return len(self.mylist)
+
 	def columnCount(self, parent):
-		return max([len(row) for row in self.mylist])
+		cols = [len(row) for row in self.mylist]
+		if (len(cols) == 0):
+			return 0
+		return max(cols)
+
 	def data(self, index, role):
 		if (index.isValid()):
 			value = self.mylist[index.row()][index.column()]
@@ -1650,28 +1656,105 @@ class TableModel(QAbstractTableModel):
 		return None
 
 	def setData(self, index, value, role):
-		orgVal = self.mylist[index.row()][index.column()]
-		if (role == Qt.CheckStateRole):
-			value = (value == Qt.Checked)
-		if (hasattr(orgVal, 'Value')):
-			orgVal.Value = value
-		else:
-			self.mylist[index.row()][index.column()] = value
+		if (index.isValid()):
+			orgVal = self.mylist[index.row()][index.column()]
+			if (role == Qt.CheckStateRole):
+				value = (value == Qt.Checked)
+			if (hasattr(orgVal, 'Value')):
+				orgVal.Value = value
+			else:
+				self.mylist[index.row()][index.column()] = value
+			return True
+		return False
+
+	def headerData(self, position, orientation, role):
+		if ((role == Qt.DisplayRole) and (orientation == Qt.Horizontal)):
+			return self.header[position]
+		return QAbstractTableModel.headerData(self, position, orientation, role)
+
+	def setHeaderData(self, position, orientation, header, role): # int, orientation, QVariant, int = Qt.EditRole
+		if ((role == Qt.DisplayRole) and (orientation == Qt.Horizontal)):
+			self.header[position] = header
+			return True
+		return QAbstractTableModel.setHeaderData(self, position, orientation, header, role)
+
+	def insertRow(self, row, index=QModelIndex()):
+		'''Insert a row into the model.'''
+		self.beginInsertRows(index, row, row)
+		data = ['' for c in range(self.columnCount(self.parent))]
+		self.mylist.insert(row, data)
+		self.endInsertRows()
 		return True
 
-	def flags (self, index):
-		'''
-		Returns the item flags for the given index.
+	def insertRows(self, position, rows=1, index=QModelIndex()):
+		'''Insert a row into the model.'''
+		self.beginInsertRows(index, position, position + rows - 1)
+		for row in range(rows):
+			data = ['' for c in range(self.columnCount(self.parent))]
+			self.mylist.insert(position + row, data)
+		self.endInsertRows()
+		return True
+
+	def removeRow(self, row, index=QModelIndex()):
+		'''Remove a row from the model.'''
+		self.beginRemoveRows(index, row, row)
+		del self.mylist[row]
+		self.endRemoveRows()
+		return True
+
+	def removeRows(self, position, rows=1, index=QModelIndex()):
+		'''Remove rows from the model.'''
+		self.beginRemoveRows(index, position, position + rows - 1)
+		del self.mylist[position:position+rows]
+		self.endRemoveRows()
+		return True
+
+	def insertColumn(self, column, index=QModelIndex()):
+		'''Insert a column into the model.'''
+		self.beginInsertColumns(index, column, column)
+		self.header.insert(column, '')
+		for row in self.mylist:
+			row.insert(column, '')
+		self.endInsertColumns()
+		return True
+
+	def insertColumns(self, position, column=1, index=QModelIndex()):
+		'''Insert a row into the model.'''
+		self.beginInsertColumns(index, position, position + column - 1)
+		for col in range(column):
+			self.header.insert(position + col, '')
+		for row in self.mylist:
+			for col in range(column):
+				row.insert(position + column, '')
+		self.endInsertColumns()
+		return True
+
+	def removeColumn(self, column, index=QModelIndex()):
+		'''Remove a column from the model.'''
+		self.beginRemoveColumns(index, column, column)
+		del self.header[column]
+		for row in self.mylist:
+			del row[column]
+		self.endRemoveColumns()
+		return True
+
+	def removeColumns(self, position, column=1, index=QModelIndex()):
+		'''Remove columns from the model.'''
+		self.beginRemoveColumns(index, position, position + column - 1)
+		for col in range(column):
+			del self.header[position]
+		for row in self.mylist:
+			del row[position:position+column]
+		self.endRemoveColumns()
+		return True
+
+	def flags(self, index):
+		'''Returns the item flags for the given index.
 		The base class implementation returns a combination of flags that enables the item
-		and allows it to be selected.
-		'''
+		and allows it to be selected.'''
 		if not index.isValid():
 			return Qt.NoItemFlags
 		return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-	def headerData(self, col, orientation, role):
-		if ((role == Qt.DisplayRole) and (orientation == Qt.Horizontal)):
-			return self.header[col]
-		return QAbstractTableModel.headerData(self, col, orientation, role)
 
 class ParameterTableModel(TableModel):
 	def __init__(self, parent, mylist, *args):
@@ -1687,4 +1770,4 @@ class VariantTableModel(TableModel):
 	def __init__(self, parent, values, *args):
 		TableModel.__init__(self, parent, values[1:], values[0], *args)
 	def flags(self, index):
-		return Qt.ItemIsEnabled |Qt.ItemIsEditable
+		return Qt.ItemIsEnabled | Qt.ItemIsEditable
