@@ -174,7 +174,12 @@ class _CmdAbstract(_CmdNoCommand):
 		dlg = QMessageBox(QMessageBox.Information, 'FreeCAD: Inventor workbench...', 'Command not ' + self.__class__.__name__ + ' yet implemented!')
 		dlg.setWindowModality(Qt.ApplicationModal)
 		dlg.exec_()
-
+	def commit(self, name, commands):
+		FreeCAD.ActiveDocument.openTransaction(str(name))
+		for command in commands:
+			FreeCADGui.doCommand(command)
+		FreeCAD.ActiveDocument.commitTransaction()
+		return
 # Sketch
 class _CmdSketch2D(_CmdAbstract):
 	def __init__(self):
@@ -287,6 +292,7 @@ class _CmdFxRectangular(_CmdFxPattern):
 		super(_CmdFxRectangular, self).__init__(menuText="&Rectangular Pattern", toolTip="Arrange objects in rectangular pattern", pixmap=getIconPath("FxRectangular.png"))
 	def Activated(self):
 		obj = FreeCADGui.Selection.getSelection()[0]
+		FreeCADGui.addModule("Draft")
 		self.commit("_CmdFxRectangular",
 			['obj = Draft.makeArray(FreeCAD.ActiveDocument.' + obj.Name + ', FreeCAD.Vector(1.0, 0.0, 0.0), FreeCAD.Vector(0.0, 1.0, 0.0), 3, 2)',
 			 'Draft.autogroup(obj)',
@@ -296,6 +302,7 @@ class _CmdFxCircular(_CmdFxPattern):
 		super(_CmdFxCircular, self).__init__(menuText="&Circular Pattern", toolTip="Arrange objects in circular pattern", pixmap=getIconPath("FxCircular.png"))
 	def Activated(self):
 		obj = FreeCADGui.Selection.getSelection()[0]
+		FreeCADGui.addModule("Draft")
 		self.commit("_CmdFxRectangular",
 			['obj = Draft.makeArray(FreeCAD.ActiveDocument.' + obj.Name + ', FreeCAD.Vector(0.0, 0.0, 0.0), 360, 3)',
 			 'Draft.autogroup(obj)',

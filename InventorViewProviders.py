@@ -380,7 +380,7 @@ class _PartVariants(object):
 		try:
 			colMember = -1
 			values = fp.Values
-			variants = [row[0] for row in values[1:]]
+			variants = [str(row[0]) for row in values[1:]]
 			fp.Rows.clear()
 			for row, variant in enumerate(variants, 1):
 				fp.Rows[variant] = row
