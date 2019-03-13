@@ -14,7 +14,7 @@ from PySide.QtCore   import *
 from PySide.QtGui    import *
 
 INVALID_NAME   = re.compile('^[0-9].*')
-TID_SKIPPABLE  = [
+SKIPPABLE_OBJECTS = [
 	'Spreadsheet::Sheet'
 ]
 XPR_PROPERTIES = {
@@ -382,8 +382,8 @@ class _PartVariants(object):
 			values = fp.Values
 			variants = [row[0] for row in values[1:]]
 			fp.Rows.clear()
-			for row, variant in enumerate(variants):
-				fp.Rows[variant] = row + 1
+			for row, variant in enumerate(variants, 1):
+				fp.Rows[variant] = row
 			fp.Variant = variants
 		except:
 			pass
@@ -501,7 +501,7 @@ class DlgIPartVariants(object):
 			values.append(rowLst)
 		self.fp.Values = values
 		FreeCADGui.ActiveDocument.resetEdit()
-		FreeCADGui.ActiveDocument.recompute()
+		FreeCAD.ActiveDocument.recompute()
 		return True
 
 class _ViewProviderPartVariants(_ViewProvider):
@@ -533,11 +533,11 @@ class _ViewProviderPartVariants(_ViewProvider):
 	def getIcon(self):
 		return getIconPath("iPart-VO.png")
 
-def getTableValues():
+def searchDocParameters(doc):
 	values = []
 	d = 0
-	for obj in FreeCAD.ActiveDocument.Objects:
-		if (not obj.TypeId in TID_SKIPPABLE):
+	for obj in doc.Objects:
+		if (not obj.TypeId in SKIPPABLE_OBJECTS):
 			if (obj.TypeId == 'Sketcher::SketchObject'):
 				c = 0
 				for constraint in obj.Constraints:
@@ -545,57 +545,108 @@ def getTableValues():
 						value = constraint.Value
 						if (constraint.Type == 'Angle'):
 							value = degrees(value)
-						values.append([False, '%s.Constraints[%d]' %(obj.Name, c), 'd_%d' %(d), str(value), DIM_CONSTRAINTS[constraint.Type]])
+						values.append([False, obj.Name, 'Constraints[%d]' %(c), 'd_%d' %(d), str(value), DIM_CONSTRAINTS[constraint.Type]])
 						d += 1
 					c += 1
 			else:
 				for prp in obj.PropertiesList:
 					if (obj.getTypeIdOfProperty(prp) in XPR_PROPERTIES):
 						value = getattr(obj, prp)
-						values.append([False, '%s.%s' %(obj.Name, prp), 'd_%d' %(d), str(value), XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
+						if (hasattr(value, 'Value')):
+							value = value.Value
+						values.append([False, obj.Name, prp, 'd_%d' %(d), str(value), XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
 						d += 1
 	return values
 
-def createIPart():
-	doc = FreeCAD.ActiveDocument
-	table = doc.getObject('Parameters')
-	headers = ['Member'] # Fixed Key for part variant name!
-	variants = [headers]
+def getParametersValues(doc):
+	table  = None
+	for t in doc.getObjectsByLabel('Parameters'):
+		if (t.TypeId == 'Spreadsheet::Sheet'):
+			table = t
+			break
 	if (table is None):
-		form       = FreeCADGui.PySideUic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui"))
-		values     = getTableValues()
-		ParameterTableModel(form.tableView, values)
-		if (not form.exec_()):
+		return None, None, True
+	if ((table.get('A1') != 'Parameter') or (table.get('B1') != 'Value')):
+		logWarning("Spreadsheet 'Parameters' doesn't meet layout constraints to serve as parameters table!")
+		logWarning("First row must be 'Parameter', 'Value', 'Unit', 'Source' - creating new one.")
+		return None, None, True
+	hasUnit     = (table.get('C1') == 'Unit')
+	hasSource   = (table.get('D1') == 'Source')
+	hasProperty = (table.get('E1') == 'Property')
+	row         = 2
+	values      = []
+	while (True):
+		name     = getTableValue(table, 'A', row)
+		if (name is None):
+			break
+		value    = getTableValue(table, 'B', row)
+		unit = None
+		if (hasUnit):
+			unit = getTableValue(table, 'C', row)
+		else:
+			unit = table.get(getCellRef('B', row))
+			if (hasattr(unit, 'getUserPreferred')):
+				unit = unit.getUserPreferred()[2]
+			else:
+				unit = None
+		source = None
+		if (hasSource):
+			source = getTableValue(table, 'D', row)
+		property = None
+		if (hasProperty):
+			property = getTableValue(table, 'E', row)
+		values.append([False, source, property, name, value, unit])
+		row += 1
+	return table, values, False
 
-			return None
-		table = doc.addObject('Spreadsheet::Sheet', 'Parameters')
-		setTableValue(table, 'A', 1, 'Parameter')
-		setTableValue(table, 'B', 1, 'Value')
-		setTableValue(table, 'D', 1, 'Comment')
-		variant = ['Part-01']
-		variants.append(variant)
-		for r, data in enumerate(values):
-			row = r + 2
-			prmSource = data[1]
-			prmName   = data[2]
-			prmValue  = data[3]
-			prmUnit   = data[4]
-			dot   = data[1].find('.')
-			lable = data[1][0:dot] # obj.Name can never contain a DOT!
-			expr  = data[1][dot+1:]
-			setTableValue(table, 'A', row, prmName)   # parameter's name
-			setTableValue(table, 'B', row, prmValue)  # parameter's value
-			setTableValue(table, 'C', row, prmUnit)
-			setTableValue(table, 'D', row, "'<-> %s" % prmSource) # parameter's source
-			# replace value by expression
-			aliasName = calcAliasname(prmName)
-			table.setAlias(u"B%d" %(row), aliasName)
-			doc.recompute()
-			obj = doc.getObject(lable)
-			obj.setExpression(expr, "%s.%s" %(table.Name, aliasName))
-			if (data[0]):
-				variant.append(prmValue)
-				headers.append(prmName)
+def createIPartParameters(doc, values):
+	table = doc.addObject('Spreadsheet::Sheet', 'Parameters')
+	table.set('A1', 'Parameter')
+	table.set('B1', 'Value')
+	table.set('C1', 'Unit')
+	table.set('D1', 'Source')
+	table.set('E1', 'Property')
+	for row, data in enumerate(values, 2):
+		(add, source, property, name, value, unit) = data
+		setTableValue(table, 'A', row, name)
+		try:
+			setTableValue(table, 'B', row, float(value))
+		except:
+			setTableValue(table, 'B', row, '=%s' %(value))
+		setTableValue(table, 'C', row, unit)
+		setTableValue(table, 'D', row, source)
+		setTableValue(table, 'E', row, property)
+		# replace value by expression
+		table.setAlias(u"B%d" %(row), calcAliasname(name))
+	doc.recompute()
+	return table
+
+def createIPart():
+	doc    = FreeCAD.ActiveDocument
+	table, values, create = getParametersValues(doc)
+	if (values is None):
+		values = searchDocParameters(doc)
+
+	form = FreeCADGui.PySideUic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui"))
+	ParameterTableModel(form.tableView, values)
+	if (not form.exec_()):
+		return None
+
+	if (create):
+		table = createIPartParameters(doc, values)
+
+	headers  = ['Member']  # fixed key for part variant name
+	variant  = ['Part-01'] # default name of the variant
+	variants = [headers, variant]
+	for data in values:
+		(add, source, property, name, value, unit) = data
+		if ((not source is None) and (not property is None)):
+			obj = doc.getObject(source)
+			obj.setExpression(property, "%s.%s" %(table.Name, calcAliasname(name)))
+		if (add):
+			variant.append(value)
+			headers.append(name)
+
 	fp = makePartVariants()
 	fp.Parameters = table
 	fp.Values     = variants

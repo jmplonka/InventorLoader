@@ -2921,10 +2921,10 @@ class FreeCADImporter(object):
 				meshGR = gr.indexNodes[meshDC.get('index')]
 			else:
 				meshGR = gr.meshes[meshId]
-			for p, partGR in enumerate(meshGR.get('parts')):
+			for partGR in (meshGR.get('parts'):
 				obj3D  = partGR.get('object3D')
-				for f, facetGR in enumerate(obj3D.get('objects')):
-					name = u"%s_%d" %(meshDC.name, (f + 1))
+				for f, facetGR in enumerate(obj3D.get('objects'), 1):
+					name = u"%s_%d" %(meshDC.name, f)
 					logInfo(u"        addign Mesh '%s_%d' ...", name)
 					points  = facetGR.get('points').get('points')
 					indices = facetGR.get('pointIndices').get('indices')

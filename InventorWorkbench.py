@@ -203,22 +203,22 @@ class _CmdFxExtrude(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxExtrude, self).__init__(menuText="&Extrude", toolTip="extrude a profile", pixmap=getIconPath("FxExtrude.png"), accel="I, E")
 	def Activated(self):
-		runPartDesignCommand("Pad")
+		runPartCommand("Extrude")
 class _CmdFxRevolve(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRevolve, self).__init__(menuText="&Revolve", toolTip="revolve a profile", pixmap=getIconPath("FxRevolve.png"), accel="I, R")
 	def Activated(self):
-		runPartDesignCommand("Revolution")
+		runPartCommand("Revolve")
 class _CmdFxLoft(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxLoft, self).__init__(menuText="&Loft", toolTip="loft profiles", pixmap=getIconPath("FxLoft.png"), accel="I, L")
 	def Activated(self):
-		runPartDesignCommand("AdditiveLoft")
+		runPartCommand("Loft")
 class _CmdFxSweep(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxSweep, self).__init__(menuText="&Sweep", toolTip="sweep profile along path", pixmap=getIconPath("FxSweep.png"), accel="I, W")
 	def Activated(self):
-		runPartDesignCommand("AdditivePipe")
+		runPartCommand("Sweep")
 class _CmdFxRib(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRib, self).__init__(menuText="Ri&b", toolTip="Create ribs", pixmap=getIconPath("FxRib.png"))
@@ -237,12 +237,12 @@ class _CmdFxFillet(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxFillet, self).__init__(menuText="&Fillet", toolTip="Create fillets", pixmap=getIconPath("FxFillet.png"))
 	def Activated(self):
-		runPartDesignCommand("Fillet")
+		runPartCommand("Fillet")
 class _CmdFxChamfer(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxChamfer, self).__init__(menuText="&Chamfer", toolTip="Create chamfers", pixmap=getIconPath("FxChamfer.png"))
 	def Activated(self):
-		runPartDesignCommand("Chamfer")
+		runPartCommand("Chamfer")
 class _CmdFxShell(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxShell, self).__init__(menuText="&Shell", toolTip="Create a shell", pixmap=getIconPath("FxShell.png"))
@@ -263,7 +263,7 @@ class _CmdFxCombine(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxCombine, self).__init__(menuText="C&ombine", toolTip="", pixmap=getIconPath("FxCombine.png"))
 	def Activated(self):
-		runPartDesignCommand("Boolean")
+		runPartCommand("Boolean")
 class _CmdFxMoveFace(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxMoveFace, self).__init__(menuText="&Move Face", toolTip="", pixmap=getIconPath("FxMoveFace.png"))
@@ -277,17 +277,30 @@ class _CmdFxMoveBody(_CmdAbstract):
 		super(_CmdFxMoveBody, self).__init__(menuText="Move Ob&jects", toolTip="", pixmap=getIconPath("FxMoveBody.png"))
 
 # Pattern
-class _CmdFxRectangular(_CmdAbstract):
+class _CmdFxPattern(_CmdAbstract):
+	def __init__(self, menuText = None, toolTip = None, pixmap = None, accel=None):
+		super(_CmdAbstract, self).__init__(menuText, toolTip, pixmap, accel)
+	def IsActive(self):
+		return len(FreeCADGui.Selection.getSelection()) > 0
+class _CmdFxRectangular(_CmdFxPattern):
 	def __init__(self):
 		super(_CmdFxRectangular, self).__init__(menuText="&Rectangular Pattern", toolTip="Arrange objects in rectangular pattern", pixmap=getIconPath("FxRectangular.png"))
 	def Activated(self):
-		runPartDesignCommand("LinearPattern")
-class _CmdFxCircular(_CmdAbstract):
+		obj = FreeCADGui.Selection.getSelection()[0]
+		self.commit("_CmdFxRectangular",
+			['obj = Draft.makeArray(FreeCAD.ActiveDocument.' + obj.Name + ', FreeCAD.Vector(1.0, 0.0, 0.0), FreeCAD.Vector(0.0, 1.0, 0.0), 3, 2)',
+			 'Draft.autogroup(obj)',
+			 'FreeCAD.ActiveDocument.recompute()'])
+class _CmdFxCircular(_CmdFxPattern):
 	def __init__(self):
 		super(_CmdFxCircular, self).__init__(menuText="&Circular Pattern", toolTip="Arrange objects in circular pattern", pixmap=getIconPath("FxCircular.png"))
 	def Activated(self):
-		runPartDesignCommand("PolarPattern")
-class _CmdFxSketchDriven(_CmdAbstract):
+		obj = FreeCADGui.Selection.getSelection()[0]
+		self.commit("_CmdFxRectangular",
+			['obj = Draft.makeArray(FreeCAD.ActiveDocument.' + obj.Name + ', FreeCAD.Vector(0.0, 0.0, 0.0), 360, 3)',
+			 'Draft.autogroup(obj)',
+			 'FreeCAD.ActiveDocument.recompute()'])
+class _CmdFxSketchDriven(_CmdFxPattern):
 	def __init__(self):
 		super(_CmdFxSketchDriven, self).__init__(menuText="&Sketcht driven", toolTip="Arrange objects according sketch points", pixmap=getIconPath("FxSketchDriven.png"))
 	def Activated(self):
@@ -299,7 +312,7 @@ class _CmdFxPatterns(_CmdNoCommand):
 		return tuple([_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_])
 	def GetDefaultCommand(self):
 		return 0 # by default 'Box'
-class _CmdFxMirror(_CmdAbstract):
+class _CmdFxMirror(_CmdFxPattern):
 	def __init__(self):
 		super(_CmdFxMirror, self).__init__(menuText="&Mirror Pattern", toolTip="Arrange objects in a mirror pattern", pixmap=getIconPath("FxMirror.png"))
 	def Activated(self):

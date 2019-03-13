@@ -1758,11 +1758,11 @@ class TableModel(QAbstractTableModel):
 
 class ParameterTableModel(TableModel):
 	def __init__(self, parent, mylist, *args):
-		TableModel.__init__(self, parent, mylist, ['Variant', 'Source', 'Parameter', 'Value', 'Units'], *args)
+		TableModel.__init__(self, parent, mylist, ['Variant', 'Source', 'Property', 'Parameter', 'Value', 'Units'], *args)
 	def flags(self, index):
 		if (index.column() == 0):
 			return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsUserCheckable
-		if (index.column() in [1, 4]): # make object's property and unit column read only!
+		if (index.column() in [1, 2, 5]): # make object's name and property and unit column read only!
 			return Qt.ItemIsEnabled
 		return Qt.ItemIsEnabled |Qt.ItemIsEditable
 
