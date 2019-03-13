@@ -540,25 +540,26 @@ def readText(fileName):
 		tokenizer = Tokenizer(content)
 		while (tokenizer.hasNext()):
 			entity, index = readEntityText(tokenizer, index)
-			#TODO: update progress indocator for tokenizer.pos
-			if (entity.index < 0): entity.index = index
-			map[entity.index] = entity
-			lst.append(entity)
-			if (entity.name == "Begin-of-ACIS-History-Data"):
-				del map[entity.index]
-				entityIdx = entity.index
-				entity.index = -1
-				history = History(entity)
-				index = 0
-				map = history.delta_states
-			elif (entity.name == "End-of-ACIS-History-Section"):
-				del map[entity.index]
-				entity.index = -1
-				index = entityIdx
-				map = entities
-			elif (entity.name == "End-of-ACIS-data"):
-				del map[entity.index]
-				entity.index = -1
+			if (entity):
+				#TODO: update progress indocator for tokenizer.pos
+				if (entity.index < 0): entity.index = index
+				map[entity.index] = entity
+				lst.append(entity)
+				if (entity.name == "Begin-of-ACIS-History-Data"):
+					del map[entity.index]
+					entityIdx = entity.index
+					entity.index = -1
+					history = History(entity)
+					index = 0
+					map = history.delta_states
+				elif (entity.name == "End-of-ACIS-History-Section"):
+					del map[entity.index]
+					entity.index = -1
+					index = entityIdx
+					map = entities
+				elif (entity.name == "End-of-ACIS-data"):
+					del map[entity.index]
+					entity.index = -1
 		#progress.stop() # DONE reading file
 	resolveEntityReferences(entities, lst, history)
 	setEntities(lst)

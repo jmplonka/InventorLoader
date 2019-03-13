@@ -5,7 +5,7 @@ importerUtils.py:
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import os, sys, datetime, FreeCADGui, numpy, json, shutil
+import os, sys, datetime, FreeCADGui, numpy, json, shutil, re
 from PySide.QtCore import *
 from PySide.QtGui  import *
 from uuid          import UUID
@@ -164,6 +164,8 @@ STRATEGY_SAT    = 0
 STRATEGY_NATIVE = 1
 STRATEGY_STEP   = 2
 __strategy__ = __prmPrefIL__.GetInt("strategy", STRATEGY_SAT)
+
+IS_CELL_REF = re.compile('^[a-z](\d+)?$', re.IGNORECASE)
 
 _author = ''
 _description = None
@@ -738,8 +740,8 @@ def isEmbeddings(names):
 	return 'RSeEmbeddings' in names
 
 def isEqual(a, b):
-	if (a is None): return isEqual(b, VEC())
-	if (b is None): return isEqual(a, VEC())
+	if (a is None): return isEqual(b, CENTER)
+	if (b is None): return isEqual(a, CENTER)
 	return ((a - b).Length < 0.0001)
 
 def isEqual1D(a, b):
@@ -870,4 +872,47 @@ class Color(object):
 
 def getIconPath(fileName):
 	return os.path.join(os.path.dirname(__file__), "Resources", "icons", fileName)
+
+def int2col(c):
+	m = c // 26
+	n = c % 26
+	if (m > 0):
+		return chr(ord('A') + (m - 1)) + chr(ord('A') + n - 1)
+	return chr(ord('A') + n - 1)
+
+def getCellRef(col, row):
+	if (isString(col)):
+		return u"%s%d" %(col, row)
+	return u"%s%d" %(int2col(col), row)
+
+def getTableValue(table, col, row):
+	try:
+		return table.get(getCellRef(col, row))
+	except:
+		return None
+
+def setTableValue(table, col, row, val):
+	if (type(val) == str):
+		table.set(getCellRef(col, row), val)
+	else:
+		if ((sys.version_info.major <= 2) and (type(val) == unicode)):
+			table.set(getCellRef(col, row), "%s" %(val.encode("utf8")))
+		else:
+			table.set(getCellRef(col, row), str(val))
+
+def calcAliasname(name):
+	alias = name.replace(':', '_')
+	if (IS_CELL_REF.search(name)):
+		return '%s_' %(alias)
+	# 45, 48..57, 65..90, 97..122
+	result = ''
+	for c in alias:
+		i = ord(c)
+		if (i == 45) or (i > 47 and i < 58) or (i > 64 and i < 91) or (i > 96 and i < 123):
+			result += c
+		else:
+			result += '_'
+	if (result[0] == '_'):
+		return 'd' + result
+	return result
 

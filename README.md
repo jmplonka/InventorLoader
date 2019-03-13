@@ -80,6 +80,8 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
+- 0.15.0 (2019-03-07): Added part variant handling (ak iPart)
+
 - 0.14.0 (2019-03-05): InventorLoader is now a workbench.
 
 - 0.13.0 (2019-03-01): Added support for Fillets and Chamfers. Segmented variable radius

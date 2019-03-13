@@ -9,6 +9,8 @@ import sys, os, Part
 from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion, isEqual, isEqual1D
 from math          import degrees, radians, pi
 from FreeCAD       import Vector as VEC
+from PySide.QtCore import *
+from PySide.QtGui  import *
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -444,6 +446,24 @@ class AbstractValue(object):
 	def __str__(self):  return u"%g%s" %(self.x / self.factor - self.offset, self.unit)
 	def __repr__(self): return self.toStandard()
 	def toStandard(self):  return self.__str__()
+	def getNominalValue(self):
+		return self.x / self.factor + self.offset
+	def __sub__(self):
+		return self.__class__(-self.x, self.factor, self.unit)
+	def __neg__(self):
+		return self.__class__(-self.x, self.factor, self.unit)
+	def __sub__(self, other):
+		if (isinstance(other, AbstractValue)):
+			return self.__class__(self.x - other.x, self.factor, self.unit)
+		return self.__class__(self.x - other, self.factor, self.unit)
+	def __add__(self, other):
+		if (isinstance(other, AbstractValue)):
+			return self.__class__(self.x + other.x, self.factor, self.unit)
+		return self.__class__(self.x + other, self.factor, self.unit)
+	def __mul__(self, other):
+		if (isinstance(other, AbstractValue)):
+			return self.__class__(self.x * other.x, self.factor, self.unit)
+		return self.__class__(self.x * other, self.factor, self.unit)
 
 class Length(AbstractValue):
 	def __init__(self, x, factor = 0.1, unit = 'mm'):
@@ -523,7 +543,7 @@ class Derived(AbstractValue):
 
 class DataNode(object):
 	def __init__(self, data, isRef):
-		## data must bean instance of AbstractData!
+		## data must be an instance of AbstractData!
 		if (data):
 			assert isinstance(data, AbstractData), 'Data is not a AbstractData (%s)!' %(data.__class__.__name__)
 			if (isRef == False): data.node = self
@@ -672,7 +692,6 @@ class DataNode(object):
 class ParameterNode(DataNode):
 	def __init__(self, data, isRef):
 		super(ParameterNode, self).__init__(data, isRef)
-		self.asText  = False
 
 	def getValueRaw(self):
 		return self.get('valueNominal')
@@ -686,14 +705,14 @@ class ParameterNode(DataNode):
 		except Exception as e:
 			return u'(%04X): %s \'%s\'=%s - %s' %(self.index, self.typeName, self.name, x, e)
 
-	def getParameterFormula(self, parameterData, withUnits):
+	def getParameterFormula(self, parameterData, asText):
 		subFormula = ''
 		typeName   = parameterData.typeName
 
 		if (typeName == 'ParameterValue'):
 			type   = parameterData.get('type')
 			unitName = ''
-			if (self.asText or withUnits):
+			if (asText):
 				unitName = parameterData.getUnitName()
 				if (len(unitName) > 0): unitName = ' ' + unitName
 			if (type == 0xFFFF):
@@ -707,44 +726,37 @@ class ParameterNode(DataNode):
 				else: # floating point value!
 					subFormula = '%g%s' %((value / factor) - offset, unitName)
 		elif (typeName == 'ParameterUnaryMinus'):
-			subFormula = '-' + self.getParameterFormula(parameterData.get('value'), withUnits)
+			subFormula = '-' + self.getParameterFormula(parameterData.get('value'), asText)
 		elif (typeName == 'ParameterConstant'):
 			unitName = ''
-			if (self.asText or withUnits):
+			if (asText):
 				unitName = parameterData.getUnitName()
 				if (len(unitName) > 0): unitName = ' ' + unitName
 			subFormula = '%s%s' %(parameterData.name, unitName)
 		elif (typeName == 'ParameterRef'):
 			target = parameterData.get('target')
-			if (self.asText):
+			if (asText):
 				subFormula = target.name
 			else:
 				subFormula = '%s_' %(target.name)
 		elif (typeName == 'ParameterFunction'):
 			function          = parameterData.name
-			functionSupported = (function not in FunctionsNotSupported)
-			if (self.asText or functionSupported):
-				operandRefs = parameterData.get('operands')
-				# WORKAROUND:
-				# There seems to be a bug in the 'tanh' function regarding units! => ignore units!
-				ignoreUnits = (parameterData.name == 'tanh')
-				subFormula = "(%s)" %(';'.join(["%s" %(self.getParameterFormula(ref, withUnits and not ignoreUnits)) for ref in operandRefs]))
-
-			else:
-				# Modulo operation not supported by FreeCAD
-				raise UserWarning('Function \'%s\' not supported' %function)
+			operandRefs = parameterData.get('operands')
+			subFormula = "%s(%s)" %(function, ';'.join(["%s" %(self.getParameterFormula(ref, asText)) for ref in operandRefs]))
+			if ((function in FunctionsNotSupported) and (not asText)):
+				nominalValue = self.getValue().getNominalValue()
+				logError(u"Function \'%s\' not supported in formula of '%s' using nominal value %g!", function, self.name, nominalValue)
+				subFormula = '%g' %(nominalValue)
 		elif (typeName == 'ParameterOperationPowerIdent'):
-			operand1 = self.getParameterFormula(parameterData.get('operand1'), withUnits)
+			operand1 = self.getParameterFormula(parameterData.get('operand1'), asText)
 			subFormula = operand1
 		elif (typeName.startswith('ParameterOperation')):
 			operation = parameterData.name
-			if (self.asText or (operation != '%')):
-				operand1 = self.getParameterFormula(parameterData.get('operand1'), withUnits)
-				operand2 = self.getParameterFormula(parameterData.get('operand2'), withUnits)
-				subFormula = '(%s %s %s)' %(operand1, operation, operand2)
-			else:
-				# Modulo operation not supported by FreeCAD
-				raise UserWarning('Modulo operator not supported')
+			operand1 = self.getParameterFormula(parameterData.get('operand1'), asText)
+			operand2 = self.getParameterFormula(parameterData.get('operand2'), asText)
+			subFormula = '(%s %s %s)' %(operand1, operation, operand2)
+			if ((not asText) and (operation == '%')):
+				subFormula = 'mod(%s, %s)' %(operand1, operand2)
 		else:
 			logError(u"    Don't now how to build formula for %s: %s!", typeName, parameterData)
 
@@ -752,14 +764,13 @@ class ParameterNode(DataNode):
 
 	def getFormula(self, asText):
 		data = self.data
-		self.asText = asText
 		if (data):
 			refValue = data.get('value')
 			if (refValue):
 				if (asText):
-					return u'\'' + self.getParameterFormula(refValue, True)
+					return u'\'' + self.getParameterFormula(refValue, asText)
 				try:
-					return u'=' + self.getParameterFormula(refValue, True)
+					return u'=' + self.getParameterFormula(refValue, asText)
 				except BaseException as be:
 					# replace by nominal value and unit!
 					value = self.getValue()
@@ -1594,11 +1605,14 @@ def createNewModel():
 
 def getModel():
 	global model
-	return model
+	if ('model' in globals()):
+		return model
+	return None
 
 def releaseModel():
 	global model
-	del model
+	if ('model' in globals()):
+		del model
 
 class NtEntry(object):
 	def __init__(self, nameTable, key):
@@ -1609,3 +1623,151 @@ class NtEntry(object):
 		if (self.nameTable is None):
 			return u""
 		return u"%04X[%04X]" %(self.nameTable, self.key)
+
+class TableModel(QAbstractTableModel):
+	def __init__(self, parent, mylist, header, *args):
+		QAbstractTableModel.__init__(self, parent, *args)
+		self.mylist = mylist
+		self.header = header
+		parent.setModel(self)
+
+	def rowCount(self, parent):
+		return len(self.mylist)
+
+	def columnCount(self, parent):
+		cols = [len(row) for row in self.mylist]
+		if (len(cols) == 0):
+			return 0
+		return max(cols)
+
+	def data(self, index, role):
+		if (index.isValid()):
+			value = self.mylist[index.row()][index.column()]
+			if (hasattr(value, 'Value')):
+				value = value.Value
+			if (type(value) == bool):
+				if (role == Qt.CheckStateRole):
+					if value:
+						return Qt.Checked
+					return Qt.Unchecked
+			else:
+				if (role in [Qt.EditRole, Qt.DisplayRole]):
+					return value
+		return None
+
+	def setData(self, index, value, role):
+		if (index.isValid()):
+			orgVal = self.mylist[index.row()][index.column()]
+			if (role == Qt.CheckStateRole):
+				value = (value == Qt.Checked)
+			if (hasattr(orgVal, 'Value')):
+				orgVal.Value = value
+			else:
+				self.mylist[index.row()][index.column()] = value
+			return True
+		return False
+
+	def headerData(self, position, orientation, role):
+		if ((role == Qt.DisplayRole) and (orientation == Qt.Horizontal)):
+			return self.header[position]
+		return QAbstractTableModel.headerData(self, position, orientation, role)
+
+	def setHeaderData(self, position, orientation, header, role): # int, orientation, QVariant, int = Qt.EditRole
+		if ((role == Qt.DisplayRole) and (orientation == Qt.Horizontal)):
+			self.header[position] = header
+			return True
+		return QAbstractTableModel.setHeaderData(self, position, orientation, header, role)
+
+	def insertRow(self, row, index=QModelIndex()):
+		'''Insert a row into the model.'''
+		self.beginInsertRows(index, row, row)
+		data = ['' for c in range(self.columnCount(self.parent))]
+		self.mylist.insert(row, data)
+		self.endInsertRows()
+		return True
+
+	def insertRows(self, position, rows=1, index=QModelIndex()):
+		'''Insert a row into the model.'''
+		self.beginInsertRows(index, position, position + rows - 1)
+		for row in range(rows):
+			data = ['' for c in range(self.columnCount(self.parent))]
+			self.mylist.insert(position + row, data)
+		self.endInsertRows()
+		return True
+
+	def removeRow(self, row, index=QModelIndex()):
+		'''Remove a row from the model.'''
+		self.beginRemoveRows(index, row, row)
+		del self.mylist[row]
+		self.endRemoveRows()
+		return True
+
+	def removeRows(self, position, rows=1, index=QModelIndex()):
+		'''Remove rows from the model.'''
+		self.beginRemoveRows(index, position, position + rows - 1)
+		del self.mylist[position:position+rows]
+		self.endRemoveRows()
+		return True
+
+	def insertColumn(self, column, index=QModelIndex()):
+		'''Insert a column into the model.'''
+		self.beginInsertColumns(index, column, column)
+		self.header.insert(column, '')
+		for row in self.mylist:
+			row.insert(column, '')
+		self.endInsertColumns()
+		return True
+
+	def insertColumns(self, position, column=1, index=QModelIndex()):
+		'''Insert a row into the model.'''
+		self.beginInsertColumns(index, position, position + column - 1)
+		for col in range(column):
+			self.header.insert(position + col, '')
+		for row in self.mylist:
+			for col in range(column):
+				row.insert(position + column, '')
+		self.endInsertColumns()
+		return True
+
+	def removeColumn(self, column, index=QModelIndex()):
+		'''Remove a column from the model.'''
+		self.beginRemoveColumns(index, column, column)
+		del self.header[column]
+		for row in self.mylist:
+			del row[column]
+		self.endRemoveColumns()
+		return True
+
+	def removeColumns(self, position, column=1, index=QModelIndex()):
+		'''Remove columns from the model.'''
+		self.beginRemoveColumns(index, position, position + column - 1)
+		for col in range(column):
+			del self.header[position]
+		for row in self.mylist:
+			del row[position:position+column]
+		self.endRemoveColumns()
+		return True
+
+	def flags(self, index):
+		'''Returns the item flags for the given index.
+		The base class implementation returns a combination of flags that enables the item
+		and allows it to be selected.'''
+		if not index.isValid():
+			return Qt.NoItemFlags
+		return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+class ParameterTableModel(TableModel):
+	def __init__(self, parent, mylist, *args):
+		TableModel.__init__(self, parent, mylist, ['Variant', 'Source', 'Property', 'Parameter', 'Value', 'Units'], *args)
+	def flags(self, index):
+		if (index.column() == 0):
+			return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsUserCheckable
+		if (index.column() in [1, 2, 5]): # make object's name and property and unit column read only!
+			return Qt.ItemIsEnabled
+		return Qt.ItemIsEnabled |Qt.ItemIsEditable
+
+class VariantTableModel(TableModel):
+	def __init__(self, parent, values, *args):
+		TableModel.__init__(self, parent, values[1:], values[0], *args)
+	def flags(self, index):
+		return Qt.ItemIsEnabled | Qt.ItemIsEditable

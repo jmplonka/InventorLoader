@@ -14,7 +14,7 @@ from olefile           import OleFileIO
 from importerUtils     import *
 from importerReader    import *
 from importerClasses   import Inventor
-from importerFreeCAD   import FreeCADImporter, createGroup
+from importerFreeCAD   import FreeCADImporter
 from importerSAT       import readEntities, importModel, convertModel
 from uuid              import UUID
 

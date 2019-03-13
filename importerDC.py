@@ -1804,7 +1804,7 @@ class DCReader(EeDataReader):
 		i = node.ReadLen32Text16(i)
 		i = node.ReadCrossRef(i, 'refParent')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'iParts')
-		i = node.ReadUInt8(i, 'selected')
+		i = node.ReadBoolean(i, 'selected')
 		return i
 
 	def Read_262EA00C(self, node):
@@ -4838,7 +4838,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_8B2BE62E(self, node):
-		i = self.ReadHeaderEnum(node)
+		i = self.ReadHeaderEnum(node, 'ComputeType', {1: 'Identical', 2: 'AdjustToModel', 3: 'Optimized'})
 		return i
 
 	def Read_8B3E95F7(self, node):

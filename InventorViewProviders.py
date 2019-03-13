@@ -5,11 +5,42 @@ InventorViewProviders.py
 GUI representations for objectec imported from Inventor
 '''
 
-import re, sys, Part, FreeCAD
-from importerUtils import logInfo, getIconPath
-from FreeCAD       import Vector as VEC
+import os, re, sys, Part, FreeCAD, FreeCADGui
+from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, logError, getCellRef, setTableValue, calcAliasname
+from FreeCAD         import Vector as VEC
+from importerClasses import ParameterTableModel, VariantTableModel
+from math            import degrees
+from PySide.QtCore   import *
+from PySide.QtGui    import *
 
-INVALID_NAME = re.compile('^[0-9].*')
+INVALID_NAME   = re.compile('^[0-9].*')
+SKIPPABLE_OBJECTS = [
+	'Spreadsheet::Sheet'
+]
+XPR_PROPERTIES = {
+	'App::PropertyInteger' : u'',
+	'App::PropertyFloat'   : u'',
+	'App::PropertyQuantity': u'',
+	'App::PropertyAngle'   : u'°',
+	'App::PropertyDistance': u'mm',
+	'App::PropertyLength'  : u'mm',
+	'App::PropertyPercent' : u'%',
+}
+DIM_CONSTRAINTS = {
+	'Angle'    : u'°',
+	'Distance' : u'mm',
+	'DistanceX': u'mm',
+	'DistanceY': u'mm',
+	'Radius'   : u'mm',
+}
+
+def createPartFeature(doctype, name, default):
+	if (name is None):
+		fp = FreeCAD.ActiveDocument.addObject(doctype, default)
+	else:
+		fp = FreeCAD.ActiveDocument.addObject(doctype, getObjectName(name))
+		fp.Label = name
+	return fp
 
 def getObjectName(name):
 	if (sys.version_info.major < 3):
@@ -53,11 +84,7 @@ class _ViewProviderBoundaryPatch(_ViewProvider):
 		return getIconPath('FxBoundaryPatch.xpm')
 
 def makeBoundaryPatch(edges, name = None):
-	if (name is None):
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "BoundaryPatch")
-	else:
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", getObjectName(name))
-		fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "BoundaryPatch")
 	fp.Shape = Part.Face(Part.Wire(edges))
 	if FreeCAD.GuiUp:
 		_ViewProviderBoundaryPatch(fp.ViewObject)
@@ -73,7 +100,7 @@ class _Stich(object):
 		fp.Proxy    = self
 
 	def execute(self, fp):
-		faces = [f.Shape for f in fp.FaceList]
+		faces = [f.Shape for f in fp.FaceList if not f.Shape is None]
 		fp.Shape = Part.Shell(faces)
 		if (fp.Solid):
 			if (fp.Shape.isClosed()):
@@ -90,11 +117,7 @@ class _ViewProviderStitch(_ViewProvider):
 		return getIconPath('FxStitch.xpm')
 
 def makeStitch(faces, name = None, solid = False):
-	if (name is None):
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "FxStitch")
-	else:
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", getObjectName(name))
-		fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "FxStitch")
 	_Stich(fp, solid, faces)
 	if FreeCAD.GuiUp:
 		_ViewProviderStitch(fp.ViewObject)
@@ -150,8 +173,7 @@ class _ViewProviderPoint(_ViewProvider):
 			"""
 
 def makePoint(pt, name):
-	fp = FreeCAD.ActiveDocument.addObject("Part::Feature", getObjectName(name))
-	fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "Point")
 	_Point(fp, pt)
 	if FreeCAD.GuiUp:
 		_ViewProviderPoint(fp.ViewObject)
@@ -176,8 +198,7 @@ class _ViewProviderLine(_ViewProvider):
 		super(_ViewProviderLine, self).__init__(vp)
 
 def makeLine(pt1, pt2, name):
-	fp = FreeCAD.ActiveDocument.addObject("Part::Feature", getObjectName(name))
-	fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "Line")
 	line = _Line(fp, pt1, pt2)
 	if FreeCAD.GuiUp:
 		_ViewProviderLine(fp.ViewObject)
@@ -249,8 +270,7 @@ class _ViewProviderPlane(_ViewProvider):
 			"""
 
 def makePlane(c, n, name):
-	fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", getObjectName(name))
-	fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "Plane")
 	plane = _Plane(fp, c, n)
 	if FreeCAD.GuiUp:
 		_ViewProviderPlane(fp.ViewObject)
@@ -296,13 +316,347 @@ class _ViewProviderSketch3D(_ViewProvider):
 		return getIconPath("Sketch3D.xpm")
 
 def makeSketch3D(name = None):
-	if (name is None):
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Sketch3D")
-	else:
-		fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", getObjectName(name))
-		fp.Label = name
+	fp = createPartFeature("Part::FeaturePython", name, "Sketch3D")
 	sketch3D = _Sketch3D(fp)
 	if (FreeCAD.GuiUp):
 		_ViewProviderSketch3D(fp.ViewObject)
+	FreeCAD.ActiveDocument.recompute()
+	return fp
+
+class _PartVariants(object):
+	def __init__(self, fp):
+		fp.addProperty("App::PropertyPythonObject", "Values")
+		fp.addProperty("App::PropertyPythonObject", "Rows").Rows = {}
+		fp.addProperty("App::PropertyPythonObject", "Mapping").Mapping = {}
+		fp.addProperty("App::PropertyPythonObject", "Proxy").Proxy = self
+		fp.addProperty("App::PropertyLink"        , "Parameters")
+		fp.addProperty("App::PropertyEnumeration" , "Variant", "iPart")
+
+	def _getHeadersByRow_(self, table):
+		headers = {}
+		row = 2 # Skip header row
+		header = getTableValue(table, 'A', row)
+		while (header):
+			headers[header] = row
+			row += 1
+			header = getTableValue(table, 'A', row)
+
+		return headers
+
+	def _updateMapping_(self, fp):
+		if (fp.Values is None): return False
+		if (fp.Parameters is None): return False
+
+		fp.Mapping.clear()
+		FreeCAD.ActiveDocument.recompute()
+		parameter  = self._getHeadersByRow_(fp.Parameters)
+		for col in range(1, len(fp.Values[0])):
+			hdr = fp.Values[0][col]
+			cell = parameter[hdr]
+			fp.Mapping[col] = cell
+
+		return True
+
+	def _updateVariant_(self, fp):
+		try:
+			if (not self._updateMapping_(fp)):
+				return False
+			r = fp.Rows[fp.Variant]
+			FreeCAD.Console.PrintMessage("Set parameters according to variant '%s' (row %d):\n" %(fp.Variant, r))
+			for col in fp.Mapping:
+				prm = fp.Values[0][col]
+				val = fp.Values[r][col]
+				if (hasattr(val, 'Value')):
+					val = val.Value
+				setTableValue(fp.Parameters, 'B', fp.Mapping[col], val)
+				FreeCAD.Console.PrintMessage("    '%s' = %s\n" %(prm, val))
+			if (FreeCAD.ActiveDocument):
+				FreeCAD.ActiveDocument.recompute()
+			return True
+		except:
+			return False
+
+	def _updateValues_(self, fp):
+		try:
+			colMember = -1
+			values = fp.Values
+			variants = [row[0] for row in values[1:]]
+			fp.Rows.clear()
+			for row, variant in enumerate(variants, 1):
+				fp.Rows[variant] = row
+			fp.Variant = variants
+		except:
+			pass
+
+	def onChanged(self, fp, prop):
+		if (prop == 'Variant'):
+			self._updateVariant_(fp)
+		elif (prop == 'Values'):
+			self._updateValues_(fp)
+
+class DlgIPartVariants(object):
+	def __init__(self, fp):
+		res = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources")
+		ui  = os.path.join(res, "ui", "iPartVariants.ui")
+		self.form = FreeCADGui.PySideUic.loadUi(ui)
+		table = self.form.tableView
+		table.setSelectionMode(QAbstractItemView.SingleSelection)
+		self.form.btnPartAdd.setIcon(QIcon(os.path.join(res, "icons", "iPart_Part_add.svg")))
+		self.form.btnPartDel.setIcon(QIcon(os.path.join(res, "icons", "iPart_Part_del.svg")))
+		self.form.btnParamAdd.setIcon(QIcon(os.path.join(res, "icons", "iPart_Param_add.svg")))
+		self.form.btnParamDel.setIcon(QIcon(os.path.join(res, "icons", "iPart_Param_del.svg")))
+		QObject.connect(self.form.btnPartAdd, SIGNAL("clicked()"), self.addPart)
+		QObject.connect(self.form.btnPartDel, SIGNAL("clicked()"), self.delPart)
+		QObject.connect(self.form.btnParamAdd, SIGNAL("clicked()"), self.addParam)
+		QObject.connect(self.form.btnParamDel, SIGNAL("clicked()"), self.delParam)
+		VariantTableModel(table, fp.Values)
+		self.fp = fp
+	def getParameters(self):
+		parameters = []
+		table = self.fp.Parameters
+		row = 2
+		parameter = getTableValue(table, 'A', row)
+		while (parameter):
+			parameters.append(parameter)
+			row += 1
+			parameter = getTableValue(table, 'A', row)
+		return parameters
+	def addPart(self):
+		table = self.form.tableView
+		model = table.model()
+		rows  = model.rowCount(table)
+		index = table.currentIndex()
+		if (index.isValid()):
+			row = index.row() + 1
+		else:
+			row = rows
+		if (model.insertRow(row)):
+			index = model.index(row, 0)
+			model.setData(index, 'Part-%02d' %(rows+1), Qt.EditRole)
+			FreeCAD.ActiveDocument.recompute()
+		else:
+			logError("Failed to insert row %d", row)
+		return
+	def delPart(self):
+		table = self.form.tableView
+		model = table.model()
+		index = table.currentIndex()
+		if (index.isValid()):
+			row   = index.row()
+			ret   =  QMessageBox.question(self.form, "FreeCAD - remove part variant",
+				   u"Do you really want to remove '%s'?" %(model.data(model.index(row, 0), Qt.DisplayRole)),
+				   QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+			if (ret == QMessageBox.Yes):
+				model.removeRow(row)
+		FreeCAD.ActiveDocument.recompute()
+		return
+	def addParam(self):
+		parameters = self.getParameters()
+		(prmName, ok) = QInputDialog.getItem(None, u"FreeCAD - add iPart parameter", u"Name of the parameter:", parameters)
+		if (ok):
+			table = self.form.tableView
+			model = table.model()
+			cols  = model.columnCount(table)
+			index = table.currentIndex()
+			if (index.isValid()):
+				col = index.column() + 1
+			else:
+				col = cols
+			if (model.insertColumn(col)):
+				model.setHeaderData(col, Qt.Horizontal, prmName, Qt.DisplayRole)
+				FreeCAD.ActiveDocument.recompute()
+			else:
+				logError("Failed to insert column %d", row)
+		return
+	def delParam(self):
+		table = self.form.tableView
+		model = table.model()
+		index = table.currentIndex()
+		if (index.isValid()):
+			col = index.column()
+			ret =  QMessageBox.question(self.form, "FreeCAD - remove iPart parameter",
+				   u"Do you really want to remove '%s'?" %(model.headerData(col, Qt.Horizontal, Qt.DisplayRole)),
+				   QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+			if (ret == QMessageBox.Yes):
+				model.removeColumn(col)
+		return
+	def reject(self):
+		FreeCADGui.ActiveDocument.resetEdit()
+		return True
+	def accept(self):
+		table  = self.form.tableView
+		model  = table.model()
+		values = []
+		cols   = model.columnCount(table)
+		rows   = model.rowCount(table)
+		hdrLst = []
+		for col in range(cols):
+			hdrLst.append(model.headerData(col, Qt.Horizontal, Qt.DisplayRole))
+		values.append(hdrLst)
+		for row in range(rows):
+			rowLst = []
+			for col in range(cols):
+				index = model.index(row, col)
+				rowLst.append(model.data(index, Qt.DisplayRole))
+			values.append(rowLst)
+		self.fp.Values = values
+		FreeCADGui.ActiveDocument.resetEdit()
+		FreeCAD.ActiveDocument.recompute()
+		return True
+
+class _ViewProviderPartVariants(_ViewProvider):
+	def __init__(self, vp):
+		super(_ViewProviderPartVariants, self).__init__(vp)
+
+	def claimChildren(self):
+		children = []
+		if (not self.fp.Parameters is None):
+			children.append(self.fp.Parameters)
+		if (not self.fp.Values is None):
+			children.append(self.fp.Values)
+		return children
+
+	def setEdit(self, vobj=None, mode=0):
+		if mode == 0:
+			if vobj is None:
+				vobj = self.vobj
+			fp = vobj.Object
+			FreeCADGui.Control.closeDialog()
+			FreeCADGui.Control.showDialog(DlgIPartVariants(fp))
+			return True
+		return False
+
+	def unsetEdit(self, vobj, mode):
+		FreeCADGui.Control.closeDialog()
+		return False
+
+	def getIcon(self):
+		return getIconPath("iPart-VO.png")
+
+def searchDocParameters(doc):
+	values = []
+	d = 0
+	for obj in doc.Objects:
+		if (not obj.TypeId in SKIPPABLE_OBJECTS):
+			if (obj.TypeId == 'Sketcher::SketchObject'):
+				c = 0
+				for constraint in obj.Constraints:
+					if (constraint.Type in DIM_CONSTRAINTS):
+						value = constraint.Value
+						if (constraint.Type == 'Angle'):
+							value = degrees(value)
+						values.append([False, obj.Name, 'Constraints[%d]' %(c), 'd_%d' %(d), str(value), DIM_CONSTRAINTS[constraint.Type]])
+						d += 1
+					c += 1
+			else:
+				for prp in obj.PropertiesList:
+					if (obj.getTypeIdOfProperty(prp) in XPR_PROPERTIES):
+						value = getattr(obj, prp)
+						if (hasattr(value, 'Value')):
+							value = value.Value
+						values.append([False, obj.Name, prp, 'd_%d' %(d), str(value), XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
+						d += 1
+	return values
+
+def getParametersValues(doc):
+	table  = None
+	for t in doc.getObjectsByLabel('Parameters'):
+		if (t.TypeId == 'Spreadsheet::Sheet'):
+			table = t
+			break
+	if (table is None):
+		return None, None, True
+	if ((table.get('A1') != 'Parameter') or (table.get('B1') != 'Value')):
+		logWarning("Spreadsheet 'Parameters' doesn't meet layout constraints to serve as parameters table!")
+		logWarning("First row must be 'Parameter', 'Value', 'Unit', 'Source' - creating new one.")
+		return None, None, True
+	hasUnit     = (table.get('C1') == 'Unit')
+	hasSource   = (table.get('D1') == 'Source')
+	hasProperty = (table.get('E1') == 'Property')
+	row         = 2
+	values      = []
+	while (True):
+		name     = getTableValue(table, 'A', row)
+		if (name is None):
+			break
+		value    = getTableValue(table, 'B', row)
+		unit = None
+		if (hasUnit):
+			unit = getTableValue(table, 'C', row)
+		else:
+			unit = table.get(getCellRef('B', row))
+			if (hasattr(unit, 'getUserPreferred')):
+				unit = unit.getUserPreferred()[2]
+			else:
+				unit = None
+		source = None
+		if (hasSource):
+			source = getTableValue(table, 'D', row)
+		property = None
+		if (hasProperty):
+			property = getTableValue(table, 'E', row)
+		values.append([False, source, property, name, value, unit])
+		row += 1
+	return table, values, False
+
+def createIPartParameters(doc, values):
+	table = doc.addObject('Spreadsheet::Sheet', 'Parameters')
+	table.set('A1', 'Parameter')
+	table.set('B1', 'Value')
+	table.set('C1', 'Unit')
+	table.set('D1', 'Source')
+	table.set('E1', 'Property')
+	for row, data in enumerate(values, 2):
+		(add, source, property, name, value, unit) = data
+		setTableValue(table, 'A', row, name)
+		try:
+			setTableValue(table, 'B', row, float(value))
+		except:
+			setTableValue(table, 'B', row, '=%s' %(value))
+		setTableValue(table, 'C', row, unit)
+		setTableValue(table, 'D', row, source)
+		setTableValue(table, 'E', row, property)
+		# replace value by expression
+		table.setAlias(u"B%d" %(row), calcAliasname(name))
+	doc.recompute()
+	return table
+
+def createIPart():
+	doc    = FreeCAD.ActiveDocument
+	table, values, create = getParametersValues(doc)
+	if (values is None):
+		values = searchDocParameters(doc)
+
+	form = FreeCADGui.PySideUic.loadUi(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Resources", "ui", "iPartParameters.ui"))
+	ParameterTableModel(form.tableView, values)
+	if (not form.exec_()):
+		return None
+
+	if (create):
+		table = createIPartParameters(doc, values)
+
+	headers  = ['Member']  # fixed key for part variant name
+	variant  = ['Part-01'] # default name of the variant
+	variants = [headers, variant]
+	for data in values:
+		(add, source, property, name, value, unit) = data
+		if ((not source is None) and (not property is None)):
+			obj = doc.getObject(source)
+			obj.setExpression(property, "%s.%s" %(table.Name, calcAliasname(name)))
+		if (add):
+			variant.append(value)
+			headers.append(name)
+
+	fp = makePartVariants()
+	fp.Parameters = table
+	fp.Values     = variants
+	doc.recompute()
+	return fp
+
+def makePartVariants(name = None):
+	fp = createPartFeature("Part::FeaturePython", name, "Variations")
+	iPart = _PartVariants(fp)
+	if (FreeCAD.GuiUp):
+		_ViewProviderPartVariants(fp.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
 	return fp

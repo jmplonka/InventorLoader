@@ -1753,18 +1753,19 @@ class Face(Topology):
 	def build(self):
 		edges = self.buildCoEdges()
 		s     = self.getSurface()
-		face = None
-		surface = s.build() if (s is not None) else None
-		if (surface is not None):
-			if (len(edges) > 0):
-				return applyBoundary(surface, edges)
-			# edges can be empty because not all edges can be created right now :(
-			return surface
-		if (hasattr(s, 'type')):
-			if (s.type != 'ref'):
-				logWarning(u"    ... Don't know how to build surface '-%d %s::%s' - only edges displayed!", s.index, s.__class__.__name__, s.type)
-		else:
-			logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", s.index, s.__class__.__name__)
+		if (s is not None):
+			face = None
+			surface = s.build() if (s is not None) else None
+			if (surface is not None):
+				if (len(edges) > 0):
+					return applyBoundary(surface, edges)
+				# edges can be empty because not all edges can be created right now :(
+				return surface
+			if (hasattr(s, 'type')):
+				if (s.type != 'ref'):
+					logWarning(u"    ... Don't know how to build surface '-%d %s::%s' - only edges displayed!", s.index, s.__class__.__name__, s.type)
+			else:
+				logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", s.index, s.__class__.__name__)
 		return self.showEdges(edges)
 	def getSurfaceRef(self):
 		return getattr(self.getSurface(), 'ref', None)
