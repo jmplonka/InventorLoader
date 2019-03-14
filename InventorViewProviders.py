@@ -667,3 +667,40 @@ def makePartVariants(name = None):
 		_ViewProviderPartVariants(fp.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
 	return fp
+
+class _Trim(object):
+	def __init__(self, fp, patches):
+		fp.addProperty("App::PropertyPythonObject", "Patches").Patches = patches
+		fp.Proxy = self
+	def execute(self, fp):
+		print("Base: %s" %(fp.Patches[0].Label))
+		face = fp.Patches[0].Shape.Faces[0]
+		trim = face.cut([p.Shape.Faces[0] for p in fp.Patches[1:]])
+		fp.Shape = trim
+
+class _ViewProviderTrim(_ViewProvider):
+	def __init__(self, vp):
+		super(_ViewProviderTrim, self).__init__(vp)
+
+	def claimChildren(self):
+		return self.fp.Patches
+
+	def getIcon(self):
+		return getIconPath('FxBoundaryPatch.xpm')
+
+def makeTrim(name = None, faces = None):
+	if (faces == None):
+		selection = FreeCADGui.Selection.getSelectionEx(FreeCAD.ActiveDocument.Name)
+		faces = []
+		for selObj in selection:
+			obj = selObj.Object
+			if ((hasattr(obj.ViewObject, "Proxy")) and (obj.ViewObject.Proxy.__class__.__name__ == '_ViewProviderBoundaryPatch')):
+				obj.ViewObject.Visibility = False
+				faces.append(obj)
+
+	fp = createPartFeature("Part::FeaturePython", name, "Trim")
+	_Trim(fp, faces)
+	if FreeCAD.GuiUp:
+		_ViewProviderTrim(fp.ViewObject)
+	FreeCAD.ActiveDocument.recompute()
+	return fp

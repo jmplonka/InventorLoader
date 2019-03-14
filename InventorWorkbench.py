@@ -237,6 +237,8 @@ class _CmdFxEmboss(_CmdAbstract):
 class _CmdFxHole(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxHole, self).__init__(menuText="&Hole", toolTip="Create holes", pixmap=getIconPath("FxHole.png"))
+	def Activated(self):
+		runPartDesignCommand("Hole")
 class _CmdFxFillet(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxFillet, self).__init__(menuText="&Fillet", toolTip="Create fillets", pixmap=getIconPath("FxFillet.png"))
@@ -353,6 +355,14 @@ class _CmdFxPatch(_CmdAbstract):
 class _CmdFxTrim(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxTrim, self).__init__(menuText="&Trim face", toolTip="", pixmap=getIconPath("FxTrim.png"))
+	def Activated(self):
+		if FreeCAD.ActiveDocument:
+			sel = FreeCADGui.Selection.getSelection(FreeCAD.ActiveDocument.Name)
+			if (len(sel) > 1):
+				FreeCAD.ActiveDocument.openTransaction("_CmdFxTrim")
+				FreeCADGui.addModule("InventorViewProviders")
+				FreeCADGui.doCommand("InventorViewProviders.makeTrim()")
+				FreeCAD.ActiveDocument.commitTransaction()
 class _CmdFxFaceDelete(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxFaceDelete, self).__init__(menuText="&Delete face", toolTip="", pixmap=getIconPath("FxFaceDelete.png"))
