@@ -533,29 +533,36 @@ class _ViewProviderPartVariants(_ViewProvider):
 	def getIcon(self):
 		return getIconPath("iPart-VO.png")
 
+def getExpression(obj, prp):
+	exprssions = obj.ExpressionEngine
+	for xpr, value in expressions:
+		if (xpr == prp):
+			return value
+	return None
+
 def searchDocParameters(doc):
 	values = []
-	d = 0
 	for obj in doc.Objects:
 		if (not obj.TypeId in SKIPPABLE_OBJECTS):
 			if (obj.TypeId == 'Sketcher::SketchObject'):
-				c = 0
-				for constraint in obj.Constraints:
+				for c, constraint in enumerate(obj.Constraints):
 					if (constraint.Type in DIM_CONSTRAINTS):
-						value = constraint.Value
-						if (constraint.Type == 'Angle'):
-							value = degrees(value)
-						values.append([False, obj.Name, 'Constraints[%d]' %(c), 'd_%d' %(d), str(value), DIM_CONSTRAINTS[constraint.Type]])
-						d += 1
-					c += 1
+						prp = 'Constraints[%d]' %(c)
+						value = getExpression(obj, prp)
+						if (value is None):
+							value = constraint.Value
+							if (constraint.Type == 'Angle'):
+								value = degrees(value)
+						values.append([False, obj.Name, prp, 'd_%d' %(len(values)), str(value), DIM_CONSTRAINTS[constraint.Type]])
 			else:
 				for prp in obj.PropertiesList:
 					if (obj.getTypeIdOfProperty(prp) in XPR_PROPERTIES):
-						value = getattr(obj, prp)
-						if (hasattr(value, 'Value')):
-							value = value.Value
-						values.append([False, obj.Name, prp, 'd_%d' %(d), str(value), XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
-						d += 1
+						value = getExpression(obj, prp)
+						if (value is None):
+							value = getattr(obj, prp)
+							if (hasattr(value, 'Value')):
+								value = value.Value
+						values.append([False, obj.Name, prp, 'd_%d' %(len(values)), str(value), XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
 	return values
 
 def getParametersValues(doc):

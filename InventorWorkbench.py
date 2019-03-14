@@ -52,7 +52,6 @@ _FX_DRAFT_            = PREFIX + 'FxDraft'           # FX Missing
 _FX_THREAD_           = PREFIX + 'FxThread'          # FX Missing
 _FX_SPLIT_            = PREFIX + 'FxSplit'           # FX Missing
 _FX_COMBINE_          = PREFIX + 'FxCombine'
-_FX_MOVE_FACE_        = PREFIX + 'FxFaceMove'        # FX missing
 _FX_COPY_OBJECT_      = PREFIX + 'FxCopyObject'      # FX missing
 _FX_MOVE_BODY_        = PREFIX + 'FxMove'            # FX missing
 # Pattern
@@ -179,7 +178,7 @@ class _CmdAbstract(_CmdNoCommand):
 		for command in commands:
 			FreeCADGui.doCommand(command)
 		FreeCAD.ActiveDocument.commitTransaction()
-		return
+
 # Sketch
 class _CmdSketch2D(_CmdAbstract):
 	def __init__(self):
@@ -269,9 +268,6 @@ class _CmdFxCombine(_CmdAbstract):
 		super(_CmdFxCombine, self).__init__(menuText="C&ombine", toolTip="", pixmap=getIconPath("FxCombine.png"))
 	def Activated(self):
 		runPartCommand("Boolean")
-class _CmdFxMoveFace(_CmdAbstract):
-	def __init__(self):
-		super(_CmdFxMoveFace, self).__init__(menuText="&Move Face", toolTip="", pixmap=getIconPath("FxMoveFace.png"))
 class _CmdFxCopyObject(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxCopyObject, self).__init__(menuText="Copy O&bject", toolTip="", pixmap=getIconPath("FxCopyObject.png"))
@@ -289,7 +285,7 @@ class _CmdFxPattern(_CmdAbstract):
 		return len(FreeCADGui.Selection.getSelection()) > 0
 class _CmdFxRectangular(_CmdFxPattern):
 	def __init__(self):
-		super(_CmdFxRectangular, self).__init__(menuText="&Rectangular Pattern", toolTip="Arrange objects in rectangular pattern", pixmap=getIconPath("FxRectangular.png"))
+		super(_CmdFxRectangular, self).__init__(menuText="&Rectangular", toolTip="Arrange objects in rectangular pattern", pixmap=getIconPath("FxRectangular.png"))
 	def Activated(self):
 		obj = FreeCADGui.Selection.getSelection()[0]
 		FreeCADGui.addModule("Draft")
@@ -299,7 +295,7 @@ class _CmdFxRectangular(_CmdFxPattern):
 			 'FreeCAD.ActiveDocument.recompute()'])
 class _CmdFxCircular(_CmdFxPattern):
 	def __init__(self):
-		super(_CmdFxCircular, self).__init__(menuText="&Circular Pattern", toolTip="Arrange objects in circular pattern", pixmap=getIconPath("FxCircular.png"))
+		super(_CmdFxCircular, self).__init__(menuText="&Circular", toolTip="Arrange objects in circular pattern", pixmap=getIconPath("FxCircular.png"))
 	def Activated(self):
 		obj = FreeCADGui.Selection.getSelection()[0]
 		FreeCADGui.addModule("Draft")
@@ -321,7 +317,7 @@ class _CmdFxPatterns(_CmdNoCommand):
 		return 0 # by default 'Box'
 class _CmdFxMirror(_CmdFxPattern):
 	def __init__(self):
-		super(_CmdFxMirror, self).__init__(menuText="&Mirror Pattern", toolTip="Arrange objects in a mirror pattern", pixmap=getIconPath("FxMirror.png"))
+		super(_CmdFxMirror, self).__init__(menuText="&Mirror", toolTip="Arrange objects in a mirror pattern", pixmap=getIconPath("FxMirror.png"))
 	def Activated(self):
 		runPartCommand("Mirror")
 
@@ -535,7 +531,7 @@ class InventorWorkbench(Workbench):
 
 	def Initialize(self):
 		self.appendToolbar('Inventor-Create'     , [_SKETCHES_, _SKETCH_BLOCK_, _SEPARATOR_,_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_, _SEPARATOR_, _FREEFORMS_ , _PRIMITIVES_, _SEPARATOR_, _I_PART_])
-		self.appendToolbar('Inventor-Modify'     , [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_COMBINE_, _FX_THICKEN_, _FX_SPLIT_, _FX_DIRECT_EDIT_, _FX_DELETE_FACE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_])
+		self.appendToolbar('Inventor-Modify'     , [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_COMBINE_, _FX_THICKEN_, _FX_SPLIT_, _FX_DIRECT_EDIT_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_])
 		self.appendToolbar('Inventor-Patterns'   , [_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_, _FX_MIRROR_])
 		self.appendToolbar('Inventor-Surfaces'   , [_FX_STITCH_, _FX_PATCH_, _FX_SCULPT_, _FX_TRIM_, _FX_DELETE_FACE_, _FX_REPLACE_FACE_, _FX_RULED_SURFACE_])
 		self.appendToolbar('Inventor-Plastic'    , [_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_])
@@ -544,7 +540,7 @@ class InventorWorkbench(Workbench):
 		self.appendMenu(["&Inventor", "create &Sketch"    ], [_SKETCH_2D_, _SKETCH_3D_, _SKETCH_BLOCK_])
 		self.appendMenu(["&Inventor", "create &Primitives"], [_PRIMITIVE_BOX_, _PRIMITIVE_CYLINDER_, _PRIMITIVE_SPHERE_, _PRIMITIVE_CONE_, _PRIMITIVE_ELLIPSOID_, _PRIMITIVE_TORUS_, _PRIMITIVE_PRISM_, _PRIMITIVE_WEDGE_])
 		self.appendMenu(["&Inventor", "&create Model"     ], [_FX_EXTRUDE_, _FX_REVOLVE_, _FX_LOFT_, _FX_SWEEP_, _FX_RIB_, _FX_COIL_, _FX_EMBOSS_])
-		self.appendMenu(["&Inventor", "&modify Model"     ], [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_THICKEN_, _FX_SPLIT_, _FX_COMBINE_, _FX_DELETE_FACE_, _FX_MOVE_FACE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _FX_DIRECT_EDIT_])
+		self.appendMenu(["&Inventor", "&modify Model"     ], [_FX_HOLE_, _FX_FILLET_, _FX_CHAMFER_, _FX_SHELL_, _FX_DRAFT_, _FX_THREAD_, _FX_THICKEN_, _FX_SPLIT_, _FX_COMBINE_, _FX_COPY_OBJECT_, _FX_MOVE_BODY_, _FX_DIRECT_EDIT_])
 		self.appendMenu(["&Inventor", "&Pattern"          ], [_FX_RECTANGULAR_, _FX_CIRCULAR_, _FX_SKETCH_DRIVEN_, _SEPARATOR_, _FX_MIRROR_])
 		self.appendMenu(["&Inventor", "Sur&face"          ], [_FX_STITCH_, _FX_PATCH_, _FX_SCULPT_, _FX_TRIM_, _FX_DELETE_FACE_, _FX_REPLACE_FACE_, _FX_RULED_SURFACE_])
 		self.appendMenu(["&Inventor", "Plas&tic"          ], [_FX_GRILL_, _FX_BOSS_, _FX_REST_, _FX_SNAP_FIT_, _FX_RULE_FILLET_, _FX_LIP_])
@@ -581,7 +577,6 @@ if (FreeCAD.GuiUp):
 	addCommand(_FX_THREAD_          , _CmdFxThread())
 	addCommand(_FX_SPLIT_           , _CmdFxSplit())
 	addCommand(_FX_COMBINE_         , _CmdFxCombine())
-	addCommand(_FX_MOVE_FACE_       , _CmdFxMoveFace())
 	addCommand(_FX_COPY_OBJECT_     , _CmdFxCopyObject())
 	addCommand(_FX_MOVE_BODY_       , _CmdFxMoveBody())
 	addCommand(_FX_RECTANGULAR_     , _CmdFxRectangular())
