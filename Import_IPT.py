@@ -248,5 +248,5 @@ def create3dModel(root, doc):
 			if (strategy == STRATEGY_SAT):
 				importModel(root, doc)
 			elif (strategy == STRATEGY_STEP):
-				convertModel(root, doc)
+				convertModel(root, doc.Name)
 	return
