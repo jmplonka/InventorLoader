@@ -486,7 +486,6 @@ def buildWire(root, wire, transform):
 	logInfo(u"    building wire '%s'...", name)
 
 	buildWires(wire.getCoEdges(), root, name, transform)
-	buildFaces(wire.getShells(), root, name, transform)
 
 	return True
 
