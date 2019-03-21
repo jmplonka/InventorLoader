@@ -51,13 +51,18 @@ def getObjectName(name):
 		return "_%s" %(v)
 	return v
 
+class _ObjectProxy(object):
+	def __init__(self, obj):
+		obj.Proxy   = self # allows invocation of execute function
+		self.Object = obj
+
 class _ViewProvider(object):
 	def __init__(self, vp):
 		vp.Proxy = self
 
 	def attach(self, vp):
 		self.ViewObject = vp
-		self.fp = vp.Object
+		self.Object = vp.Object
 
 	def onChanged(self, vp, prop):   return
 
@@ -91,13 +96,13 @@ def makeBoundaryPatch(edges, name = None):
 	FreeCAD.ActiveDocument.recompute()
 	return fp
 
-class _Stich(object):
+class _Stich(_ObjectProxy):
 	def __init__(self, fp, solid, faces):
+		super(_Stich, self).__init__(fp)
 		fp.addProperty("App::PropertyBool",     "Solid", "Stitch", "Create a solid if possible")
 		fp.addProperty("App::PropertyLinkList", "FaceList", "Stitch", "List of faces to stitch together")
 		fp.Solid    = solid
 		fp.FaceList = faces
-		fp.Proxy    = self
 
 	def execute(self, fp):
 		faces = [f.Shape for f in fp.FaceList if not f.Shape is None]
@@ -111,7 +116,7 @@ class _ViewProviderStitch(_ViewProvider):
 		super(_ViewProviderStitch, self).__init__(vp)
 
 	def claimChildren(self):
-		return self.fp.FaceList
+		return self.Object.FaceList
 
 	def getIcon(self):
 		return getIconPath('FxStitch.xpm')
@@ -126,11 +131,11 @@ def makeStitch(faces, name = None, solid = False):
 	FreeCAD.ActiveDocument.recompute()
 	return fp
 
-class _Point(object):
+class _Point(_ObjectProxy):
 	def __init__(self, fp, pt):
+		super(_Point, self).__init__(fp)
 		fp.addProperty("App::PropertyVector", "Point", "Draft", "Location")
 		fp.Point = pt
-		fp.Proxy = self
 
 	def execute(self, fp):
 		vec = VEC(fp.Point)
@@ -180,13 +185,11 @@ def makePoint(pt, name):
 	FreeCAD.ActiveDocument.recompute()
 	return fp
 
-class _Line(object):
+class _Line(_ObjectProxy):
 	def __init__(self, fp, pt1, pt2):
-		fp.addProperty("App::PropertyVector", "Start", "Line", "start point")
-		fp.addProperty("App::PropertyVector", "End", "Line", "end point")
-		fp.Start = pt1
-		fp.End   = pt2
-		fp.Proxy = self
+		super(_Line, self).__init__(fp)
+		fp.addProperty("App::PropertyVector", "Start", "Line", "start point").Start = pt1
+		fp.addProperty("App::PropertyVector", "End", "Line", "end point").End = pt2
 
 	def execute(self, fp):
 		pt1 = fp.Start
@@ -205,13 +208,13 @@ def makeLine(pt1, pt2, name):
 	FreeCAD.ActiveDocument.recompute()
 	return fp
 
-class _Plane(object):
+class _Plane(_ObjectProxy):
 	def __init__(self, fp, c, n):
+		super(_Plane, self).__init__(fp)
 		fp.addProperty("App::PropertyVector", "Center", "Plane", "center position")
 		fp.addProperty("App::PropertyVector", "Normal", "Plane", "normal vector of the plane")
 		fp.Center = c
 		fp.Normal = n
-		fp.Proxy = self
 
 	def execute(self, fp):
 		c = fp.Center
@@ -221,6 +224,7 @@ class _Plane(object):
 class _ViewProviderPlane(_ViewProvider):
 	def __init__(self, vp):
 		super(_ViewProviderPlane, self).__init__(vp)
+
 	def getIcon(self):
 		return """
 		    /* XPM */
@@ -277,14 +281,13 @@ def makePlane(c, n, name):
 	FreeCAD.ActiveDocument.recompute()
 	return fp
 
-class _Sketch3D(object):
+class _Sketch3D(_ObjectProxy):
 	def __init__(self, fp):
+		super(_Sketch3D, self).__init__(fp)
 		fp.addProperty("App::PropertyPythonObject", "addGeometry").addGeometry = self.addGeometry
 		fp.addProperty("App::PropertyPythonObject", "addConstraint").addConstraint = self.addConstraint
 		fp.addProperty("App::PropertyPythonObject", "Geometry").Geometry = []
 		fp.addProperty("App::PropertyPythonObject", "Constraint").Constraint = []
-		self.fp = fp
-		fp.Proxy = self
 
 	def execute(self, fp):
 		l = len(fp.Geometry)
@@ -296,13 +299,13 @@ class _Sketch3D(object):
 			fp.Shape = Part.Compound([g.toShape() for g in fp.Geometry])
 
 	def addGeometry(self, geometry, mode = False):
-		index = len(self.fp.Geometry)
-		self.fp.Geometry.append(geometry)
+		index = len(self.Object.Geometry)
+		self.Object.Geometry.append(geometry)
 		return index
 
 	def addConstraint(self, constraint):
-		index = len(self.fp.Constraint)
-		self.fp.Constraint.append(constraint)
+		index = len(self.Object.Constraint)
+		self.Object.Constraint.append(constraint)
 		return index
 
 class _ViewProviderSketch3D(_ViewProvider):
@@ -323,8 +326,9 @@ def makeSketch3D(name = None):
 	FreeCAD.ActiveDocument.recompute()
 	return fp
 
-class _PartVariants(object):
+class _PartVariants(_ObjectProxy):
 	def __init__(self, fp):
+		super(_PartVariants, self).__init__(fp)
 		fp.addProperty("App::PropertyPythonObject", "Values")
 		fp.addProperty("App::PropertyPythonObject", "Rows").Rows = {}
 		fp.addProperty("App::PropertyPythonObject", "Mapping").Mapping = {}
@@ -411,6 +415,7 @@ class DlgIPartVariants(object):
 		QObject.connect(self.form.btnParamDel, SIGNAL("clicked()"), self.delParam)
 		VariantTableModel(table, fp.Values)
 		self.fp = fp
+
 	def getParameters(self):
 		parameters = []
 		table = self.fp.Parameters
@@ -421,6 +426,7 @@ class DlgIPartVariants(object):
 			row += 1
 			parameter = getTableValue(table, 'A', row)
 		return parameters
+
 	def addPart(self):
 		table = self.form.tableView
 		model = table.model()
@@ -437,6 +443,7 @@ class DlgIPartVariants(object):
 		else:
 			logError("Failed to insert row %d", row)
 		return
+
 	def delPart(self):
 		table = self.form.tableView
 		model = table.model()
@@ -450,6 +457,7 @@ class DlgIPartVariants(object):
 				model.removeRow(row)
 		FreeCAD.ActiveDocument.recompute()
 		return
+
 	def addParam(self):
 		parameters = self.getParameters()
 		(prmName, ok) = QInputDialog.getItem(None, u"FreeCAD - add iPart parameter", u"Name of the parameter:", parameters)
@@ -468,6 +476,7 @@ class DlgIPartVariants(object):
 			else:
 				logError("Failed to insert column %d", row)
 		return
+
 	def delParam(self):
 		table = self.form.tableView
 		model = table.model()
@@ -480,9 +489,11 @@ class DlgIPartVariants(object):
 			if (ret == QMessageBox.Yes):
 				model.removeColumn(col)
 		return
+
 	def reject(self):
 		FreeCADGui.ActiveDocument.resetEdit()
 		return True
+
 	def accept(self):
 		table  = self.form.tableView
 		model  = table.model()
@@ -510,10 +521,10 @@ class _ViewProviderPartVariants(_ViewProvider):
 
 	def claimChildren(self):
 		children = []
-		if (not self.fp.Parameters is None):
-			children.append(self.fp.Parameters)
-		if (not self.fp.Values is None):
-			children.append(self.fp.Values)
+		if (not self.Object.Parameters is None):
+			children.append(self.Object.Parameters)
+		if (not self.Object.Values is None):
+			children.append(self.Object.Values)
 		return children
 
 	def setEdit(self, vobj=None, mode=0):
@@ -668,10 +679,10 @@ def makePartVariants(name = None):
 	FreeCAD.ActiveDocument.recompute()
 	return fp
 
-class _Trim(object):
+class _Trim(_ObjectProxy):
 	def __init__(self, fp, patches):
+		super(_Trim, self).__init__(fp)
 		fp.addProperty("App::PropertyPythonObject", "Patches").Patches = patches
-		fp.Proxy = self
 	def execute(self, fp):
 		print("Base: %s" %(fp.Patches[0].Label))
 		face = fp.Patches[0].Shape.Faces[0]
@@ -683,7 +694,7 @@ class _ViewProviderTrim(_ViewProvider):
 		super(_ViewProviderTrim, self).__init__(vp)
 
 	def claimChildren(self):
-		return self.fp.Patches
+		return self.Object.Patches
 
 	def getIcon(self):
 		return getIconPath('FxBoundaryPatch.xpm')

@@ -291,7 +291,7 @@ class GraphicsReader(EeSceneReader):
 		return i
 
 	def Read_5194E9A2(self, node):
-		i = self.Read_32RRR2(node)
+		i = self.ReadHeader3dObject(node)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i, 8)
@@ -458,7 +458,7 @@ class GraphicsReader(EeSceneReader):
 	def Read_A6DD2FCC(self, node): return 0
 
 	def Read_A79EACD1(self, node):
-		i = self.Read_32RRR2(node)
+		i = self.ReadHeader3dObject(node)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 

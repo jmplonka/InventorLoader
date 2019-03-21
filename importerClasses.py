@@ -745,7 +745,7 @@ class ParameterNode(DataNode):
 			subFormula = "%s(%s)" %(function, ';'.join(["%s" %(self.getParameterFormula(ref, asText)) for ref in operandRefs]))
 			if ((function in FunctionsNotSupported) and (not asText)):
 				nominalValue = self.getValue().getNominalValue()
-				logError(u"Function \'%s\' not supported in formula of '%s' using nominal value %g!", function, self.name, nominalValue)
+				logWarning(u"Function \'%s\' not supported in formula of '%s' (%s) - using nominal value %g!", function, self.name, subFormula, nominalValue)
 				subFormula = '%g' %(nominalValue)
 		elif (typeName == 'ParameterOperationPowerIdent'):
 			operand1 = self.getParameterFormula(parameterData.get('operand1'), asText)
@@ -949,8 +949,24 @@ class DirectionNode(DataNode):
 	def __init__(self, data, isRef):
 		super(DirectionNode, self).__init__(data, isRef)
 
+	def getDirection(self):
+		dir = self.get('dir')
+		if (dir):
+			return dir
+		face = self.get('face')
+#		if (face):
+		return None
+
 	def getRefText(self): # return unicode
-		return u'(%04X): %s - (%g,%g,%g)' %(self.index, self.typeName, self.get('dirX'), self.get('dirY'), self.get('dirZ'))
+		dir = self.getDirection()
+		pt  = self.get('point')
+		if (dir):
+			if(pt):
+				return u'(%04X): %s start=(%g,%g,%g), dir=(%g,%g,%g)' %(self.index, self.typeName, pt.x, pt.y, pt.z, dir.x, dir.y, dir.z)
+			return u'(%04X): %s dir=(%g,%g,%g)' %(self.index, self.typeName, dir.x, dir.y, dir.z)
+		if (pt):
+			return u'(%04X): %s start=(%g,%g,%g)' %(self.index, self.typeName, pt.x, pt.y, pt.z)
+		return u'(%04X): %s' %(self.index, self.typeName)
 
 class BendEdgeNode(DataNode):
 	def __init__(self, data, isRef):
@@ -959,7 +975,7 @@ class BendEdgeNode(DataNode):
 	def getRefText(self): # return unicode
 		p1 = self.get('from')
 		p2 = self.get('to')
-		return u'(%04X): %s - (%g,%g,%g)-(%g,%g,%g)' %(self.index, self.typeName, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
+		return u'(%04X): %s - (%g,%g,%g)-(%g,%g,%g)' %(self.index, self.typeName, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z)
 
 class SketchNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1014,24 +1030,24 @@ class FeatureNode(DataNode):
 		p1 = self._getPropertyName(1)
 		p4 = self._getPropertyName(4)
 
-		if (p4 == 'Face'):
+		if (p4 == 'FaceItem'):
 			if (p1 == 'FaceExtend'):                return 'FaceExtend'
 			return 'Rip'
-		if (p0 == 'EdgeCollectionProxy'):
+		if (p0 == 'EdgeCollection'):
 			p4 = self._getPropertyEnumName(4)
 			if (p4 == 'ChamferType'):               return 'Chamfer'
 			if (p1 == 'Parameter'):                 return 'Bend'
 			if (p1 == 'FaceExtend'):                return 'FaceExtend'
-		elif (p0 == 'SurfaceBodies'):
+		elif (p0 == 'BodyCollection'):
 			if (p1 == 'ObjectCollection'):          return 'Combine'
 			if (p1 == 'SurfaceBody'):               return 'AliasFreeform'
-			if (p1 == 'SurfaceBodies'):             return 'CoreCavity'
-			if (p1 == 'Face'):
+			if (p1 == 'BodyCollection'):            return 'CoreCavity'
+			if (p1 == 'FaceItem'):
 				p7 = self._getPropertyEnumName(7)
 				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
 				if (p7 == '4688EBA3_Enum'):         return 'Unfold'
 		elif (p0 == 'SurfaceBody'):
-			if (p1 == 'Face'):
+			if (p1 == 'FaceItem'):
 				p7 = self._getPropertyEnumName(7)
 				if (p7 == 'EBB23D6E_Enum'):         return 'Refold'
 				if (p7 == '4688EBA3_Enum'):         return 'Unfold'
@@ -1046,7 +1062,7 @@ class FeatureNode(DataNode):
 					if (p6 is None):                return 'Revolve'
 					if (p6 == 'ExtentType'):        return 'Cut'
 					return 'Coil'
-				elif (p2 == 'Direction'):
+				elif (p2 == 'DirectionAxis'):
 					if (p6 == 'Parameter'):         return 'Emboss'
 					p10 = self._getPropertyName(0x10)
 					if (p10 == 'ParameterBoolean'): return 'Cut'
@@ -1070,14 +1086,14 @@ class FeatureNode(DataNode):
 			if (p1 == 'FaceCollection'):            return 'FaceReplace'
 			if (p1 == 'ParameterBoolean'):
 				p3 = self._getPropertyName(3)
-				if (p3 == 'SurfaceBodies'):         return 'FaceDelete'
+				if (p3 == 'BodyCollection'):        return 'FaceDelete'
 				if (p3 == 'Parameter'):             return 'Thread'
 		elif (p0 == 'BoundaryPatch'):
 			p2 = self._getPropertyName(2)
 			if (p2 == 'BoundaryPatch'):             return 'Grill'
 			if (p1 == 'FaceBoundOuterProxy'):       return 'Sweep'
 			if (p1 == 'FaceBoundProxy'):            return 'Sweep'
-			if (p1 == 'Direction'):                 return 'Extrude'
+			if (p1 == 'DirectionAxis'):             return 'Extrude'
 			if (p1 == 'BoundaryPatch'):             return 'Rib'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p1 == 'Parameter'):
@@ -1085,19 +1101,19 @@ class FeatureNode(DataNode):
 				return 'BendPart'
 			p4 = self._getPropertyName(4)
 			if (p4 == 'SurfaceBody'):               return 'BoundaryPatch'
-		elif (p0 == 'Direction'):
-			if (p1 == 'EdgeCollectionProxy'):       return 'Lip'
+		elif (p0 == 'DirectionAxis'):
+			if (p1 == 'EdgeCollection'):            return 'Lip'
 			if (p1 == 'FaceCollection'):            return 'FaceDraft'
 		elif (p0 == 'CA02411F'):                    return 'NonParametricBase'
 		elif (p0 == 'EB9E49B0'):                    return 'Freeform'
 		elif (p0 == 'FaceBoundOuterProxy'):
-			if (p4 == 'EdgeCollectionProxy'):       return 'Hem'
+			if (p4 == 'EdgeCollection'):            return 'Hem'
 			return 'Plate'
 		elif (p0 == 'ObjectCollection'):
 			p2 = self._getPropertyName(2)
 			if (p2 == 'FeatureDimensions'):         return 'Move'
 			if (p2 == 'SurfaceBody'):               return 'Stitch'
-			if (p1 == 'SurfaceBodies'):             return 'Stitch'
+			if (p1 == 'BodyCollection'):            return 'Stitch'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
 		elif (p0 == 'TrimType'):                    return 'Trim'
 		elif (p0 == 'CornerSeam'):                  return 'Corner'
@@ -1114,7 +1130,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'Enum'):                      return 'Thicken'
 			if (p1 == '671CE131'):                  return 'RuledSurface'
 			if (p1 == '8B2B8D96'):                  return 'BoundaryPatch'
-			if (p1 == 'EdgeCollectionProxy'):       return 'Lip'
+			if (p1 == 'EdgeCollection'):            return 'Lip'
 			if (p1 == 'FaceBoundOuterProxy'):       return 'ContourRoll'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p10 == 'FilletFullRoundSet'):       return 'Fillet'
@@ -1189,13 +1205,9 @@ class LineNode(DataNode):
 			x1 = p1.get('x')
 			y1 = p1.get('y')
 			return u'(%04X): %s - (%g,%g) - (%g,%g)' %(self.index, self.typeName, x0, y0, x1, y1)
-		x0 = self.get('x')
-		y0 = self.get('y')
-		z0 = self.get('z')
-		x1 = self.get('dirX') + x0
-		y1 = self.get('dirY') + y0
-		z1 = self.get('dirZ') + z0
-		return u'(%04X): %s - (%g,%g,%g) - (%g,%g,%g)' %(self.index, self.typeName, x0, y0, z0, x1, y1, z1)
+		p1 = VEC(self.get('x'), self.get('y'), self.get('z'))
+		p2 = self.get('dir') + p1
+		return u'(%04X): %s (%g,%g,%g)-(%g,%g,%g)' %(self.index, self.typeName, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z)
 
 class CircleNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1272,12 +1284,12 @@ class DimensionDistance2DNode(DataNode):
 			return u'(%04X): %s - d=\'%s\', (%g,%g)\t(%04X): %s' %(self.index, self.typeName, d.name, e2.get('x'), e2.get('y'), e1.index, e1.typeName)
 		return u'(%04X): %s - d=\'%s\', e1=(%04X): %s, e2=(%04X): %s' %(self.index, self.typeName, d.name, e1.index, e1.typeName, e2.index, e2.typeName)
 
-class SurfaceBodiesNode(DataNode):
+class ObjectCollectionNode(DataNode):
 	def __init__(self, data, isRef):
-		super(SurfaceBodiesNode, self).__init__(data, isRef)
+		super(ObjectCollectionNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
-		bodies = self.get('bodies')
+		bodies = self.get('items')
 		names = ','.join([u"'%s'" %(b.name) for b in bodies])
 		return u'(%04X): %s %s' %(self.index, self.typeName, names)
 

@@ -625,11 +625,11 @@ def getFloat64A(data, offset, size):
 
 def getFloat64_2D(data, index):
 	val = FLOAT64_2D(data, index)
-	return val, int(index + 0x10)
+	return VEC(val + (0.0,)), int(index + 0x10)
 
 def getFloat64_3D(data, index):
 	val = FLOAT64_3D(data, index)
-	return val, int(index + 0x18)
+	return VEC(val), int(index + 0x18)
 
 def getColorRGBA(data, offset):
 	r, g, b, a = RGBA(data, offset)

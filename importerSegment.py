@@ -93,6 +93,8 @@ BRANCH_NODES = {
 	'Parameter':                       ParameterNode,
 	'ParameterText':                   ParameterTextNode,
 	'ParameterBoolean':                ValueNode,
+	'RotateClockwise':                 ValueNode,
+	'3D8924FD':                        ValueNode,
 	'Enum':                            EnumNode,
 	'Feature':                         FeatureNode,
 	'Point2D':                         PointNode,
@@ -109,10 +111,12 @@ BRANCH_NODES = {
 	'Dimension_Distance_Vertical2D':   DimensionDistance2DNode,
 	'Dimension_Angle2Line2D':          DimensionAngleNode,
 	'Dimension_Angle3Point2D':         DimensionAngleNode,
-	'SurfaceBodies':                   SurfaceBodiesNode,
-	'ObjectCollection':                SurfaceBodiesNode,
-	'Direction':                       DirectionNode,
-	'A244457B':                        DirectionNode,
+	'BodyCollection':                  ObjectCollectionNode,
+	'ObjectCollection':                ObjectCollectionNode,
+	'DirectionAxis':                   DirectionNode,
+	'DirectionEdge':                   DirectionNode,
+	'DirectionFace':                   DirectionNode,
+	'DirectionPath':                   DirectionNode,
 	'BendEdge':                        BendEdgeNode,
 	'SketchBlock':                     SketchNode,
 	'Sketch2D':                        SketchNode,
@@ -199,7 +203,7 @@ def resolveReferencNodes(nodes):
 			refFx = node.get('fx')
 			refFx.set('fxColor', node)
 		elif (node.typeName == 'ObjectCollectionDef'):
-			definition = node.get('definition')
+			definition = node.get('collection')
 			definition.set('objectCollection', node)
 	return
 

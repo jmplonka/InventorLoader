@@ -20,16 +20,6 @@ class EeSceneReader(StyleReader):
 		self.faces = []
 		self.objects3D = []
 
-	def Read_32RRR2(self, node, typeName = None):
-		i = node.Read_Header0(typeName)
-		i = node.ReadUInt32(i, 'flags') # until 2019 this is always 0 otherwise it references the element with sketch's index in DC-Segment
-		i = node.ReadChildRef(i, 'styles')
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadParentRef(i)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		return i
-
 	def Read_ColorAttr(self, offset, node):
 		i = self.skipBlockSize(offset)
 		i = node.ReadUInt8A(i, 2,  'ColorAttr.a0')
@@ -228,9 +218,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadFloat64(i, 'x')
 		i = node.ReadFloat64(i, 'y')
 		i = node.ReadFloat64(i, 'z')
-		i = node.ReadFloat64(i, 'dirX')
-		i = node.ReadFloat64(i, 'dirY')
-		i = node.ReadFloat64(i, 'dirZ')
+		i = node.ReadFloat64_3D(i, 'dir')
 		return i
 
 	def Read_4B57DC55(self, node): # Arc 3D-Object

@@ -246,7 +246,7 @@ def create3dModel(root, doc):
 		for asm in brep.AcisList:
 			readEntities(asm)
 			if (strategy == STRATEGY_SAT):
-				importModel(root, doc)
+				importModel(root)
 			elif (strategy == STRATEGY_STEP):
 				convertModel(root, doc.Name)
 	return

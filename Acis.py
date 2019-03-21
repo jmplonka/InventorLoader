@@ -906,12 +906,19 @@ def applyBoundary(face, edges):
 	compound, elements = face.generalFuse(edges, 0.05)
 	return eliminateOuterFaces(elements[0], edges)
 
+def createCircle(center, normal, radius):
+	circle = Part.Circle(center, normal, radius.Length)
+	circle.XAxis = radius
+	return circle
+
 def createEllipse(center, normal, major, ratio):
-	radius = major.Length
-	ellipse = Part.Ellipse(center, radius, radius*ratio)
-	ellipse.Axis  = normal
-	ellipse.XAxis = major
-	return ellipse
+	if (ratio < 1):
+		s1 = center + major
+		s2 = center + normal.cross(major).normalize() * major.Length * ratio
+	else:
+		s2 = center + major
+		s1 = center + major.cross(normal).normalize() * major.Length * ratio
+	return Part.Ellipse(s1, s2, center)
 
 def createLine(start, end):
 	line = Part.makeLine(start, end)
@@ -1476,14 +1483,18 @@ class IndexMappings(object):
 		self.attributes = []
 	def append(self, attr):
 		self.attributes.append(attr)
-	def getEdges(self):
-		edges = {}
+	def __getTypedOwners__(self, ownerType):
+		result = {}
 		for a in self.attributes:
 			owner = a.getOwner()
-			if (isinstance(owner, Edge)):
-				if (owner.index not in edges):
-					edges[owner.index] = owner
-		return edges.values()
+			if (owner.getType() == ownerType):
+				if (owner.index not in result):
+					result[owner.index] = owner
+		return result.values()
+	def getEdges(self):
+		return self.__getTypedOwners__('edge')
+	def getFaces(self):
+		return self.__getTypedOwners__('face')
 class AsmHeader(object): pass
 class BeginOfAcisHistoryData(object): pass
 class DeltaState(object): pass
@@ -1800,6 +1811,17 @@ class Face(Topology):
 			addCurveSurfaceDefs(entity.node, defs)
 		defs = sorted(defs)
 		return defs
+	def isCone(self):   return isinstance(self.getSurface(), SurfaceCone)
+	def isMesh(self):   return isinstance(self.getSurface(), SurfaceMesh)
+	def isPlane(self):  return isinstance(self.getSurface(), SurfacePlane)
+	def isSphere(self): return isinstance(self.getSurface(), SurfaceSphere)
+	def isSpline(self): return isinstance(self.getSurface(), SurfaceSpline)
+	def isTorus(self):  return isinstance(self.getSurface(), SurfaceTorus)
+	def getEdges(self):
+		edges = []
+		for loop in self.getLoops():
+			edges += loop.getEdges()
+		return edges
 class Loop(Topology):
 	def __init__(self):
 		super(Loop, self).__init__()
@@ -1852,52 +1874,37 @@ class Loop(Topology):
 			if (e is not None):
 				addCurveSurfaceDefs(e.getCurve(), defs)
 		return defs
-class Edge(Topology):
+	def getEdges(self):
+		return [coEdge.getEdge() for coEdge in self.getCoEdges().values()]
+class Wire(Topology):
 	def __init__(self):
-		super(Edge, self).__init__()
-		self._start = None # The start vertex
-		self._end   = None # The end vertex
-		self._owner = None # The edge's coedge
-		self._curve = None # Lying on one the Adjacent faces
-		self.sense  = 'forwared'
-		self.text   = ''
+		super(Wire, self).__init__()
+		self._next = None
+		self._coedge = None
+		self._owner = None
+		self.side = False
 	def set(self, entity):
-		i = super(Edge, self).set(entity)
-		self._start, i = getRefNode(entity, i, 'vertex')
-		if (getVersion() > 4.0):
-			self.parameter1, i = getFloat(entity.chunks, i)
-		else:
-			self.parameter1 = 0.0
-		self._end, i   = getRefNode(entity, i, 'vertex')
-		if (getVersion() > 4.0):
-			self.parameter2, i = getFloat(entity.chunks, i)
-		else:
-			self.parameter2 = 1.0
-		self._owner, i = getRefNode(entity, i, 'coedge')
-		self._curve, i = getRefNode(entity, i, 'curve')
-		self.sense, i  = getSense(entity.chunks, i)
-		if (getVersion() > 5.0):
-			self.text, i = getText(entity.chunks, i)
-		self.unknown, i = getUnknownFT(entity.chunks, i)
+		i = super(Wire, self).set(entity)
+		self._next, i   = getRefNode(entity, i, 'wire')
+		self._coedge, i = getRefNode(entity, i, 'coedge')
+		self._owner, i  = getRefNode(entity, i, None)
+		self.unknown, i = getRefNode(entity, i, None)
+		self.side, i    = getSide(entity.chunks, i)
+		self.ft, i      = getUnknownFT(entity.chunks, i)
 		return i
-	def getStart(self):  return None if (self._start is None) else self._start.node.getPosition()
-	def getEnd(self):    return None if (self._end   is None) else self._end.node.getPosition()
-	def getParent(self): return None if (self._owner is None) else self._owner.node
-	def getCurve(self):  return None if (self._curve is None) else self._curve.node
-	def getPoints(self):
-		points = []
-		ptStart = None if (self._start is None) else self._start.node
-		if (ptStart is not None): points.append(ptStart.getPosition())
-		ptEnd = None if (self._end   is None) else self._end.node
-		if ((ptEnd is not None) and (ptEnd.index != ptStart.index)): points.append(ptEnd.getPosition())
-		return points
-class EdgeTolerance(Edge):
-	def __init__(self):
-		super(EdgeTolerance, self).__init__()
-		self.tolerance = 0.0
-	def set(self, entity):
-		i = super(EdgeTolerance, self).set(entity)
-		return i
+	def getNext(self):   return None if (self._next is None)   else self._next.node
+	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.node
+	def getOwner(self):  return None if (self._owner is None)  else self._owner.node
+	def getCoEdges(self):
+		coedges = {}
+		ce = self.getCoEdge()
+		index = -1 if (ce is None) else ce.index
+		while (ce is not None):
+			if (ce.index in coedges):
+				break
+			coedges[ce.index] = ce
+			ce = ce.getNext()
+		return coedges
 class CoEdge(Topology):
 	def __init__(self):
 		super(CoEdge, self).__init__()
@@ -1944,6 +1951,52 @@ class CoEdgeTolerance(CoEdge):
 		self.tStart, i  = getFloat(entity.chunks, i)
 		self.tEnd, i    = getFloat(entity.chunks, i)
 		return i
+class Edge(Topology):
+	def __init__(self):
+		super(Edge, self).__init__()
+		self._start = None # The start vertex
+		self._end   = None # The end vertex
+		self._owner = None # The edge's coedge
+		self._curve = None # Lying on one the Adjacent faces
+		self.sense  = 'forwared'
+		self.text   = ''
+	def set(self, entity):
+		i = super(Edge, self).set(entity)
+		self._start, i = getRefNode(entity, i, 'vertex')
+		if (getVersion() > 4.0):
+			self.parameter1, i = getFloat(entity.chunks, i)
+		else:
+			self.parameter1 = 0.0
+		self._end, i   = getRefNode(entity, i, 'vertex')
+		if (getVersion() > 4.0):
+			self.parameter2, i = getFloat(entity.chunks, i)
+		else:
+			self.parameter2 = 1.0
+		self._owner, i = getRefNode(entity, i, 'coedge')
+		self._curve, i = getRefNode(entity, i, 'curve')
+		self.sense, i  = getSense(entity.chunks, i)
+		if (getVersion() > 5.0):
+			self.text, i = getText(entity.chunks, i)
+		self.unknown, i = getUnknownFT(entity.chunks, i)
+		return i
+	def getStart(self):  return None if (self._start is None) else self._start.node.getPosition()
+	def getEnd(self):    return None if (self._end   is None) else self._end.node.getPosition()
+	def getParent(self): return None if (self._owner is None) else self._owner.node
+	def getCurve(self):  return None if (self._curve is None) else self._curve.node
+	def getPoints(self):
+		points = []
+		ptStart = None if (self._start is None) else self._start.node
+		if (ptStart is not None): points.append(ptStart.getPosition())
+		ptEnd = None if (self._end   is None) else self._end.node
+		if ((ptEnd is not None) and (ptEnd.index != ptStart.index)): points.append(ptEnd.getPosition())
+		return points
+class EdgeTolerance(Edge):
+	def __init__(self):
+		super(EdgeTolerance, self).__init__()
+		self.tolerance = 0.0
+	def set(self, entity):
+		i = super(EdgeTolerance, self).set(entity)
+		return i
 class Vertex(Topology):
 	def __init__(self):
 		super(Vertex, self).__init__()
@@ -1971,44 +2024,6 @@ class VertexTolerance(Vertex):
 		i = super(VertexTolerance, self).set(entity)
 		self.tolerance, i = getFloat(entity.chunks, i)
 		return i
-class Wire(Topology):
-	def __init__(self):
-		super(Wire, self).__init__()
-		self._next = None
-		self._coedge = None
-		self._shell = None
-		self.side = False
-	def set(self, entity):
-		i = super(Wire, self).set(entity)
-		self._next, i   = getRefNode(entity, i, 'wire')
-		self._coedge, i = getRefNode(entity, i, 'coedge')
-		self._owner, i  = getRefNode(entity, i, None)
-		self.unknown, i = getRefNode(entity, i, None)
-		self.side, i    = getSide(entity.chunks, i)
-		self.ft, i      = getUnknownFT(entity.chunks, i)
-		return i
-	def getNext(self):   return None if (self._next is None)   else self._next.node
-	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.node
-	def getShell(self):  return None if (self._shell is None)  else self._shell.node
-	def getOwner(self):  return None if (self._owner is None)  else self._owner.node
-	def getCoEdges(self):
-		coedges = {}
-		ce = self.getCoEdge()
-		index = -1 if (ce is None) else ce.index
-		while (ce is not None):
-			if (ce.index in coedges):
-				break
-			coedges[ce.index] = ce
-			ce = ce.getNext()
-		return coedges
-	def getShells(self):
-		shells = []
-		shell = self.getShell()
-		index = -1 if (shell is None) else shell.index
-		while (shell is not None):
-			shells.append(shell)
-			shell = shell.getNext()
-		return shells
 
 # abstract super class for all geometries
 class Geometry(Entity):
@@ -2078,7 +2093,10 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 		self.range, i  = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		return i
 	def build(self, start, end):
-		ellipse = createEllipse(self.center, self.normal, self.major, self.ratio)
+		if (self.ratio == 1):
+			ellipse = createCircle(self.center, self.normal, self.major)
+		else:
+			ellipse = createEllipse(self.center, self.normal, self.major, self.ratio)
 		if (start != end):
 			if (isinstance(start, VEC)):
 				a = ellipse.parameter(start)
@@ -2089,7 +2107,13 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 			else:
 				b = end
 			self.range = Intervall(Range('F', a), Range('F', b))
-			ellipse = Part.ArcOfEllipse(ellipse, a, b)
+			if (self.ratio == 1):
+				ellipse = Part.ArcOfCircle(ellipse, a, b)
+			else:
+				if (self.ratio < 0):
+					ellipse = Part.ArcOfEllipse(ellipse, a, b)
+				else:
+					ellipse = Part.ArcOfEllipse(ellipse, (a + pi/2) % (2*pi), (b + pi/2) % (2*pi))
 		return ellipse.toShape()
 class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def __init__(self, name = ''):
@@ -2527,6 +2551,11 @@ class SurfaceCone(Surface):
 		self.sense, i  = getSense(chunks, i)
 		self.urange, i = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		self.vrange, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+		if (self.sine == 0.):
+			self.apex = None
+		else:
+			h = self.major.Length / tan(asin(self.sine))
+			self.apex = self.center - self.axis * h
 		return i
 	def build(self):
 		if (self.shape is None):
@@ -2538,15 +2567,14 @@ class SurfaceCone(Surface):
 				cyl.translate((-MAX_LEN) * self.axis)
 				self.shape = cyl.Faces[0]
 			else:
-				# Workaround: can't generalFuse Part.Cone!
-				height = self.major.Length / tan(asin(self.sine))
-				apex  = self.center - self.axis * height
-				l = Part.Line(apex, self.center + self.major)
-				e = Part.LineSegment(apex, l.value(MAX_LEN)).toShape()
-				self.shape = e.revolve(self.center, self.axis, 360.0)
+				# Workaround: can't generate Part.Cone!
+				l = Part.Line(self.apex, self.center + self.major)
+				e = Part.LineSegment(self.apex, l.value(MAX_LEN)).toShape()
 				if (self.ratio != 1):
 					# TODO: apply scaling for ratios != 1.0!
 					logWarning(u"    ... Can't create cone surface with elliptical base - skipped!")
+				else:
+					self.shape = e.revolve(self.center, self.axis, 360.0)
 		return self.shape
 class SurfaceMesh(Surface):
 	def __init__(self):

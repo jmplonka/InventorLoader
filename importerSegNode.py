@@ -296,22 +296,22 @@ class SecNode(AbstractData):
 		return i
 
 	def ReadFloat64_2D(self, offset, name):
-		x, i = getFloat64_2D(self.data, offset)
-		self.set(name, x)
-		self.content += ' %s=(%g,%g)' %(name, x[0], x[1])
+		v, i = getFloat64_2D(self.data, offset)
+		self.set(name, v)
+		self.content += ' %s=(%g,%g)' %(name, v.x, v.y)
 		return i
 
 	def ReadFloat64_3D(self, offset, name):
-		x, i = getFloat64_3D(self.data, offset)
-		self.set(name, x)
-		self.content += ' %s=(%g,%g,%g)' %(name, x[0], x[1], x[2])
+		v, i = getFloat64_3D(self.data, offset)
+		self.set(name, v)
+		self.content += ' %s=(%g,%g,%g)' %(name, v.x, v.y, v.z)
 		return i
 
 	def ReadVec3D(self, offset, name, scale = 1.0):
-		p, i = getFloat64_3D(self.data, offset)
-		v = VEC(p[0], p[1], p[2]) * scale
+		v, i = getFloat64_3D(self.data, offset)
+		v *= scale
 		self.set(name, v)
-		self.content += ' %s=%s' %(name, v)
+		self.content += ' %s=(%g,%g,%g)' %(name, v.x, v.y, v.z)
 		return i
 
 	def ReadUUID(self, offset, name):
@@ -771,7 +771,7 @@ class SecNode(AbstractData):
 			a2, i = getFloat64_3D(self.data, i)
 			i += skip
 			lst.append((u1, l1, u2, u3, l2, a1, a2))
-		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s],%04X,%04X,[%s],(%s)-(%s))" %(a[0], IntArr2Str(a[1], 4), a[2], a[3], IntArr2Str(a[4], 4), FloatArr2Str(a[5]), FloatArr2Str(a[6])) for a in lst]))
+		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s],%04X,%04X,[%s],(%g,%g,%g)-(%g,%g,%g))" %(a[0], IntArr2Str(a[1], 4), a[2], a[3], IntArr2Str(a[4], 4), a[5].x, a[5].y, a[5].z, a[6].x, a[6].y, a[6].z) for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -1410,6 +1410,11 @@ class SecNodeRef(object):
 	def getValue(self):
 		node = self.node
 		if (node): return node.getValue()
+		return None
+
+	def getNominalValue(self):
+		value = self.getValue()
+		if (value): return value.getNominalValue()
 		return None
 
 	def getSubTypeName(self):

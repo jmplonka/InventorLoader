@@ -4,20 +4,23 @@
 		* SketchBlock
 		* SketchDrivenPattern
 
+	* Colors
+		* single faces
+
 ## Missing Features
 	* SheetMetal
 		* add (Cosmetic-)Bend, (Re-)Fold, Hem, Face (Delete, Draft, Move, Replace), Corner (Chamfer, Round), (Contour-, Lofted-)Flange
 		* add CounterRoll, Rip
 
 	* Solids modeling
-		* add Shell, Split
+		* add Split
 
 	* Surfaces
 		* add Trim, Sculpt, Extend
 		* add RuledSurface
 		* add Decal, Emboss
 
-	* combined
+	* Plastic
 		* add Boss, Rib, Grill, Lip, Rest, SnapFit
 
 	* Access to feature properties
