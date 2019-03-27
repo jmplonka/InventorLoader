@@ -34,12 +34,9 @@ DIM_CONSTRAINTS = {
 	'Radius'   : u'mm',
 }
 
-def createPartFeature(doctype, name, default):
-	if (name is None):
-		fp = FreeCAD.ActiveDocument.addObject(doctype, default)
-	else:
-		fp = FreeCAD.ActiveDocument.addObject(doctype, getObjectName(name))
-		fp.Label = name
+def createPartFeature(doctype, name):
+	fp = FreeCAD.ActiveDocument.addObject(doctype, getObjectName(name))
+	fp.Label = name
 	return fp
 
 def getObjectName(name):
@@ -55,6 +52,13 @@ class _ObjectProxy(object):
 	def __init__(self, obj):
 		obj.Proxy   = self # allows invocation of execute function
 		self.Object = obj
+
+	def __getstate__(self):
+		state = {}
+		return state
+
+	def __setstate__(self, state):
+		return
 
 class _ViewProvider(object):
 	def __init__(self, vp):
@@ -88,8 +92,8 @@ class _ViewProviderBoundaryPatch(_ViewProvider):
 	def getIcon(self):
 		return getIconPath('FxBoundaryPatch.xpm')
 
-def makeBoundaryPatch(edges, name = None):
-	fp = createPartFeature("Part::FeaturePython", name, "BoundaryPatch")
+def makeBoundaryPatch(edges, name = "BoundaryPatch"):
+	fp = createPartFeature("Part::FeaturePython", name)
 	fp.Shape = Part.Face(Part.Wire(edges))
 	if FreeCAD.GuiUp:
 		_ViewProviderBoundaryPatch(fp.ViewObject)
@@ -121,8 +125,8 @@ class _ViewProviderStitch(_ViewProvider):
 	def getIcon(self):
 		return getIconPath('FxStitch.xpm')
 
-def makeStitch(faces, name = None, solid = False):
-	fp = createPartFeature("Part::FeaturePython", name, "FxStitch")
+def makeStitch(faces, name = u"FxStitch", solid = False):
+	fp = createPartFeature("Part::FeaturePython", name)
 	_Stich(fp, solid, faces)
 	if FreeCAD.GuiUp:
 		_ViewProviderStitch(fp.ViewObject)
@@ -177,8 +181,8 @@ class _ViewProviderPoint(_ViewProvider):
 			"                "};
 			"""
 
-def makePoint(pt, name):
-	fp = createPartFeature("Part::FeaturePython", name, "Point")
+def makePoint(pt, name = u"Point"):
+	fp = createPartFeature("Part::FeaturePython", name)
 	_Point(fp, pt)
 	if FreeCAD.GuiUp:
 		_ViewProviderPoint(fp.ViewObject)
@@ -200,8 +204,8 @@ class _ViewProviderLine(_ViewProvider):
 	def __init__(self, vp):
 		super(_ViewProviderLine, self).__init__(vp)
 
-def makeLine(pt1, pt2, name):
-	fp = createPartFeature("Part::FeaturePython", name, "Line")
+def makeLine(pt1, pt2, name = u"Line"):
+	fp = createPartFeature("Part::FeaturePython", name)
 	line = _Line(fp, pt1, pt2)
 	if FreeCAD.GuiUp:
 		_ViewProviderLine(fp.ViewObject)
@@ -273,8 +277,8 @@ class _ViewProviderPlane(_ViewProvider):
 			"                "};
 			"""
 
-def makePlane(c, n, name):
-	fp = createPartFeature("Part::FeaturePython", name, "Plane")
+def makePlane(c, n, name = u"Plane"):
+	fp = createPartFeature("Part::FeaturePython", name)
 	plane = _Plane(fp, c, n)
 	if FreeCAD.GuiUp:
 		_ViewProviderPlane(fp.ViewObject)
@@ -318,8 +322,8 @@ class _ViewProviderSketch3D(_ViewProvider):
 	def getIcon(self):
 		return getIconPath("Sketch3D.xpm")
 
-def makeSketch3D(name = None):
-	fp = createPartFeature("Part::FeaturePython", name, "Sketch3D")
+def makeSketch3D(name = u"Sketch3D"):
+	fp = createPartFeature("Part::FeaturePython", name)
 	sketch3D = _Sketch3D(fp)
 	if (FreeCAD.GuiUp):
 		_ViewProviderSketch3D(fp.ViewObject)
@@ -545,7 +549,7 @@ class _ViewProviderPartVariants(_ViewProvider):
 		return getIconPath("iPart-VO.png")
 
 def getExpression(obj, prp):
-	exprssions = obj.ExpressionEngine
+	expressions = obj.ExpressionEngine
 	for xpr, value in expressions:
 		if (xpr == prp):
 			return value
@@ -671,8 +675,8 @@ def createIPart():
 	doc.recompute()
 	return fp
 
-def makePartVariants(name = None):
-	fp = createPartFeature("Part::FeaturePython", name, "Variations")
+def makePartVariants(name = u"Variations"):
+	fp = createPartFeature("Part::FeaturePython", name)
 	iPart = _PartVariants(fp)
 	if (FreeCAD.GuiUp):
 		_ViewProviderPartVariants(fp.ViewObject)
@@ -684,7 +688,6 @@ class _Trim(_ObjectProxy):
 		super(_Trim, self).__init__(fp)
 		fp.addProperty("App::PropertyPythonObject", "Patches").Patches = patches
 	def execute(self, fp):
-		print("Base: %s" %(fp.Patches[0].Label))
 		face = fp.Patches[0].Shape.Faces[0]
 		trim = face.cut([p.Shape.Faces[0] for p in fp.Patches[1:]])
 		fp.Shape = trim
@@ -699,7 +702,7 @@ class _ViewProviderTrim(_ViewProvider):
 	def getIcon(self):
 		return getIconPath('FxBoundaryPatch.xpm')
 
-def makeTrim(name = None, faces = None):
+def makeTrim(name = u"Trim", faces = None):
 	if (faces == None):
 		selection = FreeCADGui.Selection.getSelectionEx(FreeCAD.ActiveDocument.Name)
 		faces = []
@@ -709,7 +712,7 @@ def makeTrim(name = None, faces = None):
 				obj.ViewObject.Visibility = False
 				faces.append(obj)
 
-	fp = createPartFeature("Part::FeaturePython", name, "Trim")
+	fp = createPartFeature("Part::FeaturePython", name)
 	_Trim(fp, faces)
 	if FreeCAD.GuiUp:
 		_ViewProviderTrim(fp.ViewObject)
