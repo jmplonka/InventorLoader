@@ -1181,12 +1181,12 @@ class PointNode(DataNode): # return unicoe
 		super(PointNode, self).__init__(data, isRef)
 
 	def getRefText(self): # return unicode
+		pos = self.get('pos')
+		if (pos is None):
+			return u'(%04X): %s' %(self.index, self.typeName)
 		if (self.typeName[-2:] == '2D'):
-			point = self
-			if (point.typeName != 'Point2D'):
-				return u'(%04X): %s' %(self.index, self.typeName)
-			return u'(%04X): %s - (%g,%g)' %(self.index, self.typeName, point.get('x'), point.get('y'))
-		return u'(%04X): %s - (%g,%g,%g)' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'))
+			return u'(%04X): %s - (%g,%g)' %(self.index, self.typeName, pos.x, pos.y)
+		return u'(%04X): %s - (%g,%g,%g)' %(self.index, self.typeName, pos.x, pos.y, pos.z)
 
 class LineNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1196,18 +1196,15 @@ class LineNode(DataNode):
 		if (self.typeName[-2:] == '2D'):
 			p0 = self.get('points')[0]
 			if (p0 is None):
-				x0 = self.get('x')
-				y0 = self.get('y')
+				p0 = self.get('pos')
 			else:
-				x0 = p0.get('x')
-				y0 = p0.get('y')
+				p0 = p0.get('pos')
 			p1 = self.get('points')[1]
-			x1 = p1.get('x')
-			y1 = p1.get('y')
-			return u'(%04X): %s - (%g,%g) - (%g,%g)' %(self.index, self.typeName, x0, y0, x1, y1)
-		p1 = VEC(self.get('x'), self.get('y'), self.get('z'))
+			p1 = p1.get('pos')
+			return u"(%04X): %s - (%g,%g) - (%g,%g)" %(self.index, self.typeName, p0.x, p0.y, p1.x, p1.y)
+		p1 = self.get('pos')
 		p2 = self.get('dir') + p1
-		return u'(%04X): %s (%g,%g,%g)-(%g,%g,%g)' %(self.index, self.typeName, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z)
+		return u"(%04X): %s (%g,%g,%g)-(%g,%g,%g)" %(self.index, self.typeName, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z)
 
 class CircleNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1215,21 +1212,20 @@ class CircleNode(DataNode):
 
 	def getRefText(self): # return unicode
 		r = self.get('r')
-		p = self.get('points')
 		points = ''
-		for i in p:
+		for i in self.get('points'):
 			if (i):
+				p = i.get('pos')
 				if (self.typeName[-2:] == '2D'):
-					try:
-						points += ', (%g,%g)' %(i.get('x'), i.get('y'))
-					except:
-						logError(u"ERROR> (%04X): %s - x=%s, y=%s, r=%s, points=%s", i.index, i.typeName, i.get('x'), i.get('y'), r, points)
+					points += ', (%g,%g)' %(p.x, p.y)
 				else:
-					points += ', (%g,%g,%g)' %(i.get('x'), i.get('y'), i.get('z'))
+					points += u", (%g,%g,%g)" %(p.x, p.y, p.z)
 		if (self.typeName[-2:] == '2D'):
 			c = self.get('center')
-			return u'(%04X): %s - (%g,%g), r=%g%s' %(self.index, self.typeName, c.get('x'), c.get('y'), r, points)
-		return u'(%04X): %s - (%g,%g,%g), r=%g%s' %(self.index, self.typeName, self.get('x'), self.get('y'), self.get('z'), r, points)
+			p = c.get('pos')
+			return u"(%04X): %s - (%g,%g), r=%g%s" %(self.index, self.typeName, p.x, p.y, r, points)
+		p = self.get('pos')
+		return u"(%04X): %s - (%g,%g,%g), r=%g%s" %(self.index, self.typeName, p.x, p.y, p.z, r, points)
 
 class GeometricRadius2DNode(DataNode):
 	def __init__(self, data, isRef):
@@ -1248,9 +1244,11 @@ class GeometricCoincident2DNode(DataNode):
 		e1 = self.get('entity1')
 		e2 = self.get('entity2')
 		if (e1.typeName == 'Point2D'):
-			return u'(%04X): %s - (%g,%g)\t(%04X): %s' %(self.index, self.typeName, e1.get('x'), e1.get('y'), e2.index, e2.typeName)
+			p = e1.get('pos')
+			return u"(%04X): %s - (%g,%g)\t(%04X): %s" %(self.index, self.typeName, p.x, p.y, e2.index, e2.typeName)
 		if (e2.typeName == 'Point2D'):
-			return u'(%04X): %s - (%g,%g)\t(%04X): %s' %(self.index, self.typeName, e2.get('x'), e2.get('y'), e1.index, e1.typeName)
+			p = e2.get('pos')
+			return u"(%04X): %s - (%g,%g)\t(%04X): %s" %(self.index, self.typeName, p.x, p.y, e1.index, e1.typeName)
 		return u'(%04X): %s - e1=(%04X): %s, e2=(%04X): %s' %(self.index, self.typeName, e1.index, e1.typeName, e2.index, e2.typeName)
 
 class DimensionAngleNode(DataNode):
@@ -1277,11 +1275,14 @@ class DimensionDistance2DNode(DataNode):
 		e1 = self.get('entity1')
 		e2 = self.get('entity2')
 		if (e1.typeName == 'Point2D'):
+			p1 = e1.get('pos')
 			if (e2.typeName == 'Point2D'):
-				return u'(%04X): %s - d=\'%s\', (%g,%g), (%g,%g)' %(self.index, self.typeName, d.name, e1.get('x'), e1.get('y'), e2.get('x'), e2.get('y'))
-			return u'(%04X): %s - d=\'%s\', (%g,%g)\t(%04X): %s' %(self.index, self.typeName, d.name, e1.get('x'), e1.get('y'), e2.index, e2.typeName)
+				p2 = e2.get('pos')
+				return u'(%04X): %s - d=\'%s\', (%g,%g), (%g,%g)' %(self.index, self.typeName, d.name, p1.x, p1.y, p2.x, p2.y)
+			return u'(%04X): %s - d=\'%s\', (%g,%g)\t(%04X): %s' %(self.index, self.typeName, d.name, p1.x, p1.y, e2.index, e2.typeName)
 		if (e2.typeName == 'Point2D'):
-			return u'(%04X): %s - d=\'%s\', (%g,%g)\t(%04X): %s' %(self.index, self.typeName, d.name, e2.get('x'), e2.get('y'), e1.index, e1.typeName)
+			p2 = e2.get('pos')
+			return u'(%04X): %s - d=\'%s\', (%g,%g)\t(%04X): %s' %(self.index, self.typeName, d.name, p2.x, p2.y, e1.index, e1.typeName)
 		return u'(%04X): %s - d=\'%s\', e1=(%04X): %s, e2=(%04X): %s' %(self.index, self.typeName, d.name, e1.index, e1.typeName, e2.index, e2.typeName)
 
 class ObjectCollectionNode(DataNode):

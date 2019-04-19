@@ -197,9 +197,7 @@ class EeSceneReader(StyleReader):
 
 	def Read_A79EACD3(self, node): # Point 3D-Object
 		i = self.ReadHeader3dObject(node, 'Point3D')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'pos')
 		i = node.ReadFloat32(i, 'f32_0')
 		i = node.ReadSInt32(i, 's32_0')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -215,17 +213,13 @@ class EeSceneReader(StyleReader):
 
 	def Read_A79EACC7(self, node): # Line 3D-Object
 		i = self.ReadHeader3dObject(node, 'Line3D')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'pos')
 		i = node.ReadFloat64_3D(i, 'dir')
 		return i
 
 	def Read_4B57DC55(self, node): # Arc 3D-Object
 		i = self.ReadHeader3dObject(node, 'Arc3D')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'center')
 		i = node.ReadFloat64(i, 'f64_0')
 		i = node.ReadFloat64(i, 'r')
 		i = node.ReadAngle(i, 'startAngle')
@@ -234,9 +228,7 @@ class EeSceneReader(StyleReader):
 
 	def Read_A79EACCC(self, node): # Circle 3D-Object
 		i = self.ReadHeader3dObject(node, 'Circle3D')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'pos')
 		i = node.ReadFloat64_3D(i, 'normal')
 		i = node.ReadFloat64_3D(i, 'm')
 		i = node.ReadFloat64(i, 'r')

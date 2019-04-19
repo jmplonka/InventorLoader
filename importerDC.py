@@ -807,9 +807,9 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_03D6552D(self, node):
-		i = self.ReadChildHeader1(node)
+		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'entity')
+		i = node.ReadCrossRef(i, 'entity2')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
@@ -1023,7 +1023,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_0A3BA89C(self, node):
-		i = self.ReadChildHeader1(node)
+		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_3')
 		return i
@@ -1303,9 +1303,7 @@ class DCReader(EeDataReader):
 		elif (cnt == 0):
 			node.set('u32_4', 0)
 			node.content += ' u32_4=0000'
-		i = node.ReadFloat64(i, 'x') # start x
-		i = node.ReadFloat64(i, 'y') # start y
-		i = node.ReadFloat64(i, 'z') # start z
+		i = node.ReadFloat64_3D(i, 'pos') # start z
 		i = node.ReadFloat64_3D(i, 'dir') # direction
 		i = node.ReadFloat64_3D(i, 'point') # start point
 		return i
@@ -2140,21 +2138,15 @@ class DCReader(EeDataReader):
 				i = node.ReadUInt32(i, 'u32_4')
 				if (node.get('u16_1') == 0x2000):
 					node.typeName = 'Point3D'
-					i = node.ReadFloat64(i, 'x')
-					i = node.ReadFloat64(i, 'y')
-					i = node.ReadFloat64(i, 'z')
+					i = node.ReadFloat64_3D(i, 'pos')
 					i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'endPointOf')
 					i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
 				else:
 					node.typeName = 'Plane'
 					i = node.ReadUInt32(i, 'u32_5')
-					i = node.ReadFloat64(i, 'b_x')
-					i = node.ReadFloat64(i, 'b_y')
-					i = node.ReadFloat64(i, 'b_z')
+					i = node.ReadFloat64_3D(i, 'center')
 					i = node.ReadFloat64_3D(i, 'a1')
-					i = node.ReadFloat64(i, 'n_x')
-					i = node.ReadFloat64(i, 'n_y')
-					i = node.ReadFloat64(i, 'n_z')
+					i = node.ReadFloat64_3D(i, 'normal')
 			elif (u16_2 == 0xFFFF):
 				pass
 #				if (node.get('label') is not None):
@@ -2212,8 +2204,7 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'line1')
 		i = node.ReadCrossRef(i, 'line2')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64_2D(i, 'pos')
 		i = self.skipBlockSize(i)
 		if (getFileVersion() > 2010):
 			i = node.ReadFloat64_3D(i, 'p0')
@@ -2993,7 +2984,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_46407F70(self, node):
-		i = self.ReadChildHeader1(node, 'ClearanceHole')
+		i = self.ReadChildHeader1(node, 'ClearanceHole', 'fx', 'next')
 		i = self.skipBlockSize(i)
 		i = node.ReadLen32Text16(i, 'standard')
 		i = node.ReadLen32Text16(i, 'fastener')
@@ -3036,7 +3027,7 @@ class DCReader(EeDataReader):
 	def Read_475E7861(self, node): # FeatureDimensionStateAttr
 		i = self.ReadChildHeader1(node, 'FeatureDimensionStateAttr', ref1Name='fx', ref2Name='label')
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'ref_4')
+		i = node.ReadChildRef(i, 'next')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16(i, 'u16_1')
@@ -3293,7 +3284,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_4F8A6797(self, node):
-		i = self.ReadChildHeader1(node)
+		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -3501,8 +3492,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadCrossRef(i, 'line1')
 		i = node.ReadCrossRef(i, 'line2')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64_2D(i, 'pos')
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
@@ -3809,7 +3799,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_63E209F9(self, node):
-		i = self.ReadChildHeader1(node)
+		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
 		i = self.skipBlockSize(i)
 		return i
 
@@ -4956,9 +4946,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		if (len(node.data) - i == 6*8 + 1 + 4):
 			i += 4
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'pos')
 		i = node.ReadFloat64_3D(i, 'dir')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
@@ -5739,9 +5727,7 @@ class DCReader(EeDataReader):
 		i = self.ReadSketch3DEntityHeader(node, 'Circle3D')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'pos')
 		i = node.ReadFloat64_3D(i, 'normal')
 		i = node.ReadFloat64_3D(i, 'm')
 		i = node.ReadFloat64(i, 'r')
@@ -5851,8 +5837,7 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_22')
 		i = node.ReadCrossRef(i, 'ref_23')
 		i = node.ReadCrossRef(i, 'ref_24')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64_2D(i, 'pos')
 		i = node.ReadList2(i, importerSegNode._TYP_FLOAT64_A_, 'coords', 3)
 
 		return i
@@ -5862,11 +5847,11 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_A4087E1F(self, node):
-		i = self.ReadChildHeader1(node, 'TappedHole', ref2Name = 'label')
+		i = self.ReadChildHeader1(node, 'TappedHole', 'fx', 'next')
 		i = self.skipBlockSize(i)
 		i = node.ReadLen32Text16(i)
 		i = node.ReadLen32Text16(i, 'txt0')
-		i = node.ReadLen32Text16(i, 'txt1')
+		i = node.ReadLen32Text16(i, 'standard')
 		i = node.ReadLen32Text16(i, 'txt2')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadFloat64(i, 'x')
@@ -6041,7 +6026,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'fx')
 		i = node.ReadParentRef(i)
-		i = node.ReadChildRef(i, 'cld_1')
+		i = node.ReadChildRef(i, 'first') # first element of a linked list
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'sketch')
 		return i
@@ -6227,7 +6212,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_B269ACEF(self, node):
-		i = self.ReadChildHeader1(node, 'TaperTappedHole')
+		i = self.ReadChildHeader1(node, 'TaperTappedHole', 'fx', 'next')
 		i = node.ReadLen32Text16(i, 'size')
 		i = node.ReadLen32Text16(i, 'txt0')
 		i = node.ReadLen32Text16(i, 'txt1')
@@ -6372,7 +6357,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_B6482AF8(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'fx')
+		i = self.ReadChildHeader1(node, ref1Name = 'fx', ref2Name = 'next')
 		i = self.skipBlockSize(i)
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'lst0')
@@ -6568,8 +6553,7 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'point1')
 		i = node.ReadCrossRef(i, 'point2')
 		i = node.ReadCrossRef(i, 'point3')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64_2D(i, 'pos')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
@@ -6601,7 +6585,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_BFD09C43(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name='label')
+		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'entity2')
 		i = node.ReadFloat64A(i, 4, 'a1')
@@ -6707,10 +6691,10 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_C89EF3C0(self, node):
-		i = self.ReadChildHeader1(node)
+		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadFloat64_2D(i, 'a1')
+		i = node.ReadFloat64_2D(i, 'pos')
 		return i
 
 	def Read_CA02411F(self, node):
@@ -6932,8 +6916,7 @@ class DCReader(EeDataReader):
 	def Read_CE52DF35(self, node): # SketchPoint {8006A022-ECC4-11D4-8DE9-0010B541CAA8}:
 		i = self.ReadSketch2DEntityHeader(node, 'Point2D')
 		i = self.skipBlockSize(i)
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64_2D(i, 'pos')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'endPointOf')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
 		if (getFileVersion() > 2012):
@@ -6961,8 +6944,7 @@ class DCReader(EeDataReader):
 		else:
 			addEmptyLists(node, [0])
 		# RootPoint
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64_2D(i, 'pos')
 		# Direction
 		i = node.ReadFloat64_2D(i, 'dir')
 		return i
@@ -6983,9 +6965,7 @@ class DCReader(EeDataReader):
 
 	def Read_CE52DF3E(self, node): # SketchPoint3D {2307500B-D075-4F5D-815D-7A1B8E90B20C}
 		i = self.ReadSketch3DEntityHeader(node, 'Point3D')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'pos')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'endPointOf')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
 		endPointOf = node.get('endPointOf')
@@ -7011,9 +6991,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'pos')
 		i = node.ReadFloat64_3D(i, 'dir')
 		i = node.ReadFloat64_3D(i, 'point') # should be same values as entity!
 		i = node.ReadUInt8(i, 'u8_0')
@@ -7072,13 +7050,9 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		if (node.get('u32_1') > 1):
 			i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadFloat64(i, 'b_x')
-		i = node.ReadFloat64(i, 'b_y')
-		i = node.ReadFloat64(i, 'b_z')
+		i = node.ReadFloat64_3D(i, 'center')
 		i = node.ReadFloat64_3D(i, 'a1')
-		i = node.ReadFloat64(i, 'n_x')
-		i = node.ReadFloat64(i, 'n_y')
-		i = node.ReadFloat64(i, 'n_z')
+		i = node.ReadFloat64_3D(i, 'normal')
 		return i
 
 	def Read_CE59B7F5(self, node):
@@ -7178,8 +7152,7 @@ class DCReader(EeDataReader):
 		i = self.ReadChildHeader1(node)
 		i = self.skipBlockSize(i, 8)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64_2D(i, 'pos')
 		i = node.ReadFloat64_2D(i, 'dir')
 		return i
 
@@ -7414,8 +7387,7 @@ class DCReader(EeDataReader):
 		i = self.ReadCntHdr2SRef(node, 'Picture', 'sketch') # The image is def
 		i = node.ReadFloat64(i, 'width')
 		i = node.ReadFloat64(i, 'height')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
+		i = node.ReadFloat64_2D(i, 'pos')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.ReadTransformation3D(node, i)
 		i = node.ReadUInt16A(i, 3, 'a1')
@@ -7714,9 +7686,7 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64_3D(i, 'm0')
 		i = node.ReadFloat64_3D(i, 'm1')
 		i = node.ReadFloat64_3D(i, 'm2')
-		i = node.ReadFloat64(i, 'x')
-		i = node.ReadFloat64(i, 'y')
-		i = node.ReadFloat64(i, 'z')
+		i = node.ReadFloat64_3D(i, 'center')
 		i = node.ReadFloat64(i, 'angleStart')
 		i = node.ReadFloat64(i, 'angleSweep')
 		return i
@@ -7940,7 +7910,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_EEE03AF5(self, node):
-		i = self.ReadChildHeader1(node)
+		i = self.ReadChildHeader1(node, ref1Name = 'entity0', ref2Name = 'label') # Sketch2D-Pre-Style
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt16(i, 'u16_0')

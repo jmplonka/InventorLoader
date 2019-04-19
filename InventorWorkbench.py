@@ -141,14 +141,14 @@ def createPrimitive(name):
 		view = FreeCADGui.ActiveDocument.ActiveView
 		body = doc.addObject('PartDesign::Body', 'Body')
 		view.setActiveObject('pdbody', body)
-		box = doc.addObject('PartDesign::Additive' + name, name)
-		doc.Body.addObject(box)
+		primitive = doc.addObject('PartDesign::Additive' + name, name)
+		doc.Body.addObject(primitive)
+		primitive.ViewObject.ShapeColor   = body.ViewObject.ShapeColor
+		primitive.ViewObject.LineColor    = body.ViewObject.LineColor
+		primitive.ViewObject.PointColor   = body.ViewObject.PointColor
+		primitive.ViewObject.Transparency = body.ViewObject.Transparency
+		primitive.ViewObject.DisplayMode  = body.ViewObject.DisplayMode
 		doc.recompute()
-		box.ViewObject.ShapeColor   = body.ViewObject.ShapeColor
-		box.ViewObject.LineColor    = body.ViewObject.LineColor
-		box.ViewObject.PointColor   = body.ViewObject.PointColor
-		box.ViewObject.Transparency = body.ViewObject.Transparency
-		box.ViewObject.DisplayMode  = body.ViewObject.DisplayMode
 		view.setEdit(box.Name)
 
 class _CmdNoCommand(object):
@@ -253,7 +253,7 @@ class _CmdFxShell(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxShell, self).__init__(menuText="&Shell", toolTip="Create a shell", pixmap=getIconPath("FxShell.png"))
 	def Activated(self):
-		runPartDesignCommand("Thickness")
+		runPartCommand("Thickness")
 class _CmdFxDraft(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxDraft, self).__init__(menuText="&Draft", toolTip="Create a draft", pixmap=getIconPath("FxDraft.png"))

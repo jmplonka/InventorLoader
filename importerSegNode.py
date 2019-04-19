@@ -1469,7 +1469,6 @@ def getExpression(parameter):
 	return alias
 
 def setParameter(geometry, attribute, parameter, formula = None, factor=1.0):
-
 	aliases = []
 	if (type(parameter) in [list, tuple]):
 		value   = 0
