@@ -5804,6 +5804,8 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'edges') #
 		i = node.ReadUInt32(i, 'faceIndex')
+		if (getFileVersion() > 2019):
+			i += 4 # skip 00 00 00 00
 		return i
 
 	def Read_A37B053C(self, node):
@@ -6914,14 +6916,15 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_CE52DF35(self, node): # SketchPoint {8006A022-ECC4-11D4-8DE9-0010B541CAA8}:
+		vers = getFileVersion()
 		i = self.ReadSketch2DEntityHeader(node, 'Point2D')
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64_2D(i, 'pos')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'endPointOf')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
-		if (getFileVersion() > 2012):
+		if (vers > 2012):
 			i = node.ReadUInt32(i, 'u32_0')
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
 		else:
 			node.content += ' u32_0=0000 lst2={}'
 			node.set('u32_0', 0)
@@ -6932,15 +6935,22 @@ class DCReader(EeDataReader):
 		entities.extend(endPointOf)
 		entities.extend(centerOf)
 		node.set('entities', entities)
+		if (vers > 2019):
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst3')
 		return i
 
 	def Read_CE52DF3A(self, node): # SketchLine {8006A016-ECC4-11D4-8DE9-0010B541CAA8}
+		vers = getFileVersion()
 		i = self.ReadSketch2DEntityHeader(node, 'Line2D')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
-		if (getFileVersion() > 2012):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		if (vers > 2012):
+			if (vers > 2019):
+				i += 8 # skip 01 00 00 00 00 00 00 00
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
+			if (vers > 2019):
+				i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
 		else:
 			addEmptyLists(node, [0])
 		# RootPoint
@@ -6950,12 +6960,17 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_CE52DF3B(self, node): # SketchCircle {8006A04C-ECC4-11D4-8DE9-0010B541CAA8}
+		vers = getFileVersion()
 		i = self.ReadSketch2DEntityHeader(node, 'Circle2D')
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
-		if (getFileVersion() > 2012):
+		if (vers > 2012):
+			if (vers > 2019):
+				i += 8 # skip 01 00 00 00 00 00 00 00
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
+			if (vers > 2019):
+				i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
 		else:
 			addEmptyLists(node, [1])
 		i = node.ReadCrossRef(i, 'center')

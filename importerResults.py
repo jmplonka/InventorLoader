@@ -137,7 +137,7 @@ class ResultReader(SegmentReader):
 		i = node.Read_Header0()
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'schema')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_0')
