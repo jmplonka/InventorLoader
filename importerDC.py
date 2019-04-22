@@ -162,6 +162,20 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'sketch')
 		return i
 
+	def ReadSketch2DEdge(self, node, typeName = None):
+		vers = getFileVersion()
+		i = self.ReadSketch2DEntityHeader(node, typeName)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
+		if (vers > 2012):
+			if (vers > 2019): i += 8 # skip 01 00 00 00 00 00 00 00
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
+			if (vers > 2019):
+				i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
+		else:
+			i = self.skipBlockSize(i)
+		return i
+
 	def ReadSketch3DEntityHeader(self, node, typeName = None):
 		i = self.ReadHeadersss2S16s(node, typeName)
 		i = node.ReadUInt32(i, 'u32_0')
@@ -1322,13 +1336,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_160915E2(self, node): # SketchArc {8006A046-ECC4-11D4-8DE9-0010B541CAA8}
-		i = self.ReadSketch2DEntityHeader(node, 'Arc2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
-		if (getFileVersion() > 2012):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		else:
-			i = self.skipBlockSize(i)
+		i = self.ReadSketch2DEdge(node, 'Arc2D')
 		i = node.ReadCrossRef(i, 'center')
 		i = node.ReadFloat64(i, 'r')
 		i = node.ReadUInt8(i, 'u8_0')
@@ -2312,16 +2320,11 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_317B7346(self, node): # SketchSpline {8006A048-ECC4-11D4-8DE9-0010B541CAA8}:
-		i = self.ReadSketch2DEntityHeader(node, 'Spline2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
+		i = self.ReadSketch2DEdge(node, 'Spline2D')
 		if (getFileVersion() > 2012):
-			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 			i = node.ReadUInt32(i, 'u32_0')
 			i = node.ReadUInt32(i, 's')
 		else:
-			addEmptyLists(node, [0])
-			i = self.skipBlockSize(i)
 			i = node.ReadUInt32(i, 'u32_0')
 			i = node.ReadUInt8(i, 's')
 		i = node.ReadUInt32(i, 'u32_1')
@@ -2706,14 +2709,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_3E55D947(self, node): # SketchOffsetSpline {063D7617-E630-4D35-B809-64D6695F57C0}:
-		i = self.ReadSketch2DEntityHeader(node, 'OffsetSpline2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
-		if (getFileVersion() > 2012):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		else:
-			i = self.skipBlockSize(i)
-			addEmptyLists(node, [0])
+		i = self.ReadSketch2DEdge(node, 'OffsetSpline2D')
 		i = node.ReadCrossRef(i, 'entity')
 		i = node.ReadFloat64(i, 'x')
 		return i
@@ -2902,14 +2898,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_4507D460(self, node): # SketchEllipse {8006A04A-ECC4-11D4-8DE9-0010B541CAA8}
-		i = self.ReadSketch2DEntityHeader(node, 'Ellipse2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
-		i = self.skipBlockSize(i)
-		if (getFileVersion() > 2012):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-		else:
-			addEmptyLists(node, [1])
+		i = self.ReadSketch2DEdge(node, 'Ellipse2D')
 		i = node.ReadCrossRef(i, 'center')
 		i = node.ReadFloat64_2D(i, 'dA')
 		i = node.ReadFloat64(i, 'a')
@@ -5903,14 +5892,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_A644E76A(self, node): # SketchSplineHandle {1236D237-9BAC-4399-8CFB-66CB6B7FD5CA}
-		i = self.ReadSketch2DEntityHeader(node, 'SplineHandle2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
-		if (getFileVersion() > 2012):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		else:
-			i = self.skipBlockSize(i)
-			addEmptyLists(node, [0])
+		i = self.ReadSketch2DEdge(node, 'SplineHandle2D')
 		i = node.ReadFloat64A(i, 4, 'a1')
 		i = self.skipBlockSize(i)
 		return i
@@ -6417,6 +6399,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_B71CBEC9(self, node): # HelicalConstraint3D {33E293A8-9DD6-4B9A-8274-E436A3BB3876}
+		vers = getFileVersion()
 		i = self.ReadHeaderContent(node, 'Geometric_Helical3D')
 		i = self.skipBlockSize(i)
 		i = node.ReadSInt32(i, 'u32_0')
@@ -6434,15 +6417,16 @@ class DCReader(EeDataReader):
 			addEmptyLists(node, [1, 2])
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt32(i, 'u32_0')
-		if (getFileVersion() < 2019):
+		if (vers < 2019):
 			i = node.ReadCrossRef(i, 'parameter0')
 			i = node.ReadCrossRef(i, 'parameter1')
 			i = node.ReadCrossRef(i, 'parameter2')
 			i = node.ReadCrossRef(i, 'parameter3')
 			i = node.ReadCrossRef(i, 'parameter4')
 		i = node.ReadUInt16A(i, 7, 'a0')
-		if (getFileVersion() > 2018):
-			i += 4
+		if (vers > 2018):
+			i += 4 # skip 00 00 00 00
+			if (vers > 2019): i += 3 # skip 00 00 00
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst3')
 		i = node.ReadChildRef(i, 'parameter5')
 		i = node.ReadCrossRef(i, 'ref_1')
@@ -6940,19 +6924,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_CE52DF3A(self, node): # SketchLine {8006A016-ECC4-11D4-8DE9-0010B541CAA8}
-		vers = getFileVersion()
-		i = self.ReadSketch2DEntityHeader(node, 'Line2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
-		i = self.skipBlockSize(i)
-		if (vers > 2012):
-			if (vers > 2019):
-				i += 8 # skip 01 00 00 00 00 00 00 00
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-			if (vers > 2019):
-				i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
-		else:
-			addEmptyLists(node, [0])
+		i = self.ReadSketch2DEdge(node, 'Line2D')
 		# RootPoint
 		i = node.ReadFloat64_2D(i, 'pos')
 		# Direction
@@ -6960,19 +6932,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_CE52DF3B(self, node): # SketchCircle {8006A04C-ECC4-11D4-8DE9-0010B541CAA8}
-		vers = getFileVersion()
-		i = self.ReadSketch2DEntityHeader(node, 'Circle2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
-		i = self.skipBlockSize(i)
-		if (vers > 2012):
-			if (vers > 2019):
-				i += 8 # skip 01 00 00 00 00 00 00 00
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-			if (vers > 2019):
-				i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
-		else:
-			addEmptyLists(node, [1])
+		i = self.ReadSketch2DEdge(node, 'Circle2D')
 		i = node.ReadCrossRef(i, 'center')
 		i = node.ReadFloat64(i, 'r')
 		i = node.ReadUInt8(i, 'u8_0')
@@ -8159,14 +8119,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_F9372FD4(self, node): # SketchControlPointSpline {D5F8CF99-AF1F-4089-A638-F6889762C1D6}
-		i = self.ReadSketch2DEntityHeader(node, 'BSplineCurve2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
-		if (getFileVersion() > 2012):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		else:
-			addEmptyLists(node, [0])
-			i = self.skipBlockSize(i)
+		i = self.ReadSketch2DEdge(node, 'BSplineCurve2D')
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadUInt16A(i, 5, 'a0')
 		i = node.ReadCrossRef(i, 'ref_2')

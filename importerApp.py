@@ -20,15 +20,18 @@ class AppReader(SegmentReader):
 		self.defStyle = None
 
 	def readHeaderStyle(self, node, typeName = None, ref1Name = 'collection'):
+		vers = getFileVersion()
 		i = node.Read_Header0(typeName)
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 3, 'a0')
+		i = node.ReadUInt16(i, 'u16_0')
+		if (vers > 2019): i += 2 # skip 00 00
+		i = node.ReadUInt16A(i, 2, 'a0')
 		i = node.ReadUInt32(i, 'default')
 		i = node.ReadUInt32(i, 'u32')
 		i = node.ReadCrossRef(i, ref1Name)
 		i = node.ReadLen32Text16(i)
 		i = node.ReadLen32Text16(i, 'comment')
-		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadUInt16(i, 'u16_1')
 		i = node.ReadLen32Text16(i, 'longName')
 		i = self.skipBlockSize(i)
 		return i
@@ -237,27 +240,29 @@ class AppReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'ref_0')
 		if (vers > 2011):
 			i = node.ReadLen32Text16(i, 'txt_4')
-#		a0, j = getUInt8A(node.data, i, len(node.data) - i)
-#		if (len(a0) > 0):
-#			logError(u"%s\t%s\t%s", getInventorFile()[0:getInventorFile().rindex('/')], node.typeName, ' '.join(['%0{0}X'.format(2) %(h) for h in a0]))
-
+		a0, j = getUInt8A(node.data, i, len(node.data) - i)
+		if (len(a0) > 0):
+			logError(u"%s\t%s\t%s", getInventorFile()[0:getInventorFile().rindex('/')], node.typeName, ' '.join(['%0{0}X'.format(2) %(h) for h in a0]))
 		return i
 
 	def Read_6759D86F(self, node): # RenderingStyle
+		vers = getFileVersion()
 		i = node.Read_Header0('RenderingStyle')
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 3, 'a0')
+		i = node.ReadUInt16(i, 'u16_0')
+		if (vers > 2019):
+			i += 2 # skip 00 00
+		i = node.ReadUInt16A(i, 2, 'a0')
 		i = node.ReadUInt32(i, 'default')
 		i = node.ReadUInt32(i, 'u32')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'ref1Name')
 		i = node.ReadLen32Text16(i)
-		vers = getFileVersion()
 		if (vers < 2013):
 			i = node.ReadLen32Text16(i, 'comment')
 			i = node.ReadUInt16(i, 'u16_0')
 		else:
 			node.content += u" comment='' u16_0=0000"
-			node.set('comment', 0)
+			node.set('comment', '')
 			node.set('u16_0', 0)
 		i = node.ReadLen32Text16(i, 'longName')
 		i = self.skipBlockSize(i)
@@ -332,11 +337,14 @@ class AppReader(SegmentReader):
 			i = node.ReadColorRGBA(i, 'c_0')
 			i = node.ReadFloat32(i, 'f_0')
 			i = node.ReadUInt16(i, 'u16_0')
+			if (vers > 2019): i += 3 # skip 00 00 00
 			i = node.ReadFloat64(i, 'f_1')
 			i = node.ReadUInt32(i, 'u32_1')
 			i = node.ReadFloat64(i, 'f_2')
 			i = node.ReadUInt32(i, 'u32_2')
-			i = node.ReadFloat64_3D(i, 'a3')
+			i = node.ReadFloat64(i, 'f_3')
+			if (vers > 2019): i += 1 # skip 00
+			i = node.ReadFloat64_2D(i, 'a3')
 			i = node.ReadUInt32A(i, 2, 'a4')
 			if (vers > 2011):
 				i = node.ReadUInt32(i, 'u32_4')

@@ -408,6 +408,7 @@ class GraphicsReader(EeSceneReader):
 		return i
 
 	def Read_9A676A50(self, node): # Body
+		vers = getFileVersion()
 		i = node.Read_Header0('Body')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadChildRef(i, 'attrs')
@@ -418,7 +419,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt32(i, 'index')
 		i = node.ReadChildRef(i, 'obj')
-		i = node.ReadUInt32A(i , 3, 'a0')
+		if (vers < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
+		i = node.ReadUInt32(i , 'u32_1')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadChildRef(i, 'shell')
 		i = node.ReadChildRef(i, 'wire')

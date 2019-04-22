@@ -1214,17 +1214,13 @@ class CircleNode(DataNode):
 		r = self.get('r')
 		points = ''
 		ptList = self.get('points')
-		if (ptList):
-			for i in ptList:
-				if (i):
-					p = i.get('pos')
-					if (self.typeName[-2:] == '2D'):
-						points += ', (%g,%g)' %(p.x, p.y)
-					else:
-						points += u", (%g,%g,%g)" %(p.x, p.y, p.z)
-		else:
-			logError("ERROR> (%04X): %s has no 'points'", self.index, self.typeName)
-			return u"(%04X): %s" %(self.index, self.typeName)
+		for i in ptList:
+			if (i):
+				p = i.get('pos')
+				if (self.typeName[-2:] == '2D'):
+					points += ', (%g,%g)' %(p.x, p.y)
+				else:
+					points += u", (%g,%g,%g)" %(p.x, p.y, p.z)
 		if (self.typeName[-2:] == '2D'):
 			c = self.get('center')
 			if (c is None):

@@ -358,7 +358,8 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt32A(i, 3, 'a1')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadChildRef(i, 'body')
-		i = node.ReadUInt32A(i, 3, 'a2')
+		if (getFileVersion() < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
+		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32A(i, 5, 'a3')
 		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
