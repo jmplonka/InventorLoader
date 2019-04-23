@@ -220,8 +220,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'a4')
 		i = node.ReadUInt32A(i, 3, 'a5')
-		if (getFileVersion() > 2019):
-			i += 4 # skip 00 00 00 00
+		if (getFileVersion() > 2019): i += 4 # skip 00 00 00 00
 		return i
 
 	def Read_F4360D18(self, node): # Name table root node

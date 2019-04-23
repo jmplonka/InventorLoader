@@ -250,8 +250,7 @@ class AppReader(SegmentReader):
 		i = node.Read_Header0('RenderingStyle')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16(i, 'u16_0')
-		if (vers > 2019):
-			i += 2 # skip 00 00
+		if (vers > 2019): i += 2 # skip 00 00
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = node.ReadUInt32(i, 'default')
 		i = node.ReadUInt32(i, 'u32')

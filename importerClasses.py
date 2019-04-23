@@ -1213,8 +1213,7 @@ class CircleNode(DataNode):
 	def getRefText(self): # return unicode
 		r = self.get('r')
 		points = ''
-		ptList = self.get('points')
-		for i in ptList:
+		for i in self.get('points'):
 			if (i):
 				p = i.get('pos')
 				if (self.typeName[-2:] == '2D'):
@@ -1223,8 +1222,7 @@ class CircleNode(DataNode):
 					points += u", (%g,%g,%g)" %(p.x, p.y, p.z)
 		if (self.typeName[-2:] == '2D'):
 			c = self.get('center')
-			if (c is None):
-				return u"(%04X): %s" %(self.index, self.typeName)
+			return u"(%04X): %s" %(self.index, self.typeName)
 			p = c.get('pos')
 			return u"(%04X): %s - (%g,%g), r=%g%s" %(self.index, self.typeName, p.x, p.y, r, points)
 		p = self.get('pos')

@@ -45,12 +45,12 @@ class DCReader(EeDataReader):
 ########################################
 # usability functions
 
-	def ReadHeaderContent(self, node, typeName = None, name='label'):
+	def ReadHeaderContent(self, node, typeName = None, name = 'label'):
 		'''
 		Read the header for content objects like Sketch2D, Pads, ...
 		'''
 		i = node.Read_Header0(typeName)
-		if (name in ['label', 'creator']):
+		if (name in ['label', 'creator', 'styles']):
 			i = node.ReadChildRef(i, name)
 		else:
 			i = node.ReadCrossRef(i, name)
@@ -117,14 +117,14 @@ class DCReader(EeDataReader):
 		i = node.ReadChildRef(i, name)
 		return i
 
-	def ReadCntHdr3S(self, node, typeName = None):
-		i = self.ReadHeaderContent(node, typeName)
+	def ReadCntHdr3S(self, node, typeName = None, name = 'label'):
+		i = self.ReadHeaderContent(node, typeName, name)
 		i = self.skipBlockSize(i, 12)
 		if (getFileVersion() > 2018): i += 4
 		return i
 
-	def ReadHeadersss2S16s(self, node, typeName = None):
-		i = self.ReadCntHdr3S(node, typeName)
+	def ReadHeadersss2S16s(self, node, typeName = None, name = 'styles'):
+		i = self.ReadCntHdr3S(node, typeName, name)
 		i = node.ReadUInt32(i, 'flags2')
 		i = self.skipBlockSize(i)
 		return i
@@ -157,27 +157,13 @@ class DCReader(EeDataReader):
 			i = self.skipBlockSize(i)
 		return i
 
-	def ReadSketch2DEntityHeader(self, node, typeName = None):
-		i = self.ReadHeadersss2S16s(node, typeName)
+	def ReadHeaderSketch2DEntity(self, node, typeName = None):
+		i = self.ReadHeadersss2S16s(node, typeName, name = 'styles')
 		i = node.ReadCrossRef(i, 'sketch')
 		return i
 
-	def ReadSketch2DEdge(self, node, typeName = None):
-		vers = getFileVersion()
-		i = self.ReadSketch2DEntityHeader(node, typeName)
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
-		if (vers > 2012):
-			if (vers > 2019): i += 8 # skip 01 00 00 00 00 00 00 00
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-			if (vers > 2019):
-				i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
-		else:
-			i = self.skipBlockSize(i)
-		return i
-
-	def ReadSketch3DEntityHeader(self, node, typeName = None):
-		i = self.ReadHeadersss2S16s(node, typeName)
+	def ReadHeaderSketch3DEntity(self, node, typeName = None):
+		i = self.ReadHeadersss2S16s(node, typeName, name = 'styles')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadCrossRef(i, 'sketch')
 		if (getFileVersion() > 2017):
@@ -820,11 +806,73 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'outlineItem')
 		return i
 
-	def Read_03D6552D(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
+	##########################
+	# Sketch 2D geometry styles
+	#
+
+	def Read_90874D15(self, node): # Styles
+		i = node.Read_Header0('Styles')
+		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
+		i = node.ReadParentRef(i)
+		i = node.ReadCrossRef(i, 'ref1Name')
+		i = node.ReadChildRef(i, 'entityReference')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'associativeID') # Number of the entity inside the sketch
+		i = node.ReadUInt32(i, 'typEntity')
+		return i
+
+	def Read_63E209F9(self, node, ref1Name = 'entity1', ref2Name = 'styles'): # Sketch2D-Pre-Style
+		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'styles')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_0A3BA89C(self, node): # Sketch2D-Pre-Style
+		i = self.Read_63E209F9(node)
+		i = node.ReadCrossRef(i, 'entity2')
+		return i
+
+	def Read_03D6552D(self, node): # Sketch2D-Pre-Style
+		i = self.Read_63E209F9(node)
 		i = node.ReadCrossRef(i, 'entity2')
 		i = node.ReadUInt8(i, 'u8_0')
+		return i
+
+	def Read_4F8A6797(self, node): # Sketch2D-Pre-Style
+		i = self.Read_63E209F9(node)
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt16(i, 'u16_0')
+		return i
+
+	def Read_BFD09C43(self, node): # Sketch2D-Pre-Style
+		i = self.Read_63E209F9(node)
+		i = node.ReadCrossRef(i, 'entity2')
+		i = node.ReadFloat64A(i, 4, 'a1')
+		i = node.ReadUInt32(i, 'u32_0')
+		return i
+
+	def Read_C89EF3C0(self, node): # Sketch2D-Pre-Style
+		i = self.Read_63E209F9(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadFloat64_2D(i, 'pos')
+		return i
+
+	def Read_EEE03AF5(self, node): # Sketch2D-Pre-Style
+		i = self.Read_63E209F9(node)
+		i = node.ReadChildRef(i, 'entity2')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'entity3')
+		i = node.ReadCrossRef(i, 'entity4')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadFloat64_2D(i, 'a0')
+		i = self.skipBlockSize(i)
+		if (getFileVersion() > 2010):
+			i = node.ReadFloat64_3D(i, 'p1')
+			i = node.ReadFloat64_3D(i, 'p2')
+			i = node.ReadFloat64_2D(i, 'a1')
 		return i
 
 	def Read_040D7FB2(self, node):
@@ -1036,12 +1084,6 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderEnum(node)
 		return i
 
-	def Read_0A3BA89C(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
-		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_3')
-		return i
-
 	def Read_0A52ED98(self, node):
 		i = node.Read_Header0()
 		i = node.ReadCrossRef(i, 'ref_1')
@@ -1076,7 +1118,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_0B86AD43(self, node): # SketchFixedSpline3D {7A5B2F53-5756-4261-B6F1-4B5C3CDE1226}
-		i = self.ReadSketch3DEntityHeader(node, 'Spline3D_Fixed')
+		i = self.ReadHeaderSketch3DEntity(node, 'Spline3D_Fixed')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
@@ -1335,12 +1377,160 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		return i
 
+	##########################
+	# Sketch 2D Edges
+	#
+
+	def Read_CE52DF35(self, node): # SketchPoint {8006A022-ECC4-11D4-8DE9-0010B541CAA8}:
+		vers = getFileVersion()
+		i = self.ReadHeaderSketch2DEntity(node, 'Point2D')
+		i = self.skipBlockSize(i)
+		i = node.ReadFloat64_2D(i, 'pos')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'endPointOf')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
+		if (vers > 2012):
+			i = node.ReadUInt32(i, 'u32_0')
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
+		else:
+			node.content += ' u32_0=0000 lst2={}'
+			node.set('u32_0', 0)
+			node.set('lst2', [])
+		endPointOf = node.get('endPointOf')
+		centerOf   = node.get('centerOf')
+		entities   = []
+		entities.extend(endPointOf)
+		entities.extend(centerOf)
+		node.set('entities', entities)
+		if (vers > 2019):
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
+		return i
+
+	def Read_18A9717E(self, node):
+		i = self.ReadHeaderSketch2DEntity(node, 'BlockPoint2D')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
+		i = node.ReadCrossRef(i, 'point')
+		node.set('points', node.get('centerOf'))
+		return i
+
+	def Read_52534838(self, node): # PatternConstraint {C173A073-012F-11D5-8DEA-0010B541CAA8}
+		i = self.ReadHeaderSketch2DEntity(node, 'Geometric_PolygonCenter2D')
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'center')
+		i = node.ReadCrossRef(i, 'construction')
+		return i
+
+	def ReadHeader2DEdge(self, node, typeName = None):
+		vers = getFileVersion()
+		i = self.ReadHeaderSketch2DEntity(node, typeName)
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
+		if (vers > 2012):
+			if (vers > 2019): i += 8 # skip 01 00 00 00 00 00 00 00
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
+			if (vers > 2019):
+				i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
+		else:
+			i = self.skipBlockSize(i)
+		return i
+
+	def Read_CE52DF3A(self, node): # SketchLine {8006A016-ECC4-11D4-8DE9-0010B541CAA8}
+		i = self.ReadHeader2DEdge(node, 'Line2D')
+		# RootPoint
+		i = node.ReadFloat64_2D(i, 'pos')
+		# Direction
+		i = node.ReadFloat64_2D(i, 'dir')
+		return i
+
+	def Read_CE52DF3B(self, node): # SketchCircle {8006A04C-ECC4-11D4-8DE9-0010B541CAA8}
+		i = self.ReadHeader2DEdge(node, 'Circle2D')
+		i = node.ReadCrossRef(i, 'center')
+		i = node.ReadFloat64(i, 'r')
+		i = node.ReadUInt8(i, 'u8_0')
+		return i
+
 	def Read_160915E2(self, node): # SketchArc {8006A046-ECC4-11D4-8DE9-0010B541CAA8}
-		i = self.ReadSketch2DEdge(node, 'Arc2D')
+		i = self.ReadHeader2DEdge(node, 'Arc2D')
 		i = node.ReadCrossRef(i, 'center')
 		i = node.ReadFloat64(i, 'r')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
+		return i
+
+	def Read_4507D460(self, node): # SketchEllipse {8006A04A-ECC4-11D4-8DE9-0010B541CAA8}
+		i = self.ReadHeader2DEdge(node, 'Ellipse2D')
+		i = node.ReadCrossRef(i, 'center')
+		i = node.ReadFloat64_2D(i, 'dA')
+		i = node.ReadFloat64(i, 'a')
+		i = node.ReadFloat64(i, 'b')
+		i = node.ReadUInt8(i, 'u8_0')
+		return i
+
+	def Read_317B7346(self, node): # SketchSpline {8006A048-ECC4-11D4-8DE9-0010B541CAA8}:
+		i = self.ReadHeader2DEdge(node, 'Spline2D')
+		i = node.ReadUInt32(i, 'u32_0')
+		if (getFileVersion() > 2012):
+			i = node.ReadUInt32(i, 's')
+		else:
+			i = node.ReadUInt8(i, 's')
+		i = node.ReadUInt32(i, 'u32_1')
+		if (node.get('u32_0') == 0):
+			i = node.ReadUInt32(i, 'u32_2')
+			i = node.ReadFloat64(i, 'f64_0')
+			i = node.ReadUInt32A(i, 3, 'a0')
+			i = node.ReadFloat64A(i, node.get('a0')[0], 'a1')
+			i = node.ReadFloat64(i, 'f64_1')
+			i = node.ReadUInt32A(i, 4, 'a2')
+#			i = self.ReadFloat64A(node, i, node.get('a2')[0], 'a3', 2)
+#			i = node.ReadFloat64(i, 'f64_2')
+#			i = node.ReadUInt32A(i, 2, 'a4')
+#			i = self.ReadFloat64A(node, i, node.get('a4')[1], 'a5', 2)
+#			i = node.ReadFloat64(i, 'f64_3')
+#			i = node.ReadUInt32(i, 'u32_3')
+		return i
+
+	def Read_3E55D947(self, node): # SketchOffsetSpline {063D7617-E630-4D35-B809-64D6695F57C0}:
+		i = self.ReadHeader2DEdge(node, 'OffsetSpline2D')
+		i = node.ReadCrossRef(i, 'entity')
+		i = node.ReadFloat64(i, 'x')
+		return i
+
+	def Read_A644E76A(self, node): # SketchSplineHandle {1236D237-9BAC-4399-8CFB-66CB6B7FD5CA}
+		i = self.ReadHeader2DEdge(node, 'SplineHandle2D')
+		i = node.ReadFloat64A(i, 4, 'a1')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_F9372FD4(self, node): # SketchControlPointSpline {D5F8CF99-AF1F-4089-A638-F6889762C1D6}
+		i = self.ReadHeader2DEdge(node, 'BSplineCurve2D')
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadUInt16A(i, 5, 'a0')
+		i = node.ReadCrossRef(i, 'ref_2')
+		i = node.ReadUInt16A(i, 5, 'a1')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'ptIdcs')
+
+		i = self.readTypedList(node, i, 'a2',    3, 1, True)  # really 1?
+		i = self.readTypedList(node, i, 'a3',    3, 1, False)
+		i = self.readTypedList(node, i, 'a4',    3, 1, False) # really 1?
+		i = self.readTypedList(node, i, 'poles', 3, 2, True)  # poles
+		i = self.readTypedList(node, i, 'a5',    2, 2, False)
+		i = self.readTypedList(node, i, 'a6',    3, 1, False) # really 1?
+
+#		i = node.ReadUInt8(i, 'u8_0')
+#		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'handles')
+#		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'arcs')
+#		i = node.ReadUInt8(i, 'u8_1')
+#		i = node.ReadFloat64(i, 'f64_6')
+#		i = node.ReadUInt32(i, 'u32_6')
+#		i = node.ReadUInt8(i, 'u8_2')
+#
+#		# redundant information of a2..a6:
+#		i = self.readTypedList(node, i, 'a7',  3, 1, True)
+#		i = self.readTypedList(node, i, 'a8',  3, 1, False)
+#		i = self.readTypedList(node, i, 'a9',  3, 1, False)
+#		i = self.readTypedList(node, i, 'a10', 3, 2, True)
+#		i = self.readTypedList(node, i, 'a11', 2, 2, False)
+#		i = self.readTypedList(node, i, 'a12', 3, 2, False)
+
 		return i
 
 	def Read_16DE1A75(self, node): # DimensionAnnotation
@@ -1415,13 +1605,6 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
-	def Read_18A9717E(self, node):
-		i = self.ReadSketch2DEntityHeader(node, 'BlockPoint2D')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
-		i = node.ReadCrossRef(i, 'point')
-		node.set('points', node.get('centerOf'))
-		return i
-
 	def Read_18D844B8(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
@@ -1452,7 +1635,7 @@ class DCReader(EeDataReader):
 
 	def Read_1A1C8265(self, node):
 		i = self.ReadHeaderContent(node)
-		if (getFileVersion() > 2019): i += 4 # skipp FF FF FF FF
+		if (getFileVersion() > 2018): i += 4 # skipp FF FF FF FF
 		i = node.ReadUInt32A(i, 2, 'a0') # (0002, 0000)
 		return i
 
@@ -2319,30 +2502,6 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
-	def Read_317B7346(self, node): # SketchSpline {8006A048-ECC4-11D4-8DE9-0010B541CAA8}:
-		i = self.ReadSketch2DEdge(node, 'Spline2D')
-		if (getFileVersion() > 2012):
-			i = node.ReadUInt32(i, 'u32_0')
-			i = node.ReadUInt32(i, 's')
-		else:
-			i = node.ReadUInt32(i, 'u32_0')
-			i = node.ReadUInt8(i, 's')
-		i = node.ReadUInt32(i, 'u32_1')
-		if (node.get('u32_0') == 0):
-			i = node.ReadUInt32(i, 'u32_2')
-			i = node.ReadFloat64(i, 'f64_0')
-			i = node.ReadUInt32A(i, 3, 'a0')
-			i = node.ReadFloat64A(i, node.get('a0')[0], 'a1')
-			i = node.ReadFloat64(i, 'f64_1')
-			i = node.ReadUInt32A(i, 4, 'a2')
-#			i = self.ReadFloat64A(node, i, node.get('a2')[0], 'a3', 2)
-#			i = node.ReadFloat64(i, 'f64_2')
-#			i = node.ReadUInt32A(i, 2, 'a4')
-#			i = self.ReadFloat64A(node, i, node.get('a4')[1], 'a5', 2)
-#			i = node.ReadFloat64(i, 'f64_3')
-#			i = node.ReadUInt32(i, 'u32_3')
-		return i
-
 	def Read_31C98504(self, node):
 		i = node.Read_Header0()
 
@@ -2708,12 +2867,6 @@ class DCReader(EeDataReader):
 		i = node.ReadBoolean(i, 'value')
 		return i
 
-	def Read_3E55D947(self, node): # SketchOffsetSpline {063D7617-E630-4D35-B809-64D6695F57C0}:
-		i = self.ReadSketch2DEdge(node, 'OffsetSpline2D')
-		i = node.ReadCrossRef(i, 'entity')
-		i = node.ReadFloat64(i, 'x')
-		return i
-
 	def Read_3E710428(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'ref_1')
@@ -2895,15 +3048,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'circle1')
 		i = node.ReadCrossRef(i, 'circle2')
 
-		return i
-
-	def Read_4507D460(self, node): # SketchEllipse {8006A04A-ECC4-11D4-8DE9-0010B541CAA8}
-		i = self.ReadSketch2DEdge(node, 'Ellipse2D')
-		i = node.ReadCrossRef(i, 'center')
-		i = node.ReadFloat64_2D(i, 'dA')
-		i = node.ReadFloat64(i, 'a')
-		i = node.ReadFloat64(i, 'b')
-		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
 	def Read_452121B6(self, node): # Modeler Transaction Manager
@@ -3272,13 +3416,6 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
-	def Read_4F8A6797(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16(i, 'u16_0')
-		return i
-
 	def Read_4FB10CB8(self, node):
 		i = self.ReadHeaderEnum(node, 'EnumCoilType', ["PitchAndRevolution","RevolutionAndHeight","PitchAndHeight","Spiral"])
 		i = node.ReadUInt32(i,'u32_0')
@@ -3325,13 +3462,6 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = node.ReadUInt8(i, 'u8_0')
-		return i
-
-	def Read_52534838(self, node): # PatternConstraint {C173A073-012F-11D5-8DEA-0010B541CAA8}
-		i = self.ReadSketch2DEntityHeader(node, 'Geometric_PolygonCenter2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'center')
-		i = node.ReadCrossRef(i, 'construction')
 		return i
 
 	def Read_526B3F3D(self, node):
@@ -3785,11 +3915,6 @@ class DCReader(EeDataReader):
 
 	def Read_63D9BDC4(self, node):
 		i = self.ReadHeaderContent(node)
-		return i
-
-	def Read_63E209F9(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
-		i = self.skipBlockSize(i)
 		return i
 
 	def Read_6480700A(self, node):
@@ -4418,7 +4543,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_7C44ABDE(self, node): # Bezier3D
-		i = self.ReadSketch3DEntityHeader(node, 'Bezier3D')
+		i = self.ReadHeaderSketch3DEntity(node, 'Bezier3D')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a2')
@@ -4930,7 +5055,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_8EF06C89(self, node): # SketchLine3D {87056D9A-B0B2-4BD0-A6EC-51E9D893A502}
-		i = self.ReadSketch3DEntityHeader(node, 'Line3D')
+		i = self.ReadHeaderSketch3DEntity(node, 'Line3D')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
 		if (len(node.data) - i == 6*8 + 1 + 4):
@@ -5019,19 +5144,6 @@ class DCReader(EeDataReader):
 		i = node.ReadBoolean(i, 'posDir')    # Indicator for the orientation of edge (required for e.g. circles)
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'sketch')
-		return i
-
-	def Read_90874D15(self, node): # Styles
-		i = node.Read_Header0('Styles')
-		i = node.ReadUInt16A(i, 4, 'a0')
-		i = self.skipBlockSize(i)
-		i = node.ReadParentRef(i)
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadChildRef(i, 'entityReference')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'associativeID') # Number of the entity inside the sketch
-		i = node.ReadUInt32(i, 'typEntity')
 		return i
 
 	def Read_90874D16(self, node): # Document
@@ -5713,7 +5825,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_9E43716A(self, node): # Circle3D
-		i = self.ReadSketch3DEntityHeader(node, 'Circle3D')
+		i = self.ReadHeaderSketch3DEntity(node, 'Circle3D')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64_3D(i, 'pos')
@@ -5726,7 +5838,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_9E43716B(self, node): # Ellipse3D
-		i = self.ReadSketch3DEntityHeader(node, 'Ellipse3D')
+		i = self.ReadHeaderSketch3DEntity(node, 'Ellipse3D')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64_3D(i, 'center')
@@ -5793,8 +5905,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'edges') #
 		i = node.ReadUInt32(i, 'faceIndex')
-		if (getFileVersion() > 2019):
-			i += 4 # skip 00 00 00 00
+		if (getFileVersion() > 2019): i += 4 # skip 00 00 00 00
 		return i
 
 	def Read_A37B053C(self, node):
@@ -5888,12 +5999,6 @@ class DCReader(EeDataReader):
 	def Read_A6118E11(self, node):
 		i = self.ReadHeadersS32ss(node)
 		i = node.ReadCrossRef(i, 'plane')
-		i = self.skipBlockSize(i)
-		return i
-
-	def Read_A644E76A(self, node): # SketchSplineHandle {1236D237-9BAC-4399-8CFB-66CB6B7FD5CA}
-		i = self.ReadSketch2DEdge(node, 'SplineHandle2D')
-		i = node.ReadFloat64A(i, 4, 'a1')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -6570,14 +6675,6 @@ class DCReader(EeDataReader):
 		i = node.ReadChildRef(i, 'ref_2')
 		return i
 
-	def Read_BFD09C43(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
-		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'entity2')
-		i = node.ReadFloat64A(i, 4, 'a1')
-		i = node.ReadUInt32(i, 'u32_0')
-		return i
-
 	def Read_BFED36A9(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'u32_0')
@@ -6607,7 +6704,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_C1A45D98(self, node):
-		i = self.ReadSketch3DEntityHeader(node, 'SplineHandle3D')
+		i = self.ReadHeaderSketch3DEntity(node, 'SplineHandle3D')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64A(i, 6, 'a0')
@@ -6674,13 +6771,6 @@ class DCReader(EeDataReader):
 
 	def Read_C7A06AC2(self, node): # PartFeatureExtentDirectionEnum {D56C4513-7B52-4020-8FFB-E531EF8C69BF}
 		i = self.ReadHeaderEnum(node, 'PartFeatureExtentDirection', ['Positive', 'Negative', 'Symmetric', 'Angle'])
-		return i
-
-	def Read_C89EF3C0(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'entity1', ref2Name = 'label') # Sketch2D-Pre-Style
-		i = self.skipBlockSize(i, 8)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadFloat64_2D(i, 'pos')
 		return i
 
 	def Read_CA02411F(self, node):
@@ -6899,47 +6989,8 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64(i, 'f64_0')
 		return i
 
-	def Read_CE52DF35(self, node): # SketchPoint {8006A022-ECC4-11D4-8DE9-0010B541CAA8}:
-		vers = getFileVersion()
-		i = self.ReadSketch2DEntityHeader(node, 'Point2D')
-		i = self.skipBlockSize(i)
-		i = node.ReadFloat64_2D(i, 'pos')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'endPointOf')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
-		if (vers > 2012):
-			i = node.ReadUInt32(i, 'u32_0')
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
-		else:
-			node.content += ' u32_0=0000 lst2={}'
-			node.set('u32_0', 0)
-			node.set('lst2', [])
-		endPointOf = node.get('endPointOf')
-		centerOf   = node.get('centerOf')
-		entities   = []
-		entities.extend(endPointOf)
-		entities.extend(centerOf)
-		node.set('entities', entities)
-		if (vers > 2019):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst3')
-		return i
-
-	def Read_CE52DF3A(self, node): # SketchLine {8006A016-ECC4-11D4-8DE9-0010B541CAA8}
-		i = self.ReadSketch2DEdge(node, 'Line2D')
-		# RootPoint
-		i = node.ReadFloat64_2D(i, 'pos')
-		# Direction
-		i = node.ReadFloat64_2D(i, 'dir')
-		return i
-
-	def Read_CE52DF3B(self, node): # SketchCircle {8006A04C-ECC4-11D4-8DE9-0010B541CAA8}
-		i = self.ReadSketch2DEdge(node, 'Circle2D')
-		i = node.ReadCrossRef(i, 'center')
-		i = node.ReadFloat64(i, 'r')
-		i = node.ReadUInt8(i, 'u8_0')
-		return i
-
 	def Read_CE52DF3E(self, node): # SketchPoint3D {2307500B-D075-4F5D-815D-7A1B8E90B20C}
-		i = self.ReadSketch3DEntityHeader(node, 'Point3D')
+		i = self.ReadHeaderSketch3DEntity(node, 'Point3D')
 		i = node.ReadFloat64_3D(i, 'pos')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'endPointOf')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'centerOf')
@@ -7121,6 +7172,35 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i, 8)
 		if (getFileVersion() > 2018): i += 4
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'items')
+		return i
+
+	def Read_4C478499(self, node):
+		i = self.ReadHeaderContent(node, 'ThreadProxy')
+		i = self.skipBlockSize(i, 8)
+		if (getFileVersion() > 2018): i += 4 # skip FF FF FF FF
+		i = node.ReadFloat64_3D(i, 'a1')
+		i = node.ReadFloat64_3D(i, 'a2')
+		i = node.ReadFloat64_3D(i, 'a3')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadCrossRef(i, 'definition')
+		return i
+
+	def Read_8C1A567D(self, node):
+		i = self.ReadHeaderContent(node, 'ThreadDefinition')
+		i = self.skipBlockSize(i, 8)
+		if (getFileVersion() > 2018): i += 4 # skip FF FF FF FF
+		i = node.ReadCrossRef(i, 'proxy')
+		i = node.ReadCrossRef(i, 'faces')
+		i = node.ReadCrossRef(i, 'edges')
+		i = node.ReadCrossRef(i, 'fullDepth')
+		i = node.ReadCrossRef(i, 'reversed')
+		i = node.ReadCrossRef(i, 'length')
+		i = node.ReadCrossRef(i, 'offset')
+		i = node.ReadBoolean(i,  'fully')
 		return i
 
 	def Read_D5F19E40(self, node):
@@ -7884,23 +7964,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_4')
 		return i
 
-	def Read_EEE03AF5(self, node):
-		i = self.ReadChildHeader1(node, ref1Name = 'entity0', ref2Name = 'label') # Sketch2D-Pre-Style
-		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'ref_1')
-		i = node.ReadUInt16(i, 'u16_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'entity1')
-		i = node.ReadCrossRef(i, 'entity2')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadFloat64_2D(i, 'a0')
-		i = self.skipBlockSize(i)
-		if (getFileVersion() > 2010):
-			i = node.ReadFloat64_3D(i, 'p1')
-			i = node.ReadFloat64_3D(i, 'p2')
-			i = node.ReadFloat64_2D(i, 'a1')
-		return i
-
 	def Read_EEF10748(self, node):
 		i = self.ReadHeaderContent(node)
 		i = node.ReadSInt32(i, 's32_0')
@@ -8116,39 +8179,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'ref_2')
 		i = self.Read2RefList(node, i, 'lst0')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_U32_U32_, 'lst1')
-		return i
-
-	def Read_F9372FD4(self, node): # SketchControlPointSpline {D5F8CF99-AF1F-4089-A638-F6889762C1D6}
-		i = self.ReadSketch2DEdge(node, 'BSplineCurve2D')
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadUInt16A(i, 5, 'a0')
-		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadUInt16A(i, 5, 'a1')
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'ptIdcs')
-
-		i = self.readTypedList(node, i, 'a2',    3, 1, True)  # really 1?
-		i = self.readTypedList(node, i, 'a3',    3, 1, False)
-		i = self.readTypedList(node, i, 'a4',    3, 1, False) # really 1?
-		i = self.readTypedList(node, i, 'poles', 3, 2, True)  # poles
-		i = self.readTypedList(node, i, 'a5',    2, 2, False)
-		i = self.readTypedList(node, i, 'a6',    3, 1, False) # really 1?
-
-#		i = node.ReadUInt8(i, 'u8_0')
-#		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'handles')
-#		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'arcs')
-#		i = node.ReadUInt8(i, 'u8_1')
-#		i = node.ReadFloat64(i, 'f64_6')
-#		i = node.ReadUInt32(i, 'u32_6')
-#		i = node.ReadUInt8(i, 'u8_2')
-#
-#		# redundant information of a2..a6:
-#		i = self.readTypedList(node, i, 'a7',  3, 1, True)
-#		i = self.readTypedList(node, i, 'a8',  3, 1, False)
-#		i = self.readTypedList(node, i, 'a9',  3, 1, False)
-#		i = self.readTypedList(node, i, 'a10', 3, 2, True)
-#		i = self.readTypedList(node, i, 'a11', 2, 2, False)
-#		i = self.readTypedList(node, i, 'a12', 3, 2, False)
-
 		return i
 
 	def Read_F94FF0D9(self, node): # Spline3D_Curve

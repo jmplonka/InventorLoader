@@ -1983,21 +1983,21 @@ class FreeCADImporter(object):
 	def addSketch_DD80AC37(self, node, sketchObj): return
 
 	def handleAssociativeID(self, node):
-		label  = node.get('label')
-		if (label is None): return
-		while (label.typeName in ['03D6552D', '0A3BA89C', '4F8A6797', '63E209F9', 'BFD09C43', 'C89EF3C0', 'EEE03AF5', 'SurfaceTexture', 'Label', 'StyleLine']):
-			label = label.get('label')
-			if (label is None): return
-		if (label.typeName == 'Styles'):
-			id = label.get('associativeID')
+		styles  = node.get('label')
+		if (styles is None): return
+		while (styles.typeName in ['03D6552D', '0A3BA89C', '4F8A6797', '63E209F9', 'BFD09C43', 'C89EF3C0', 'EEE03AF5', 'SurfaceTexture', 'Label', 'StyleLine']):
+			styles = styles.get('styles')
+			if (styles is None): return
+		if (styles.typeName == 'Styles'):
+			id = styles.get('associativeID')
 			sketch = node.get('sketch')
 			entity = node.geometry
 			if (entity is not None):
 				if (hasattr(entity, 'Construction') and (entity.Construction == False)):
 					sketch.data.sketchEdges[id]  = entity
-			setAssociatedSketchEntity(sketch, node, id, label.get('typEntity'))
+			setAssociatedSketchEntity(sketch, node, id, styles.get('typEntity'))
 		else:
-			logError("Can't handle associative ID for '%s'", label.typeName)
+			logError("Can't handle associative ID for '%s'", styles.typeName)
 
 	def Create_Sketch_Node(self, sketchObj, node):
 		if ((node.handled == False) and (node.valid)):
@@ -2118,7 +2118,6 @@ class FreeCADImporter(object):
 				dims.append(child)
 			else:
 				self.Create_Sketch_Node(sketch3D, child.node)
-				self.handleAssociativeID(child.node)
 
 		for g in geos:
 			self.Create_Sketch_Node(sketch3D, g.node)
@@ -3739,16 +3738,18 @@ class FreeCADImporter(object):
 	def Create_FxThread(self, threadNode):
 		properties = threadNode.get('properties')
 #		faceSet    = getProperty(properties, 0) # FaceCollection
-#		getProperty(properties, 1) # ParameterBoolean=True
+#		fullDepth  = getProperty(properties, 1) # ParameterBoolean=True
 #		getProperty(properties, 2) # ParameterBoolean=True
-#		getProperty(properties, 3) # Parameter 'd16'=0mm
-#		getProperty(properties, 4) # Parameter 'd17'=0mm
+#		length     = getProperty(properties, 3) # Parameter 'd16'= 0mm
+#		offset     = getProperty(properties, 4) # Parameter 'd17'= 0mm
 #		edgeSet    = getProperty(properties, 5) # EdgeCollection
-#		getProperty(properties, 6) # ParameterBoolean=False
-#		getProperty(properties, 7) # BodyCollection 'Solid1'
-#		getProperty(properties, 8) # FeatureDimensions
+#		reversed   = getProperty(properties, 6) # ParameterBoolean=False
+#		getProperty(properties, 7)  # BodyCollection 'Solid1' <= 2019
+#		getProperty(properties, 8)  # FeatureDimensions
+#		getProperty(properties, 9)  # ObjectCollection >=2020
+#		getProperty(properties, 10) # ThreadProxy      >=2020
 
-#		edges = self.getEdgesFromSet(edgeSet)
+#		faces = self.getFacesFromSet(faceSet)
 
 		return unsupportedNode(threadNode) # https://www.freecadweb.org/wiki/Thread_for_Screw_Tutorial/de
 
