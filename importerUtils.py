@@ -151,6 +151,7 @@ UUID_NAMES = {
 ENCODING_FS      = 'utf8'
 
 _fileVersion     = None
+_fileBeta        = -1
 _can_import      = True
 _use_sheet_metal = True
 
@@ -166,7 +167,7 @@ STRATEGY_STEP   = 2
 __strategy__ = __prmPrefIL__.GetInt("strategy", STRATEGY_SAT)
 
 IS_CELL_REF = re.compile('^[a-z](\d+)?$', re.IGNORECASE)
-
+IS_BETA     = re.compile('^.* Beta(\d+) .*$', re.IGNORECASE)
 _author = ''
 _description = None
 _colorDefault = None
@@ -781,6 +782,10 @@ def getFileVersion():
 	global _fileVersion
 	return _fileVersion
 
+def getFileBeta():
+	global _fileBeta
+	return _fileBeta
+
 def getProperty(ole, path, key):
 	p = ole.getproperties([path], convert_time=True)
 	try:
@@ -789,7 +794,7 @@ def getProperty(ole, path, key):
 		return None
 
 def setFileVersion(ole):
-	global _fileVersion
+	global _fileVersion, _fileBeta
 
 	v = None
 	b = getProperty(ole, '\x05Qz4dgm1gRjudbpksAayal4qdGf', 0x16)
@@ -802,14 +807,21 @@ def setFileVersion(ole):
 	else:
 		b = 0
 		_fileVersion = 2008
-
+	_fileBeta = -1
 	v = getProperty(ole, '\x05PypkizqiUjudbposAayal4qdGf', 0x43)
 	if (v is not None):
-		v = v[0:v.index(' ')]
-		_fileVersion = int(float(v))
+		_fileVersion = int(float(v[0:v.index(' ')])) # float because of service pack numbers!
+		beta = IS_BETA.search(v)
+		if (beta):
+			_fileBeta = int(beta.group(1))
+			logWarning("   File was created with a BETA version (%s) - patching file version!", v)
+			if (_fileBeta < 2) and (_fileVersion < 2018):
+				_fileVersion -= 1
 		if (_fileVersion == 134): # early version of 2010
 			_fileVersion = 2010
-	logInfo(u"    created with Autodesk Inventor %s (Build %d)" %(_fileVersion, b))
+		logInfo(u"    created with Autodesk Inventor %s", v)
+	else:
+		logInfo(u"    created with Autodesk Inventor %s (Build %d)", _fileVersion, b)
 
 def getInventorFile():
 	global _inventor_file
