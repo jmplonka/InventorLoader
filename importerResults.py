@@ -64,7 +64,7 @@ class ResultReader(SegmentReader):
 				node.content += ' lst5={}'
 				i += 1
 		else:
-			node.content += ' lst4=[] lst5={}'
+			node.content += ' lst4={} lst5={}'
 			i += 1
 		i = node.ReadList4(i, importerSegNode._TYP_RESULT_5_, 'lst6')
 		i = node.ReadList4(i, importerSegNode._TYP_RESULT_4_, 'lst7')
