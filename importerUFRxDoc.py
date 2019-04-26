@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Import_IPT.py:
+importerUFRxDoc.py:
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
