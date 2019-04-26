@@ -71,6 +71,7 @@ _TYP_F64_F64_U32_U8_U8_U16_ = 0x0047
 _TYP_NT_ENTRY_              = 0x0048
 _TYP_2D_UINT32_             = 0x0049
 _TYP_MTM_LST_               = 0x004A
+_TYP_NODE_LST2_X_REF_       = 0x004B
 
 _TYP_LIST_UINT16_A_         = 0x8001
 _TYP_LIST_SINT16_A_         = 0x8002
@@ -89,16 +90,17 @@ _TYP_MAP_TEXT8_REF_         = 0x7005
 _TYP_MAP_TEXT8_X_REF_       = 0x7006
 _TYP_MAP_TEXT16_REF_        = 0x7007
 _TYP_MAP_TEXT16_X_REF_      = 0x7008
-_TYP_MAP_X_REF_REF_         = 0x7009
-_TYP_MAP_X_REF_FLOAT64_     = 0x700A
-_TYP_MAP_X_REF_2D_UINT32_   = 0x700B
-_TYP_MAP_X_REF_X_REF_       = 0x700C
-_TYP_MAP_X_REF_LIST2_XREF_  = 0x700D
-_TYP_MAP_UUID_UINT32_       = 0x700E
-_TYP_MAP_UUID_X_REF         = 0x700F
-_TYP_MAP_U16_U16_           = 0x7010
-_TYP_MAP_KEY_APP_1_         = 0x7011
-_TYP_MAP_KEY_MAP_APP_1_     = 0x7012
+_TYP_MAP_TEXT16_UINT32_     = 0x7009
+_TYP_MAP_X_REF_REF_         = 0x700A
+_TYP_MAP_X_REF_FLOAT64_     = 0x700B
+_TYP_MAP_X_REF_2D_UINT32_   = 0x700C
+_TYP_MAP_X_REF_X_REF_       = 0x700D
+_TYP_MAP_X_REF_LIST2_XREF_  = 0x700E
+_TYP_MAP_UUID_UINT32_       = 0x700F
+_TYP_MAP_UUID_X_REF         = 0x7010
+_TYP_MAP_U16_U16_           = 0x7011
+_TYP_MAP_KEY_APP_1_         = 0x7012
+_TYP_MAP_KEY_MAP_APP_1_     = 0x7013
 
 _TYP_MAP_MDL_TXN_MGR_       = 0x6001
 
@@ -139,6 +141,7 @@ TYP_LIST_FUNC = {
 	_TYP_F64_F64_U32_U8_U8_U16_: 'getListApp5',
 	_TYP_NT_ENTRY_:              'getListNtEntries',
 	_TYP_MTM_LST_:               'getListMdlrTxnMgr',
+	_TYP_NODE_LST2_X_REF_:       'getListList2XRef',
 	_TYP_LIST_UINT16_A_:         'getListListUInt16sA',
 	_TYP_LIST_SINT16_A_:         'getListListSInt16sA',
 	_TYP_LIST_UINT32_A_:         'getListListUInt32sA',
@@ -189,6 +192,7 @@ TYP_MAP_FUNC = {
 	_TYP_MAP_TEXT8_X_REF_:      'getMapT8XRef',
 	_TYP_MAP_TEXT16_REF_:       'getMapT16Ref',
 	_TYP_MAP_TEXT16_X_REF_:     'getMapT16XRef',
+	_TYP_MAP_TEXT16_UINT32_:    'getMapT16U32',
 	_TYP_MAP_MDL_TXN_MGR_:      'getMapMdlTxnMgr',
 	_TYP_MAP_KEY_APP_1_:        'getMapKeyApp1',
 	_TYP_MAP_KEY_MAP_APP_1_:    'getMapKeyMapApp1',
@@ -676,15 +680,15 @@ class SecNode(AbstractData):
 		for j in range(cnt):
 			n1, i = getUInt32(self.data, i)
 			t1, i = getLen32Text16(self.data, i)
-			n2, i = getUInt32(self.data, i)
+			t2, i = getLen32Text16(self.data, i)
 			c = self.content
 			i = self.ReadList2(i, _TYP_FLOAT64_, 'tmp')
 			l1 = self.get('tmp')
 			self.delete('_tmp')
 			n3, i = getUInt8(self.data, i)
 			i += skip
-			lst.append((n1, t1, n2, l1, n3))
-		self.content = c + u" %s={%s}" %(name, u",".join([u"(%d,'%s',%06X,%s,%02X)" %(a[0], a[1], a[2], FloatArr2Str(a[3]), a[4]) for a in lst]))
+			lst.append((n1, t1, t2, l1, n3))
+		self.content = c + u" %s={%s}" %(name, u",".join([u"(%d,'%s','%s',%s,%02X)" %(a[0], a[1], a[2], FloatArr2Str(a[3]), a[4]) for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -741,6 +745,18 @@ class SecNode(AbstractData):
 			a = MTM_LST(self.data, i)
 			lst.append(a)
 			i += structLen
+		self.set(name, lst)
+		return i
+
+	def getListList2XRef(self, name, offset, cnt, arraysize):
+		lst = []
+		i = offset
+		for j in range(cnt):
+			i = self.ReadList2(i, _TYP_LIST_X_REF_, name, 1)
+			a = self.get(name)
+			i = self.ReadCrossRef(i, name)
+			b = self.get(name)
+			lst.append((a, b))
 		self.set(name, lst)
 		return i
 
@@ -1060,7 +1076,7 @@ class SecNode(AbstractData):
 			key, i = getUUID(self.data, i)
 			val, i = getUInt32(self.data, i)
 			lst[key] = val
-		self.content += u" %s=[%s]" % (name, u" %s={%s}" %(name, u",".join([u"[{%s}:%04X]" %(key, lst[key]) for key in lst])))
+		self.content += u" %s={%s}" %(name, u",".join([u"[{%s}:%04X]" %(key, lst[key]) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -1114,6 +1130,17 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
+	def	getMapT16U32(self, name, offset, cnt):
+		lst = {}
+		i   = offset
+		for j in range(cnt):
+			key, i = getLen32Text16(self.data, i)
+			val, i = getUInt32(self.data, i)
+			lst[key] = val
+		self.content += u" %s={%s}" %(name, u",".join([u"'%s':%04X" %(key, lst[key]) for key in lst]))
+		self.set(name, lst)
+		return i
+
 	def	getMapMdlTxnMgr(self, name, offset, cnt):
 		lst = []
 		i   = offset
@@ -1138,7 +1165,7 @@ class SecNode(AbstractData):
 		i   = offset
 		self.set(name, lst)
 		APP_1 = Struct('<Bffffffffffff').unpack_from
-		skip  = 50 if (getFileVersion() > 2018) else 49 # Really 2018???
+		skip  = 50 if (getFileVersion() > 2017) else 49
 		for j in range(cnt):
 			key, i = getUInt32(self.data, i)
 			val = APP_1(self.data, i)

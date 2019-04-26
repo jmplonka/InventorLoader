@@ -287,7 +287,6 @@ class AppReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat32_2D(i, 'vec2d_0')
 		i = node.ReadSInt32A(i, 2, 'a3')
-		l = len(node.data)
 		i = node.ReadUInt8A(i, 5, 'a4')
 		i = node.ReadSInt32(i, 's32_0')
 		i = node.ReadFloat64(i, 'f32_1')
@@ -331,7 +330,7 @@ class AppReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		if (vers > 2010):
-			i = node.ReadUInt32A(i, 20, 'a1')
+			i = node.ReadFloat64A(i, 10, 'a2')
 			i = node.ReadUInt8(i, 'u8_1')
 			i = node.ReadColorRGBA(i, 'c_0')
 			i = node.ReadFloat32(i, 'f_0')
@@ -363,9 +362,8 @@ class AppReader(SegmentReader):
 					i = node.ReadUInt8(i, 'u8_5')
 					i = node.ReadLen32Text16(i)
 					if (vers > 2016):
-						i = node.ReadFloat32(i, 'f_5')
-						if (vers > 2017):
-							i += 1
+						if (i < len(node.data)): node.ReadFloat32(i, 'f_5')
+						if (vers > 2017): i += 1
 		else:
 			i = node.ReadUInt32(i, 'u32_3')
 		return i
@@ -544,6 +542,10 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadLen32Text16(i, 'txt_0')
+		return i
+
+	def Read_C1AB98DD(self, node):
+		i = self.readHeaderStyle(node)
 		return i
 
 	def Read_C435E97C(self, node):

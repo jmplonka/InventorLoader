@@ -161,8 +161,8 @@ def read(doc, filename, readProperties):
 
 	for fname in elements:
 		if (fname[-1] == 'UFRxDoc'):
-			stream = ole.openstream(fname).read()
-			getModel().UFRxDoc = importerUFRxDoc.read(stream)
+#			stream = ole.openstream(fname).read()
+#			getModel().UFRxDoc = importerUFRxDoc.read(stream)
 			handled[PrintableName(fname)] = True
 			break
 

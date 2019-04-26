@@ -155,6 +155,13 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadFloat64_3D(i, 'a3')
 		return i
 
+	def Read_139358BF(self, node): # Name table root node
+		i = self.ReadHeaderNameTableRootNode(node)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
+		i = self.ReadNtEntry(node, i, 'edge')
+		i = node.ReadUInt32(i, 'u32_0')
+		return i
+
 	def Read_14340ADB(self, node): # Name table root node
 		i = self.ReadHeaderNameTableRootNode(node)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
@@ -325,6 +332,24 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = self.ReadHeaderNameTableChild2Node(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 3, 'a1')
+		return i
+
+	def Read_A170F6B6(self, node): # Name table child node
+		i = self.ReadHeaderNameTableChild2Node(node)
+		i = node.ReadSInt32A(i, 7, 'a1')
+		i = node.ReadUInt32(i, 'u32_1')
+		cnt, i = getUInt32(node.data, i)
+		lst = []
+		for j in range(cnt):
+			a, i = getUInt32A(node.data, i, 7)
+			lst.append(a)
+		node.content += ' lst2=[%s]' %(','.join(['[%s]' %("," .join(["%04X" %(m) for m in a])) for a in lst]))
+		node.set('lst2', lst)
+		return i
+
+	def Read_E5289C69(self, node): # Name table child node
+		i = self.ReadHeaderNameTableChild2Node(node)
+		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_B1ED010F(self, node): # Name table child node

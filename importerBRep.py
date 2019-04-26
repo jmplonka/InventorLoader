@@ -287,6 +287,15 @@ class BRepReader(NameTableReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
 		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadLen32Text16(i, 'txt1')
+		i = node.ReadFloat64A(i, 5, 'a1')
+		i = node.ReadLen32Text16(i, 'txt2')
+		i = node.ReadFloat64_3D(i, 'a2')
+		i = node.ReadUInt32A(i, 2, 'a3')
+		i = node.ReadUInt16A(i, 4, 'a4')
+		i = node.ReadLen32Text16(i, 'txt3')
+		i = node.ReadLen32Text16(i, 'txt4')
 		return i
 
 	def Read_DDA265D6(self, node): return 0

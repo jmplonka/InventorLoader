@@ -167,6 +167,22 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
+	def Read_D95D32FC(self, node): # Attribute ...
+		i = self.ReadHeaderSU32S(node, 'Attr_D95D32FC')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_1')
+		i  = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadUInt8(i, 'u8_1')
+		return i
+
+	def Read_DFDFCB84(self, node): # Attribute ...
+		i = self.ReadHeaderSU32S(node, 'Attr_DFDFCB84')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_1')
+		return i
+
 	def Read_438452F0(self, node): # Color attributes
 		node.typeName = 'Attr_Colors'
 		i = node.ReadUInt32A(0, 2, 'a0')
@@ -217,6 +233,15 @@ class GraphicsReader(EeSceneReader):
 	def Read_2116098E(self, node): return 0
 
 	def Read_23974603(self, node): return 0
+
+	def Read_27DFC9F5(self, node):
+		i = self.ReadHeaderU32RefU8List3(node)
+		i = node.ReadChildRef(i, 'object3D')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_2')
+		return i
 
 	def Read_27F6DF59(self, node): return 0
 
@@ -351,10 +376,17 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadChildRef(i, 'ref1')
 		i = node.ReadChildRef(i, 'ref2')
-		i = node.ReadUInt32(i, 'index')
+		if (i < len(node.data)): # > 2018 Beta 1!!!
+			i = node.ReadUInt32(i, 'index')
 		return i
 
 	def Read_76986821(self, node): return 0
+
+	def Read_8974BA73(self, node):
+		i = node.ReadUInt32(0, 'u32_0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt32(i, 'u32_1')
+		return i
 
 	def Read_8DA49A23(self, node): # InstanceNode
 		i = node.Read_Header0( 'InstanceNode')
@@ -400,7 +432,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadChildRef(i, 'ref1')
 		i = node.ReadChildRef(i, 'ref2')
-		i = node.ReadChildRef(i, 'ref3')
+		if (i < len(node.data)): # > 2018 Beta 1!!!
+			i = node.ReadChildRef(i, 'ref3')
 		return i
 
 	def Read_9A5F40BC(self, node):
@@ -450,7 +483,8 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadChildRef(i, 'ref1')
 		i = node.ReadChildRef(i, 'ref2')
-		i = node.ReadUInt32(i, 'index')
+		if not(getFileVersion() == 2018 and getFileBeta() >= 0):
+			i = node.ReadUInt32(i, 'index')
 		return i
 
 	def Read_A3EBE198(self, node): #  BodyNode

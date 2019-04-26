@@ -2301,24 +2301,13 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		subLaws = []
 		laws.append(subLaws)
 		while (i < len(chunks)):
-			n, i   = getInteger(chunks, i) #0
-			if (n == 0):
-				l, i  = readLaw(chunks, i)
+			n, i = getInteger(chunks, i)
+			l, i = readLaw(chunks, i)
+			subLaws.append(l)
+			for j in range(n-1):
+				l, i = readLaw(chunks, i)
 				subLaws.append(l)
-			elif (n == 1):
-				l, i  = readLaw(chunks, i)
-				subLaws.append(l)
-				break
-			elif (n == 2):
-				l, i  = readLaw(chunks, i)
-				subLaws.append(l)
-				l, i  = readLaw(chunks, i)
-				subLaws.append(l)
-				while (True):
-					l, i  = readLaw(chunks, i)
-					subLaws.append(l)
-					if (l[0] != 'null_law'):
-						break
+			i = len(chunks)
 		return i
 	def setOff(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor)
@@ -2863,16 +2852,27 @@ class SurfaceSpline(Surface):
 		scl2, i = self._readScaleClLoft(chunks, i)
 		scl3, i = self._readScaleClLoft(chunks, i)
 		scl4, i = self._readScaleClLoft(chunks, i)
+		chunk = chunks[i]
+		if (isinstance(chunk, AcisLongChunk)):
+			scl5, i = self._readScaleClLoft(chunks, i)
 		e1, i = getEnum(chunks, i)    # 0x0B
 		e2, i = getEnum(chunks, i)    # 0x0B
-		n1, i = getInteger(chunks, i) # 0, 7
-		if (n1 > 0):
+		n1, i = getInteger(chunks, i) # 0, 6, 7
+		if (n1 == 6):
+			e3  , i = getEnum(chunks, i)    # 0x0B
+			e4  , i = getEnum(chunks, i)   # 0x0A
+			scl5, i = self._readScaleClLoft(chunks, i)
+			n2  , i = getInteger(chunks, i) # 0
+			v1  , i = getVector(chunks, i)
+		elif (n1 == 7):
 			e3  , i = getEnum(chunks, i)    # 0x0B
 			scl5, i = self._readScaleClLoft(chunks, i)
 			e4  , i = getEnum(chunks, i)
 			scl6, i = self._readScaleClLoft(chunks, i)
 			n2  , i = getInteger(chunks, i) # 0
 			v1  , i = getVector(chunks, i)
+			e5, i = getEnum(chunks, i)
+			e6, i = getEnum(chunks, i)
 		else:
 			e3  , i = getEnum(chunks, i)    # 0x0B
 			e4  , i = getEnum(chunks, i)    # 0x0B
@@ -2881,8 +2881,8 @@ class SurfaceSpline(Surface):
 				c3, i = getVector(chunks, i)
 			else:
 				c3, i = readBS3Curve(chunks, i)
-		e5, i = getEnum(chunks, i)
-		e6, i = getEnum(chunks, i)
+			e5, i = getEnum(chunks, i)
+			e6, i = getEnum(chunks, i)
 		return i
 	def setCompound(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
@@ -3893,6 +3893,9 @@ class AttribNamingMatchingNMxBrepTagNameHole(AttribNamingMatchingNMxBrepTagName)
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameHole, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameImportAlias(AttribNamingMatchingNMxBrepTagName):
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameImportAlias, self).__init__()
+class AttribNamingMatchingNMxBrepTagNameImportBrep(AttribNamingMatchingNMxBrepTagName):
+	# 1, [i], 0
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameImportBrep, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameLocalFaceModifier(AttribNamingMatchingNMxBrepTagName):
 	# no more values!
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameLocalFaceModifier, self).__init__()
@@ -4009,6 +4012,9 @@ class AttribNamingMatchingNMxBrepTagNameSweepGenerated(AttribNamingMatchingNMxBr
 class AttribNamingMatchingNMxBrepTagNameShellFace(AttribNamingMatchingNMxBrepTagName):
 	# n1, x, 0, n3
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameShellFace, self).__init__()
+class AttribNamingMatchingNMxBrepTagNameSolidSweep(AttribNamingMatchingNMxBrepTagName):
+	# [0, i, x, 1, b, 0, 0]
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSolidSweep, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameSplitFace(AttribNamingMatchingNMxBrepTagName):
 	# n1, [a, 2, c, 0, x, f, g, h, 1, y, k, l]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameSplitFace, self).__init__()
@@ -4523,6 +4529,7 @@ ENTITY_TYPES = {
 	"NMx_GrillOffset_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameGrillOffsetBrep,
 	"NMx_Hole_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                      AttribNamingMatchingNMxBrepTagNameHole,
 	"NMx_import_alias_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                   AttribNamingMatchingNMxBrepTagNameImportAlias,
+	"NMx_Import_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                    AttribNamingMatchingNMxBrepTagNameImportBrep,
 	"NMx_local_face_modifier_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":            AttribNamingMatchingNMxBrepTagNameLocalFaceModifier,
 	"NMx_local_face_modifier_for_corner_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib": AttribNamingMatchingNMxBrepTagNameLocalFaceModifierForCorner,
 	"NMx_Loft_Surface_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":              AttribNamingMatchingNMxBrepTagNameLoftSurface,
@@ -4535,6 +4542,7 @@ ENTITY_TYPES = {
 	"NMx_Ruled_Surface_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                  AttribNamingMatchingNMxBrepTagNameRuledSurface,
 	"NMx_shadow_taper_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":              AttribNamingMatchingNMxBrepTagNameShadowTaperFace,
 	"NMx_shell_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameShellFace,
+	"NMx_SolidSweep_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameSolidSweep,
 	"NMx_Split_Egde_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameSplitEdge,
 	"NMx_split_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagNameSplitFace,
 	"NMx_Split_Vertex_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                   AttribNamingMatchingNMxBrepTagNameSplitVertex,

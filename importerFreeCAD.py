@@ -64,6 +64,26 @@ IMPLEMENTED_COMPONENTS = [
 	u"Blocks",
 ]
 
+def __dumpProperties__(name, properties):
+	text = []
+	for p in properties:
+		if p is None:
+			text.append(u'')
+		else:
+			t = p.node.getRefText()
+			i = t.index('): ')
+			t = t[i+3:]
+			try:
+				i = t.index('=')
+				text.append(t[i+1:])
+			except:
+				text.append(t)
+
+	vals = u"\t".join(text)
+	dump = u"%s\t%s" %(name, vals)
+#	print(dump.encode("utf8"))
+	FreeCAD.Console.PrintMessage(dump)
+
 def _enableConstraint(name, bit, preset):
 	global SKIP_CONSTRAINTS
 	SKIP_CONSTRAINTS &= ~bit        # clear the bit if already set.
@@ -1160,11 +1180,12 @@ class FreeCADImporter(object):
 				creator    = item.segment.indexNodes[idxCreator]
 				geometry   = self.getGeometry(creator) # ensure that the creator is already available!
 				if (geometry is not None):
-					edgeAttrs = acis[idxRef]
-					acisEdges = edgeAttrs.getEdges()
-					idxEdge   = findFcEdgeIndex(geometry.Shape, acisEdges)
-					if (idxEdge is not None):
-						return idxCreator, idxEdge
+					edgeAttrs = acis.get(idxRef)
+					if (not edgeAttrs is None):
+						acisEdges = edgeAttrs.getEdges()
+						idxEdge   = findFcEdgeIndex(geometry.Shape, acisEdges)
+						if (idxEdge is not None):
+							return idxCreator, idxEdge
 		return None, None
 
 	def getEdgesFromSet(self, edgeSet):
@@ -1976,8 +1997,10 @@ class FreeCADImporter(object):
 		return
 
 	def addSketch_BlockInserts(self, node, sketchObj): return
+	def addSketch_EquationCurve2D(self, node, sketchObj): return
 
 	def addSketch_5D8C859D(self, node, sketchObj): return
+	def addSketch_72E450AC(self, node, sketchObj): return
 	def addSketch_8EC6B314(self, node, sketchObj): return
 	def addSketch_8FEC335F(self, node, sketchObj): return
 	def addSketch_DD80AC37(self, node, sketchObj): return
