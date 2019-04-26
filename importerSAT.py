@@ -15,7 +15,6 @@ __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 LENGTH_TEXT = re.compile('[ \t]*(\d+) +(.*)')
-NEXT_TOKEN  = re.compile('[ \t]*([^ \t]+) +(.*)')
 
 TokenTranslations = {
 	'0x0A':       0x0A,
