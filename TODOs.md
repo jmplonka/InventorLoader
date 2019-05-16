@@ -1,9 +1,5 @@
 # IPT file
 ## Incomplete Features
-	* Sketch2D, Sketch3D
-		* SketchBlock
-		* SketchDrivenPattern
-
 	* Colors
 		* single faces
 
@@ -23,10 +19,13 @@
 	* Plastic
 		* add Boss, Rib, Grill, Lip, Rest, SnapFit
 
+	* Annotations
+
 	* Access to feature properties
 
 ## Unsupported
 	* NonParametricBase, CoreCavity, (Alias-)Freeform, Reference, DirectEdit, PunchTool, iFeature
+	* SketchBlock, SketchDrivenPattern
 
 # SAT files
 ## Incomplete Features
