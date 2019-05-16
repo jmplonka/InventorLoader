@@ -536,6 +536,7 @@ class GraphicsReader(EeSceneReader):
 		return i
 
 	def Read_A94779E3(self, node):
+		node.typeName = 'GroupFeatureOutline'
 		i = self.skipBlockSize(0)
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt16A(i, 2, 'a0')
@@ -549,13 +550,15 @@ class GraphicsReader(EeSceneReader):
 			i = node.ReadFloat64A(i, 6, 'a2')
 		else:
 			node.content += ' a2=()'
-		i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadFloat64A(i, 6, 'a3')
+		cnt, i = getUInt32(node.data, i)
+		i = self.ReadFloat64A(node, i, cnt, 'a1', 3)
+		i = node.ReadFloat64A(i, 6, 'box')
 		i = node.ReadUInt8A(i, 2, 'a4')
 		i = self.ReadEdgeList(node, i)
 		return i
 
-	def Read_A94779E4(self, node):
+	def Read_A94779E4(self, node): # MultiFeatureOutline
+		node.typeName = 'MultiFeatureOutline'
 		i = self.skipBlockSize(0)
 		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_0')
@@ -566,8 +569,9 @@ class GraphicsReader(EeSceneReader):
 		i = self.ReadFloat64A(node, i, cnt, 'a1', 12)
 		cnt, i = getUInt32(node.data, i)
 		i = self.ReadFloat64A(node, i, cnt, 'a2', 6)
-		i = self.ReadEdgeList(node, i, 'edges1')
-		i = node.ReadFloat64A(i, 6, 'a4')
+		cnt, i = getUInt32(node.data, i)
+		i = self.ReadFloat64A(node, i, cnt, 'a3', 3)
+		i = node.ReadFloat64A(i, 6, 'box')
 		i = node.ReadUInt8A(i, 2, 'a5')
 		i = self.ReadEdgeList(node, i, 'edges2')
 		i = node.ReadList2(i, importerSegNode._TYP_LIST_FLOAT64_A_, 'lst2', 3)
