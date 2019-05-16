@@ -1526,10 +1526,15 @@ class Entity(object):
 	def __repr__(self): return self.__str__()
 	def __lt__(self, other):
 		return self.index < other.index
-	def getAttribute(self, clsName):
+	def getAttribute(self, clsNames):
 		a = self.attrib
+		if (isString(clsNames)):
+			names = [clsNames]
+		else:
+			names = clsNames
+
 		while (a is not None) and (a.index >= 0):
-			if (a.__class__.__name__ == clsName):
+			if (a.__class__.__name__ in names):
 				return a
 			a = a.getNext()
 		return None
@@ -1541,9 +1546,7 @@ class Entity(object):
 		return None
 
 	def getColor(self):
-		color = self.getAttribute('AttribStRgbColor')
-		if color is None:
-			color = self.getAttribute('AttribNamingMatchingNMxFFColorEntity')
+		color = self.getAttribute(['AttribStRgbColor', 'AttribNamingMatchingNMxFFColorEntity', 'AttribADeskTrueColor'])
 		return color
 class EyeRefinement(Entity):
 	def __init__(self): super(EyeRefinement, self).__init__()
@@ -2434,10 +2437,16 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		i = index if (getVersion() < 25.0) else index + 1
 		self.pcurve, i = readBS2Curve(chunks, i)
 		tolerance, i = getFloat(chunks, i)
-		if (getVersion() > 15.0):
-			i += 1
+		if (getVersion() > 15.0): i += 1
 		self.surface, i = readSurface(self, chunks, i)
 		self.type = 'exppc'
+		return i
+	def setImpPar(self, chunks, index):
+		self.sense, i  = getSense(chunks, index)
+		block, i      = getBlock(chunks, i)
+		self.curve = CurveInt()
+		self.curve.setBulk(block, 1)
+		self.type = 'imppc'
 		return i
 	def setRef(self, chunks, index):
 		self.pcurve, i = getInteger(chunks, index)
@@ -2446,11 +2455,12 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		return i
 	def setBulk(self, chunks, index):
 		self.type, i = getValue(chunks, index)
-
-		if (self.type == 'ref'):         return self.setRef(chunks, i)
-		if (self.type == 'exp_par_cur'): return self.setExpPar(chunks, i)
-		if (self.type == 'exppc'):       return self.setExpPar(chunks, i)
-		raise Exception("PCurve: unknown subtype '%s'!" %(self.type))
+		try:
+			prm = PCURVE_SET_DATA[self.type]
+			fkt = getattr(self, prm)
+			return fkt(chunks, i)
+		except KeyError as ke:
+			raise Exception("PCurve: unknown subtype '%s'!" %(self.type))
 	def setSubtype(self, chunks, index):
 		self.sense, i = getSense(chunks, index)
 		block, i = getBlock(chunks, i)
@@ -3614,6 +3624,11 @@ class Attributes(Entity):
 	def getOwner(self):    return None if (self._owner is None)    else self._owner.node
 class Attrib(Attributes):
 	def __init__(self): super(Attrib, self).__init__()
+class AttribBt(Attrib):
+	def __init__(self): super(AttribBt, self).__init__()
+class AttribBtEntityColor(AttribBt):
+	# string with numbers
+	def __init__(self): super(AttribBtEntityColor, self).__init__()
 class AttribADesk(Attrib):
 	def __init__(self): super(AttribADesk, self).__init__()
 class AttribADeskColor(AttribADesk):
@@ -3622,6 +3637,21 @@ class AttribADeskColor(AttribADesk):
 	def set(self, entity):
 		i = super(AttribADeskColor, self).set(entity)
 		coloridx, i = getInteger(entity.chunks, i)
+		return i
+class AttribADeskTrueColor(AttribADesk):
+	def __init__(self):
+		super(AttribADeskTrueColor, self).__init__()
+		self.alhpa = 0.0
+		self.red   = .749
+		self.green = .749
+		self.blue  = .749
+	def set(self, entity):
+		i = super(AttribADeskTrueColor, self).set(entity)
+		rgba, i = getText(entity.chunks, i)
+		self.alhpa = ((int(rgba) >> 24) & 0xFF) / 255.0
+		self.red   = ((int(rgba) >> 16) & 0xFF) / 255.0
+		self.green = ((int(rgba) >>  8) & 0xFF) / 255.0
+		self.blue  = ((int(rgba) >>  0) & 0xFF) / 255.0
 		return i
 class AttribAnsoft(Attrib):
 	def __init__(self): super(AttribAnsoft, self).__init__()
@@ -3675,6 +3705,17 @@ class AttribGenNameString(AttribGenName):
 		i = super(AttribGenNameString, self).set(entity)
 		self.value, i = getText(entity.chunks, i)
 		return i
+class AttribGenNameReal(AttribGenName):
+	def __init__(self):
+		super(AttribGenNameReal, self).__init__()
+		self.value = ''
+	def set(self, entity):
+		i = super(AttribGenNameReal, self).set(entity)
+		self.value, i = getFloat(entity.chunks, i)
+		return i
+class AttribKcId(Attrib):
+	# string with numbers
+	def __init__(self): super(AttribKcId, self).__init__()
 class AttribLwd(Attrib):
 	def __init__(self): super(AttribLwd, self).__init__()
 class AttribLwdFMesh(Attrib): # color face mapping
@@ -3922,6 +3963,9 @@ class AttribNamingMatchingNMxBrepTagNameUnfoldGeomRepl(AttribNamingMatchingNMxBr
 class AttribNamingMatchingNMxBrepTagNameVertexBlend(AttribNamingMatchingNMxBrepTagName):
 	# n1
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameVertexBlend, self).__init__()
+class AttribNamingMatchingNMxBrepTagNameVentFace(AttribNamingMatchingNMxBrepTagName):
+	# n1
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameVentFace, self).__init__()
 class AttribNamingMatchingNMxBrepTagNameLoftSurface(AttribNamingMatchingNMxBrepTagName):
 	# [a, b, c, d, e]
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameLoftSurface, self).__init__()
@@ -4339,6 +4383,14 @@ SURFACES = {
 	'null_surface': None,
 }
 
+PCURVE_SET_DATA = {
+	'ref':         'setRef',
+	'exp_par_cur': 'setExpPar',
+	'exppc':       'setExpPar',
+	'imp_par_cur': 'setImpPar',
+	'imppc':       'setImpPar',
+}
+
 CURVE_SET_DATA = {
 	'bldcur':            ('setBlend', 0, False),
 	'blend_int_cur':     ('setBlend', 1, True),
@@ -4447,6 +4499,7 @@ ENTITY_TYPES = {
 	"attrib":                                                                                      Attrib,
 	"adesk-attrib":                                                                                AttribADesk,
 	"color-adesk-attrib":                                                                          AttribADeskColor,
+	"truecolor-adesk-attrib":                                                                      AttribADeskTrueColor,
 	"ansoft-attrib":                                                                               AttribAnsoft,
 	"id-ansoft-attrib":                                                                            AttribAnsoftId,
 	"properties-ansoft-attrib":                                                                    AttribAnsoftProperties,
@@ -4461,6 +4514,8 @@ ENTITY_TYPES = {
 	"ufld_pos_track_attrib-at_ufld-attrib":                                                        AttribAtUfldPosTrack,
 	"mix_UF_RobustPositionTrack-ufld_pos_track_attrib-at_ufld-attrib":                             AttribAtUfldPosTrackMixUfRobustPositionTrack,
 	"ufld_surf_simp_attrib-ufld_pos_track_attrib-at_ufld-attrib":                                  AttribAtUfldPosTrackSurfSimp,
+	"bt-attrib":                                                                                   AttribBt,
+	"entatt_color-bt-attrib":                                                                      AttribBtEntityColor,
 	"DXID-attrib":                                                                                 AttribDxid,
 	"ATTRIB_CUSTOM-attrib":                                                                        AttribCustom,
 	"eye-attrib":                                                                                  AttribEye,
@@ -4473,6 +4528,8 @@ ENTITY_TYPES = {
 	"name_attrib-gen-attrib":                                                                      AttribGenName,
 	"integer_attrib-name_attrib-gen-attrib":                                                       AttribGenNameInteger,
 	"string_attrib-name_attrib-gen-attrib":                                                        AttribGenNameString,
+	"real_attrib-name_attrib-gen-attrib":                                                          AttribGenNameReal,
+	"kc_id-attrib":                                                                                AttribKcId,
 	"lwd-attrib":                                                                                  AttribLwd,
 	"fmesh-lwd-attrib":                                                                            AttribLwdFMesh,
 	"ptlist-lwd-attrib":                                                                           AttribLwdPtList,
@@ -4554,6 +4611,7 @@ ENTITY_TYPES = {
 	"NMx_unfold_bend_line_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameUnfoldBendLine,
 	"NMx_unfold_geom_repl_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameUnfoldGeomRepl,
 	"NMx_vertex_blend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                   AttribNamingMatchingNMxBrepTagNameVertexBlend,
+	"NMx_vent_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":					   AttribNamingMatchingNMxBrepTagNameVentFace,
 	"NMx_stitch_tag-NMx_Brep_tag-NamingMatching-attrib":                                           AttribNamingMatchingNMxBrepTagSwitch,
 	"NMx_Dup_Attrib-NamingMatching-attrib":                                                        AttribNamingMatchingNMxDup,
 	"NMxEdgeCurveAttrib-NamingMatching-attrib":                                                    AttribNamingMatchingNMxEdgeCurve,
