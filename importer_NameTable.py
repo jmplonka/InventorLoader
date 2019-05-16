@@ -355,6 +355,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 	def Read_B1ED010F(self, node): # Name table child node
 		i = self.ReadHeaderNameTableChild1Node(node)
 		i = node.ReadSInt32A(i, 7, 'a0')
+		i = self.skipBlockSize(i, 8)
 		i = self.ReadNtEntry(node, i, 'from') # or is it face 1?
 		i = self.ReadNtEntryList(node, i, 'entries')
 		return i

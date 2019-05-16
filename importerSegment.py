@@ -92,7 +92,7 @@ def getStart(m, data, offset):
 BRANCH_NODES = {
 	'Parameter':                       ParameterNode,
 	'ParameterText':                   ParameterTextNode,
-	'ParameterBoolean':                ValueNode,
+	'Boolean':                         ValueNode,
 	'RotateClockwise':                 ValueNode,
 	'3D8924FD':                        ValueNode,
 	'Enum':                            EnumNode,
