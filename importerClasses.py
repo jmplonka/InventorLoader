@@ -1065,26 +1065,26 @@ class FeatureNode(DataNode):
 				elif (p2 == 'DirectionAxis'):
 					if (p6 == 'Parameter'):         return 'Emboss'
 					p10 = self._getPropertyName(0x10)
-					if (p10 == 'ParameterBoolean'): return 'Cut'
+					if (p10 == 'Boolean'):          return 'Cut'
 					p21 = self._getPropertyName(0x21)
-					if (p21 == 'ParameterBoolean'): return 'Cut'
+					if (p21 == 'Boolean'):          return 'Cut'
 					return 'Extrude'
 				return 'Coil'
 			if (p1 == 'FaceCollection'):            return 'Shell'
 			if (p1 == 'Parameter'):                 return 'Hole'
-			if (p1 == 'ParameterBoolean'):
+			if (p1 == 'Boolean'):
 				if (p3 == 'Enum'):                  return 'Split'
-				if (p2 == 'ParameterBoolean'):      return 'Fold'
-			if (p2 == 'ParameterBoolean'):          return 'SnapFit'
+				if (p2 == 'Boolean'):               return 'Fold'
+			if (p2 == 'Boolean'):                   return 'SnapFit'
 		elif (p0 == 'FxFilletEdgeSetsConstantR'):
 			p8 = self._getPropertyName(8)
-			if (p8 == 'ParameterBoolean'):          return 'Fillet'
+			if (p8 == 'Boolean'):                   return 'Fillet'
 			if (p8 == 'Enum'):                      return 'Fillet'
 		elif (p1 == 'FxFilletEdgeSetsVariableR'):   return 'Fillet'
 		elif (p0 == 'FaceCollection'):
 			if (p1 == 'Enum'):                      return 'FaceMove'
 			if (p1 == 'FaceCollection'):            return 'FaceReplace'
-			if (p1 == 'ParameterBoolean'):
+			if (p1 == 'Boolean'):
 				p3 = self._getPropertyName(3)
 				if (p3 == 'BodyCollection'):        return 'FaceDelete'
 				if (p3 == 'Parameter'):             return 'Thread'
@@ -1097,7 +1097,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'BoundaryPatch'):             return 'Rib'
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p1 == 'Parameter'):
-				if (p2 == 'ShellDirection'):        return 'Rest'
+				if (p2 == 'Enum'):                  return 'Rest' # Enum == Shell-Direction!
 				return 'BendPart'
 			p4 = self._getPropertyName(4)
 			if (p4 == 'SurfaceBody'):               return 'BoundaryPatch'
@@ -1111,7 +1111,7 @@ class FeatureNode(DataNode):
 			return 'Plate'
 		elif (p0 == 'ObjectCollection'):
 			p2 = self._getPropertyName(2)
-			if (p2 == 'FeatureDimensions'):         return 'Move'
+			if (p1 == '0800FE29'):                  return 'Move'
 			if (p2 == 'SurfaceBody'):               return 'Stitch'
 			if (p1 == 'BodyCollection'):            return 'Stitch'
 		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
@@ -1135,7 +1135,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'SurfaceBody'):               return 'BoundaryPatch'
 			if (p10 == 'FilletFullRoundSet'):       return 'Fillet'
 		elif (p0 == 'D70E9DDA'):                    return 'FilletRule'
-		elif (p0 == 'ParameterBoolean'):            return 'Boss'
+		elif (p0 == 'Boolean'):                     return 'Boss'
 		elif (p0 == 'Parameter'):
 			if (p1 == 'Parameter'):                 return 'Link2Body' # link between Feature and Body
 		# Missing Features:
