@@ -2168,9 +2168,9 @@ class FreeCADImporter(object):
 		# = getProperty(properties, 0x0F)#               FeatureDimensions
 		surface    = getProperty(properties, 0x10)               # SurfaceBody
 		# = getProperty(properties, 0x13)#               Parameter 'RDxVar0'=1
-		# = getPropertyValue(properties, 0x14, 'value')# ParameterBoolean=False
+		# = getPropertyValue(properties, 0x14, 'value')# Boolean=False
 		# = getProperty(properties, 0x15)#               CEFD3973_Enum=0
-		# = getPropertyValue(properties, 0x16, 'value')# ParameterBoolean=True
+		# = getPropertyValue(properties, 0x16, 'value')# Boolean=True
 		# = getProperty(properties, 0x17)#               BoundaryPatch
 		solid      = getProperty(properties, 0x1A)
 		dimLength2 = getProperty(properties, 0x1B)               # The length of the extrusion in direction 2
@@ -2272,13 +2272,13 @@ class FreeCADImporter(object):
 			#= getProperty(properties, 0x07) # FeatureDimensions
 			surface    = getProperty(properties, 0x08) # SurfaceBody
 			#= getProperty(properties, 0x09) # CEFD3973_Enum
-			#= getProperty(properties, 0x0A) # ParameterBoolean
+			#= getProperty(properties, 0x0A) # Boolean
 			#= getProperty(properties, 0x0B) # BoundaryPatch
-			#= getProperty(properties, 0x0C) # ParameterBoolean
+			#= getProperty(properties, 0x0C) # Boolean
 			#= getProperty(properties, 0x0D) # ???
 			#= getProperty(properties, 0x0E) # ???
 			#= getProperty(properties, 0x0F) # ???
-			#= getProperty(properties, 0x10) # ParameterBoolean
+			#= getProperty(properties, 0x10) # Boolean
 			angle2     = getProperty(properties, 0x12) # Parameter
 			extend2    = getProperty(properties, 0x13) # ExtentType
 
@@ -2557,7 +2557,7 @@ class FreeCADImporter(object):
 		toFace          = getProperty(properties, 0x0E) # FaceItem      <=> ExtendType = "To" | "FromTo"
 		isToPlane       = getProperty(properties, 0x0F) # 3D8924FD      <=> ExtendType = "To" | "FromTo"
 		direction       = getProperty(properties, 0x10) # DirectionAxis
-		#               = getProperty(properties, 0x11) # ParameterBoolean = False
+		#               = getProperty(properties, 0x11) # Boolean = False
 		#               = getProperty(properties, 0x12) # ???
 		fxDimensions    = getProperty(properties, 0x13) # FeatureDimensions
 		threadDiam      = getProperty(properties, 0x14) # Parameter
@@ -2638,14 +2638,14 @@ class FreeCADImporter(object):
 		properties    = loftNode.get('properties')
 		sections1     = getProperty(properties, 0x00) # LoftSections
 		operation     = getProperty(properties, 0x01) # PartFeatureOperation=Surface
-		closed        = getProperty(properties, 0x02) # ParameterBoolean =0
+		closed        = getProperty(properties, 0x02) # Boolean =0
 		#= getProperty(properties, 0x03) #
 		#= getProperty(properties, 0x04) #
 		#= getProperty(properties, 0x05) #
 		surface       = getProperty(properties, 0x06) #
 		sections2     = getProperty(properties, 0x07) # LoftSections
 		#= getProperty(properties, 0x08) #
-		ruled          = getProperty(properties, 0x09) # ParameterBoolean =0
+		ruled          = getProperty(properties, 0x09) # Boolean =0
 		loftType       = getProperty(properties, 0x0A) # LoftType=AreaLoft
 		#= getProperty(properties, 0x0B) # E558F428
 		#= getProperty(properties, 0x0C) # FeatureDimensions
@@ -2685,11 +2685,11 @@ class FreeCADImporter(object):
 		#= getProperty(properties, 0x03) # Parameter 'Thickness'=4mm
 		bendRadius     = getProperty(properties, 0x04) # Parameter 'd11'=4mm
 		#= getProperty(properties, 0x05) # 5E50B969_Enum=1
-		#= getProperty(properties, 0x06) # ParameterBoolean=False
+		#= getProperty(properties, 0x06) # Boolean=False
 		#= getProperty(properties, 0x07) # FacetControl=1
 		facetTolerance = getProperty(properties, 0x08) # Parameter 'd6'=4mm
 		#= getProperty(properties, 0x09)
-		#= getProperty(properties, 0x0A) # ParameterBoolean=False
+		#= getProperty(properties, 0x0A) # Boolean=False
 		#= getProperty(properties, 0x0B)
 		#= getProperty(properties, 0x0C) # FeatureDimensions
 		#= getProperty(properties, 0x0D) # A96B5992
@@ -2819,17 +2819,17 @@ class FreeCADImporter(object):
 		operation   = getProperty(properties, 0x00) # PartFeatureOperation=Join
 		profile     = getProperty(properties, 0x01) # BoundaryPatch
 		axis        = getProperty(properties, 0x02) # Line3D - (-1.49785,-1.08544,1.11022e-16) - (-1.49785,-0.085438,1.11022e-16)
-		negative    = getProperty(properties, 0x03) # ParameterBoolean 'AxisDirectionReversed'
+		negative    = getProperty(properties, 0x03) # Boolean 'AxisDirectionReversed'
 		rotate      = getProperty(properties, 0x04) # RotateClockwise clockwise=0
 		coilType    = getProperty(properties, 0x05) # EnumCoilType=010003, u32_0=0
 		pitch       = getProperty(properties, 0x06) # Parameter 'd21'=1.1176mm
 		height      = getProperty(properties, 0x07) # Parameter 'd22'=25.4mm
 		revolutions = getProperty(properties, 0x08) # Parameter 'd23'=2
 		taperAngle  = getProperty(properties, 0x09) # Parameter 'd24'=0°
-		startIsFlat = getProperty(properties, 0x0A) # ParameterBoolean=False
+		startIsFlat = getProperty(properties, 0x0A) # Boolean=False
 		startTrans  = getProperty(properties, 0x0B) # Parameter 'd15'=90°
 		startFlat   = getProperty(properties, 0x0C) # Parameter 'd16'=90°
-		endIsFlat   = getProperty(properties, 0x0D) # ParameterBoolean=False
+		endIsFlat   = getProperty(properties, 0x0D) # Boolean=False
 		endTrans    = getProperty(properties, 0x0E) # Parameter 'd17'=0°
 		endFlat     = getProperty(properties, 0x0F) # Parameter 'd18'=0°
 		# = getProperty(properties, 0x10) # ???
@@ -3145,10 +3145,16 @@ class FreeCADImporter(object):
 		return notYetImplemented(fxNode)
 
 	def Create_FxEmboss(self, embossNode):
+		# type = {emboss, engrave, both}
+		# depth = length
+		# taper = angle
+		# Top Face Appearance = {}
+		# Direction =
+		# wrap to face = boolean
 		properties = embossNode.get('properties')
 		operation  = getProperty(properties, 0)  # PartFeatureOperation='Cut'
 		profile    = getProperty(properties, 1)  # BoundaryPatch
-		dir        = getProperty(properties, 2)  # Direction - (-0.0238873,-6.12323e-17,0.999715)
+		direction  = getProperty(properties, 2)  # Direction - (-0.0238873,-6.12323e-17,0.999715)
 #		getProperty(properties, 3)  # Boolean
 #		getProperty(properties, 4)  # Boolean
 		depth      = getProperty(properties, 5)  # Parameter 'd474'=0.25mm
@@ -3157,9 +3163,9 @@ class FreeCADImporter(object):
 #		getProperty(properties, 8)  # Boolean
 		faceSet    = getProperty(properties, 9)  # FaceCollection
 		bodySet    = getProperty(properties, 10) # BodyCollection 'Solid1'
-		fxDim      = getProperty(properties, 11) # FeatureDimensions
+		fxDims     = getProperty(properties, 11) # FeatureDimensions
 #		getProperty(properties, 12) # Boolean
-		text       = getProperty(properties, 13) # RtfContent 'Default'
+		material   = getProperty(properties, 13) # RtfContent 'Default'
 
 		base     = self.createBoundary(profile)
 
@@ -3168,8 +3174,8 @@ class FreeCADImporter(object):
 	def Create_FxFaceDelete(self, faceNode):
 		properties = faceNode.get('properties')
 		faceSet    = getProperty(properties, 0) # FaceCollection
-#		getProperty(properties, 1) # ParameterBoolean=False
-#		getProperty(properties, 2) # ParameterBoolean=False
+#		getProperty(properties, 1) # Boolean=False
+#		getProperty(properties, 2) # Boolean=False
 		bodySet    = getProperty(properties, 3) # BodyCollection 'Solid1'
 		return notYetImplemented(faceNode)
 
@@ -3201,10 +3207,10 @@ class FreeCADImporter(object):
 		moveType   = getProperty(properties, 1) # FaceMoveType
 		direction  = getProperty(properties, 2) # Direction
 		distandce  = getProperty(properties, 3) # Parameter
-#		getProperty(properties, 4) # ParameterBoolean=False
+#		getProperty(properties, 4) # Boolean=False
 		bodySet    = getProperty(properties, 8) # BodyCollection
 		fxDim      = getProperty(properties, 9) # FeatureDimensions
-#		getProperty(properties,11) # ParameterBoolean=False
+#		getProperty(properties,11) # Boolean=False
 		matrix     = getProperty(properties,12) # Transformation
 
 		return notYetImplemented(faceNode)
@@ -3235,7 +3241,7 @@ class FreeCADImporter(object):
 		properties = nonParametricBaseNode.get('properties')
 		base = getProperty(properties, 0) # Feature, CA02411F
 #		 = getProperty(properties, 1) # CA02411F 'Srf2'
-#		 = getProperty(properties, 2) # ParameterBoolean=False
+#		 = getProperty(properties, 2) # Boolean=False
 		return notYetImplemented(nonParametricBaseNode)
 
 	def Create_FxPatternSketchDriven(self, patternNode):
@@ -3252,9 +3258,9 @@ class FreeCADImporter(object):
 	def Create_FxSculpt(self, sculptNode):
 		properties = sculptNode.get('properties')
 #		getProperty(properties, 0) # SurfacesSculpt
-#		getProperty(properties, 1) # ParameterBoolean=False
+#		getProperty(properties, 1) # Boolean=False
 #		getProperty(properties, 2) # BodyCollection 'Solid1'
-#		getProperty(properties, 3) # ParameterBoolean=False
+#		getProperty(properties, 3) # Boolean=False
 
 		return notYetImplemented(sculptNode)
 
@@ -3309,14 +3315,16 @@ class FreeCADImporter(object):
 		properties = aliasFreeformNode.get('properties')
 #		getProperty(properties, 0) # BodyCollection 'Solid1'
 #		getProperty(properties, 1) # SurfaceBody
-#		getProperty(properties, 2) # ParameterBoolean=False
+#		getProperty(properties, 2) # Boolean=False
+#		getProperty(properties, 3) # D9F7441B -> FxRefs (optional)
+
 		return notYetImplemented(aliasFreeformNode)
 
 	# Features requiring BOPTools
 	def Create_FxSplit(self, splitNode):
 		properties = splitNode.get('properties')
 		method     = getProperty(properties, 0) # SplitType='SplitFaces'
-#		getProperty(properties, 1) # ParameterBoolean=False
+#		getProperty(properties, 1) # Boolean=False
 #		getProperty(properties, 3) # SplitToolType='WorkSurface'
 		profile    = getProperty(properties, 4) # BoundaryPatch
 #		getProperty(properties, 5) # Plane 'YZ Plane'
@@ -3382,17 +3390,17 @@ class FreeCADImporter(object):
 		properties = ribNode.get('properties')
 		profile1   = getProperty(properties, 0)  # BoundaryPatch
 		profile2   = getProperty(properties, 1)  # BoundaryPatch
-#		getProperty(properties, 2)  # ParameterBoolean=False
+#		getProperty(properties, 2)  # Boolean=False
 #		getProperty(properties, 3)  # Parameter 'rib_thickness'=2.38125mm
 #		getProperty(properties, 4)  # ExtentType='2_Dimensions'
-#		getProperty(properties, 5)  # ParameterBoolean=False
+#		getProperty(properties, 5)  # Boolean=False
 #		getProperty(properties, 6)  # Parameter 'd31'=2.54mm
 #		getProperty(properties, 7)  # Direction - (0,1,0)
 #		getProperty(properties, 8)  # BodyCollection 'Solid1'
 #		getProperty(properties, 9)  # FeatureDimensions
-#		getProperty(properties, 10) # ParameterBoolean=True
+#		getProperty(properties, 10) # Boolean=True
 #		getProperty(properties, 11) # Parameter 'rib_draft_dont_use'=0°
-#		getProperty(properties, 12) # ParameterBoolean=False
+#		getProperty(properties, 12) # Boolean=False
 #		getProperty(properties, 17) # Transformation
 
 		boundary1 = self.createBoundary(profile1)
@@ -3403,12 +3411,12 @@ class FreeCADImporter(object):
 	def Create_FxFilletRule(self, filletNode):
 		properties = filletNode.get('properties')
 #		getProperty(properties, 0)  # D70E9DDA
-#		getProperty(properties, 3)  # ParameterBoolean=True
-#		getProperty(properties, 4)  # ParameterBoolean=True
-#		getProperty(properties, 5)  # ParameterBoolean=False
-#		getProperty(properties, 6)  # ParameterBoolean=False
-#		getProperty(properties, 7)  # ParameterBoolean=False
-#		getProperty(properties, 8)  # ParameterBoolean=True
+#		getProperty(properties, 3)  # Boolean=True
+#		getProperty(properties, 4)  # Boolean=True
+#		getProperty(properties, 5)  # Boolean=False
+#		getProperty(properties, 6)  # Boolean=False
+#		getProperty(properties, 7)  # Boolean=False
+#		getProperty(properties, 8)  # Boolean=True
 #		getProperty(properties, 9)  # SolidBody 'None'
 #		getProperty(properties, 10) # FeatureDimensions
 #		getProperty(properties, 11) # Parameter 'RDxVar8'=1
@@ -3494,9 +3502,9 @@ class FreeCADImporter(object):
 		properties = snapFitNode.get('properties')
 #		getProperty(properties, 0)  # SnapFitType='Beam'
 #		getProperty(properties, 1)  # Direction - (1.17886e-15,-1,0)
-#		getProperty(properties, 2)  # ParameterBoolean=False
+#		getProperty(properties, 2)  # Boolean=False
 #		getProperty(properties, 3)  # Direction - (1,0,0)
-#		getProperty(properties, 4)  # ParameterBoolean=True
+#		getProperty(properties, 4)  # Boolean=True
 #		getProperty(properties, 5)  # Parameter 'd92'=5.5mm
 #		getProperty(properties, 6)  # Parameter 'd94'=2mm
 #		getProperty(properties, 7)  # Parameter 'd95'=1.4mm
@@ -3529,7 +3537,7 @@ class FreeCADImporter(object):
 		properties = trimNode.get('properties')
 #		getProperty(properties, 0) # FaceBoundOuterProxy
 #		getProperty(properties, 1) # Direction - (0,0,1)
-#		getProperty(properties, 2) # ParameterBoolean=False
+#		getProperty(properties, 2) # Boolean=False
 #		getProperty(properties, 3) # Parameter 'Thickness'=1.524mm
 #		getProperty(properties, 4) # PlateDef
 #		edgeSet1 = getProperty(properties, 5) # EdgeCollection
@@ -3563,18 +3571,18 @@ class FreeCADImporter(object):
 #		getProperty(properties, 0)  # PartFeatureOperation='Cut'
 		profile    = getProperty(properties, 1)  # BoundaryPatch
 #		getProperty(properties, 2)  # Direction - (0,1,0)
-#		getProperty(properties, 3)  # ParameterBoolean=True
+#		getProperty(properties, 3)  # Boolean=True
 #		getProperty(properties, 4)  # Parameter 'd15'=3mm
 #		getProperty(properties, 5)  # Parameter 'd16'=0°
 #		getProperty(properties, 6)  # ExtentType='Dimension'
-#		getProperty(properties, 7)  # ParameterBoolean=False
+#		getProperty(properties, 7)  # Boolean=False
 		solid      = getProperty(properties, 14) # SurfaceBody 'Solid1'
 #		getProperty(properties, 15) # FeatureDimensions
-#		getProperty(properties, 16) # ParameterBoolean=False
-#		getProperty(properties, 18) # ParameterBoolean=False
+#		getProperty(properties, 16) # Boolean=False
+#		getProperty(properties, 18) # Boolean=False
 #		getProperty(properties, 26) # ObjectCollection 'Solid1'
-#		getProperty(properties, 31) # ParameterBoolean=False
-#		getProperty(properties, 33) # ParameterBoolean=False
+#		getProperty(properties, 31) # Boolean=False
+#		getProperty(properties, 33) # Boolean=False
 
 		boundary = self.createBoundary(profile)
 
@@ -3582,12 +3590,13 @@ class FreeCADImporter(object):
 
 	def Create_FxContourRoll(self, contourRollNode):
 		properties = contourRollNode.get('properties')
+#		getProperty(properties, 0)  # ???
 #		getProperty(properties, 1)  # FaceBoundOuterProxy
 #		getProperty(properties, 2)  # Line3D - (19.33,3.434,-22.9) - (18.33,3.434,-22.9)
 #		getProperty(properties, 3)  # Parameter 'd161'=90°
 #		getProperty(properties, 4)  # Parameter 'Thickness'=0.5mm
 #		getProperty(properties, 5)  # FlipOffset='Side1'
-#		getProperty(properties, 6)  # Direction - (-6.84788e-31,5.3904e-15,-1)
+#		getProperty(properties, 6)  # Direction - (0,0,-1)
 #		getProperty(properties, 7)  # UnrollMethod='CentroidCylinder'
 #		getProperty(properties, 8)  # Parameter 'd162'=37.1616mm
 #		getProperty(properties, 9)  # Parameter 'd163'=23.6578mm
@@ -3632,16 +3641,16 @@ class FreeCADImporter(object):
 	def Create_FxFold(self, foldNode):
 		properties = foldNode.get('properties')
 #		getProperty(properties, 0) # BendLocation='Centerline'
-#		getProperty(properties, 1) # ParameterBoolean=True
-#		getProperty(properties, 2) # ParameterBoolean=False
+#		getProperty(properties, 1) # Boolean=True
+#		getProperty(properties, 2) # Boolean=False
 #		getProperty(properties, 3) # Parameter 'd24'=90°
 #		getProperty(properties, 4) # Parameter 'd25'=0.25mm
 #		getProperty(properties, 5) # 833D1B91
 #		getProperty(properties, 6) # 96058864
 #		getProperty(properties, 7) # BodyCollection 'Solid1'
-#		getProperty(properties, 8) # ParameterBoolean=False
+#		getProperty(properties, 8) # Boolean=False
 #		getProperty(properties, 10) # Parameter 'd32'=0.25mm
-#		getProperty(properties, 12) # ParameterBoolean=True
+#		getProperty(properties, 12) # Boolean=True
 #		getProperty(properties, 13) # BendTransition
 #		getProperty(properties, 14) # 90B64134
 
@@ -3668,9 +3677,9 @@ class FreeCADImporter(object):
 		properties = fxNode.get('properties')
 		collection = getProperty(properties, 0) # ObjectCollection 'Srf1', 'Srf2', ...
 		bodySet    = getProperty(properties, 1) # BodyCollection 'Solid1'
-		surface    = getProperty(properties, 3) # ParameterBoolean=False
+		surface    = getProperty(properties, 3) # Boolean=False
 		tolerance  = getProperty(properties, 4) # Parameter 'd317'=0.0254
-#		getProperty(properties, 5) # ParameterBoolean=False
+#		getProperty(properties, 5) # Boolean=False
 
 		faces = [self.bodyNodes[face.name].geometry for face in collection.get('items') if face.name in self.bodyNodes]
 		stitch = InventorViewProviders.makeStitch(faces, fxNode.name, not surface)
@@ -3697,7 +3706,7 @@ class FreeCADImporter(object):
 #			getProperty(properties, 0) # SurfaceBod(ies|y) 'Solid1'
 			face       = getProperty(properties, 1) # Face
 			faceSet    = getProperty(properties, 2) # FaceCollection
-#			getProperty(properties, 3) # ParameterBoolean=True
+#			getProperty(properties, 3) # Boolean=True
 #			getProperty(properties, 4) # 7E15AA39
 #			getProperty(properties, 7) # 4688EBA3_Enum=1
 			return notYetImplemented(unfoldNode)
@@ -3711,7 +3720,7 @@ class FreeCADImporter(object):
 #			getProperty(properties, 0) # BodyCollection 'Solid1'
 			face       = getProperty(properties, 1) # Face
 			faceSet    = getProperty(properties, 2) # FaceCollection
-#			getProperty(properties, 3) # ParameterBoolean=True
+#			getProperty(properties, 3) # Boolean=True
 #			getProperty(properties, 4) # 7E15AA39
 #			getProperty(properties, 5) # EdgeItem
 #			getProperty(properties, 6) # EdgeItem
@@ -3728,10 +3737,10 @@ class FreeCADImporter(object):
 #		getProperty(properties, 3)  # Parameter 'Thickness'=5mm
 #		getProperty(properties, 4)  # Parameter 'd6'=5mm
 #		getProperty(properties, 5)  # FlipOffset='No'
-#		getProperty(properties, 6)  # ParameterBoolean=False
+#		getProperty(properties, 6)  # Boolean=False
 #		getProperty(properties, 7)  # A2DF48D4_Enum=1, FacetControl='CordTolerance'
 #		getProperty(properties, 8)  # Parameter 'd5'=0.5mm
-#		getProperty(properties, 10) # ParameterBoolean=False
+#		getProperty(properties, 10) # Boolean=False
 #		getProperty(properties, 12) # FeatureDimensions
 #		getProperty(properties, 13) # PlateDef
 #		getProperty(properties, 14) # 90B64134
@@ -3746,10 +3755,10 @@ class FreeCADImporter(object):
 		profile    = getProperty(properties, 0) # BoundaryPatch
 #		getProperty(properties, 1) # Parameter 'd11'=2mm
 #		getProperty(properties, 2) # Parameter 'd12'=35°
-#		getProperty(properties, 4) # ParameterBoolean=False
-#		getProperty(properties, 5) # ParameterBoolean=True
-#		getProperty(properties, 6) # ParameterBoolean=False
-#		getProperty(properties, 7) # ParameterBoolean=True
+#		getProperty(properties, 4) # Boolean=False
+#		getProperty(properties, 5) # Boolean=True
+#		getProperty(properties, 6) # Boolean=False
+#		getProperty(properties, 7) # Boolean=True
 #		getProperty(properties, 8) # BodyCollection 'Solid1'
 #		getProperty(properties, 9) # FeatureDimensions
 
@@ -3761,12 +3770,12 @@ class FreeCADImporter(object):
 	def Create_FxThread(self, threadNode):
 		properties = threadNode.get('properties')
 #		faceSet    = getProperty(properties, 0) # FaceCollection
-#		fullDepth  = getProperty(properties, 1) # ParameterBoolean=True
-#		getProperty(properties, 2) # ParameterBoolean=True
+#		fullDepth  = getProperty(properties, 1) # Boolean=True
+#		getProperty(properties, 2) # Boolean=True
 #		length     = getProperty(properties, 3) # Parameter 'd16'= 0mm
 #		offset     = getProperty(properties, 4) # Parameter 'd17'= 0mm
 #		edgeSet    = getProperty(properties, 5) # EdgeCollection
-#		reversed   = getProperty(properties, 6) # ParameterBoolean=False
+#		reversed   = getProperty(properties, 6) # Boolean=False
 #		getProperty(properties, 7)  # BodyCollection 'Solid1' <= 2019
 #		getProperty(properties, 8)  # FeatureDimensions
 #		getProperty(properties, 9)  # ObjectCollection >=2020
@@ -3993,7 +4002,7 @@ class FreeCADImporter(object):
 				setTableValue(table, 'A', r, key)
 				setTableValue(table, 'B', r, "'%s" %(value))
 				remValue = self.addParameterTableComment(table, r, valueNode.get('label'))
-			elif (typeName == 'ParameterBoolean'):
+			elif (typeName == 'Boolean'):
 				value = valueNode.get('value')
 				setTableValue(table, 'A', r, key)
 				setTableValue(table, 'B', r, value)
