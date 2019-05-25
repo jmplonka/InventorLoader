@@ -47,7 +47,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i, 8)
 		if (getFileVersion() > 2017): i += 1
 		i = node.ReadUInt32(i, 'index')
@@ -74,7 +74,8 @@ class EeSceneReader(StyleReader):
 		return i
 
 	def ReadHeaderParent(self, node, typeName = None):
-		if (typeName is not None): node.typeName = typeName
+		if (typeName is not None):
+			node.typeName = typeName
 		i = self.skipBlockSize(0, 8)
 		i = node.ReadParentRef(i)
 		i = self.skipBlockSize(i)
@@ -145,6 +146,7 @@ class EeSceneReader(StyleReader):
 
 	def Read_D79AD3F3(self, node): # Edge ...
 		i = self.Read_A79EACD2(node, None)
+		i = self.skipBlockSize(i)
 		return i
 
 	def Read_37DB9D1E(self, node): # Plane surface
@@ -186,6 +188,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadFloat64_3D(i, 'a0')
 		i = node.ReadFloat32_3D(i, 'a1')
 		i = node.ReadUInt16(i, 'u16_0')
+		i = self.skipBlockSize(i)
 		return i
 
 	def Read_A79EACCF(self, node): # 3D-Object
@@ -359,18 +362,22 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadChildRef(i, 'body')
 		if (getFileVersion() < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32A(i, 5, 'a3')
 		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64_2D(i, 'a4')
 		i = self.skipBlockSize(i, 8)
-		i = node.ReadUInt32(i, 'u32_0')
-		b = node.get('u32_0')
-		if (b == 1):
-			i = node.ReadUInt32(i, 'u32_1')
-			i = node.ReadChildRef(i, 'ref_2')
+		cnt, i = getUInt32(node.data, i)
+		lst = []
+		for k in range(cnt):
+			u, i = getUInt32(node.data, i)
+			i = node.ReadChildRef(i, 'ref', k)
+			r = node.get('ref')
+			node.delete('ref')
+			lst.append((u,r))
+		node.set('lst1', lst)
 		return i
 
 	def Read_0BC8EA6D(self, node): # key reference

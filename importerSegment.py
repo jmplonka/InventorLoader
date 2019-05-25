@@ -29,7 +29,7 @@ def resolveEntityReferences(node, entities):
 	try:
 		dumpSat(node.index, header, lst)
 
-		# until now each ref only knwos the id of the targetting entity -> resolve it
+		# until now each ref only knows the ID of the targeting entity -> resolve it
 		for index in refs:
 			ref = refs[index]
 			ref.entity = entities.get(index, None)
@@ -125,9 +125,9 @@ BRANCH_NODES = {
 	'Block2D':                         Block2DNode,
 }
 
-def getBranchNode(data, isRef):
+def getBranchNode(data):
 	nodeCls = BRANCH_NODES.get(data.typeName, DataNode)
-	return nodeCls(data, isRef)
+	data.node = nodeCls(data)
 
 def __dumpBranch(file, ref, branch, level, prefix):
 	# branch can be either an branch node or an text representation!
@@ -173,20 +173,21 @@ def buildBranch(parent, file, data, level, ref):
 						__dumpBranch(file, childRef, node.getRefText(), level + 1, '*')
 	return
 
-def resolveReferencNodes(nodes):
+def resolveReferences(nodes):
 	for node in nodes.values():
-		getBranchNode(node, False)
+		getBranchNode(node)
 		node.handled = False
 		node.sketchIndex = None
 		node.parent = None
 		isRadius2D = (node.typeName == 'Dimension_Radius2D')
 		for ref in node.references:
-			ref.analysed = False
 			if (ref.index in nodes):
 				ref._data = nodes[ref.index]
+				if (ref.type == SecNodeRef.TYPE_PARENT):
+					node.parent = ref._data
 			elif (ref.index > -1):
 				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", node.segment.name, node.index, node.typeName, ref.index, max(nodes))
-			if (isRadius2D and ((ref.typeName == 'Circle2D') or (ref.typeName == 'Ellipse2D') or (ref.typeName == '160915E2'))):
+			if (isRadius2D and (ref.typeName in ['Circle2D', 'Ellipse2D', 'Arc2D'])):
 				radius = SecNodeRef(ref.index or 0x80000000, SecNodeRef.TYPE_CROSS, 'radius')
 				radius._data = node
 				ref._data.set(radius.name, radius)
@@ -227,19 +228,19 @@ def resolveParentNodes(nodes):
 						ref.type = SecNodeRef.TYPE_CROSS
 			elif (parent.parent is not None) and (parent.parent.index == ref.index):
 				ref.type = SecNodeRef.TYPE_PARENT
-			elif (ref.type == SecNodeRef.TYPE_PARENT):
-					ref.type = SecNodeRef.TYPE_CROSS
+			elif (ref.type == SecNodeRef.TYPE_PARENT) and (parent.parent.index != ref.index):
+				ref.type = SecNodeRef.TYPE_CROSS
 	return
 
 def buildTree(file, nodes):
 	# link the node's references with the corresponding nodes
-	resolveReferencNodes(nodes)
+	resolveReferences(nodes)
 
 	# set the parent property for each node
 	resolveParentNodes(nodes)
 
 	# now the tree can be build
-	roots = DataNode(None, False)
+	roots = DataNode(None)
 	for node in nodes.values():
 		if (node.parent is None):
 			buildBranch(roots, file, node, 0, None)
@@ -687,7 +688,7 @@ class SegmentReader(object):
 		if (getFileVersion() > 2017):
 			i = node.ReadUInt16A(i, 3, 'a3')
 		else:
-			node.content += u" a3=[0000,0000,0000]"
+			node.content += u" a3=[000,000,000]"
 			node.set('a3', [0,0,0])
 		return i
 

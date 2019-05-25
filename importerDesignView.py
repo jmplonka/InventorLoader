@@ -47,8 +47,11 @@ class DesignViewReader(SegmentReader):
 	def Read_9B043321(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadLen32Text16(i)
-		i = node.ReadUInt32(i, 'u32_1')
+		if (getFileVersion() < 2020):
+			i = node.ReadLen32Text16(i)
+		else:
+			i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_9DC2A241(self, node): # ViewDirection

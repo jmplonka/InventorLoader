@@ -159,7 +159,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = self.ReadHeaderNameTableRootNode(node)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst3', 2)
 		i = self.ReadNtEntry(node, i, 'edge')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def Read_14340ADB(self, node): # Name table root node
@@ -349,7 +349,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 
 	def Read_E5289C69(self, node): # Name table child node
 		i = self.ReadHeaderNameTableChild2Node(node)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def Read_B1ED010F(self, node): # Name table child node

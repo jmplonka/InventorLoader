@@ -224,7 +224,7 @@ class RSeStorageSection7(object):
 		if (self.dbRef is None):
 			if (self.segName is None):
 				return '%r' %(self.segRef)
-			return '\'%s\'' %(self.segName)
+			return u"'%s'" %(self.segName)
 		if (self.segName is None):
 			return '[%s] [%s] [%s] [%s] %r %r %r' %(self.segRef, self.arr1, self.arr2, self.arr3, self.txt1, self.txt2, self.txt3)
 		return '[%s] [%s] [%s] [%s] %r %r %r' %(self.segName, self.arr1, self.arr2, self.arr3, self.txt1, self.txt2, self.txt3)
@@ -328,37 +328,37 @@ class Inventor(object):
 
 	def getBrowser(self):
 		for seg in self.RSeMetaData.values():
-			if (seg.isBrowser(self)): return seg
+			if (seg.isBrowser()): return seg
 		return EMPTY_SEGMENT
 
 	def getDefault(self):
 		for seg in self.RSeMetaData.values():
-			if (seg.isDefault(self)): return seg
+			if (seg.isDefault()): return seg
 		return EMPTY_SEGMENT
 
 	def getResult(self):
 		for seg in self.RSeMetaData.values():
-			if (seg.isResult(self)): return seg
+			if (seg.isResult()): return seg
 		return EMPTY_SEGMENT
 
 	def getDesignView(self):
 		for seg in self.RSeMetaData.values():
-			if (seg.isDesignView(self)): return seg
+			if (seg.isDesignView()): return seg
 		return EMPTY_SEGMENT
 
 	def getEeData(self):
 		for seg in self.RSeMetaData.values():
-			if (seg.isEeData(self)): return seg
+			if (seg.isEeData()): return seg
 		return EMPTY_SEGMENT
 
 	def getEeScene(self):
 		for seg in self.RSeMetaData.values():
-			if (seg.isEeScene(self)): return seg
+			if (seg.isEeScene()): return seg
 		return EMPTY_SEGMENT
 
 	def getFBAttribute(self):
 		for seg in self.RSeMetaData.values():
-			if (seg.isFBAttribute(self)): return seg
+			if (seg.isFBAttribute()): return seg
 		return EMPTY_SEGMENT
 
 	def getNBNotebook(self):
@@ -542,13 +542,12 @@ class Derived(AbstractValue):
 		super(Derived, self).__init__(s, 1.0, 0.0, unit)
 
 class DataNode(object):
-	def __init__(self, data, isRef):
+	def __init__(self, data):
 		## data must be an instance of AbstractData!
 		if (data):
 			assert isinstance(data, AbstractData), 'Data is not a AbstractData (%s)!' %(data.__class__.__name__)
-			if (isRef == False): data.node = self
 		self.data = data
-		self.isRef = isRef
+		self.isRef = False
 		self.children = []
 
 	@property
@@ -643,8 +642,8 @@ class DataNode(object):
 	def getRefText(self): # return unicode
 		name = self.name
 		if (name):
-			return u'(%04X): %s \'%s\'' %(self.index, self.typeName, name)
-		return u'(%04X): %s' %(self.index, self.typeName)
+			return u"(%04X): %s '%s'" %(self.index, self.typeName, name)
+		return u"(%04X): %s" %(self.index, self.typeName)
 
 	def getUnitName(self): # return unicode
 		if (self.data): return self.data.getUnitName()
@@ -664,7 +663,7 @@ class DataNode(object):
 			if (name):
 				if (sys.version_info.major < 3) and (not isinstance(name, unicode)):
 					name = unicode(name)
-				return u'(%04X): %s \'%s\'%s' %(node.index, node.typeName, name, content)
+				return u"(%04X): %s '%s'%s" %(node.index, node.typeName, name, content)
 			return u'(%04X): %s%s' %(node.index, node.typeName, content)
 		return "<NONE>"
 
@@ -678,20 +677,17 @@ class DataNode(object):
 		return None
 
 	def getParticipants(self):
-		label = self.get('label')
-		if (label is None):
-			logError(u"    (%04X): %s - has no required label attribute!", self.index, self.typeName)
-			return []
+		label = self
 		while (label.typeName != 'Label'):
-			label = label.get('label')
+			label = label.get('next')
 			if (label is None):
-				logError(u"    (%04X): %s - has no required label attribute!", dummy.index, dummy.typeName)
+				logError(u"    (%04X): %s - has no required next attribute!", label.index, label.typeName)
 				return []
 		return label.get('participants')
 
 class ParameterNode(DataNode):
-	def __init__(self, data, isRef):
-		super(ParameterNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(ParameterNode, self).__init__(data)
 
 	def getValueRaw(self):
 		return self.get('valueNominal')
@@ -699,11 +695,11 @@ class ParameterNode(DataNode):
 	def getRefText(self): # return unicode
 		x = self.getValue()
 		try:
-			if (isinstance(x, Angle)):  return u'(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.name, x)
-			if (isinstance(x, Length)): return u'(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.name, x)
-			return u'(%04X): %s \'%s\'=%s' %(self.index, self.typeName, self.name, x)
+			if (isinstance(x, Angle)):  return u"(%04X): %s '%s'=%s" %(self.index, self.typeName, self.name, x)
+			if (isinstance(x, Length)): return u"(%04X): %s '%s'=%s" %(self.index, self.typeName, self.name, x)
+			return u"(%04X): %s '%s'=%s" %(self.index, self.typeName, self.name, x)
 		except Exception as e:
-			return u'(%04X): %s \'%s\'=%s - %s' %(self.index, self.typeName, self.name, x, e)
+			return u"(%04X): %s '%s'=%s - %s" %(self.index, self.typeName, self.name, x, e)
 
 	def getParameterFormula(self, parameterData, asText):
 		subFormula = ''
@@ -745,7 +741,7 @@ class ParameterNode(DataNode):
 			subFormula = "%s(%s)" %(function, ';'.join(["%s" %(self.getParameterFormula(ref, asText)) for ref in operandRefs]))
 			if ((function in FunctionsNotSupported) and (not asText)):
 				nominalValue = self.getValue().getNominalValue()
-				logWarning(u"Function \'%s\' not supported in formula of '%s' (%s) - using nominal value %g!", function, self.name, subFormula, nominalValue)
+				logWarning(u"Function '%s' not supported in formula of '%s' (%s) - using nominal value %g!", function, self.name, subFormula, nominalValue)
 				subFormula = '%g' %(nominalValue)
 		elif (typeName == 'ParameterOperationPowerIdent'):
 			operand1 = self.getParameterFormula(parameterData.get('operand1'), asText)
@@ -768,9 +764,9 @@ class ParameterNode(DataNode):
 			refValue = data.get('value')
 			if (refValue):
 				if (asText):
-					return u'\'' + self.getParameterFormula(refValue, asText)
+					return u"'" + self.getParameterFormula(refValue, asText)
 				try:
-					return u'=' + self.getParameterFormula(refValue, asText)
+					return u"=" + self.getParameterFormula(refValue, asText)
 				except BaseException as be:
 					# replace by nominal value and unit!
 					value = self.getValue()
@@ -892,8 +888,8 @@ class ParameterNode(DataNode):
 		return Derived(x, type)
 
 class ParameterTextNode(DataNode):
-	def __init__(self, data, isRef):
-		super(ParameterTextNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(ParameterTextNode, self).__init__(data)
 
 	def getValueRaw(self):
 		return self.get('value')
@@ -902,7 +898,7 @@ class ParameterTextNode(DataNode):
 		return u''
 
 	def getRefText(self): # return unicode
-		return u'(%04X): %s \'%s\'=\'%s\'' %(self.index, self.typeName, self.name, self.getValue())
+		return u"(%04X): %s '%s'='%s'" %(self.index, self.typeName, self.name, self.getValue())
 
 	def getValue(self):
 		x = self.getValueRaw()
@@ -922,8 +918,8 @@ class ParameterValue(object):
 		return 'Parameter'
 
 class EnumNode(DataNode):
-	def __init__(self, data, isRef):
-		super(EnumNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(EnumNode, self).__init__(data)
 
 	def getValueText(self):
 		enum = self.get('Values')
@@ -946,8 +942,8 @@ class EnumNode(DataNode):
 		return '(%04X): %s %s%s' %(node.index, node.typeName, name, node.content)
 
 class DirectionNode(DataNode):
-	def __init__(self, data, isRef):
-		super(DirectionNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(DirectionNode, self).__init__(data)
 
 	def getDirection(self):
 		dir = self.get('dir')
@@ -969,8 +965,8 @@ class DirectionNode(DataNode):
 		return u'(%04X): %s' %(self.index, self.typeName)
 
 class BendEdgeNode(DataNode):
-	def __init__(self, data, isRef):
-		super(BendEdgeNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(BendEdgeNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		p1 = self.get('from')
@@ -978,31 +974,30 @@ class BendEdgeNode(DataNode):
 		return u'(%04X): %s - (%g,%g,%g)-(%g,%g,%g)' %(self.index, self.typeName, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z)
 
 class SketchNode(DataNode):
-	def __init__(self, data, isRef):
-		super(SketchNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(SketchNode, self).__init__(data)
 		data.sketchEdges = {}
 		data.associativeIDs = {}
-		return
 
 class BlockPointNode(DataNode):
-	def __init__(self, data, isRef):
-		super(BlockPointNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(BlockPointNode, self).__init__(data)
 
 	def getRefText(self):
 		p = self.get('point')
 		return u"(%04X): %s - (%s)" %(self.index, self.typeName, p.typeName)
 
 class Block2DNode(DataNode):
-	def __init__(self, data, isRef):
-		super(Block2DNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(Block2DNode, self).__init__(data)
 
 	def getRefText(self):
 		sketch = self.get('source')
 		return u"(%04X): %s '%s'" %(self.index, self.typeName, sketch.name)
 
 class FeatureNode(DataNode):
-	def __init__(self, data, isRef):
-		super(FeatureNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(FeatureNode, self).__init__(data)
 
 	def _getPropertyName(self, index):
 		properties = self.get('properties')
@@ -1075,6 +1070,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'Boolean'):
 				if (p3 == 'Enum'):                  return 'Split'
 				if (p2 == 'Boolean'):               return 'Fold'
+				if (p2 == 'Parameter'):            	return 'CornerGap'
 			if (p2 == 'Boolean'):                   return 'SnapFit'
 		elif (p0 == 'FxFilletEdgeSetsConstantR'):
 			p8 = self._getPropertyName(8)
@@ -1106,6 +1102,7 @@ class FeatureNode(DataNode):
 			if (p1 == 'FaceCollection'):            return 'FaceDraft'
 		elif (p0 == 'CA02411F'):                    return 'NonParametricBase'
 		elif (p0 == 'EB9E49B0'):                    return 'Freeform'
+		elif (p0 == 'Freeform'):                    return 'Freeform'
 		elif (p0 == 'FaceBoundOuterProxy'):
 			if (p4 == 'EdgeCollection'):            return 'Hem'
 			return 'Plate'
@@ -1114,9 +1111,9 @@ class FeatureNode(DataNode):
 			if (p1 == '0800FE29'):                  return 'Move'
 			if (p2 == 'SurfaceBody'):               return 'Stitch'
 			if (p1 == 'BodyCollection'):            return 'Stitch'
-		elif (p0 == 'SurfacesSculpt'):              return 'Sculpt'
+		elif (p0 == 'SculptSurfaceCollection'):     return 'Sculpt'
 		elif (p0 == 'TrimType'):                    return 'Trim'
-		elif (p0 == 'CornerSeam'):                  return 'Corner'
+		elif (p0 == 'CornerSeam'):                  return 'CornerSeam'
 		elif (p0 == 'AFD8A8E0'):                    return 'Corner'
 		elif (p0 == 'LoftSections'):                return 'Loft'
 #		elif (p0 == 'Parameter'):                   return 'Loft'
@@ -1148,14 +1145,14 @@ class FeatureNode(DataNode):
 		return 'Unknown'
 
 	def getRefText(self): # return unicode
-		return u'(%04X): Fx%s \'%s\'' %(self.data.index, self.getSubTypeName(), self.name)
+		return u"(%04X): Fx%s '%s'" %(self.data.index, self.getSubTypeName(), self.name)
 
 	def __str__(self):
 		return u"(%04X): Fx%s '%s'%s" %(self.data.index, self.getSubTypeName(), self.name, self.data.content)
 
 class ValueNode(DataNode):
-	def __init__(self, data, isRef):
-		super(ValueNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(ValueNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		try:
@@ -1177,8 +1174,8 @@ class ValueNode(DataNode):
 		return u'(%04X): %s' %(self.index, self.typeName)
 
 class PointNode(DataNode): # return unicoe
-	def __init__(self, data, isRef):
-		super(PointNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(PointNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		pos = self.get('pos')
@@ -1189,8 +1186,8 @@ class PointNode(DataNode): # return unicoe
 		return u'(%04X): %s - (%g,%g,%g)' %(self.index, self.typeName, pos.x, pos.y, pos.z)
 
 class LineNode(DataNode):
-	def __init__(self, data, isRef):
-		super(LineNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(LineNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		if (self.typeName[-2:] == '2D'):
@@ -1207,8 +1204,8 @@ class LineNode(DataNode):
 		return u"(%04X): %s (%g,%g,%g)-(%g,%g,%g)" %(self.index, self.typeName, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z)
 
 class CircleNode(DataNode):
-	def __init__(self, data, isRef):
-		super(CircleNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(CircleNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		r = self.get('r')
@@ -1229,8 +1226,8 @@ class CircleNode(DataNode):
 		return u"(%04X): %s - (%g,%g,%g), r=%g%s" %(self.index, self.typeName, p.x, p.y, p.z, r, points)
 
 class GeometricRadius2DNode(DataNode):
-	def __init__(self, data, isRef):
-		super(GeometricRadius2DNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(GeometricRadius2DNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		o = self.get('entity')
@@ -1238,8 +1235,8 @@ class GeometricRadius2DNode(DataNode):
 		return u'(%04X): %s - o=(%04X): %s, c=(%04X)' %(self.index, self.typeName, o.index, o.typeName, c.index)
 
 class GeometricCoincident2DNode(DataNode):
-	def __init__(self, data, isRef):
-		super(GeometricCoincident2DNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(GeometricCoincident2DNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		e1 = self.get('entity1')
@@ -1253,23 +1250,23 @@ class GeometricCoincident2DNode(DataNode):
 		return u'(%04X): %s - e1=(%04X): %s, e2=(%04X): %s' %(self.index, self.typeName, e1.index, e1.typeName, e2.index, e2.typeName)
 
 class DimensionAngleNode(DataNode):
-	def __init__(self, data, isRef):
-		super(DimensionAngleNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(DimensionAngleNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		d = self.get('parameter')
 		if (self.typeName == 'Dimension_Angle2Line2D'):
 			l1 = self.get('line1')
 			l2 = self.get('line2')
-			return u'(%04X): %s - d=\'%s\', l1=(%04X): %s, l2=(%04X): %s' %(self.index, self.typeName, d.name, l1.index, l1.typeName, l2.index, l2.typeName)
+			return u"(%04X): %s - d='%s', l1=(%04X): %s, l2=(%04X): %s" %(self.index, self.typeName, d.name, l1.index, l1.typeName, l2.index, l2.typeName)
 		p1 = self.get('point1')
 		p2 = self.get('point2')
 		p3 = self.get('point3')
-		return u'(%04X): %s - d=\'%s\', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s' %(self.index, self.typeName, d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
+		return u"(%04X): %s - d='%s', p1=(%04X): %s, p2=(%04X): %s, p3=(%04X): %s" %(self.index, self.typeName, d.name, p1.index, p1.typeName, p2.index, p2.typeName, p3.index, p3.typeName)
 
 class DimensionDistance2DNode(DataNode):
-	def __init__(self, data, isRef):
-		super(DimensionDistance2DNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(DimensionDistance2DNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		d = self.get('parameter')
@@ -1279,16 +1276,16 @@ class DimensionDistance2DNode(DataNode):
 			p1 = e1.get('pos')
 			if (e2.typeName == 'Point2D'):
 				p2 = e2.get('pos')
-				return u'(%04X): %s - d=\'%s\', (%g,%g), (%g,%g)' %(self.index, self.typeName, d.name, p1.x, p1.y, p2.x, p2.y)
-			return u'(%04X): %s - d=\'%s\', (%g,%g)\t(%04X): %s' %(self.index, self.typeName, d.name, p1.x, p1.y, e2.index, e2.typeName)
+				return u"(%04X): %s - d='%s', (%g,%g), (%g,%g)" %(self.index, self.typeName, d.name, p1.x, p1.y, p2.x, p2.y)
+			return u"(%04X): %s - d='%s', (%g,%g)\t(%04X): %s" %(self.index, self.typeName, d.name, p1.x, p1.y, e2.index, e2.typeName)
 		if (e2.typeName == 'Point2D'):
 			p2 = e2.get('pos')
-			return u'(%04X): %s - d=\'%s\', (%g,%g)\t(%04X): %s' %(self.index, self.typeName, d.name, p2.x, p2.y, e1.index, e1.typeName)
-		return u'(%04X): %s - d=\'%s\', e1=(%04X): %s, e2=(%04X): %s' %(self.index, self.typeName, d.name, e1.index, e1.typeName, e2.index, e2.typeName)
+			return u"(%04X): %s - d='%s', (%g,%g)\t(%04X): %s" %(self.index, self.typeName, d.name, p2.x, p2.y, e1.index, e1.typeName)
+		return u"(%04X): %s - d='%s', e1=(%04X): %s, e2=(%04X): %s" %(self.index, self.typeName, d.name, e1.index, e1.typeName, e2.index, e2.typeName)
 
 class ObjectCollectionNode(DataNode):
-	def __init__(self, data, isRef):
-		super(ObjectCollectionNode, self).__init__(data, isRef)
+	def __init__(self, data):
+		super(ObjectCollectionNode, self).__init__(data)
 
 	def getRefText(self): # return unicode
 		bodies = self.get('items')
@@ -1322,7 +1319,7 @@ class Segment(object):
 		self.nodes        = None
 		self.elementNodes = {}
 		self.indexNodes   = {}
-		self.tree         = DataNode(None, False)
+		self.tree         = DataNode(None)
 		self.acis         = None
 	def getDcSatAttributes(self):
 		if (self.acis is None): return []
@@ -1541,9 +1538,8 @@ class AbstractData(object):
 		name:  The name of the property.
 		value: The value of the property.
 		'''
-		oldVal = self.properties.get(name)
-		if (name): self.properties[name] = value
-		return oldVal
+		if (name):
+			self.properties[name] = value
 
 	def get(self, name):
 		'''
@@ -1562,9 +1558,12 @@ class AbstractData(object):
 			del self.properties[name]
 
 	def getName(self):
+		if (hasattr(self, 'nameSet')): return self.name
 		if (self.name is None):
-			label = self.get('label')
-			if (label): return label.name
+			label = self.get('next')
+			if (not label is None):
+				self.nameSet = True
+				self.name = label.name
 		return self.name
 
 	def __str__(self): # return unicode
@@ -1583,33 +1582,34 @@ class Enum(tuple): __getattr__ = tuple.index
 
 Tolerances = Enum(['NOMINAL', 'LOWER', 'UPPER', 'MEDIAN'])
 
-Functions  = Enum([''        , \
-                   'cos'     , \
-                   'sin'     , \
-                   'tan'     , \
-                   'acos'    , \
-                   'asin'    , \
-                   'atan'    , \
-                   'cosh'    , \
-                   'sinh'    , \
-                   'tanh'    , \
-                   'sqrt'    , \
-                   'exp'     , \
-                   'pow'     , \
-                   'log'     , \
-                   'log10'   , \
-                   'floor'   , \
-                   'ceil'    , \
-                   'round'   , \
-                   'abs'     , \
-                   'sign'    , \
-                   'max'     , \
-                   'min'     , \
-                   'random'  , \
-                   'acosh'   , \
-                   'asinh'   , \
-                   'atanh'   , \
-                   'isolate'])
+Functions  = Enum([
+	''       ,
+	'cos'    ,
+	'sin'    ,
+	'tan'    ,
+	'acos'   ,
+	'asin'   ,
+	'atan'   ,
+	'cosh'   ,
+	'sinh'   ,
+	'tanh'   ,
+	'sqrt'   ,
+	'exp'    ,
+	'pow'    ,
+	'log'    ,
+	'log10'  ,
+	'floor'  ,
+	'ceil'   ,
+	'round'  ,
+	'abs'    ,
+	'sign'   ,
+	'max'    ,
+	'min'    ,
+	'random' ,
+	'acosh'  ,
+	'asinh'  ,
+	'atanh'  ,
+	'isolate'])
 
 FunctionsNotSupported = ['sign', 'random', 'acosh', 'asinh', 'atanh', 'isolate']
 

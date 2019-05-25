@@ -75,7 +75,7 @@ class NotebookReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i, 'ref_0')
-		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt8(i, 'u8_1')
 		i = self.skipBlockSize(i)
 		return i
 

@@ -6,9 +6,10 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerClasses import AbstractData, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry, ParameterNode, AbstractValue
-from importerUtils   import *
-from math            import log10, pi
+from importerClasses        import AbstractData, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry, ParameterNode, AbstractValue
+from importerUtils          import *
+from math                   import log10, pi
+from importerTransformation import Transformation3D
 import numpy as np
 
 __author__     = 'Jens M. Plonka'
@@ -72,6 +73,7 @@ _TYP_NT_ENTRY_              = 0x0048
 _TYP_2D_UINT32_             = 0x0049
 _TYP_MTM_LST_               = 0x004A
 _TYP_NODE_LST2_X_REF_       = 0x004B
+_TYP_TRANSFORMATIONS_       = 0x004C
 
 _TYP_LIST_UINT16_A_         = 0x8001
 _TYP_LIST_SINT16_A_         = 0x8002
@@ -142,6 +144,7 @@ TYP_LIST_FUNC = {
 	_TYP_NT_ENTRY_:              'getListNtEntries',
 	_TYP_MTM_LST_:               'getListMdlrTxnMgr',
 	_TYP_NODE_LST2_X_REF_:       'getListList2XRef',
+	_TYP_TRANSFORMATIONS_:       'getListTransformations',
 	_TYP_LIST_UINT16_A_:         'getListListUInt16sA',
 	_TYP_LIST_SINT16_A_:         'getListListSInt16sA',
 	_TYP_LIST_UINT32_A_:         'getListListUInt32sA',
@@ -385,8 +388,6 @@ class SecNode(AbstractData):
 		m, i = getUInt32(self.data, offset)
 		ref = SecNodeRef(m, type, name)
 
-		self.set(name, None)
-
 		if (ref.index > 0):
 			ref.number = number
 			if (ref.index == self.index):
@@ -542,7 +543,7 @@ class SecNode(AbstractData):
 		return self.__getList2Nums(name, offset, cnt, 'l', 4, u"%d")
 
 	def getListFloat32s(self, name, offset, cnt, arraysize):
-		return self.__getList2Nums(name, offset, cnt, 'f', 4, u"%g", (getFileVersion() > 2010))
+		return self.__getList2Nums(name, offset, cnt, 'f', 4, u"%g")
 
 	def getListFloat64s(self, name, offset, cnt, arraysize):
 		return self.__getList2Nums(name, offset, cnt, 'd', 8, u"%g")
@@ -760,6 +761,17 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
+	def getListTransformations(self, name, offset, cnt, arraysize):
+		lst = []
+		i = offset
+		for j in range(cnt):
+			t = Transformation3D()
+			i = t.read(self.data, i)
+			lst.append(t)
+		self.content += u" %s={%s}" %(name, u",".join([u"%r" %(t) for t in lst]))
+		self.set(name, lst)
+		return i
+
 	def getList2DUInt32s(self, name, offset, cnt, arraysize):
 		lst = []
 		i  = offset
@@ -779,10 +791,12 @@ class SecNode(AbstractData):
 			u1, i = getUInt32(self.data, i)
 			i = self.ReadList4(i, _TYP_UINT32_, name)
 			l1 = self.get(name)
+			self.delete(name)
 			u2, i = getUInt32(self.data, i)
 			u3, i = getUInt32(self.data, i)
 			i = self.ReadList4(i, _TYP_UINT32_, name)
 			l2 = self.get(name)
+			self.delete(name)
 			a1, i = getFloat64_3D(self.data, i)
 			a2, i = getFloat64_3D(self.data, i)
 			i += skip
@@ -826,6 +840,7 @@ class SecNode(AbstractData):
 			i = self.ReadList4(i, _TYP_UINT32_, name)
 			i += skip1
 			l = self.get(name)
+			self.delete(name)
 			lst.append((u, l))
 		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s])" %(a[0], IntArr2Str(a[1], 3)) for a in lst]))
 		self.set(name, lst)
@@ -845,6 +860,7 @@ class SecNode(AbstractData):
 			u3, i = getUInt32(self.data, i)
 			i += skip1
 			l = self.get(name)
+			self.delete(name)
 			lst.append((u1, u2, u3, l))
 		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,%03X,%04X,%s)" %(a[0], a[1], a[2], a[3]) for a in lst]))
 		self.set(name, lst)
@@ -938,21 +954,32 @@ class SecNode(AbstractData):
 		func = getattr(self, TYP_LIST_FUNC[typ])
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
-		return func(name, i, cnt, arraySize)
+		i = func(name, i, cnt, arraySize)
+		return i
 
 	def ReadMetaData_04(self, name, offset, typ, method = getUInt16A):
 		cnt, i = getUInt32(self.data, offset)
 		func = getattr(self, TYP_04_FUNC[typ])
 		if (cnt > 0):
 			arr16, i = method(self.data, i, 2)
-		return func(name, i, cnt, 1) # arraysize = 1 => dummy value has to be ignored by any function in TYP_04_FUNC's
+		i = func(name, i, cnt, 1) # arraysize = 1 => dummy value has to be ignored by any function in TYP_04_FUNC's
+		return i
 
 	def ReadMetaData_ARRAY(self, name, offset, typ):
 		cnt, i = getUInt32(self.data, offset)
 		func = getattr(self, TYP_ARRAY_FUNC[typ])
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
-		return func(name, i, cnt)
+		i = func(name, i, cnt)
+		return i
+
+	def ReadMetaData_MAP(self, name, offset, typ):
+		cnt, i = getUInt32(self.data, offset)
+		func = getattr(self, TYP_MAP_FUNC[typ])
+		if (cnt > 0):
+			arr32, i = getUInt32A(self.data, i, 2)
+		i = func(name, i, cnt)
+		return i
 
 	def	getMapU16U16(self, name, offset, cnt):
 		lst = {}
@@ -1061,6 +1088,7 @@ class SecNode(AbstractData):
 		for j in range(cnt):
 			i = self.ReadCrossRef(i, name, j)
 			key = self.get(name)
+			self.delete(name)
 			tmp = u"%s[%s]" %(name, key.index)
 			i = self.ReadList2(i, _TYP_NODE_X_REF_, tmp)
 			lst[key] = self.get(tmp)
@@ -1185,13 +1213,6 @@ class SecNode(AbstractData):
 			lst[key] = (u, m)
 		self.content += u" %s={%s}" %(name, ",".join([u"(%04X:%r" %(key, val) for key, val in lst.items()]))
 		return i
-
-	def ReadMetaData_MAP(self, name, offset, typ):
-		cnt, i = getUInt32(self.data, offset)
-		func = getattr(self, TYP_MAP_FUNC[typ])
-		if (cnt > 0):
-			arr32, i = getUInt32A(self.data, i, 2)
-		return func(name, i, cnt)
 
 	def ReadList2(self, offset, typ, name, arraySize = 1):
 		i = CheckList(self.data, offset, 0x0002)

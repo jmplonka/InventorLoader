@@ -275,7 +275,7 @@ class History(object):
 		entity.index = -1
 		self.history_stream , i = Acis.getValue(entity.chunks, 0)
 		self.current_state  , i = Acis.getInteger(entity.chunks, i) # current delta_state
-		self.next_state     , i = Acis.getInteger(entity.chunks, i) # next stae to with respect to roll back
+		self.next_state     , i = Acis.getInteger(entity.chunks, i) # next state to with respect to roll back
 		self.keep_max_states, i = Acis.getInteger(entity.chunks, i) # max number of states to keep
 		self.unknown        , i = Acis.getInteger(entity.chunks, i)
 		self.ds_current     , i = Acis.getValue(entity.chunks, i)   # current delta state, a.k. "working state"
