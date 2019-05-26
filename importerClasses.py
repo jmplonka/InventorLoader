@@ -807,7 +807,7 @@ class ParameterNode(DataNode):
 		if (type == 's')     : return Time(x,       1.0000000, type)
 		if (type == 'min')   : return Time(x,      60.0000000, type)
 		if (type == 'h')     : return Time(x,    3600.0000000, type)
-		# Temperatur
+		# Temperature
 		if (type == 'K')     : return Temperature(x,     1.0,   0.00, type)
 		if (type == u'\xB0C'): return Temperature(x,     1.0, 273.15, type)
 		if (type == u'\xB0F'): return Temperature(x, 5.0/9.0, 523.67, type)
@@ -844,7 +844,7 @@ class ParameterNode(DataNode):
 		if (derivedUnit is not None):
 			# Length
 			# Mass
-			# Temperatur
+			# Temperature
 			# Angularity
 			if (derivedUnit == 'sr')       : return Angle(x   ,   1.0, type)
 			# Velocity
