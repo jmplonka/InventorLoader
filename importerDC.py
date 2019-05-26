@@ -4350,7 +4350,7 @@ class DCReader(EeDataReader):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		else:
 			addEmptyLists(node, [0])
-			i += 4 # skipt 0x000002F5
+			i += 4 # skipped 0x000002F5
 		i = node.ReadFloat64A(i, 12, 'a9')
 		i = node.ReadUInt8(i, 'u8_4')
 		i = node.ReadUInt16A(i, 5, 'a10')
