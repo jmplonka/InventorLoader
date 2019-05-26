@@ -36,7 +36,7 @@ _FX_COIL_             = PREFIX + 'FxCoil'            # FX missing
 _FX_EMBOSS_           = PREFIX + 'FxEmboss'          # FX missing
 _PRIMITIVE_BOX_       = PREFIX + 'PrimitiveBox'
 _PRIMITIVE_CYLINDER_  = PREFIX + 'PrimitiveCylinder'
-_PRIMITIVE_SPHERE_    = PREFIX + 'PrimitiveShpere'
+_PRIMITIVE_SPHERE_    = PREFIX + 'PrimitiveSphere'
 _PRIMITIVE_CONE_      = PREFIX + 'PrimitiveCone'
 _PRIMITIVE_ELLIPSOID_ = PREFIX + 'PrimitiveEllipsoid'
 _PRIMITIVE_TORUS_     = PREFIX + 'PrimitiveTorus'
@@ -432,9 +432,9 @@ class  _CmdPrimitiveCylinder(_CmdAbstract):
 		super(_CmdPrimitiveCylinder, self).__init__(menuText="&Cylinder", toolTip="Create a primitive cylinder", pixmap=getIconPath("Primitive_Cylinder.svg"))
 	def Activated(self):
 		createPrimitive('Cylinder')
-class  _CmdPrimitiveShpere(_CmdAbstract):
+class  _CmdPrimitiveSphere(_CmdAbstract):
 	def __init__(self):
-		super(_CmdPrimitiveShpere, self).__init__(menuText="&Shpere", toolTip="Create a primitive hpere", pixmap=getIconPath("Primitive_Sphere.svg"))
+		super(_CmdPrimitiveSphere, self).__init__(menuText="&Sphere", toolTip="Create a primitive sphere", pixmap=getIconPath("Primitive_Sphere.svg"))
 	def Activated(self):
 		createPrimitive('Sphere')
 class  _CmdPrimitiveCone(_CmdAbstract):
@@ -572,7 +572,7 @@ if (FreeCAD.GuiUp):
 	addCommand(_FX_EMBOSS_          , _CmdFxEmboss())
 	addCommand(_PRIMITIVE_BOX_      , _CmdPrimitiveBox())
 	addCommand(_PRIMITIVE_CYLINDER_ , _CmdPrimitiveCylinder())
-	addCommand(_PRIMITIVE_SPHERE_   , _CmdPrimitiveShpere())
+	addCommand(_PRIMITIVE_SPHERE_   , _CmdPrimitiveSphere())
 	addCommand(_PRIMITIVE_CONE_     , _CmdPrimitiveCone())
 	addCommand(_PRIMITIVE_ELLIPSOID_, _CmdPrimitiveEllipsoid())
 	addCommand(_PRIMITIVE_TORUS_    , _CmdPrimitiveTorus())
