@@ -1294,7 +1294,7 @@ class SecNode(AbstractData):
 		formula = u''
 		sep     = ''
 
-		lastUnit     = 'XXXXX' # choos any unit that is not defined!
+		lastUnit     = 'XXXXX' # choose any unit that is not defined!
 		unitExponent = 1       # by default (e.g.): m^1 => m
 
 		for j in range(len(units)):

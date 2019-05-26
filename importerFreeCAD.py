@@ -1498,7 +1498,7 @@ class FreeCADImporter(object):
 
 	def addSketch_Geometric_EqualLength2D(self, constraintNode, sketchObj):
 		'''
-		Create a  equal legnth constraint
+		Create an equal length constraint
 		'''
 		if (SKIP_CONSTRAINTS & BIT_GEO_EQUAL == 0): return
 		index1 = constraintNode.get('line1').sketchIndex
@@ -1518,7 +1518,7 @@ class FreeCADImporter(object):
 
 	def addSketch_Geometric_EqualRadius2D(self, constraintNode, sketchObj):
 		'''
-		Create a  equal radius constraint
+		Create an equal radius constraint
 		'''
 		if (SKIP_CONSTRAINTS & BIT_GEO_EQUAL == 0): return
 		index1 = constraintNode.get('circle1').sketchIndex
@@ -1779,13 +1779,13 @@ class FreeCADImporter(object):
 		return
 	def addSketch_Geometric_AlignHorizontal2D(self, node, sketchObj):
 		'''
-		Create an horizontal align constraint.
+		Create a horizontal align constraint.
 		'''
 		if (SKIP_CONSTRAINTS & BIT_GEO_ALIGN_HORIZONTAL == 0): return
 		return
 	def addSketch_Geometric_AlignVertical2D(self, node, sketchObj):
 		'''
-		Create an vertical align constraint.
+		Create a vertical align constraint.
 		'''
 		if (SKIP_CONSTRAINTS & BIT_GEO_ALIGN_VERTICAL == 0): return
 		return
@@ -1883,7 +1883,7 @@ class FreeCADImporter(object):
 
 	def addSketch_Dimension_Angle2Line2D(self,  dimensionNode, sketchObj):
 		'''
-		Create a angle constraint
+		Create an angle constraint
 		'''
 		if (SKIP_CONSTRAINTS & BIT_DIM_ANGLE_2_LINE == 0): return
 		line1 = dimensionNode.get('line1')
@@ -2144,7 +2144,7 @@ class FreeCADImporter(object):
 		direction  = getProperty(properties, 0x02)               # The direction of the extrusion
 		reversed   = getPropertyValue(properties, 0x03, 'value') # If the extrusion direction is inverted
 		dimLength1 = getProperty(properties, 0x04)               # The length of the extrusion in direction 1
-		dimAngle   = getProperty(properties, 0x05)               # The taper outward angle  (doesn't work properly in FreeCAD)
+		dimAngle   = getProperty(properties, 0x05)               # The taper outward angle (doesn't work properly in FreeCAD)
 		extend     = getPropertyValue(properties, 0x06, 'value') #
 		midplane   = getPropertyValue(properties, 0x07, 'value')
 		# = getProperty(properties, 0x0F)#               FeatureDimensions
@@ -2320,7 +2320,7 @@ class FreeCADImporter(object):
 					padGeo = self.Create_FxExtrude_New(extrudeNode, sectionNode, name)
 				else:
 					padGeo = None
-					logError(u"    ERROR Don't know how to operate PAD=%s for (%04X): %s", operation, extrudeNode.index, extrudeNode.typeName)
+					logError(u"    ERROR: Don't know how to operate PAD=%s for (%04X): %s", operation, extrudeNode.index, extrudeNode.typeName)
 
 				if (padGeo):
 					self.addBody(extrudeNode, padGeo, 0x1A, 0x10)
