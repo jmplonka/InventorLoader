@@ -26,6 +26,10 @@ APP_5_A = Struct('<ddL').unpack_from
 APP_5_B = Struct('<BBH').unpack_from
 MTM_LST = Struct('<LBL').unpack_from
 
+REF_PARENT = 1
+REF_CHILD  = 2
+REF_CROSS  = 3
+
 def CheckList(data, offset, type):
 	lst, i = getUInt16A(data, offset, 2)
 	if (getFileVersion() < 2015):
@@ -205,6 +209,7 @@ class SecNode(AbstractData):
 
 	def __init__(self):
 		super(SecNode, self).__init__()
+		self.analysed = False
 
 	def ReadUInt8(self, offset, name):
 		x, i = getUInt8(self.data, offset)
@@ -361,7 +366,7 @@ class SecNode(AbstractData):
 		x, i = getLen32Text8(self.data, offset)
 		if (name):
 			self.set(name, x)
-			self.content += ' %s=\'%s\'' %(name, x)
+			self.content += u" %s='%s'" %(name, x)
 		else:
 			self.name = x
 		return i
@@ -370,7 +375,7 @@ class SecNode(AbstractData):
 		x, i = getText8(self.data, offset, l)
 		if (name):
 			self.set(name, x)
-			self.content += ' %s=\'%s\'' %(name, x)
+			self.content += u" %s='%s'" %(name, x)
 		else:
 			self.name = x
 		return i
@@ -379,7 +384,7 @@ class SecNode(AbstractData):
 		x, i = getLen32Text16(self.data, offset)
 		if (name):
 			self.set(name, x)
-			self.content += ' %s=\'%s\'' %(name, x)
+			self.content += u" %s='%s'" %(name, x)
 		else:
 			self.name = x
 		return i
@@ -400,13 +405,13 @@ class SecNode(AbstractData):
 		return i
 
 	def ReadChildRef(self, offset, name = 'ref', number = None):
-		return self.ReadNodeRef(offset, name, number , SecNodeRef.TYPE_CHILD)
+		return self.ReadNodeRef(offset, name, number , REF_CHILD)
 
 	def ReadCrossRef(self, offset, name = 'ref', number = None):
-		return self.ReadNodeRef(offset, name, number, SecNodeRef.TYPE_CROSS)
+		return self.ReadNodeRef(offset, name, number, REF_CROSS)
 
 	def ReadParentRef(self, offset):
-		return self.ReadNodeRef(offset, 'parent', None, SecNodeRef.TYPE_CROSS)
+		return self.ReadNodeRef(offset, 'parent', None, REF_CROSS)
 
 	def __getListStrings(self, name, offset, cnt, mtd):
 		lst = []
@@ -452,9 +457,9 @@ class SecNode(AbstractData):
 				self.content += u" %s=[%s]" %(name, u",".join([u",".join([u"[%s]" %(u",".join([fmt %(n) for n in a]))]) for a in lst] ) )
 		else:
 			if (len(lst) > 100):
-				self.content += u" %s=[%s,...]" %(name, u",".join([fmt %(n) for n in lst[:100]]))
+				self.content += u" %s=[%s,...]" %(name, u",".join([fmt %(n) for n in lst[0][:100]]))
 			else:
-				self.content += u" %s=[%s]" %(name, u",".join([fmt %(n) for n in lst]))
+				self.content += u" %s=[%s]" %(name, u",".join([fmt %(n) for n in lst[0]]))
 		self.set(name, lst)
 		return i
 
@@ -467,7 +472,7 @@ class SecNode(AbstractData):
 			lst.append(self.get('lst_tmp'))
 		self.delete('lst_tmp')
 		if (arraysize == 1):
-			self.content = c + u" %s={%s}" %(name, u",".join([u"(%s)" %(u",".join([fmt %(x) for x in l])) for l in lst]))
+			self.content = c + u" %s={%s}" %(name, u",".join([u"(%s)" %(u",".join([fmt %(x) for x in l])) for l in lst[0]]))
 		else:
 			self.content = c + u" %s={%s}" %(name, u",".join([u"(%s)" %(u",".join([u"[%s]" %(FloatArr2Str(x)) for x in l])) for l in lst]))
 		self.set(name, lst)
@@ -755,8 +760,10 @@ class SecNode(AbstractData):
 		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_LIST_X_REF_, name, 1)
 			a = self.get(name)
+			self.delete(name)
 			i = self.ReadCrossRef(i, name)
 			b = self.get(name)
+			self.delete(name)
 			lst.append((a, b))
 		self.set(name, lst)
 		return i
@@ -944,17 +951,19 @@ class SecNode(AbstractData):
 		return i
 
 	def getArrayRef(self, name, offset, cnt):
-		return self.__getArrayNodes(name, offset, cnt, SecNodeRef.TYPE_CHILD)
+		return self.__getArrayNodes(name, offset, cnt, REF_CHILD)
 
 	def getArrayXRef(self, name, offset, cnt):
-		return self.__getArrayNodes(name, offset, cnt, SecNodeRef.TYPE_CROSS)
+		return self.__getArrayNodes(name, offset, cnt, REF_CROSS)
 
 	def ReadMetaData_LIST(self, offset, name, typ, arraySize = 1):
 		cnt, i = getUInt32(self.data, offset)
 		func = getattr(self, TYP_LIST_FUNC[typ])
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
+		self.skipCheck = True
 		i = func(name, i, cnt, arraySize)
+		self.skipCheck = False
 		return i
 
 	def ReadMetaData_04(self, name, offset, typ, method = getUInt16A):
@@ -962,7 +971,9 @@ class SecNode(AbstractData):
 		func = getattr(self, TYP_04_FUNC[typ])
 		if (cnt > 0):
 			arr16, i = method(self.data, i, 2)
+		self.skipCheck = True
 		i = func(name, i, cnt, 1) # arraysize = 1 => dummy value has to be ignored by any function in TYP_04_FUNC's
+		self.skipCheck = False
 		return i
 
 	def ReadMetaData_ARRAY(self, name, offset, typ):
@@ -970,7 +981,9 @@ class SecNode(AbstractData):
 		func = getattr(self, TYP_ARRAY_FUNC[typ])
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
+		self.skipCheck = True
 		i = func(name, i, cnt)
+		self.skipCheck = False
 		return i
 
 	def ReadMetaData_MAP(self, name, offset, typ):
@@ -978,7 +991,9 @@ class SecNode(AbstractData):
 		func = getattr(self, TYP_MAP_FUNC[typ])
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
+		self.skipCheck = True
 		i = func(name, i, cnt)
+		self.skipCheck = False
 		return i
 
 	def	getMapU16U16(self, name, offset, cnt):
@@ -1370,9 +1385,6 @@ class SecNode(AbstractData):
 		return None
 
 class SecNodeRef(object):
-	TYPE_PARENT = 1
-	TYPE_CHILD  = 2
-	TYPE_CROSS  = 3
 
 	def __init__(self, m, refType, name):
 		self.index    = (m & 0x7FFFFFFF)

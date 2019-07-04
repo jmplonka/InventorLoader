@@ -9,7 +9,7 @@ import os, re, sys, Part, FreeCAD, FreeCADGui
 from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, logError, getCellRef, setTableValue, calcAliasname
 from FreeCAD         import Vector as VEC
 from importerClasses import ParameterTableModel, VariantTableModel
-from math            import degrees
+from math            import degrees, radians, pi, sqrt, cos, sin, atan
 from PySide.QtCore   import *
 from PySide.QtGui    import *
 
@@ -33,6 +33,10 @@ DIM_CONSTRAINTS = {
 	'DistanceY': u'mm',
 	'Radius'   : u'mm',
 }
+
+DIR_X = VEC(1.0, 0.0, 0.0)
+DIR_Y = VEC(0.0, 1.0, 0.0)
+DIR_Z = VEC(0.0, 0.0, 1.0)
 
 def createPartFeature(doctype, name):
 	fp = FreeCAD.ActiveDocument.addObject(doctype, getObjectName(name))
@@ -716,5 +720,154 @@ def makeTrim(name = u"Trim", faces = None):
 	_Trim(fp, faces)
 	if FreeCAD.GuiUp:
 		_ViewProviderTrim(fp.ViewObject)
+	FreeCAD.ActiveDocument.recompute()
+	return fp
+
+class _Coil(_ObjectProxy):
+	def __init__(self, fp, patches):
+		super(_Coil, self).__init__(fp)
+		fp.addProperty("App::PropertyLink"       , "Profile"     , "Base", "The profile for the coil").Profile = None
+		fp.addProperty("App::PropertyVector"     , "Axis"        , "Coil", "The direction of the coil's axis").Axis = DIR_Z
+		fp.addProperty("App::PropertyVector"     , "Center"      , "Coil", "The origin of the coil").Center = DIR_Z
+		fp.addProperty("App::PropertyBoolean"    , "Reversed"    , "Coil", "Indicator for reversed direction").Reversed = False
+		fp.addProperty("App::PropertyEnumeration", "Rotation"    , "Coil", "Sens of rotation").Rotation =['Clockwise', 'Counterclockwise']
+		fp.addProperty("App::PropertyEnumeration", "CoilType"    , "Coil", "Specifies a pair of parameters").CoilType = ['PitchAndRevolution', 'RevolutionAndHeight', 'PitchAndHeight', 'Spiral']
+		fp.addProperty("App::PropertyLength"     , "Pitch"       , "Coil", "The elevation gain for each revolution of the helix").Pitch = 1.0
+		fp.addProperty("App::PropertyLength"     , "Height"      , "Coil", "The height of the coil from the center of the profile at the start to the center of the profile at the end").Height= 2.0
+		fp.addProperty("App::PropertyFloat"      , "Revolutions" , "Coil", "The number of revolutions for the coil").Revolutions = 2.0
+		fp.addProperty("App::PropertyAngle"      , "TaperAngle"  , "Coil", "The taper angle, if needed, for all coil types except spiral").TaperAngle = 0 # Cylinder!
+		fp.addProperty("App::PropertyBoolean"    , "Solid"       , "Coil", "Create a solid insteat of a shell").Solid = True
+		fp.addProperty("App::PropertyBoolean"    , "StartTransit", "Ends", "The type of the start coil's end").StartTransit = False
+		fp.addProperty("App::PropertyAngle"      , "StartFlat"   , "Ends", "The degrees the coil extends after transition with not pitch").StartFlat  = 0
+		fp.addProperty("App::PropertyAngle"      , "StartSegue"  , "Ends", "The transition angle of the start coil's end").StartSegue = 0
+		fp.addProperty("App::PropertyBoolean"    , "EndTransit"  , "Ends", "The type of the end coil's end").EndTransit = False
+		fp.addProperty("App::PropertyAngle"      , "EndSegue"    , "Ends", "The transition angle of the end coil's end").EndTrans = 0
+		fp.addProperty("App::PropertyAngle"      , "EndFlat"     , "Ends", "The degrees the coil extends after transition with not pitch").EndFlat  = 0
+
+	def _createCoilStart(self, fp):
+		pathEdges = []
+		if (fp.StartTransit):
+			m = fp.Profile.Shape.BoundBox.Center # Center of the profile
+			radius = m.distanceToLine(fp.Center, fp.Center+fp.Axis)
+			circleStart = Part.Circle(fp.Center, fp.Axis, radius)
+			a = circle.parameter(m)
+			if (fp.StartFlat > 0): # Angle of the flat part
+				b = a + readians(fp.StartFlat)
+				arc = Part.ArcOfCircle(circleStart, a, b)
+				a = b
+				pathEdges.append(arc.toShape())
+			if (fp.StartSegue > 0): # Tangent connection between flat and helical part.
+				b = a + radians(fp.StartSegue)
+				edge = Part.makeBSpline(points)
+				a = b
+				pathEdges.append(edge)
+		return pathEdges, a
+
+	def _createCoildEnd(self, fp, a):
+		pathEdges = []
+		if (fp.EndTransit):
+			m = fp.Profile.Shape.BoundBox.Center # Center of the profile
+			circleEnd = Part.Circle(fp.Center, fp.Axis, radiusEnd)
+			radius = m.distanceToLine(fp.Center, fp.Center+fp.Axis)
+			radius -= fp.Height * sin(radians(fp.Angle))
+			if (fp.EndSegue > 0): # Tangent connection between helical and flat part.
+				b = a + radians(fp.EndSegue)
+				edge = Part.makeBSpline(points)
+				a = b
+				pathEdges.append(edge)
+			if (fp.EndFlat > 0):
+				b = a + radians(fp.EndFlat)
+				edge = Part.ArcOfCircle(Part.Circle(fp.Center, fp.Axis, radius), a, b)
+				a = b
+				profileEdges.append(edge)
+		return pathEdges
+
+	def CreateSpiral(self, fp, a):
+		m = fp.Profile.Shape.BoundBox.Center # Center of the profile
+		myNumRot = fp.Rotations
+		myRadius = m.distanceToLine(fp.Center, fp.Center+fp.Axis)
+		myGrowth = Growth
+		myPitch  = 1.0
+		myHeight = myNumRot * myPitch
+		myAngle  = atan(myGrowth / myPitch)
+
+		assert myGrowth > 0, u"Growth too small"
+		assert myNumRot > 0, u"Number of rotations too small"
+
+		aPnt = VEC(0.0, 0.0, 0.0)
+		aDir = VEC(2.0 * pi, myPitch, 0.0)
+		surf = Part.Cone(aPnt, DIR_Z, 1.0, 0.0)
+
+		line = Part.LineSegment(aPnt, aDir)
+		beg = line.value(0)
+		end = line.value(aDir.Length * myNumRot)
+
+		# calculate end point for conical helix
+		v = myHeight / cos(myAngle)
+		u = myNumRot * 2.0 * pi
+		segm = Part.LineSegment(beg , VEC(u, v, 0));
+
+		edgeOnSurf = surf.project(segm)
+		wire = edgeOnSurf.toShape()
+
+		aPlane = Part.Plane(aPnt, DIR_Z)
+		range = (myNumRot+1) * myGrowth + 1 + myRadius
+		aPlane.toShape().project(wire)
+		return spiral
+
+	def _createHelix(self, fp, a):
+		if (fp.CoilType == 'Spiral'):
+			return self.createSpiral(fp, a)
+
+		if (fp.CoilType == 'PitchAndRevolution'):
+			assert fp.Pitch > 0, "Pitch must be greater than zero!"
+			assert fp.Revolutions > 0, "Revolutions must be greater than zero!"
+			fp.Height = fp.Pitch * fp.Revolutions
+		elif (fp.CoilType == 'RevolutionAndHeight'):
+			assert fp.Height > 0, "Height mus be greater than zeor!"
+			assert fp.Revolutions > 0, "Revolutions must be greater than zero!"
+			fp.Pitch = fp.Height / fp.Revolutions
+		elif (fp.CoilType == 'PitchAndHeight'):
+			assert fp.Height > 0, "Height mus be greater than zeor!"
+			assert fp.Pitch > 0, "Pitch must be greater than zero!"
+			fp.Revolutions = fp.Height / fp.Pitch
+		else:
+			raise Exception(u"Unknown Coil-Type '%s'" %(fp.CoilType))
+
+		lefthanded = (fp.Rotation == 'Counterclockwise')
+		edge = Part.makeLongHelix(fp.Pitch, fp.Height, radius, fp.Angle, lefthanded)
+		edge
+		return edge
+
+	def execute(self, fp):
+		# Part.ArcOfCircle for Coil's flat ends regardless of the taper angle
+		# Part.??? for coil's transition ends
+		# Part.makeLongHelix for Coil with with pitch, height, radius, angle, lefthanded
+
+		# Radius of the coil
+
+		pathEdges, a = self._createCoilStart(fp)
+		pathEdges.append(_createHelix(fp), a)
+		pathEdges += self._createCoildEnd(fp)
+
+class _ViewProviderCoil(_ViewProvider):
+	def __init__(self, vp):
+		super(_ViewProviderCoil, self).__init__(vp)
+
+	def claimChildren(self):
+		return self.Object.Profile
+
+	def getIcon(self):
+		return getIconPath('FxCoil.png')
+
+def makeCoil(name = u"Coil", profile = None):
+	if (profile is None):
+		profile = getProfileFromSelection()
+
+	fp = createPartFeature("Part::FeaturePython", name)
+	_Coil(fp, profile)
+	fp.Profile = profile
+	if FreeCAD.GuiUp:
+		_ViewProviderCoil(fp.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
 	return fp

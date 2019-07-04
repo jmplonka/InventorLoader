@@ -232,7 +232,7 @@ def _createCurveDegenerate(acisCurve):
 	return curve
 def _createCurveEllipse(acisCurve):
 	global _ellipses
-	key = '%s,%s,%s,%s' %(acisCurve.center, acisCurve.normal, acisCurve.major, acisCurve.ratio)
+	key = '%s,%s,%s,%s' %(acisCurve.center, acisCurve.axis, acisCurve.major, acisCurve.ratio)
 	try:
 		circle = _ellipses[key]
 	except:
@@ -241,7 +241,7 @@ def _createCurveEllipse(acisCurve):
 		else:
 			axis1 = acisCurve.major.Length
 			circle = ELLIPSE('', None, axis1, axis1 * acisCurve.ratio)
-		circle.placement = _createAxis2Placement3D('', acisCurve.center, 'Origin', acisCurve.normal, 'center_axis', acisCurve.major, 'ref_axis')
+		circle.placement = _createAxis2Placement3D('', acisCurve.center, 'Origin', acisCurve.axis, 'center_axis', acisCurve.major, 'ref_axis')
 		_ellipses[key] = circle
 	return circle
 def _createCurveInt(acisCurve):

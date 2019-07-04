@@ -45,7 +45,11 @@ def read(doc, filename, readProperties):
 		if (importerSAT.readBinary(filename)):
 			return importerSAT
 	elif (ext == '.iam'):
-		logError(u"Sorry, AUTODESK assembly files not yet supported!")
+		logError(u"Sorry, AUTODESK assemblies not yet supported!")
+	elif (ext == '.ipn'):
+		logError(u"Sorry, AUTODESK presentations not yet supported!")
+	elif (ext == '.idw'):
+		logError(u"Sorry, AUTODESK drawings not yet supported!")
 	return None
 
 def isFileValid(filename):
@@ -55,7 +59,7 @@ def isFileValid(filename):
 	if (not os.path.isfile(filename)):
 		logError(u"Can't import folders!")
 		return False
-	if (filename.split(".")[-1].lower() in ("ipt", "iam")):
+	if (filename.split(".")[-1].lower() in ("ipt", "iam", "ipn", "idw")):
 		if (not isOleFile(filename)):
 			logError(u"ERROR> '%s' is not a valid Autodesk Inventor file!", filename)
 			return False

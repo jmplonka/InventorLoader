@@ -22,33 +22,49 @@ PART_LINE = Part.Line
 if (hasattr(Part, "LineSegment")):
 	PART_LINE = Part.LineSegment
 
-SEG_APP_ASSEMBLY      = 'AmAppSegment'
-SEG_APP_PART          = 'PmAppSegment'
-SEG_APP_DL            = 'DlAppSegment'
-SEG_B_REP_ASSEMBLY    = 'AmBREPSegment'
-SEG_B_REP_MB          = 'MbBrepSegment'
-SEG_B_REP_PART        = 'PmBRepSegment'
-SEG_BROWSER_ASSEMBLY  = 'AmBrowserSegment'
-SEG_BROWSER_PART      = 'PmBrowserSegment'
-SEG_BROWSER_DL        = 'DlBrowserSegment'
-SEG_D_C_ASSEMBLY      = 'AmDcSegment'
-SEG_D_C_PART          = 'PmDCSegment'
-SEG_DIR_DL            = 'DlDirectorySegment'
-SEG_DOC_DL            = 'DlDocDCSegment'
-SEG_GRAPHICS_ASSEMBLY = 'AmGraphicsSegment'
-SEG_GRAPHICS_MB       = 'MbGraphicsSegment'
-SEG_GRAPHICS_PART     = 'PmGraphicsSegment'
-SEG_RESULT_ASSEMBLY   = 'AmRxSegment'
-SEG_RESULT_PART       = 'PmResultSegment'
-SEG_DESIGN_VIEW       = 'DesignViewSegment'
-SEG_DATA_EE           = 'EeDataSegment'
-SEG_SCENE_EE          = 'EeSceneSegment'
-SEG_SHT14_DC_DL       = 'DLSheet14DCSegment'
-SEG_SHT14_DL_DL       = 'DLSheet14DLSegment'
-SEG_SHT14_SM_DL       = 'DLSheet14SMSegment'
-SEG_ATTR_FB           = 'FBAttributeSegment'
-SEG_NOTEBOOK_NB       = 'NBNotebookSegment'
-SEG_DEFAULT           = 'Default'
+SEG_APP             = 'AppSegmentType'
+SEG_APP_AM          = 'AmAppSegmentType'
+SEG_APP_PM          = 'PmAppSegmentType'
+SEG_BREP_AM         = 'AmBREPSegmentType'
+SEG_BREP_MB         = 'MbBrepSegmentType'
+SEG_BREP_PM         = 'PmBrepSegmentType'
+SEG_BROWSER_AM      = 'AmBRxSegmentType'
+SEG_BROWSER_DL      = 'DlBRxSegmentType'
+SEG_BROWSER_DX      = 'DxBRxSegmentType'
+SEG_BROWSER_PM      = 'PmBRxSegmentType'
+SEG_DC_AM           = 'AmDcSegmentType'
+SEG_DC_DL           = 'DlDocDcSegmentType'
+SEG_DC_DX           = 'DxDcSegmentType'
+SEG_DC_PM           = 'PmDcSegmentType'
+SEG_DESIGN_VIEW     = 'FWxDesignViewType'
+SEG_DESIGN_VIEW_MGR = 'FWxDesignViewManagerType'
+SEG_DIRECTORY_DL    = 'DlDirectorySegmentType'
+SEG_EE_DATA         = 'EeDataSegmentType'
+SEG_EE_SCENE        = 'EeSceneSegmentType'
+SEG_FB_ATTRIBUTE    = 'FBAttributeSegment'
+SEG_GRAPHICS_AM     = 'AmGRxSegmentType'
+SEG_GRAPHICS_MB     = 'MbGRxSegmentType'
+SEG_GRAPHICS_PM     = 'PmGRxSegmentType'
+SEG_NOTEBOOK        = 'NotebookSegmentType'
+SEG_RESULT_AM       = 'AmRxSegmentType'
+SEG_RESULT_PM       = 'PmResultSegmentType'
+SEG_SHEET_DC_DL     = 'DlSheetDcSegmentType'
+SEG_SHEET_DL_DL     = 'DlSheetDlSegmentType'
+SEG_SHEET_SM_DL     = 'DlSheetSmSegmentType'
+
+SEGMENTS_APP = [SEG_APP, SEG_APP_AM, SEG_APP_PM]
+SEGMENTS_BRP = [SEG_BREP_AM, SEG_BREP_MB, SEG_BREP_PM]
+SEGMENTS_BRX = [SEG_BROWSER_AM, SEG_BROWSER_DL, SEG_BROWSER_DX, SEG_BROWSER_PM]
+SEGMENTS_DOC = [SEG_DC_AM, SEG_DC_DL, SEG_DC_DX, SEG_DC_PM]
+SEGMENTS_DVW = [SEG_DESIGN_VIEW, SEG_DESIGN_VIEW_MGR]
+SEGMENTS_DIR = [SEG_DIRECTORY_DL]
+SEGMENTS_EED = [SEG_EE_DATA]
+SEGMENTS_EES = [SEG_EE_SCENE]
+SEGMENTS_FBA = [SEG_FB_ATTRIBUTE]
+SEGMENTS_GRX = [SEG_GRAPHICS_AM, SEG_GRAPHICS_MB, SEG_GRAPHICS_PM]
+SEGMENTS_NTB = [SEG_NOTEBOOK]
+SEGMENTS_RSX = [SEG_RESULT_AM, SEG_RESULT_PM]
+SEGMENTS_SHT = [SEG_SHEET_DC_DL, SEG_SHEET_DL_DL, SEG_SHEET_SM_DL]
 
 class RSeDatabase(object):
 	def __init__(self):
@@ -115,7 +131,7 @@ class RSeSegment(object):
 		self.nodes       = []
 
 	def __str__(self):
-		return u"%s, count=(%d/%d), ID={%s}, value1=%04X, arr1=[%s], arr2=[%s]" %(self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.arr1, 4), IntArr2Str(self.arr2, 4))
+		return u"%s:%s, count=(%d/%d), ID={%s}, value1=%04X, arr1=[%s], arr2=[%s]" %(self.type, self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.arr1, 4), IntArr2Str(self.arr2, 4))
 
 	def __repr__(self):
 		return self.__str__()
@@ -271,9 +287,7 @@ class RSeRevisions(object):
 		self.infos   = []
 	def __del__(self):
 		self.mapping.clear()
-		del self.mapping
 		self.infos[:] = []
-		del self.infos
 class Inventor(object):
 	def __init__(self):
 		self.UFRxDoc            = None
@@ -282,24 +296,19 @@ class Inventor(object):
 		self.iProperties        = {}
 		self.RSeMetaData        = {}
 	def __del__(self):
-		del self.UFRxDoc
-		del self.RSeDb
-		del self.RSeRevisions
 		self.iProperties.clear()
-		del self.iProperties
 		self.RSeMetaData.clear()
-		del self.RSeMetaData
 
 	def __repr__(self):
 		if (getInventorFile() is None): return u"#NV#"
 		return u"[%d]: %s" %(getFileVersion(), os.path.split(os.path.abspath(getInventorFile()))[-1])
 
-	def getDC(self):
+	def getApp(self):
 		'''
-		Returns the segment that contains the 3D-objects.
+		Returns the segment that contains the application settings.
 		'''
 		for seg in self.RSeMetaData.values():
-			if (seg.isDC()): return seg
+			if (seg.isApp()): return seg
 		return EMPTY_SEGMENT
 
 	def getBRep(self):
@@ -310,40 +319,29 @@ class Inventor(object):
 			if (seg.isBRep()): return seg
 		return EMPTY_SEGMENT
 
-	def getGraphics(self):
-		'''
-		Returns the segment that contains the graphic objects.
-		'''
-		for seg in self.RSeMetaData.values():
-			if (seg.isGraphics()): return seg
-		return EMPTY_SEGMENT
-
-	def getApp(self):
-		'''
-		Returns the segment that contains the application settings.
-		'''
-		for seg in self.RSeMetaData.values():
-			if (seg.isApp()): return seg
-		return EMPTY_SEGMENT
-
 	def getBrowser(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isBrowser()): return seg
 		return EMPTY_SEGMENT
 
-	def getDefault(self):
+	def getDC(self):
+		'''
+		Returns the segment that contains the 3D-objects.
+		'''
 		for seg in self.RSeMetaData.values():
-			if (seg.isDefault()): return seg
+			if (seg.isDC()): return seg
 		return EMPTY_SEGMENT
 
-	def getResult(self):
+	def getDesignViews(self):
+		views = []
 		for seg in self.RSeMetaData.values():
-			if (seg.isResult()): return seg
-		return EMPTY_SEGMENT
+			if (seg.isDesignView()):
+				views.append(seg)
+		return views
 
-	def getDesignView(self):
+	def getDirectory(self):
 		for seg in self.RSeMetaData.values():
-			if (seg.isDesignView()): return seg
+			if (seg.isDirectory()): return seg
 		return EMPTY_SEGMENT
 
 	def getEeData(self):
@@ -361,10 +359,30 @@ class Inventor(object):
 			if (seg.isFBAttribute()): return seg
 		return EMPTY_SEGMENT
 
+	def getGraphics(self):
+		'''
+		Returns the segment that contains the graphic objects.
+		'''
+		for seg in self.RSeMetaData.values():
+			if (seg.isGraphics()): return seg
+		return EMPTY_SEGMENT
+
 	def getNBNotebook(self):
 		for seg in self.RSeMetaData.values():
 			if (seg.isNBNotebook()): return seg
 		return EMPTY_SEGMENT
+
+	def getResult(self):
+		for seg in self.RSeMetaData.values():
+			if (seg.isResult()): return seg
+		return EMPTY_SEGMENT
+
+	def getSheets(self):
+		sheets = []
+		for seg in self.RSeMetaData.values():
+			if (seg.isSheet()):
+				sheets.append(seg)
+		return sheets
 
 class DbInterface(object):
 	TYPE_MAPPING = {
@@ -721,8 +739,6 @@ class ParameterNode(DataNode):
 					subFormula = '%d%s' %(round((value / factor) - offset, 0), unitName)
 				else: # floating point value!
 					subFormula = '%g%s' %((value / factor) - offset, unitName)
-		elif (typeName == 'ParameterUnaryMinus'):
-			subFormula = '-' + self.getParameterFormula(parameterData.get('value'), asText)
 		elif (typeName == 'ParameterConstant'):
 			unitName = ''
 			if (asText):
@@ -730,7 +746,7 @@ class ParameterNode(DataNode):
 				if (len(unitName) > 0): unitName = ' ' + unitName
 			subFormula = '%s%s' %(parameterData.name, unitName)
 		elif (typeName == 'ParameterRef'):
-			target = parameterData.get('target')
+			target = parameterData.get('operand1')
 			if (asText):
 				subFormula = target.name
 			else:
@@ -743,10 +759,11 @@ class ParameterNode(DataNode):
 				nominalValue = self.getValue().getNominalValue()
 				logWarning(u"Function '%s' not supported in formula of '%s' (%s) - using nominal value %g!", function, self.name, subFormula, nominalValue)
 				subFormula = '%g' %(nominalValue)
-		elif (typeName == 'ParameterOperationPowerIdent'):
-			operand1 = self.getParameterFormula(parameterData.get('operand1'), asText)
-			subFormula = operand1
-		elif (typeName.startswith('ParameterOperation')):
+		elif (typeName == 'ParameterOperatorUnaryMinus'):
+			subFormula = '-' + self.getParameterFormula(parameterData.get('operand1'), asText)
+		elif (typeName == 'ParameterOperatorPowerIdent'):
+			subFormula = self.getParameterFormula(parameterData.get('operand1'), asText)
+		elif (typeName.startswith('ParameterOperator')):
 			operation = parameterData.name
 			operand1 = self.getParameterFormula(parameterData.get('operand1'), asText)
 			operand2 = self.getParameterFormula(parameterData.get('operand2'), asText)
@@ -770,14 +787,13 @@ class ParameterNode(DataNode):
 				except BaseException as be:
 					# replace by nominal value and unit!
 					value = self.getValue()
-					if (sys.version_info.major < 3):
-						value = unicode(value)
 					logWarning(u"    %s - replacing by nominal value %s!" %(be, value))
 			else:
-				value = data.get('valueModel')
-				if (sys.version_info.major < 3):
-					value = unicode(value)
-			return u'=%s' %(value)
+				value = self.getValue()
+			if (asText):
+				return u"'%s" %(value)
+			return u"=%s" %(value.getNominalValue())
+
 		return u''
 
 	def getValue(self):
@@ -1302,7 +1318,8 @@ class Segment(object):
 		self.dat2         = ''
 		self.arr1         = []
 		self.arr2         = []
-		self.segRef       = None
+		self.segID        = None
+		self.segment      = None
 		self.arr3         = []
 		self.sec1         = []
 		self.sec2         = []
@@ -1321,47 +1338,57 @@ class Segment(object):
 		self.indexNodes   = {}
 		self.tree         = DataNode(None)
 		self.acis         = None
+
 	def getDcSatAttributes(self):
 		if (self.acis is None): return []
 		return self.acis.get('dcAttributes')
+
+	@property
+	def type(self):
+		if (self.segment): return self.segment.type
+		return self.name
+
 	def __repr__(self):
 		return self.name
 
 	def isApp(self): # Application settings/options
-		return (self.name in [SEG_APP_PART, SEG_APP_ASSEMBLY, SEG_APP_DL])
+		return (self.type in SEGMENTS_APP)
 
-	def isBRep(self): # ACIS representation
-		return (self.name in [SEG_B_REP_PART, SEG_B_REP_ASSEMBLY, SEG_B_REP_MB])
+	def isBRep(self): # ACIS data and meta information
+		return (self.type in SEGMENTS_BRP)
 
-	def isBrowser(self): # Model broweser settings
-		return (self.name in [SEG_BROWSER_PART, SEG_BROWSER_ASSEMBLY, SEG_BROWSER_DL])
-
-	def isDefault(self):
-		return (self.name == SEG_DEFAULT)
+	def isBrowser(self): # Model navigator (browser) settings
+		return (self.type in SEGMENTS_BRX)
 
 	def isDC(self): # Model definition
-		return (self.name in [SEG_D_C_PART, SEG_D_C_ASSEMBLY, SEG_SHT14_DC_DL])
-
-	def isGraphics(self): # Model graphics definition
-		return (self.name in [SEG_GRAPHICS_PART, SEG_GRAPHICS_ASSEMBLY, SEG_GRAPHICS_MB])
-
-	def isResult(self):
-		return (self.name in [SEG_RESULT_PART, SEG_RESULT_ASSEMBLY])
+		return (self.type in SEGMENTS_DOC)
 
 	def isDesignView(self):
-		return (self.name == SEG_DESIGN_VIEW)
+		return (self.type in SEGMENTS_DGW)
+
+	def isDirectory(self):
+		return (self.name in SEGMENTS_DIR)
 
 	def isEeData(self):
-		return (self.name == SEG_DATA_EE)
+		return (self.type in SEGMENTS_EED)
 
 	def isEeScene(self):
-		return (self.name == SEG_SCENE_EE)
+		return (self.type in SEGMENTS_EES)
 
 	def isFBAttribute(self):
-		return (self.name == SEG_ATTR_FB)
+		return (self.type in SEGMENTS_FBA)
+
+	def isGraphics(self): # Model graphics definition
+		return (self.type in SEGMENTS_GRX)
 
 	def isNBNotebook(self):
-		return (self.name == SEG_NOTEBOOK_NB)
+		return (self.type in SEGMENTS_NTB)
+
+	def isResult(self):
+		return (self.type in SEGMENTS_RSX)
+
+	def isSheet(self):
+		return (self.type in SEGMENTS_SHT)
 
 EMPTY_SEGMENT = Segment()
 
@@ -1531,6 +1558,7 @@ class AbstractData(object):
 		self.valid        = True
 		self.handled      = False
 		self.node         = None
+		self.skipCheck    = False
 
 	def set(self, name, value):
 		'''
@@ -1539,11 +1567,14 @@ class AbstractData(object):
 		value: The value of the property.
 		'''
 		if (name):
+			if (self.skipCheck == False):
+				if (name  in self.properties):
+					logError(u" ERROR in %s.%s: '%s' already set!" %(self.segment.name, self.typeName, name))
 			self.properties[name] = value
 
 	def get(self, name):
 		'''
-		Returns the value fo the property given by the name.
+		Returns the value of the property given by the name.
 		name: The name of the property.
 		Returns None if the property is not yet set.
 		'''

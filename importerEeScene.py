@@ -28,7 +28,6 @@ class EeSceneReader(StyleReader):
 		i = node.ReadColorRGBA(i,  'ColorAttr.c2')
 		i = node.ReadColorRGBA(i,  'ColorAttr.c3')
 		i = node.ReadUInt16A(i, 2, 'ColorAttr.a5')
-		node.object3D = True
 		return i
 
 	def ReadHeader3dObject(self, node, typeName = None, ref1Name = 'numRef'):
@@ -85,6 +84,17 @@ class EeSceneReader(StyleReader):
 		i = self.ReadHeaderParent(node, typeName)
 		i = node.ReadUInt32(i, name)
 		node.numref = True
+		return i
+
+	def ReadHeaderAttribute(self, node, typeName = None):
+		if (typeName == None):
+			tn = 'Attr_%s' %(node.typeName)
+		else:
+			tn = typeName
+		i = self.ReadHeaderSU32S(node, tn)
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def ReadOptionalTransformation(self, node, offset):
@@ -165,10 +175,7 @@ class EeSceneReader(StyleReader):
 		return i
 
 	def Read_6C6322EB(self, node):
-		i = self.ReadHeaderSU32S(node)
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
+		i = self.ReadHeaderAttribute(node)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_1')
@@ -185,8 +192,8 @@ class EeSceneReader(StyleReader):
 
 	def Read_41305114(self, node):
 		i = self.ReadHeader3dObject(node)
-		i = node.ReadFloat64_3D(i, 'a0')
-		i = node.ReadFloat32_3D(i, 'a1')
+		i = node.ReadFloat64_3D(i, 'pos')
+		i = node.ReadFloat32_3D(i, 'dir')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = self.skipBlockSize(i)
 		return i
@@ -402,6 +409,15 @@ class EeSceneReader(StyleReader):
 
 	def Read_F6ADCC69(self, node): # Index definition
 		i = self.ReadHeaderNumRef(node, 'DefIndexLine', 'index')
+		return i
+
+	def Read_2116098E(self, node): # num ref ...
+		i = self.ReadHeaderNumRef(node, 'RefByKey_5', 'key')
+		return i
+
+	def Read_424221E2(self, node): # num ref
+		i = self.ReadHeaderNumRef(node, 'RefByKey_6', 'key')
+		i = node.ReadUInt32A(i, 4, 'a0')
 		return i
 
 # _______________________________________

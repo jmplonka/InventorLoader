@@ -382,6 +382,25 @@ def resolveNode(entity):
 		logError(traceback.format_exc())
 	return
 
+def resolveSurfaceRefs(face):
+	refs  = face.getSurfaceRefs()
+	srfs  = face.getSurfaceDefinitions()
+	j = 0
+
+	for ref in refs:
+		if (Acis.subtypeTableSurfaces.get(ref) is None):
+			id = -1
+			n = 0
+			while (j < len(srfs)):
+				s = srfs[j]
+				if ((id == -1) or (s.index == id)):
+					Acis.addSubtypeNodeSurface(s, ref + n)
+					j += 1
+					n += 1
+					id = s.index
+				else:
+					break
+
 def resolveNodes():
 	Acis.init()
 
@@ -397,22 +416,8 @@ def resolveNodes():
 
 	# try to resolve surface references...
 	for face in faces:
-		refs  = face.getSurfaceRefs()
-		srfs  = face.getSurfaceDefinitions()
-		j = 0
-		for ref in refs:
-			if (Acis.subtypeTableSurfaces.get(ref) is None):
-				id = -1
-				n = 0
-				while (j < len(srfs)):
-					s = srfs[j]
-					if ((id == -1) or (s.index == id)):
-						Acis.addSubtypeNodeSurface(s, ref + n)
-						j += 1
-						n += 1
-						id = s.index
-					else:
-						break
+		resolveSurfaceRefs(face)
+
 	return bodies
 
 _currentColor = (0xBE/255.0, 0xBE/255.0, 0xBE/255.0)
@@ -618,7 +623,7 @@ def create3dModel(group, doc):
 	return
 
 def readEntities(asm):
-	header, lst, history, refs = asm.get('SAT')
+	header, lst, history = asm.get('SAT')
 	Acis.setHeader(header)
 	setEntities(lst)
 	bodies = 0

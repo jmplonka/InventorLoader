@@ -9,9 +9,9 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 import re, traceback,  numpy as np
 from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
-from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_
+from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_, REF_PARENT, REF_CHILD, REF_CROSS
 from importerUtils          import *
-from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, createNode, setHeader, getNameMatchAttributes, getDcAttributes, setScale
+from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, initSatRefs, createNode, setHeader, getNameMatchAttributes, getDcAttributes, setScale
 from importerSAT            import readEntityBinary, int2version, Header, History
 from uuid                   import UUID
 
@@ -24,12 +24,13 @@ _listPattern = re.compile('[^\x00]\x00\x00\x30')
 _fmt_new = False
 
 def resolveEntityReferences(node, entities):
-	header, lst, history, refs = node.get('SAT')
+	header, lst, history = node.get('SAT')
 
 	try:
 		dumpSat(node.index, header, lst)
 
 		# until now each ref only knows the ID of the targeting entity -> resolve it
+		refs = getSatRefs()
 		for index in refs:
 			ref = refs[index]
 			ref.entity = entities.get(index, None)
@@ -43,6 +44,7 @@ def resolveEntityReferences(node, entities):
 		dumpHistory(node.index, history, entities)
 	except:
 		logError(traceback.format_exc())
+	initSatRefs()
 
 def dumpSat(nodeIdx, header, entities):
 	with open(u"%s/%04X.sat" %(getDumpFolder(), nodeIdx), 'wb') as sat:
@@ -145,6 +147,8 @@ def __dumpBranch(file, ref, branch, level, prefix):
 				file.write(u"[{%s}] = " %(str(ref.number).upper()))
 			elif (t is int):
 				file.write(u"[%04X] = " %(ref.number))
+			elif (t is tuple):
+				file.write(u"[%s] =" %(",".join("%s" %(n) for n in ref.number)))
 			else:
 				file.write(u"[%s] = " %(ref.number))
 		else:
@@ -157,20 +161,23 @@ def __dumpBranch(file, ref, branch, level, prefix):
 def buildBranch(parent, file, data, level, ref):
 	parent.append(data.node)
 
-	__dumpBranch(file, ref, data.node.__str__(), level, '')
-
-	for childRef in data.references:
-		if (not childRef.analysed):
-			childRef.analysed = True
-			child = childRef._data
-			if (child is not None):
-				if (childRef.type == SecNodeRef.TYPE_CHILD):
-					buildBranch(data.node, file, child, level + 1, childRef)
-				elif (childRef.type == SecNodeRef.TYPE_CROSS):
-					node = childRef.node
-					if (node is not None):
-						parent.append(childRef.node)
-						__dumpBranch(file, childRef, node.getRefText(), level + 1, '*')
+	if (data.analysed == False):
+		__dumpBranch(file, ref, data.node.__str__(), level, '')
+		data.analysed = True
+		for childRef in data.references:
+			if (not childRef.analysed):
+				childRef.analysed = True
+				child = childRef._data
+				if (child is not None):
+					if (childRef.type == REF_CHILD):
+						buildBranch(data.node, file, child, level + 1, childRef)
+					elif (childRef.type == REF_CROSS):
+						node = childRef.node
+						if (node is not None):
+							parent.append(childRef.node)
+							__dumpBranch(file, childRef, node.getRefText(), level + 1, '*')
+	else:
+		__dumpBranch(file, ref, data.node.getRefText(), level, '*')
 	return
 
 def resolveReferences(nodes):
@@ -183,12 +190,12 @@ def resolveReferences(nodes):
 		for ref in node.references:
 			if (ref.index in nodes):
 				ref._data = nodes[ref.index]
-				if (ref.type == SecNodeRef.TYPE_PARENT):
+				if (ref.type == REF_PARENT):
 					node.parent = ref._data
 			elif (ref.index > -1):
-				logError(u"ERROR> %s(%04X): %s - Index out of range (%X>%X)!", node.segment.name, node.index, node.typeName, ref.index, max(nodes))
+				logError(u"ERROR> %s.py - index out of range for %s.%s = %X!", node.__module__, node.typeName, ref.attrName, ref.index)
 			if (isRadius2D and (ref.typeName in ['Circle2D', 'Ellipse2D', 'Arc2D'])):
-				radius = SecNodeRef(ref.index or 0x80000000, SecNodeRef.TYPE_CROSS, 'radius')
+				radius = SecNodeRef(ref.index or 0x80000000, REF_CROSS, 'radius')
 				radius._data = node
 				ref._data.set(radius.name, radius)
 
@@ -218,18 +225,18 @@ def resolveParentNodes(nodes):
 		for ref in parent.references:
 			child = ref._data
 			if (isParent(ref, parent)):
-				ref.type = SecNodeRef.TYPE_CHILD
+				ref.type = REF_CHILD
 				child.parent = parent
 			elif (ref.index > parent.index):
-				if (ref.type == SecNodeRef.TYPE_CHILD):
+				if (ref.type == REF_CHILD):
 					if (child.parent is None):
 						child.parent = parent
 					else:
-						ref.type = SecNodeRef.TYPE_CROSS
+						ref.type = REF_CROSS
 			elif (parent.parent is not None) and (parent.parent.index == ref.index):
-				ref.type = SecNodeRef.TYPE_PARENT
-			elif (ref.type == SecNodeRef.TYPE_PARENT) and (parent.parent.index != ref.index):
-				ref.type = SecNodeRef.TYPE_CROSS
+				ref.type = REF_PARENT
+			elif (ref.type == REF_PARENT) and (parent.parent.index != ref.index):
+				ref.type = REF_CROSS
 	return
 
 def buildTree(file, nodes):
@@ -276,7 +283,8 @@ class SegmentReader(object):
 		self.fmt_old = (getFileVersion() < 2011)
 
 	def postRead(self):
-		return
+		for node in self.segment.elementNodes.values():
+			node.data = None
 
 	def ReadNodeRef(self, node, offset, number, type, name):
 		m, i = getUInt32(node.data, offset)
@@ -287,6 +295,16 @@ class SegmentReader(object):
 		else:
 			ref = None
 		return ref, i
+
+	def ReadNodeRefs(self, node, offset, name, type):
+		n, i = getUInt32(node.data, offset)
+		lst  = []
+		for j in range(n):
+			ref, i = self.ReadNodeRef(node, i, j, type, name)
+			if (not ref is None):
+				lst.append(ref)
+		node.set(name, lst)
+		return i
 
 	def ReadHeaderSU32S(self, node, typeName=None):
 		if (typeName is not None): node.typeName = typeName
@@ -342,14 +360,14 @@ class SegmentReader(object):
 			return BSplineEdge(a0, a1, a2, a3, a4), i
 		raise AssertionError("Unknown array type %02X in (%04X): %s" %(t, node.index, node.typeName))
 
-	def ReadEdgeList(self, node, offset, name='edges'):
+	def ReadEdgeList(self, node, offset):
 		cnt, i = getUInt32(node.data, offset)
 		lst    = []
 		for j in range(cnt):
 			edge, i = self.ReadEdge(node, i)
 			lst.append(edge)
-		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(e) for e in lst]))
-		node.set(name, lst)
+		node.content += ' edges=[%s]' %(','.join(['(%s)' %(e) for e in lst]))
+		node.set('edges', lst)
 		node.delete('tmp')
 		return i
 
@@ -530,7 +548,7 @@ class SegmentReader(object):
 			i = readType(node)
 		except AttributeError:
 			if (self.__class__.__name__ != 'SegmentReader'):
-				logError(u"ERROR> %s.Read_%s not defined!", self.__class__.__name__, node.typeName)
+				logError(u"ERROR> def Read_%s(self, node): missing in %s.py!", node.typeName, self.__module__)
 		except:
 			logError(traceback.format_exc())
 
@@ -574,22 +592,18 @@ class SegmentReader(object):
 		lst = []
 		for j in range(cnt):
 			ref, i = self.ReadNodeRef(node, i, j, type, name)
-			a, i = getUInt32A(node.data, i, size)
-			lst.append([ref, a])
-		node.content += ' %s=[%s]' %(name, ','.join(['(%s,%s)' %(r[0], IntArr2Str(r[1], 4)) for r in lst]))
+			ref.number, i = getUInt32A(node.data, i, size)
+			lst.append(ref)
 		node.set(name, lst)
 		return i
 
-	def ReadRefU32ARefU32List(self, node, offset, name, size):
+	def ReadRefU32List(self, node, offset, name, lType=REF_CHILD):
 		cnt, i = getUInt32(node.data, offset)
 		lst = []
 		for j in range(cnt):
-			ref1, i = self.ReadNodeRef(node, i, [j, 0], SecNodeRef.TYPE_CROSS, name)
-			u32, i = getUInt32(node.data, i)
-			ref2, i = self.ReadNodeRef(node, i, [j, 2], SecNodeRef.TYPE_CROSS, name)
-			a, i = getUInt32A(node.data, i, size)
-			lst.append([ref1, a, ref2, u32])
-		node.content += ' %s=[%s]' %(name, ','.join(['(%s,[%s],%s,%s)' %(r[0], IntArr2Str(r[1],4), r[2], r[3]) for r in lst]))
+			ref, i = self.ReadNodeRef(node, i, None, lType, name)
+			ref.number, i = getUInt32(node.data, i)
+			lst.append(ref)
 		node.set(name, lst)
 		return i
 
@@ -599,7 +613,10 @@ class SegmentReader(object):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'schema')
-		if (i == len(node.data)): return i
+		if (getFileVersion() > 2010):
+			if (i == len(node.data)): return i
+		else:
+			if (i + 4 == len(node.data)): return i + 4
 		txt, i = getText8(node.data, i, 15) # 'ACIS BinaryFile' or from 20214 on 'ASM BinaryFile4'
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
@@ -630,6 +647,7 @@ class SegmentReader(object):
 		index = 0
 		clearEntities()
 		entities = {}
+		initSatRefs()
 		map = entities
 		lst = []
 		e = len(node.data) - 17
@@ -660,7 +678,7 @@ class SegmentReader(object):
 				entity.index = -1
 			else:
 				index += 1
-		node.set('SAT', [header, lst, history, getSatRefs()])
+		node.set('SAT', [header, lst, history])
 		resolveEntityReferences(node, entities)
 		node.set('nameMatches', getNameMatchAttributes())
 		node.set('dcAttributes', getDcAttributes())
@@ -704,12 +722,12 @@ class SegmentReader(object):
 	def ReadTrailer(self, buffer, offset):
 		i = offset
 		if (getFileVersion() > 2014):
-			traling, i = getBoolean(buffer, i)
-			if (traling):
+			trailing, i = getBoolean(buffer, i)
+			if (trailing):
 				n, i = getUInt32(buffer, i)
 				txt = []
 				if ((n & 0x80000000) > 0):
-					pass # check  X-Ref???
+					pass # check Sec-Ref???
 				else:
 					for j in range(n):
 						k, i = getLen32Text8(buffer, i)
@@ -726,8 +744,13 @@ class SegmentReader(object):
 							v, i = getUInt16A(buffer, i, 3)
 						elif (u32_1 == 0b1011):
 							v, i = getUInt16A(buffer, i, 5)
+						elif (u32_1 == 0b1110):
+							typ, i = getUInt16(buffer, i)
+							cnt, i = getUInt32(buffer, i)
+							dat, i = getUInt8A(buffer, i, cnt)
+							v = (typ, dat)
 						else:
-							raise ValueError(u"Unknown property value type 0x%02X!" %(u32_1))
+							raise ValueError(u"Unknown property value type 0x%02X in '%s'!" %(u32_1, getInventorFile()))
 						txt.append((k,v))
 					i = CheckList(buffer, i, 0x0006)
 					cnt, i = getUInt32(buffer, i)
@@ -737,7 +760,7 @@ class SegmentReader(object):
 						for j in range(cnt):
 							txt, i = getLen32Text8(buffer, i)
 							m, i = getUInt32(buffer, i)
-							ref = SecNodeRef(m, SecNodeRef.TYPE_CROSS, txt)
+							ref = SecNodeRef(m, REF_CROSS, txt)
 							values.append(ref)
 		return i
 
@@ -757,6 +780,7 @@ class SegmentReader(object):
 				i = self.ReadTrailer(buffer, i)
 				if ((l != 0) and (sec.length != l)):
 					logError('%s: BLOCK[%04X] - incorrect block size %X != 	%X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, u32_0, start, data.typeName))
+
 		self.segment.tree = buildTree(file, self.segment.elementNodes)
 		self.postRead()
 

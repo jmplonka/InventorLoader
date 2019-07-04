@@ -100,8 +100,6 @@ class AppReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_276E3074(self, node): return 0
-
 	def Read_2AE52C91(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUInt16A(i, 2, 'u16_0')
@@ -137,12 +135,36 @@ class AppReader(SegmentReader):
 
 	def Read_36BC43F4(self, node):
 		i = self.readHeaderStyle(node)
-		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadCrossRef(i, 'ref_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64(i, 'f64_0')
 		i = node.ReadUInt32A(i, 4, 'a1')
 		i = node.ReadList2(i, importerSegNode._TYP_FLOAT64_, 'lst0')
 		i = node.ReadList2(i, importerSegNode._TYP_FLOAT64_, 'lst1')
+		i = self.ReadNodeRefs(node, i, 'leaders', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a2', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'textures', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a3', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a4', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'frames', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a5', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a6', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a7', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a8', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a9', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'texts', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a10', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a11', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a12', importerSegNode.REF_CROSS)
+		i = self.ReadNodeRefs(node, i, 'a13', importerSegNode.REF_CROSS)
+		i = node.ReadList2(i, importerSegNode._TYP_STRING16_, 'lst2')
+		i = node.ReadUInt32A(i, 2, 'a14')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_TEXT8_REF_, 'lst3')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadLen32Text16(i, 'txt1')
+		i = node.ReadUInt16(i, 'u16_2')
+		i = node.ReadLen32Text16(i, 'txt2')
+		i = node.ReadList2(i, importerSegNode._TYP_STRING16_, 'lst2')
 		return i
 
 	def Read_37186901(self, node):
@@ -150,6 +172,11 @@ class AppReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_APP_1_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
+		return i
+
+	def Read_3A645317(self, node):
+		i = node.Read_Header0()
+		i = node.ReadChildRef(i, 'layers')
 		return i
 
 	def Read_3F89DC90(self, node):
@@ -240,7 +267,7 @@ class AppReader(SegmentReader):
 			i = node.ReadUInt16A(i, 2, 'a2')
 			i = node.ReadUUID(i, 'uid_0')
 		else:
-			node.content += ' txt_1=\'\' txt_2=\'\' txt_3=\'\' txt_4=\'\' a2=[0000,0000] uid_0=None '
+			node.content += u" txt_1='' txt_2='' txt_3='' txt_4='' a2=[0000,0000] uid_0=None "
 		i = node.ReadFloat64A(i, 8, 'a3')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadCrossRef(i, 'ref_0')
@@ -280,7 +307,7 @@ class AppReader(SegmentReader):
 			i = node.ReadUInt16A(i, 2, 'a2')
 			i = node.ReadUUID(i, 'uid_0')
 		else:
-			node.content += ' u16_2=0000 txt_1=\'\' txt_2=\'\' txt_3=\'\' txt_4=\'\' a2=[0000,0000] uid_0=None'
+			node.content += u" u16_2=0000 txt_1='' txt_2='' txt_3='' txt_4='' a2=[0000,0000] uid_0=None"
 		i = node.ReadColorRGBA(i, 'color')
 		i = node.ReadColorRGBA(i, 'c1')
 		i = node.ReadColorRGBA(i, 'c2')
@@ -455,7 +482,11 @@ class AppReader(SegmentReader):
 		i = node.ReadLen32Text16(i, 'FontName')
 		return i
 
-	def Read_81A9D693(self, node): return 0
+	def Read_81A9D693(self, node):
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'l0')
+		i = node.ReadUUID(i, 'uid_0')
+		return i
 
 	def Read_81AFC10F(self, node): # CompositeInterfaceDef
 		i = node.Read_Header0('CompositeInterfaceDef')
@@ -505,7 +536,8 @@ class AppReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'default')
 		i = node.ReadParentRef(i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_TEXT16_REF_, 'lst0')
-		i = node.ReadUInt8A(i, 4, 'a0')
+		i = node.ReadUInt16(i, 'localeId') # Locale-ID / Language-ID
+		i = node.ReadUInt8A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -551,7 +583,14 @@ class AppReader(SegmentReader):
 		return i
 
 	def Read_C1AB98DD(self, node):
-		i = self.readHeaderStyle(node)
+		i = self.readHeaderStyle(node, 'Layer')
+		i = node.ReadFloat64(i, 'd0')
+		i = node.ReadUInt32(i, 'l1')
+		i = node.ReadFloat32A(i, 4, 'a1')
+		i = self.skipBlockSize(i)
+		i = node.ReadBoolean(i, 'b1')
+		i = node.ReadFloat64(i, 'd1')
+		i = node.ReadUInt8A(i, 3, 'a2')
 		return i
 
 	def Read_C435E97C(self, node):
@@ -661,7 +700,7 @@ class AppReader(SegmentReader):
 
 	def Read_E5DDE747(self, node):
 		i = node.Read_Header0()
-		i = node.ReadFloat64A(i, 14, 'a0')
+		i = node.ReadFloat64A(i, 16, 'a0')
 		return i
 
 	def Read_E9874A94(self, node):
@@ -699,13 +738,20 @@ class AppReader(SegmentReader):
 
 	def Read_F8A779F9(self, node):
 		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'ref1')
-		i = node.ReadChildRef(i, 'ref2')
-		return i
+		i = node.ReadChildRef(i, 'ref_1')
+		i = node.ReadChildRef(i, 'ref_2')
 		return i
 
 	def Read_F8D07626(self, node):
 		i = node.Read_Header0()
+		cnt, i = getUInt32(node.data, i)
+		lst = []
+		for j in range(cnt):
+			uid, i = getUUID(node.data, i)
+			txt, i = getLen32Text16(node.data, i)
+			lst.append((uid, txt))
+		node.content += u" a0=[%s]" %(",".join([u"(%s,'%s')" %(uid, txt) for uid, txt in lst]))
+		i = node.ReadUUID(i, 'uid')
 		return i
 
 	def Read_FD1E8992(self, node):
@@ -721,6 +767,10 @@ class AppReader(SegmentReader):
 	def Read_FD1E8997(self, node):
 		i = self.skipBlockSize(0, 8)
 		i = node.ReadUInt32(i, 'u32_0')
+		return i
+
+	def Read_276E3074(self, node): # Analysis Style
+		i = self.readHeaderStyle(node, 'AnalysisStyle')
 		return i
 
 	def Read_FD1E899A(self, node): # Analysis Style Draft
@@ -748,9 +798,12 @@ class AppReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'default')
 		i = node.ReadParentRef(i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_TEXT16_REF_, 'lst0')
+		i = node.ReadUInt16(i, 'localeId') # Locale-ID / Language-ID
 		return i
 
 	def postRead(self):
-		color = self.defStyle.get('color')
-		if (color is not None):
-			setColorDefault(color.red, color.green, color.blue)
+		if (self.defStyle is not None):
+			color = self.defStyle.get('color')
+			if (color is not None):
+				setColorDefault(color.red, color.green, color.blue)
+		return super(AppReader, self).postRead()

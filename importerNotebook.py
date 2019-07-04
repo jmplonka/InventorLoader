@@ -56,7 +56,8 @@ class NotebookReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 7, 'a1')
+		i = node.ReadUInt32(i, 'l1')
+		i = node.ReadFloat64_3D(i, 'a1')
 		return i
 
 	def Read_7ABDF905(self, node):

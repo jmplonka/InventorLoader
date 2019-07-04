@@ -8,7 +8,7 @@ import importerSegNode
 
 from importerSegment import SegmentReader
 from importerUtils   import *
-from importerSegNode import _TYP_NODE_REF_, _TYP_NODE_X_REF_, _TYP_UINT32_A_, _TYP_NT_ENTRY_
+from importerSegNode import _TYP_NODE_REF_, _TYP_NODE_X_REF_, _TYP_UINT32_A_, _TYP_NT_ENTRY_, REF_CHILD, REF_CROSS
 from importerClasses import NtEntry
 
 __author__     = 'Jens M. Plonka'
@@ -107,6 +107,18 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		return i
 
+	def ReadRefU32ARefU32List(self, node, offset, name, size):
+		cnt, i = getUInt32(node.data, offset)
+		s = Struct('<LLL')
+		lst = []
+		for j in range(cnt):
+			a1, i = getUInt32A(node.data, i, 3)
+			a2, i = getUInt32A(node.data, i, size)
+			lst.append([a1, a2])
+		node.content += ' %s=[%s]' %(name, ','.join(['(%s,[%s])' %(IntArr2Str(a1, 4), IntArr2Str(a2, 4)) for a1, a2 in lst]))
+		node.set(name, lst)
+		return i
+
 	def Read_05C619B6(self, node):
 		i = self.ReadHeaderNameTableOtherNode(node)
 		i = node.ReadBoolean(i, 'b1')
@@ -136,9 +148,38 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		lst = {}
 		for j in range(cnt):
 			key, i = getUInt32(node.data, i)
-			val, i = self.ReadNodeRef(node, i, key, importerSegNode.SecNodeRef.TYPE_CHILD, 'entries')
+			val, i = self.ReadNodeRef(node, i, key, REF_CHILD, 'entries')
 			lst[key] = val
 		node.set('entries', lst)
+		return i
+
+	def Read_CCC5085A(self, node): # FaceMergeData
+		i = node.Read_Header0('FaceMergeData')
+		i = node.ReadSInt32(i, 's32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i, 'nameTable')
+		i = self.ReadRefU32AList(node, i, 'lst0', 2, REF_CROSS)
+		i = self.ReadRefU32ARefU32List(node, i, 'lst1', 2)
+		i = self.ReadRefU32ARefU32List(node, i, 'lst2', 1)
+		cnt, i = getUInt32(node.data, i)
+		sep = ''
+		node.content += ' lst3=['
+		lst = []
+		# remember node content as it will be overwritten by ReadList2!
+		c = node.content
+		for j in range(cnt):
+			u32_0, i = getUInt32(node.data, i)
+			i = node.ReadList2(i, _TYP_UINT32_A_, 'tmp', 2)
+			lst0 = node.get('tmp')
+			u32_1, i = getUInt32(node.data, i)
+			i = node.ReadList2(i, _TYP_UINT32_A_, 'tmp', 2) # this is ref + uint!
+			lst1 = node.get('tmp')
+			c += '%s[%04X,%s,%04X,%s]' %(sep, u32_0, Int2DArr2Str(lst0, 4), u32_1, Int2DArr2Str(lst1, 4))
+			lst.append([u32_0, lst0, u32_1, lst1])
+			sep = ','
+		node.delete('tmp')
+		node.content = c + ']'
+		node.set('lst3', lst)
 		return i
 
 	# Root name table entries

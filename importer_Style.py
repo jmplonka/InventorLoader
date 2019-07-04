@@ -217,7 +217,33 @@ class StyleReader(SegmentReader):
 
 	def Read_BBC99377(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_BBC99377')
-		# ?????
+#		i = node.ReadUInt16A(i, 4, 'a1')
+#		i = node.ReadUInt8A(i, 5, 'a2')
+#		i = node.ReadFloat64_3D(i, 'a3')
+#		i = node.ReadFloat64_3D(i, 'a4')
+#		i = node.ReadUInt32(i, 'u32_0')
+#		i = self.skipBlockSize(i)
+#		i = node.ReadCrossRef(i, 'xref_0')
+#		i = self.skipBlockSize(i)
+#		i = node.ReadUInt8A(i, 3, 'a5')
+#		if (node.get('u32_0') == 0):
+#			i = node.ReadFloat64_3D(i, 'a6')
+#			node.get('a6').insert(0, 0.0)
+#		else:
+#			i = node.ReadFloat64A(i, 4, 'a6')
+#		i = node.ReadUInt8(i, 'u8_0')
+#		u8_0 = node.get('u8_0')
+#		if (u8_0 == 0x74):
+#			i = node.ReadFloat64A(i, 0x0B, 'a7')
+#		elif (u8_0 == 0x72):
+#			i = node.ReadFloat64A(i, 0x10, 'a7')
+#		elif (u8_0 == 0x7D):
+#			i = node.ReadFloat64A(i, 0x07, 'a7')
+#		i = node.ReadUInt8(i, 'u8_1')
+#		i = node.ReadUInt16A(i , 2, 'a8')
+#		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+#		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst1')
+#		i = node.ReadUInt8(i, 'u8_2')
 		return i
 
 	def Read_C29D5C11(self, node): # Object style ...

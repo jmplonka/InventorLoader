@@ -8,10 +8,11 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 import sys, os, uuid, datetime, re, zlib, operator, glob, struct, codecs, xlrd, FreeCAD, Import_IPT, importerOle10Nateive
 from importerClasses     import *
 from importerSegment     import SegmentReader
-from importerBRep        import BRepReader
-from importerDC          import DCReader
 from importerApp         import AppReader
+from importerBRep        import BRepReader
 from importerBrowser     import BrowserReader
+from importerDC          import DCReader
+from importerDirectory   import DirectoryReader
 from importerDesignView  import DesignViewReader
 from importerEeData      import EeDataReader
 from importerEeScene     import EeSceneReader
@@ -44,6 +45,38 @@ KEY_LANGUAGE_CODE        = 0x80000000
 
 KEY_DTP_VERSION          = 43
 KEY_DTP_BUILD            = 0
+
+SEG_TYPE_READERS = {
+	SEG_APP            : AppReader,
+	SEG_APP_AM         : AppReader,
+	SEG_APP_PM         : AppReader,
+	SEG_BREP_AM        : BRepReader,
+	SEG_BREP_MB        : BRepReader,
+	SEG_BREP_PM        : BRepReader,
+	SEG_BROWSER_AM     : BrowserReader,
+	SEG_BROWSER_DL     : BrowserReader,
+	SEG_BROWSER_DX     : BrowserReader,
+	SEG_BROWSER_PM     : BrowserReader,
+	SEG_DC_AM          : DCReader,
+	SEG_DC_DL          : DCReader,
+	SEG_DC_DX          : DCReader,
+	SEG_DC_PM          : DCReader,
+	SEG_DESIGN_VIEW    : DesignViewReader,
+	SEG_DESIGN_VIEW_MGR: DesignViewReader,
+	SEG_DIRECTORY_DL   : DirectoryReader,
+	SEG_EE_DATA        : EeDataReader,
+	SEG_EE_SCENE       : EeSceneReader,
+	SEG_FB_ATTRIBUTE   : FBAttributeReader,
+	SEG_GRAPHICS_AM    : GraphicsReader,
+	SEG_GRAPHICS_MB    : GraphicsReader,
+	SEG_GRAPHICS_PM    : GraphicsReader,
+	SEG_NOTEBOOK       : NotebookReader,
+	SEG_RESULT_AM      : ResultReader,
+	SEG_RESULT_PM      : ResultReader,
+#	SEG_SHEET_DC_DL    : SheetReader,
+#	SEG_SHEET_DL_DL    : SheetReader,
+#	SEG_SHEET_SM_DL    : SheetReader,
+}
 
 # F29F85E0-4FF9-1068-AB91-08002B27B3D9
 Inventor_Summary_Information = {
@@ -703,38 +736,12 @@ def findSegment(segRef):
 
 def getReader(seg):
 	logInfo(u"%2d: '%s' ('%s')", seg.index, seg.file, seg.name)
-	reader = None
 	seg.AcisList = []
-	if (seg.isBRep()): # BoundaryRepresentation for SAT/STEP based import
-		#if (isStrategySat() or isStrategyStep()):
-			reader = BRepReader(seg)
-	elif (seg.isDC()):
-		if (isStrategyNative()):   # DocumentComponent for featured base import
-			reader = DCReader(seg)
-	elif (seg.isApp()): # ApplicationSettings for colors
-		reader = AppReader(seg)
-	elif (seg.isGraphics()): # required for Meshes and Colors
-		reader = GraphicsReader(seg)
-	elif (seg.isBrowser()):
-		reader = BrowserReader(seg)
-	elif (seg.isDefault()):
-		reader = DefaultReader(seg)
-	elif (seg.isResult()):
-		reader = ResultReader(seg)
-	elif (seg.isDesignView()):
-		reader = DesignViewReader(seg)
-	elif (seg.isEeData()):
-		reader = EeDataReader(seg)
-	elif (seg.isEeScene()):
-		reader = EeSceneReader(seg)
-	elif (seg.isFBAttribute()):
-		reader = FBAttributeReader(seg)
-	elif (seg.isNBNotebook()):
-		reader = NotebookReader(seg)
+	reader = SEG_TYPE_READERS.get(seg.type, None)
 	if (reader is None):
-		logInfo(u"    IGNORED '%s'" %(seg.name))
-		#reader = SegmentReader()
-	return reader
+		logError(u"    NO READER DEFINED FOR %s '%s'" %(seg.type, seg.name))
+		return SegmentReader(seg)
+	return reader(seg)
 
 def ReadRSeMetaDataB(dataB, seg):
 	reader = getReader(seg)
@@ -753,21 +760,17 @@ def ReadRSeMetaDataB(dataB, seg):
 def ReadRSeMetaDataM(dataM, name):
 	i = 0
 	value = Segment()
-	value.txt1, i = getLen32Text8(dataM, i)
-	value.ver, i = getUInt16(dataM, i)
-	value.arr1, i = getUInt16A(dataM, i, 8)
-	if (value.arr1[0] + value.arr1[1] + value.arr1[2] + value.arr1[3] + value.arr1[4] == 0):
-		value.name = name
-		value.segRef = None
-		value.arr2 = []
-		return value
-	value.name, i = getLen32Text16(dataM, i)
-	value.segRef, i = getUUID(dataM, i)
-	value.arr2, i = getUInt32A(dataM, i, 0x3)
-	seg = findSegment(value.segRef)
-	if (seg is not None):
-		seg.metaData = value
+	value.txt1,  i = getLen32Text8(dataM, i)
+	value.ver,   i = getUInt16(dataM, i)
+	value.arr1,  i = getUInt16A(dataM, i, 8)
+	value.name,  i = getLen32Text16(dataM, i)
+	value.segID, i = getUUID(dataM, i)
 
+	value.segment = findSegment(value.segID)
+	if (value.segment is not None):
+		value.segment.metaData = value
+
+	value.arr2,   i = getUInt32A(dataM, i, 0x3)
 	if (value.ver < 0x07):
 		value.val1, i = getUInt32(dataM, i)
 		value.dat1, i = getLen32Text8(dataM, i)
@@ -779,8 +782,7 @@ def ReadRSeMetaDataM(dataM, name):
 		value.val2    = 0
 		value.dat2, i = getLen32Text8(dataM, i)
 
-	# dataM[i] should always be '\0x01' !!!
-	x01, i = getUInt8(dataM, i)
+	bTrue, i = getBoolean(dataM, i) # should always be True!!!
 
 	z = zlib.decompressobj()
 	data = z.decompress(dataM[i:])

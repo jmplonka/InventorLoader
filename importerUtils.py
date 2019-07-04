@@ -752,10 +752,11 @@ def isEqual1D(a, b):
 
 def _log(caller, method, msg, args):
 	try:
+		s = u"%s\n" %(msg)
 		if (len(args) > 0):
-			method(msg %args + '\n')
+			method(s %args)
 		else:
-			method(msg + '\n')
+			method(s)
 	except:
 		Console.PrintError("FATAL ERROR in %s:\n" %(caller))
 		Console.PrintError("msg   = " + msg)
@@ -789,7 +790,11 @@ def getFileBeta():
 def getProperty(ole, path, key):
 	p = ole.getproperties([path], convert_time=True)
 	try:
-		return p[key]
+		property = p[key]
+		if (isString(property)):
+			if (property[-1] == '\x00'):
+				return property[0:-1]
+		return property
 	except:
 		return None
 
@@ -828,9 +833,8 @@ def getInventorFile():
 	return _inventor_file
 
 def getDumpFolder():
-	invFile = getInventorFile()
-	dumpFolder = invFile[0:-4].strip()
-	return dumpFolder
+	global _inventor_file
+	return u"%s_%s" %(_inventor_file[0:-4], _inventor_file[-3:])
 
 def setInventorFile(file):
 	global _inventor_file
@@ -886,11 +890,14 @@ def getIconPath(fileName):
 	return os.path.join(os.path.dirname(__file__), "Resources", "icons", fileName)
 
 def int2col(c):
+	if (c < 27):
+		return chr(64 + c)
 	m = c // 26
 	n = c % 26
-	if (m > 0):
-		return chr(ord('A') + (m - 1)) + chr(ord('A') + n - 1)
-	return chr(ord('A') + n - 1)
+	if (n == 0):
+		n = 26;
+		m -=1;
+	return int2col(m) + int2col(n)
 
 def getCellRef(col, row):
 	if (isString(col)):

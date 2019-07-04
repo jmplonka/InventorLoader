@@ -144,6 +144,11 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
+	def Read_AC1898AD(self, node): # Hospital item
+		i = self.ReadHeaderHospitalItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
+		return i
+
 	def Read_9B451345(self, node): # Hospital item
 		i = self.ReadHeaderHospitalItem(node)
 		i = node.ReadUInt32(i, 'u32_2')
@@ -155,6 +160,13 @@ class BrowserReader(SegmentReader):
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_2')
+		return i
+
+	def Read_E7E4F967(self, node):
+		i = self.ReadHeaderHospitalItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'u32_3')
+		i = node.ReadUInt16(i, 'u16_2')
 		return i
 
 	def Read_44664C6F(self, node):
@@ -208,7 +220,6 @@ class BrowserReader(SegmentReader):
 
 	######
 	# Folder Entries
-
 	def Read_7DFCC818(self, node):
 		i = self.ReadHeader0_664(node, 'FolderEntries')
 		i = self.Read_Str01(i, node)
@@ -248,49 +259,47 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
+	#######
+	# Part folder interfaces
 	def Read_9E77CCC1(self, node):
-		i = self.ReadHeader0_664(node)
+		i = self.ReadHeader0_664(node, 'PartInterfaceFolder')
 		i = node.ReadUInt16A(i, 2, 'a0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_9E77CCC3(self, node): # PartInterfaceMate
-		i = self.ReadHeader0_664(node, 'PartInterfaceMate')
+	def ReadHeaderPartInterface(self, node, typeName = None):
+		i = self.ReadHeader0_664(node, typeName)
 		i = self.Read_Str01(i, node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 4, 'a4')
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_9E77CCC4(self, node): return 0
-
-	def Read_9E77CCC5(self, node): # PartInterfaceAngle
-		i = self.ReadHeader0_664(node, 'PartInterfaceAngle')
-		i = self.Read_Str01(i, node)
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 4, 'a0')
-		i = self.skipBlockSize(i)
+	def Read_9E77CCC3(self, node): # Part mate interface
+		i = self.ReadHeaderPartInterface(node,'PartInterfaceMate')
 		return i
 
-	def Read_9E77CCC6(self, node): # PartInterfaceTangent
-		i = self.ReadHeader0_664(node, 'PartInterfaceTangent')
-		i = self.Read_Str01(i, node)
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 4, 'a0')
-		i = self.skipBlockSize(i)
+	def Read_9E77CCC4(self, node): # Part flush interface
+		i = self.ReadHeaderPartInterface(node, 'PartInterfaceFlush')
 		return i
 
-	def Read_9E77CCC7(self, node): # PartInterfaceInsert
-		i = self.ReadHeader0_664(node, 'PartInterfaceInsert')
-		i = self.Read_Str01(i, node)
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 4, 'a0')
-		i = self.skipBlockSize(i)
+	def Read_9E77CCC5(self, node): # Part angle interface
+		i = self.ReadHeaderPartInterface(node, 'PartInterfaceAngle')
 		return i
 
-	def Read_AC1898AD(self, node): return 0
+	def Read_9E77CCC6(self, node): # Parttangent interface
+		i = self.ReadHeaderPartInterface(node, 'PartInterfaceTangent')
+		return i
+
+	def Read_9E77CCC7(self, node): # Part insert interface
+		i = self.ReadHeaderPartInterface(node, 'PartInterfaceInsert')
+		return i
+
+	def Read_E7EE0A91(self, node): # Part composite interface
+		i = self.ReadHeaderPartInterface(node, 'PartInterfaceComposite')
+		return i
 
 	def Read_B251BFC0(self, node): # EntryManager
 		i = node.Read_Header0('EntryManager')
@@ -345,7 +354,18 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_4')
 		return i
 
-	def Read_D9389A04(self, node): return 0
+	def Read_D9389A04(self, node):
+		i = node.ReadUInt16A(0, 10, 'a0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i,  importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadBoolean(i, 'b0')
+		i = node.ReadUInt32A(i, 3, 'a2')
+		i = node.ReadBoolean(i, 'b1')
+		i = node.ReadUInt32A(i, 2, 'a3')
+		i = node.ReadBoolean(i, 'b2')
+		i = self.skipBlockSize(i, 12)
+		return i
 
 	def Read_D95A2DF2(self, node): # TranslationReport
 		i = self.ReadHeader0_664(node, 'TranslationReport')
@@ -354,41 +374,43 @@ class BrowserReader(SegmentReader):
 		i = node.ReadSInt32(i, 's32_0')
 		i = node.ReadLen32Text16(i, 'str2')
 		i = node.ReadLen32Text16(i, 'str3')
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadChildRef(i, 'ref_0')
 		return i
 
-	def Read_DDC7ED24(self, node): return 0
+	def Read_DDC7ED24(self, node):
+		i = node.Read_Header0()
+		i = self.skipBlockSize(i)
+		i = node.ReadUUID(i, 'uid_0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		return i
 
 	def Read_DF9CA7B0(self, node):
 		i = node.Read_Header0()
 		i = node.ReadParentRef(i)
-		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadCrossRef(i, 'ref_0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadList4(i, importerSegNode._TYP_STRING8_, 'lst0')
 		i = node.ReadUInt16(i, 'u16')
 		i = node.ReadLen32Text16(i, 'val')
 		return i
 
-	def Read_E079A121(self, node): return 0
+	def Read_E079A121(self, node):
+		i = self.ReadHeaderEntry(node)
+		if (getFileVersion() > 2016):
+			i = node.ReadLen32Text16(i, 'txt0')
+		return i
 
-	def Read_E7E4F967(self, node): return 0
-
-	def Read_E7EE0A91(self, node): return 0
-
-	def Read_F1EDED3E(self, node): return 0
+	def Read_F1EDED3E(self, node):
+		i = self.ReadHeaderEntry(node)
+		return i
 
 	def Read_F757BC76(self, node):
 		i = node.Read_Header0()
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
-		cnt, i = getUInt32(node.data, i)
-		lst = []
-		for j in range(cnt):
-			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.SecNodeRef.TYPE_CHILD, 'lst1')
-			node.delete('lst1')
-			lst.append(ref)
-		node.set('lst1', lst)
+		i = self.ReadNodeRefs(node, i, 'lst1', importerSegNode.REF_CHILD)
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt32A(i, 2, 'a1')
@@ -578,7 +600,8 @@ class BrowserReader(SegmentReader):
 
 	def Read_33DDFC82(self, node): # Reference
 		i = self.ReadHeaderEntry(node, 'Reference')
-		if (getFileVersion() > 2016): i += 8 # skip 00 00 00 00 00 00 00 00
+		if (getFileVersion() > 2016):
+			i = node.ReadLen32Text16(i, 'path')
 		return i
 
 	def Read_46DE5489(self, node): # Assembly reference
@@ -718,3 +741,242 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		node.Entry = True
 		return i
+
+	###########
+	# Drawing
+
+	def ReadHeaderDx(self, node, typeName = None):
+		if (typeName is not None):
+			node.typeName = typeName
+		i = node.ReadUInt32(0, 'u32_0')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = self.skipBlockSize(i)
+		return i
+
+	def ReadHeaderDxHierarchy(self, node, typeName = None):
+		i = self.ReadHeaderDx(node,typeName)
+		i = node.ReadList2(i, _TYP_NODE_REF_, 'items')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt32A(i, 4, 'a1')
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt32A(i, 2, 'a2')
+		i = node.ReadUInt8(i, 'u8_2')
+		i = self.skipBlockSize(i)
+		i = node.ReadLen32Text16(i)
+		i = node.ReadLen32Text16(i, 'group')
+		i = node.ReadUInt8(i, 'u8_3')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_01E698C4(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_28F1F886(self, node):
+		i = self.ReadHeaderDxHierarchy(node, 'Scene')
+		i = node.ReadUInt32(i, 'u32_1')
+		return i
+
+	def Read_2F111558(self, node):
+		i = self.ReadHeaderDxHierarchy(node, 'Tweak')
+		if (getFileVersion() > 2017):
+			x, i = getFloat64(node.data, i) # skip
+		return i
+
+	def Read_51F99C85(self, node): # DxBrowser
+		i = self.ReadHeaderDxHierarchy(node, 'Presentation')
+		i = node.ReadUInt32(i, 'u32_1')
+		return i
+
+	def Read_959A9EA0(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		i = node.ReadUInt32(i, 'u32_1')
+		return i
+
+	def Read_8CC74082(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_CACB745A(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_CACB745B(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_CACB745C(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_DB5B972C(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_FA0DFEE2(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_F4BF99A1(self, node):
+		i = self.ReadHeaderDxHierarchy(node, 'TweakMember')
+		i = node.ReadFloat64(i, 'x')
+		return i
+
+	def Read_246EF1E0(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_2AB35572(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA560(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA561(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA562(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA563(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA564(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA565(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA566(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA567(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA568(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6B6FA569(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		i = node.ReadBoolean(i, 'b0')
+		i = node.ReadUInt32A(i, 3, 'a3')
+		i = node.ReadList7(i, _TYP_MAP_KEY_REF_, 'entries')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadBoolean(i, 'b1')
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadBoolean(i, 'b2')
+		if not node.get('b1'):
+			i = node.ReadLen32Text16(i, 'category')
+			i = node.ReadLen32Text16(i, 'id')
+			i = node.ReadUInt16(i, 'u16_1')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_79EBBBEA(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_9200B040(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_B40C3AFC(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_C2D84C27(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadLen32Text16(i, 'part')
+		return i
+
+	def Read_214443B4(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_21DDD237(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_6263ECBE(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_8AE910D6(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_8FAF1C15(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_9200B041(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_98AB6133(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_B26F49F6(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_B26F49F7(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_B556DDFF(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_D8727CE1(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_E3656A31(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_F3FD738E(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_F5F3D48F(self, node):
+		i = self.ReadHeaderDxHierarchy(node)
+		return i
+
+	def Read_16045A0A(self, node):
+		i = self.ReadHeaderDx(node)
+		# L L _ L S S
+		return i
+
+	def Read_69074B0B(self, node):
+		i = self.ReadHeaderDx(node)
+		# L L _ L S
+		return i
+
+	def Read_D29A65E5(self, node):
+		i = self.ReadHeaderDx(node)
+		# L L _ L _
+		return i
+
+	def Read_FC89C973(self, node):
+		i = self.ReadHeaderDx(node)
+		# L L _ L
+		return i
+
+
+	###########
+	# Presentation

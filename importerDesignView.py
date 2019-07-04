@@ -10,11 +10,10 @@ TODO:
 
 from importerSegment import SegmentReader
 from importerUtils   import *
-import importerSegNode
+from importerSegNode import _TYP_NODE_REF_, _TYP_UINT32_, _TYP_LIST_UINT32_A_
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
-__version__     = '0.1.0'
 __status__      = 'In-Development'
 
 class DesignViewReader(SegmentReader):
@@ -32,10 +31,22 @@ class DesignViewReader(SegmentReader):
 		#aX=[00]
 		return i
 
+	def Read_216B3A55(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i, _TYP_UINT32_, 'lst0')
+		i = self.ReadTransformation3D(node, i)
+		return i
+
 	def Read_328FC2EA(self, node): # ViewDirectionCollection
 		i = node.Read_Header0('ViewDirectionCollection')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
 		i = node.ReadLen32Text16(i)
+		return i
+
+	def Read_47C98A81(self, node):
+		i = node.Read_Header0()
+		i = node.ReadChildRef(i, 'ref0')
+		i = node.ReadBoolean(i, 'b0')
 		return i
 
 	def Read_551FB1BF(self, node):
@@ -44,30 +55,70 @@ class DesignViewReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
+	def Read_71C22321(self, node):
+		i = node.Read_Header0()
+		i = node.ReadChildRef(i, 'ref0')
+		i = node.ReadBoolean(i, 'b0')
+		return i
+
+	def Read_987C5D0F(self, node):
+		i = node.ReadUInt16A(0, 3, 'a0')
+		i = node.ReadUUID(i, 'uid0')
+		i = node.ReadList2(i, _TYP_LIST_UINT32_A_, 'lst0')
+		return i
+
 	def Read_9B043321(self, node):
 		i = node.Read_Header0()
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'ref0')
 		if (getFileVersion() < 2020):
 			i = node.ReadLen32Text16(i)
 		else:
 			i = node.ReadUInt32(i, 'u32_1')
-		i = node.ReadUInt32(i, 'u32_2')
+		if (getFileVersion() > 2012): i += 4 # skip ?? ?? ?? ??
+		return i
+
+	def Read_BDA7138D(self, node):
+		i = node.Read_Header0()
+		return i
+
+	def Read_D8B8F230(self, node):
+		i = node.Read_Header0()
+		i = node.ReadChildRef(i, 'ref0')
+		i = node.ReadBoolean(i, 'b0')
+		i = node.ReadUInt32(i, 'u32_0')
+		return i
+
+	def Read_D9980532(self, node):
+		i = node.Read_Header0()
+		i = node.ReadChildRef(i, 'ref0')
+		i = node.ReadUInt8A(i, 3, 'a0')
+		i = node.ReadUInt32(i, 'u32_0')
+		if (node.get('a0')[1] == 0):
+			i = node.ReadLen32Text16(i, 'txt0')
+			i = node.ReadLen32Text16(i, 'txt1')
+			i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def Read_9DC2A241(self, node): # ViewDirection
 		i = node.Read_Header0('ViewDirection')
 		i = node.ReadLen32Text16(i)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
+		i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_301D4138(self, node): # member of ViewDirection.lst0
-		return 0
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt8A(i, 2, 'a0')
+		i = node.ReadUInt32A(i, 2, 'a1')
+		return i
 
 	def Read_8902B593(self, node): # member of ViewDirection.lst0
-		return 0
-
-	def Read_D9980532(self, node): # member of ViewDirection.lst0
-		return 0
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'flags')
+		return i
 
 	def Read_E3684E1C(self, node):
 		i = node.Read_Header0()

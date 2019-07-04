@@ -18,46 +18,45 @@ from importerFreeCAD   import FreeCADImporter
 from importerSAT       import readEntities, importModel, convertModel
 from uuid              import UUID
 
-def ReadIgnorable(fname, data):
+def ReadIgnorable(fname):
 	logInfo(u"    IGNORED: '%s'" %(fname[-1]))
 
-def skip(data):
+def skip():
 	return
 
 def ReadElement(ole, fname, doc, counter, readProperties):
 	name        = fname[-1]
 	path        = PrintableName(fname)
-	stream      = ole.openstream(fname).read()
 
-	if (len(stream)>0):
-		if (fname[0] == 'Protein'):
-#			ReadProtein(stream)
-			ReadIgnorable(fname, stream)
-		elif (fname[0]=='CacheGraphics'):
-			skip(stream)
-		elif (fname[0]=='RSeStorage'):
-			if (isEmbeddings(fname)):
-				if (name == 'Workbook'):
-					ReadWorkbook(doc, stream, fname[-2], name)
-				elif (name.endswith('Ole10Native')):
-					ReadOle10Native(doc, stream, fname)
-				else:
-					skip(stream)
-			elif (name.startswith('M')):
+	if (fname[0] == 'Protein'):
+#		ReadProtein(ole.openstream(fname).read())
+		ReadIgnorable(fname)
+	elif (fname[0]=='CacheGraphics'):
+		skip()
+	elif (fname[0]=='RSeStorage'):
+		if (isEmbeddings(fname)):
+			if (name == 'Workbook'):
+				ReadWorkbook(doc, ole.openstream(fname).read(), fname[-2], name)
+			elif (name.endswith('Ole10Native')):
+				ReadOle10Native(doc, ole.openstream(fname).read(), fname)
+			else:
+				skip()
+		elif (name.startswith('M')):
+			if not ('Templates' in fname):
 				fnameB = []
 				for n in (fname):
 					fnameB.append(n)
 				fnameB[-1] = 'B' + name[1:]
-				seg = ReadRSeMetaDataM(stream, name[1:])
+				seg = ReadRSeMetaDataM(ole.openstream(fname).read(), name[1:])
 				seg.file = name[1:]
 				seg.index = counter
 				getModel().RSeMetaData[seg.name] = seg
 				dataB = ole.openstream(fnameB).read()
 				ReadRSeMetaDataB(dataB, seg)
 			else:
-				ReadIgnorable(fname, stream)
+				skip()
 		else:
-			ReadIgnorable(fname, stream)
+			ReadIgnorable(fname)
 	return
 
 def dumpRSeDBFile(db, log):
@@ -122,6 +121,11 @@ def dumpRevisionInfo(revisions):
 	return
 
 def read(doc, filename, readProperties):
+	ufrxDoc        = None
+	rSeDb          = None
+	rSeSegInfo     = None
+	rSeDbRevisions = None
+
 	createNewModel()
 
 	ole = setInventorFile(filename)
@@ -156,41 +160,37 @@ def read(doc, filename, readProperties):
 				else:
 					ReadOtherProperties(props, fname, {})
 				handled[PrintableName(fname)] = True
+			elif (name == 'UFRxDoc'):
+				ufrxDoc = ole.openstream(fname).read()
+				handled[PrintableName(fname)] = True
+			elif (name == 'RSeDb'):
+				rSeDb = ole.openstream(fname).read()
+				handled[PrintableName(fname)] = True
+			elif (name == 'RSeSegInfo'):
+				rSeSegInfo = ole.openstream(fname).read()
+				handled[PrintableName(fname)] = True
+			elif (name == 'RSeDbRevisionInfo'):
+				rSeDbRevisions = ole.openstream(fname).read()
+				handled[PrintableName(fname)] = True
 
 	chooseImportStrategy()
 
-	for fname in elements:
-		if (fname[-1] == 'UFRxDoc'):
-#			stream = ole.openstream(fname).read()
-#			getModel().UFRxDoc = importerUFRxDoc.read(stream)
-			handled[PrintableName(fname)] = True
-			break
+#	if (ufrxDoc):
+#		getModel().UFRxDoc = importerUFRxDoc.read(ufrxDoc)
 
-	for fname in elements:
-		if (fname[-1] == 'RSeDb'):
-			stream = ole.openstream(fname).read()
-			ReadRSeDb(getModel().RSeDb, stream)
-			handled[PrintableName(fname)] = True
-			break
+	if (rSeDb):
+		ReadRSeDb(getModel().RSeDb, rSeDb)
 
-	for fname in elements:
-		if (fname[-1] == 'RSeSegInfo'):
-			stream = ole.openstream(fname).read()
-			if ((getModel().RSeDb is None) or (getModel().RSeDb.schema == 0x1F)):
-				ReadRSeSegInfo1F(getModel().RSeDb, stream)
-			elif (getModel().RSeDb.schema == 0x1E):
-				ReadRSeSegInfo1E(getModel().RSeDb, stream)
-			else:
-				ReadRSeSegInfo1D(getModel().RSeDb, stream)
-			handled[PrintableName(fname)] = True
-			break;
+	if (rSeSegInfo):
+		if ((getModel().RSeDb is None) or (getModel().RSeDb.schema == 0x1F)):
+			ReadRSeSegInfo1F(getModel().RSeDb, rSeSegInfo)
+		elif (getModel().RSeDb.schema == 0x1E):
+			ReadRSeSegInfo1E(getModel().RSeDb, rSeSegInfo)
+		else:
+			ReadRSeSegInfo1D(getModel().RSeDb, rSeSegInfo)
 
-	for fname in elements:
-		if (not handled.get(PrintableName(fname), False)):
-			if (fname[-1] == 'RSeDbRevisionInfo'):
-				stream = ole.openstream(fname).read()
-				ReadRSeDbRevisionInfo(getModel().RSeRevisions, stream)
-				break;
+	if (rSeDbRevisions):
+		ReadRSeDbRevisionInfo(getModel().RSeRevisions, rSeDbRevisions)
 
 	for fname in elements:
 		if (handled.get(PrintableName(fname), False) == False):
@@ -211,7 +211,7 @@ def read(doc, filename, readProperties):
 		doc.Comment += '\n'
 	doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), filename)
 
-	logInfo(u"Dumped data to folder: '%s'", filename[0:-4])
+	logInfo(u"Dumped data to folder: '%s'", getDumpFolder())
 
 	return True
 

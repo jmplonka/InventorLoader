@@ -157,7 +157,7 @@ version = 7.0
 subtypeTableCurves   = []
 subtypeTablePCurves  = []
 subtypeTableSurfaces = {}
-references           = {}
+references           = {} # dict of AcisEntities
 _invSubTypTblSurfLst = {}
 _nameMtchAttr        = {}
 _refs                = {} # dict of AcisRefs
@@ -167,6 +167,10 @@ _header              = None
 def getSatRefs():
 	global _refs
 	return _refs
+
+def initSatRefs():
+	global _refs
+	_refs.clear()
 
 def getDcAttributes():
 	global _dcIdxAttributes
@@ -265,7 +269,7 @@ class Law(object):
 		return None
 
 def init():
-	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, _invSubTypTblSurfLst, _nameMtchAttr, _refs, _dcIdxAttributes
+	global references, subtypeTableCurves, subtypeTablePCurves, subtypeTableSurfaces, _invSubTypTblSurfLst, _nameMtchAttr, _dcIdxAttributes
 
 	subtypeTableCurves   = []
 	subtypeTablePCurves  = []
@@ -273,8 +277,8 @@ def init():
 	_invSubTypTblSurfLst = {}
 	_nameMtchAttr        = {}
 	references           = {}
-	_refs                = {}
 	_dcIdxAttributes     = {}
+	initSatRefs()
 
 def addSubtypeNodeCurve(curve):
 	global subtypeTableCurves
@@ -581,7 +585,7 @@ def getRange(chunks, index, default, scale):
 def getInterval(chunks, index, defMin, defMax, scale):
 	lower, i = getRange(chunks, index, defMin, scale)
 	upper, i = getRange(chunks, i, defMax, scale)
-	return Intervall(lower, upper), i
+	return Interval(lower, upper), i
 
 def getPoint(chunks, index):
 	chunk = chunks[index]
@@ -901,24 +905,27 @@ def eliminateOuterFaces(faces, edges):
 		return faces[0]
 	return faces[0].multiFuse(faces[1:])
 
-def applyBoundary(face, edges):
-	shapes = [face] + edges
-	compound, elements = face.generalFuse(edges, 0.05)
-	return eliminateOuterFaces(elements[0], edges)
-
 def createCircle(center, normal, radius):
 	circle = Part.Circle(center, normal, radius.Length)
 	circle.XAxis = radius
 	return circle
 
 def createEllipse(center, normal, major, ratio):
-	if (ratio < 1):
+	if (ratio == 1):
+		return createCircle(center, normal, major)
+	if (ratio <= 1):
 		s1 = center + major
-		s2 = center + normal.cross(major).normalize() * major.Length * ratio
+		s2 = center + major.cross(normal).normalize() * major.Length * ratio
 	else:
 		s2 = center + major
-		s1 = center + major.cross(normal).normalize() * major.Length * ratio
-	return Part.Ellipse(s1, s2, center)
+		s1 = center + major.cross(normal).normalize() * major.Length / ratio
+	try:
+		return Part.Ellipse(s1, s2, center)
+	except:
+		try:
+			return Part.Ellipse(s2, s1, center)
+		except:
+			logError("ERROR> Can't create ellipse for center=(%s), normal=(%s), major=(%s), ratio=%g", center, normal, major, ratio)
 
 def createLine(start, end):
 	line = Part.makeLine(start, end)
@@ -1228,11 +1235,11 @@ def getNameMatchAttributes():
 	return _nameMtchAttr
 
 def releaseMemory():
-	global _refs, _dcIdxAttributes, _header
+	global _dcIdxAttributes, _header
 
 	clearEntities()
+	initSatRefs()
 
-	_refs.clear()
 	_dcIdxAttributes.clear()
 	_header  = None
 
@@ -1356,7 +1363,7 @@ class BS3_Surface(BS3_Curve):
 		return i
 class Helix(object):
 	def __init__(self):
-		self.radAngles = Intervall(Range('I', 1.0), Range('I', 1.0))
+		self.radAngles = Interval(Range('I', 1.0), Range('I', 1.0))
 		self.posCenter = CENTER
 		self.dirMajor  = DIR_X
 		self.dirMinor  = DIR_Y
@@ -1467,7 +1474,7 @@ class Range(object):
 	def __str__(self): return 'I' if (self.type == 'I') else "F %g" %(self.getLimit())
 	def __repr__(self): return 'I' if (self.type == 'I') else "%g" %(self.getLimit())
 	def getLimit(self): return self.limit if (self.type == 'I') else self.limit * self.scale
-class Intervall(object):
+class Interval(object):
 	def __init__(self, upper, lower):
 		self.lower = upper
 		self.upper = lower
@@ -1772,7 +1779,8 @@ class Face(Topology):
 			surface = s.build() if (s is not None) else None
 			if (surface is not None):
 				if (len(edges) > 0):
-					return applyBoundary(surface, edges)
+					compound, elements = surface.generalFuse(edges)
+					surface = eliminateOuterFaces(elements[0], edges)
 				# edges can be empty because not all edges can be created right now :(
 				return surface
 			if (hasattr(s, 'type')):
@@ -2083,23 +2091,23 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 	def __init__(self):
 		super(CurveEllipse, self).__init__('ellipse')
 		self.center = CENTER
-		self.normal = DIR_Z
+		self.axis   = DIR_Z
 		self.major  = DIR_X
 		self.ratio  = MIN_0
-		self.range  = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
-	def __str__(self): return "Curve-Ellipse: center=%s, dir=%s, major=%s, ratio=%g, range=%s" %(self.center, self.normal, self.major, self.ratio, self.range)
+		self.range  = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
+	def __str__(self): return "Curve-Ellipse: center=%s, dir=%s, major=%s, ratio=%g, range=%s" %(self.center, self.axis, self.major, self.ratio, self.range)
 	def setSubtype(self, chunks, index):
 		self.center, i = getLocation(chunks, index)
-		self.normal, i = getVector(chunks, i)
+		self.axis, i   = getVector(chunks, i)
 		self.major, i  = getLocation(chunks, i)
 		self.ratio, i  = getFloat(chunks, i)
 		self.range, i  = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		return i
 	def build(self, start, end):
 		if (self.ratio == 1):
-			ellipse = createCircle(self.center, self.normal, self.major)
+			ellipse = createCircle(self.center, self.axis, self.major)
 		else:
-			ellipse = createEllipse(self.center, self.normal, self.major, self.ratio)
+			ellipse = createEllipse(self.center, self.axis, self.major, self.ratio)
 		if (start != end):
 			if (isinstance(start, VEC)):
 				a = ellipse.parameter(start)
@@ -2109,7 +2117,7 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 				b = ellipse.parameter(end)
 			else:
 				b = end
-			self.range = Intervall(Range('F', a), Range('F', b))
+			self.range = Interval(Range('F', a), Range('F', b))
 			if (self.ratio == 1):
 				ellipse = Part.ArcOfCircle(ellipse, a, b)
 			else:
@@ -2122,7 +2130,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def __init__(self, name = ''):
 		super(CurveInt, self).__init__(name + 'intcurve')
 		self.sense    = 'forward' # The IntCurve's reversal flag
-		self.range    = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.range    = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.type     = ''
 		self.surfaces = []
 		self.curve    = None
@@ -2413,7 +2421,7 @@ class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 	def __init__(self):
 		super(CurveIntInt, self).__init__('intcurve-')
 		self.sense = 'forward' # The IntCurve's reversal flag
-		self.range = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.range = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.type  = ''
 		self.curve = None
 	def setLaw(self, chunks, index, inventor):
@@ -2495,7 +2503,7 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 		super(CurveStraight, self).__init__('straight')
 		self.root  = CENTER
 		self.dir   = CENTER
-		self.range = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.range = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
 	def __str__(self): return "Line: root=%s, dir=%s, range=%s" %(self.root, self.dir, self.range)
 	def setSubtype(self, chunks, index):
 		self.root, i  = getLocation(chunks, index)
@@ -2527,13 +2535,13 @@ class SurfaceCone(Surface):
 		self.axis   = DIR_Z
 		self.major  = DIR_X
 		self.ratio  = 1.0
-		self.range  = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.range  = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.sine   = 0.0
 		self.cosine = 0.0
 		self.scale  = 1.0
 		self.sense  = 'forward'
-		self.urange = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
-		self.vrange = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.urange = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
+		self.vrange = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
 	def __str__(self): return "Surface-Cone: center=%s, axis=%s, radius=%g, ratio=%g, semiAngle=%g" %(self.center, self.axis, self.major.Length, self.ratio, degrees(asin(self.sine)))
 	def setSubtype(self, chunks, index):
 		self.center, i = getLocation(chunks, index) # Cartesian Point 'Origin'
@@ -2562,9 +2570,10 @@ class SurfaceCone(Surface):
 				# Workaround: create ellipse and extrude in both directions
 				ellipse = createEllipse(self.center, self.axis, self.major, self.ratio)
 				# make a gigantic extrusion as it will be beautyfied later
-				cyl = ellipse.toShape().extrude((2*MAX_LEN) * self.axis)
-				cyl.translate((-MAX_LEN) * self.axis)
-				self.shape = cyl.Faces[0]
+				if (ellipse):
+					cyl = ellipse.toShape().extrude((2*MAX_LEN) * self.axis)
+					cyl.translate((-MAX_LEN) * self.axis)
+					self.shape = cyl.Faces[0]
 			else:
 				# Workaround: can't generate Part.Cone!
 				l = Part.Line(self.apex, self.center + self.major)
@@ -2588,8 +2597,8 @@ class SurfacePlane(Surface):
 		self.normal   = DIR_Z
 		self.uvorigin = CENTER
 		self.sensev   = 'forward_v'
-		self.urange   = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
-		self.vrange   = Intervall(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.urange   = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.vrange   = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
 	def __str__(self): return "Surface-Plane: root=%s, normal=%s, uvorigin=%s" %(self.root, self.normal, self.uvorigin)
 	def setSubtype(self, chunks, index):
 		self.root, i     = getLocation(chunks, index)
@@ -2612,8 +2621,8 @@ class SurfaceSphere(Surface):
 		self.uvorigin = CENTER
 		self.pole     = DIR_Z
 		self.sensev   = 'forward_v'
-		self.urange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
-		self.vrange   = Intervall(Range('I', MIN_PI2), Range('I', MAX_PI2))
+		self.urange   = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
+		self.vrange   = Interval(Range('I', MIN_PI2), Range('I', MAX_PI2))
 	def __str__(self): return "Surface-Sphere: center=%s, radius=%g, uvorigin=%s, pole=%s" %(self.center, self.radius, self.uvorigin, self.pole)
 	def setSubtype(self, chunks, index):
 		self.center, i   = getLocation(chunks, index)
@@ -3566,8 +3575,8 @@ class SurfaceTorus(Surface):
 		self.minor    = 0.1
 		self.uvorigin = CENTER
 		self.sensev   = 'forward_v'
-		self.urange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
-		self.vrange   = Intervall(Range('I', MIN_0), Range('I', MAX_2PI))
+		self.urange   = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
+		self.vrange   = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
 	def __str__(self): return "Surface-Torus: center=%s, normal=%s, R=%g, r=%g, uvorigin=%s" %(self.center, self.axis, self.major, self.minor, self.uvorigin)
 	def setSubtype(self, chunks, index):
 		self.center, i   = getLocation(chunks, index)
@@ -3581,16 +3590,11 @@ class SurfaceTorus(Surface):
 		return i
 	def build(self):
 		if (self.shape is None):
-			major = fabs(self.major)
-			minor = fabs(self.minor)
-			if (major > minor):
-				try:
-					torus = Part.makeTorus(major, minor, self.center,self.axis)
-					self.shape = torus.Faces[0]
-				except Exception as e:
-					logError(u"    Creation of torus failed for major=%g, minor=%g, center=%s, axis=%s\n\t%s", major, minor, self.center, self.axis, e)
-			else:
-				logError(u"    Creation of torus failed for major=%g < minor=%g, center=%s, axis=%s!", major, minor, self.center, self.axis)
+			circleAxis   = self.axis.cross(self.uvorigin).normalize()
+			circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
+			circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
+			torus = circle.revolve(self.center, self.axis, 360)
+			self.shape = torus
 		return self.shape
 class Point(Geometry):
 	def __init__(self):
@@ -3860,14 +3864,13 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 		self.a1         = []
 		self.name       = u"Default"
 		self.idxCreator = -1
-		self.a2         = []
+		self.mapping    = []
 		self.red = self.green = self.blue = 0xBE / 255.0 # light gray
 	def set(self, entity):
 		i = super(AttribNamingMatchingNMxFFColorEntity, self).set(entity)
-		self.a1  , i = getIntegers(entity.chunks, i, 2)
-		self.name, i = getText(entity.chunks, i)
-		self.idxCreator, i = getInteger(entity.chunks, i)
-		self.a2, i = getIntegers(entity.chunks, i, len(entity.chunks) - i - 1)
+		self.a1     , i = getIntegers(entity.chunks, i, 2)
+		self.name   , i = getText(entity.chunks, i)
+		self.mapping, i = getDcIndexMappings(entity.chunks, i, self)
 		color = getColor(self.name)
 		if (color is None):
 			logWarning(u"Color '%s' not defined in color table - using gray!", self.name)
@@ -3880,6 +3883,50 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 class AttribNamingMatchingNMxThreadEntity(AttribNamingMatching):
 	# x1, x2, V1, V2, n1, V2, [????]
 	def __init__(self): super(AttribNamingMatchingNMxThreadEntity, self).__init__()
+	def set(self, entity):
+		i = super(AttribNamingMatchingNMxThreadEntity, self).set(entity)
+		self.x      , i = getFloat(entity.chunks, i)
+		self.y      , i = getFloat(entity.chunks, i)
+		self.n1     , i = getInteger(entity.chunks, i)
+		self.p1     , i = getPoint(entity.chunks, i)
+		self.p2     , i = getPoint(entity.chunks, i)
+		self.n2     , i = getInteger(entity.chunks, i)
+		self.p3     , i = getPoint(entity.chunks, i)
+		self.n2     , i = getInteger(entity.chunks, i)
+		self.t1     , i = getText(entity.chunks, i)
+		self.t2     , i = getText(entity.chunks, i)
+		self.n3     , i = getInteger(entity.chunks, i)
+		self.t3     , i = getText(entity.chunks, i)
+		self.t4     , i = getText(entity.chunks, i)
+		self.t5     , i = getText(entity.chunks, i)
+		self.n4     , i = getInteger(entity.chunks, i)
+		self.t3     , i = getText(entity.chunks, i)
+		self.lst = []
+		for n in range(self.n2):
+			t1, i = getText(entity.chunks, i)
+			t2, i = getText(entity.chunks, i)
+			t3, i = getText(entity.chunks, i)
+			t4, i = getText(entity.chunks, i)
+			t5, i = getText(entity.chunks, i)
+			t6, i = getText(entity.chunks, i)
+			t7, i = getText(entity.chunks, i)
+			t8, i = getText(entity.chunks, i)
+			self.lst.append((t1, t2, t3, t4, t5, t6, t7, t8))
+		self.mapping, i = getDcIndexMappings(entity.chunks, i, self)
+		self.p4     , i = getPoint(entity.chunks, i)
+		self.p5     , i = getPoint(entity.chunks, i)
+		self.n5     , i = getInteger(entity.chunks, i)
+
+		return i
+class AttribNamingMatchingNMxTagWeldLateralFaceName(AttribNamingMatching):
+	# no more values
+	def __init__(self): super(AttribNamingMatchingNMxTagWeldLateralFaceName, self).__init__()
+class AttribNamingMatchingNMxTagWeldLumpFaceName(AttribNamingMatching):
+	# no more values
+	def __init__(self): super(AttribNamingMatchingNMxTagWeldLumpFaceName, self).__init__()
+class AttribNamingMatchingNMxWeld(AttribNamingMatching):
+	# n
+	def __init__(self): super(AttribNamingMatchingNMxWeld, self).__init__()
 class AttribNamingMatchingNMxFeatureOrientation(AttribNamingMatching):
 	def __init__(self):
 		super(AttribNamingMatchingNMxFeatureOrientation, self).__init__()
@@ -3908,6 +3955,15 @@ class AttribNamingMatchingNMxBrepTagFeature(AttribNamingMatchingNMxBrepTag):
 class AttribNamingMatchingNMxBrepTagSwitch(AttribNamingMatchingNMxBrepTag):
 	# no more values
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagSwitch, self).__init__()
+class AttribNamingMatchingNMxBrepTagFilletWeld(AttribNamingMatchingNMxBrepTag):
+	# [n] n1, n2, n3
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagFilletWeld, self).__init__()
+class AttribNamingMatchingNMxBrepTagGapWeldFace(AttribNamingMatchingNMxBrepTag):
+	# no more values
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagGapWeldFace, self).__init__()
+class AttribNamingMatchingNMxBrepTagWeldEnt(AttribNamingMatchingNMxBrepTag):
+	# 1 n1 n2 dir *[01]
+	def __init__(self): super(AttribNamingMatchingNMxBrepTagWeldEnt, self).__init__()
 class AttribNamingMatchingNMxBrepTagName(AttribNamingMatchingNMxBrepTag):
 	# no more values
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagName, self).__init__()
@@ -4224,13 +4280,16 @@ class AcisEntityRefChunk(_AcisChunk_):
 		super(AcisEntityRefChunk, self).__init__(TAG_ENTITY_REF, value)
 	def __repr__(self): return u"%s " %(self.val)
 	def read(self, data, offset):
-		global _refs
 		index, i = getSInt32(data, offset)
-		try:
-			self.val = _refs[index]
-		except:
-			self.val = AcisRef(index)
-			_refs[index] = self.val
+		if (index >= 0):
+			refs = getSatRefs()
+			try:
+				self.val = refs[index]
+			except:
+				self.val = AcisRef(index)
+				refs[index] = self.val
+		else:
+			self.val = ACIS_REF_NONE
 		return i
 class AcisIdentChunk(_AcisChunk_):
 	'''name of the base class'''
@@ -4349,6 +4408,8 @@ class AcisRef(object):
 		return "$%d" %(self.entity.index)
 	def __repr__(self):
 		return self.__str__()
+
+ACIS_REF_NONE = AcisRef(-1)
 
 def readNextSabChunk(data, index):
 	tag, i = getUInt8(data, index)
@@ -4611,8 +4672,11 @@ ENTITY_TYPES = {
 	"NMx_unfold_bend_line_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameUnfoldBendLine,
 	"NMx_unfold_geom_repl_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":               AttribNamingMatchingNMxBrepTagNameUnfoldGeomRepl,
 	"NMx_vertex_blend_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                   AttribNamingMatchingNMxBrepTagNameVertexBlend,
-	"NMx_vent_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":					   AttribNamingMatchingNMxBrepTagNameVentFace,
+	"NMx_vent_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                      AttribNamingMatchingNMxBrepTagNameVentFace,
 	"NMx_stitch_tag-NMx_Brep_tag-NamingMatching-attrib":                                           AttribNamingMatchingNMxBrepTagSwitch,
+	"NMx_FilletWeld_Tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                     AttribNamingMatchingNMxBrepTagFilletWeld,
+	"NMx_GapWeld_face_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                   AttribNamingMatchingNMxBrepTagGapWeldFace,
+	"NMx_weld_ent_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib":                       AttribNamingMatchingNMxBrepTagWeldEnt,
 	"NMx_Dup_Attrib-NamingMatching-attrib":                                                        AttribNamingMatchingNMxDup,
 	"NMxEdgeCurveAttrib-NamingMatching-attrib":                                                    AttribNamingMatchingNMxEdgeCurve,
 	"NMx_FFColor_Entity-NamingMatching-attrib":                                                    AttribNamingMatchingNMxFFColorEntity,
@@ -4623,6 +4687,9 @@ ENTITY_TYPES = {
 	"NMx_Order_Count_Attrib-NamingMatching-attrib":                                                AttribNamingMatchingNMxOrderCount,
 	"NMx_Punchtool_Brep_tag-NamingMatching-attrib":                                                AttribNamingMatchingNMxPuchtoolBRep,
 	"NMx_Thread_Entity-NamingMatching-attrib":                                                     AttribNamingMatchingNMxThreadEntity,
+	"NMxAttribTagWeldLateralFaceName-NamingMatching-attrib":                                       AttribNamingMatchingNMxTagWeldLateralFaceName,
+	"NMxAttribTagWeldLumpFaceName-NamingMatching-attrib":                                          AttribNamingMatchingNMxTagWeldLumpFaceName,
+	"NMx_Weld_Attrib-NamingMatching-attrib":                                                       AttribNamingMatchingNMxWeld,
 	"RFbase-attrib":                                                                               AttribRfBase,
 	"RFFaceTracker-RFbase-attrib":                                                                 AttribRfBaseFaceTracker,
 	"sg-attrib":                                                                                   AttribSg,
