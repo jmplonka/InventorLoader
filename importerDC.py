@@ -60,7 +60,6 @@ class DCReader(EeDataReader):
 		node.visible             = (flags & 0x00000400) > 0
 		node.dimensioningVisible = (flags & 0x00800000) > 0
 		self.segment.indexNodes[node.get('index')] = node
-		node.Item = True
 		return i
 
 	def ReadHeadersS32ss(self, node, typeName = None, name = 'next'):
@@ -265,7 +264,6 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'owner')
 		i = node.ReadParentRef(i)
 		i = node.ReadChildRef(i, 'next')
-		node.isAttr = True
 		return i
 
 	def Read2RefList(self, node, offset, name, type1 = importerSegNode.REF_CROSS, type2 = importerSegNode.REF_CROSS):
@@ -4285,7 +4283,6 @@ class DCReader(EeDataReader):
 
 	def Read_7F4A3E30(self, node):
 		i = self.ReadHeadersss2S16s(node)
-		node.isAttr = True
 		node.delete('next')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
@@ -5637,7 +5634,6 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i, 21, 'a8')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadFloat64A(i, 45, 'a9')
-		node.isAttr = True
 		return i
 
 	def Read_AE1C96C9(self, node):
@@ -6744,7 +6740,6 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i, 6, 'a11')
 		if (vers > 2010):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		node.isAttr = True
 		return i
 
 	def Read_E1D8C31B(self, node):
@@ -6962,7 +6957,6 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i, 13, 'a4')
 		if (getFileVersion() > 2012):
 			i += 3*8 # same as a4[-3:]
-		node.isAttr = True
 		return i
 
 	def Read_EB9E49B0(self, node):

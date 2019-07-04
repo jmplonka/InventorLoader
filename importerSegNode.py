@@ -961,9 +961,7 @@ class SecNode(AbstractData):
 		func = getattr(self, TYP_LIST_FUNC[typ])
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
-		self.skipCheck = True
 		i = func(name, i, cnt, arraySize)
-		self.skipCheck = False
 		return i
 
 	def ReadMetaData_04(self, name, offset, typ, method = getUInt16A):
@@ -971,9 +969,7 @@ class SecNode(AbstractData):
 		func = getattr(self, TYP_04_FUNC[typ])
 		if (cnt > 0):
 			arr16, i = method(self.data, i, 2)
-		self.skipCheck = True
 		i = func(name, i, cnt, 1) # arraysize = 1 => dummy value has to be ignored by any function in TYP_04_FUNC's
-		self.skipCheck = False
 		return i
 
 	def ReadMetaData_ARRAY(self, name, offset, typ):
@@ -981,9 +977,7 @@ class SecNode(AbstractData):
 		func = getattr(self, TYP_ARRAY_FUNC[typ])
 		if (cnt > 0):
 			arr16, i = getUInt16A(self.data, i, 2)
-		self.skipCheck = True
 		i = func(name, i, cnt)
-		self.skipCheck = False
 		return i
 
 	def ReadMetaData_MAP(self, name, offset, typ):
@@ -991,9 +985,7 @@ class SecNode(AbstractData):
 		func = getattr(self, TYP_MAP_FUNC[typ])
 		if (cnt > 0):
 			arr32, i = getUInt32A(self.data, i, 2)
-		self.skipCheck = True
 		i = func(name, i, cnt)
-		self.skipCheck = False
 		return i
 
 	def	getMapU16U16(self, name, offset, cnt):
