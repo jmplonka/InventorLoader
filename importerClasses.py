@@ -1558,7 +1558,6 @@ class AbstractData(object):
 		self.valid        = True
 		self.handled      = False
 		self.node         = None
-		self.skipCheck    = False
 
 	def set(self, name, value):
 		'''
@@ -1567,9 +1566,6 @@ class AbstractData(object):
 		value: The value of the property.
 		'''
 		if (name):
-			if (self.skipCheck == False):
-				if (name  in self.properties):
-					logError(u" ERROR in %s.%s: '%s' already set!" %(self.segment.name, self.typeName, name))
 			self.properties[name] = value
 
 	def get(self, name):

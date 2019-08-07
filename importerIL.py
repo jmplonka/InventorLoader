@@ -45,11 +45,11 @@ def read(doc, filename, readProperties):
 		if (importerSAT.readBinary(filename)):
 			return importerSAT
 	elif (ext == '.iam'):
-		logError(u"Sorry, AUTODESK assemblies not yet supported!")
+		logError(u"Sorry, AUTODESK's Inventor assemblies not yet supported!")
 	elif (ext == '.ipn'):
-		logError(u"Sorry, AUTODESK presentations not yet supported!")
+		logError(u"Sorry, AUTODESK's Inventor presentations not yet supported!")
 	elif (ext == '.idw'):
-		logError(u"Sorry, AUTODESK drawings not yet supported!")
+		logError(u"Sorry, AUTODESK's Inventor drawings not yet supported!")
 	return None
 
 def isFileValid(filename):

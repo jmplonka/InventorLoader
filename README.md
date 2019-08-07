@@ -5,6 +5,9 @@ Parts (IPT) but nor assemblies (IAM) nor drawings (IDW) can be displayed.
 As Inventor files contains a complete ACIS model representation, SAT and SAB files can also be
 imported into FreeCAD.
 
+## Status:
+> Release Candidate 1 (RC1)
+
 ## Prerequisites
 - The AddOn requires additional python packages in the FreeCAD python installation:
   - https://pypi.python.org/pypi/xlrd - for reading embedded Excel workbooks
@@ -65,9 +68,6 @@ Export will not be supported - neither to IPT nor to SAT file.
 ### STEP conversion import
 STEP converts the ACIS data from SAT or IPT files. Therefore any limitation is inherited.
 
-## Status:
-> BETA!
-
 Autodesk Inventor files have a OLE2 files.
 That allows it to embed Excel workbooks e.g.
 
@@ -80,6 +80,8 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
+- 0.17.0 (2019-07-04): Missing features added as ACIS models.
+
 - 0.16.0 (2019-03-19): Added creation of Shells
 
 - 0.15.0 (2019-03-07): Added part variant handling (ak iPart)
