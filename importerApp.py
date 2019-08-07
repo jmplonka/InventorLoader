@@ -90,7 +90,7 @@ class AppReader(SegmentReader):
 
 	def Read_1E5CBB86(self, node): # Lighting
 		i = self.readHeaderStyle(node, 'Lighting')
-		i = node.ReadColorRGBA(i, 'a2')
+		i = node.ReadColorRGBA(i, 'color')
 		i = node.ReadList2(i, importerSegNode._TYP_LIGHTNING_, 'lst0')
 		return i
 
@@ -308,10 +308,10 @@ class AppReader(SegmentReader):
 			i = node.ReadUUID(i, 'uid_0')
 		else:
 			node.content += u" u16_2=0000 txt_1='' txt_2='' txt_3='' txt_4='' a2=[0000,0000] uid_0=None"
-		i = node.ReadColorRGBA(i, 'color')
-		i = node.ReadColorRGBA(i, 'c1')
-		i = node.ReadColorRGBA(i, 'c2')
-		i = node.ReadColorRGBA(i, 'c3')
+		i = node.ReadColorRGBA(i, 'Color.c0')
+		i = node.ReadColorRGBA(i, 'Color.diffuse')
+		i = node.ReadColorRGBA(i, 'Color.c2')
+		i = node.ReadColorRGBA(i, 'Color.c3')
 		i = node.ReadFloat32(i, 'f32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadLen32Text16(i, 'FileMapTexture')
@@ -344,7 +344,7 @@ class AppReader(SegmentReader):
 			i = node.ReadFloat32A(i, 10, 'a9')
 			i = node.ReadUInt8(i, 'u8_4')
 			i = node.ReadFloat32A(i, 7, 'a10')
-		color = node.get('color')
+		color = node.get('Color.diffuse')
 		setColor(node.name, color.red, color.green, color.blue)
 		return i
 
@@ -803,7 +803,9 @@ class AppReader(SegmentReader):
 
 	def postRead(self):
 		if (self.defStyle is not None):
-			color = self.defStyle.get('color')
+			color = self.defStyle.get('Color.diffuse')
 			if (color is not None):
 				setColorDefault(color.red, color.green, color.blue)
+			else:
+				logError(u"ERROR: %s has no 'Color.diffuse' property!", self.defStyle)
 		return super(AppReader, self).postRead()

@@ -3871,14 +3871,6 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 		self.a1     , i = getIntegers(entity.chunks, i, 2)
 		self.name   , i = getText(entity.chunks, i)
 		self.mapping, i = getDcIndexMappings(entity.chunks, i, self)
-		color = getColor(self.name)
-		if (color is None):
-			logWarning(u"Color '%s' not defined in color table - using gray!", self.name)
-			setColor(self.name, self.red, self.green, self.blue) # ignore future complains...
-		else:
-			self.red   = color[0]
-			self.green = color[1]
-			self.blue  = color[2]
 		return i
 class AttribNamingMatchingNMxThreadEntity(AttribNamingMatching):
 	# x1, x2, V1, V2, n1, V2, [????]

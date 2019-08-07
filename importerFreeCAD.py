@@ -447,25 +447,70 @@ def getAssociatedSketchEntity(sketchNode, ai, entityType):
 	idMap = sketchNode.data.associativeIDs[ai]
 	return idMap.get(entityType, None)
 
-def getBodyColor(bodyNode):
-	attributes = bodyNode.get('attrs')
+def getNodeColor(node):
+	attributes = node.get('attrs')
 	for attribute in attributes.get('attributes'):
-		if (attribute.typeName == 'AttrPartDraw'):
-			return attribute.get('c0')
+		if (attribute.typeName in ['AttrPartDraw', 'Attr_Colors']):
+			return attribute.get('Color.diffuse')
 	return None
 
-def adjustColor(entity, color):
-	if (color is not None):
-		if (type(entity) is list):
-			for child in entity:
-				adjustColor(child, color)
-		else:
-			entity.ViewObject.ShapeColor = color.getRGB()
-	return
+def getBodyColor(body):
+	color = getNodeColor(body)
+	if (not color is None): return color
+	part = body.get('parent')
+	color = getNodeColor(part)
+	if (not color is None): return color
+	group = part._data.parent
+	return getNodeColor(group)
 
+def getFaceColor(face):
+	styles = face.get('styles')
+	if (styles):
+		for style in styles.get('styles'):
+			if (style.typeName in ['Style_PrimColorAttr', 'Style_LineColor']):
+				return style.get('Color.diffuse')
+	return None
+
+def getFaceIndex(face, shape):
+	faceIndex = 0
+	for f in shape.Faces:
+		b1 = f.BoundBox
+		b2 = face.get('box')
+		if isEqual1D(b1.XMin, b2[0] * 10.0, 0.1):
+			if isEqual1D(b1.YMin, b2[1] * 10.0, 0.1):
+				if isEqual1D(b1.ZMin, b2[2] * 10.0, 0.1):
+					if isEqual1D(b1.XMax, b2[3] * 10.0, 0.1):
+						if isEqual1D(b1.YMax, b2[4] * 10.0, 0.1):
+							if isEqual1D(b1.ZMax, b2[5] * 10.0, 0.1):
+								return faceIndex
+		faceIndex = faceIndex + 1
+	return -1
+
+def adjustBodyColor(entity, body):
+	if (body):
+		color = getBodyColor(body)
+		if (color):
+			if not (type(entity) is list):
+				#entity.ViewObject.ShapeColor = color.getRGB()
+				shell = body.get('shell')
+				shellColor = getFaceColor(shell)
+				if (shellColor):
+					color = shellColor
+				colors = [color.getRGB()] * len(entity.Shape.Faces)
+				# entity must have same number of faces as shell!!!
+				for face in shell.get('objects'):
+					faceColor = getFaceColor(face)
+					if (faceColor):
+						faceIndex = getFaceIndex(face, entity.Shape)
+						if (faceIndex < 0):
+							logInfo(u"    Can't find index for face %r", face)
+						else:
+							colors[faceIndex] = faceColor.getRGB()
+				entity.ViewObject.DiffuseColor = colors
+				entity.ViewObject.Transparency = 100 - int(color.alpha * 100)
 def adjustFxColor(entity, nodColor):
 	if (entity is not None):
-		if nodColor is not None:
+		if (nodColor is not None):
 			color = getColor(nodColor.name)
 			if (color is not None):
 				if (type(entity) is list):
@@ -716,15 +761,6 @@ class FreeCADImporter(object):
 					if (node.valid):
 						importObject = getattr(self, 'Create_%s' %(node.typeName))
 						importObject(node)
-
-						# apply colors stored in graphics segment
-						entity = node.geometry
-						if (entity is not None):
-							gr = getModel().getGraphics()
-							grNode = gr.indexNodes.get(node.get('index'), None)
-							if (grNode is not None):
-								color  = getBodyColor(grNode)
-								adjustColor(entity, color)
 			except Exception as e:
 				logError(u"Error in creating (%04X): %s - %s", node.index, node.typeName, e)
 				logError(traceback.format_exc())
@@ -752,6 +788,7 @@ class FreeCADImporter(object):
 	def addSurfaceBody(self, fxNode, obj3D, surface):
 		fxNode.setGeometry(obj3D)
 		if (surface is not None):
+			surface.setGeometry(obj3D)
 			# overwrite previously added sourfaces with the same name!
 			self.bodyNodes[surface.name] = fxNode
 		return
@@ -3736,7 +3773,7 @@ class FreeCADImporter(object):
 
 		faces = [self.bodyNodes[face.name].geometry for face in collection.get('items') if face.name in self.bodyNodes]
 		stitch = InventorViewProviders.makeStitch(faces, fxNode.name, not surface)
-		if (surface):
+		if (surface.get('value')):
 			self.addSurfaceBody(fxNode, stitch, bodySet)
 		else:
 			self.addSolidBody(fxNode, stitch, bodySet)
@@ -3844,8 +3881,21 @@ class FreeCADImporter(object):
 			return self.notYetImplemented(threadNode, bodySet19)
 		return self.notYetImplemented(threadNode, bodySet20)
 
-	def Create_FxPunchTool(self, node):     return unsupportedNode(node) # Special iFeature and requires the punch tool file -> additional parser!
-	def Create_FxiFeature(self, node):      return unsupportedNode(node)
+	def Create_FxPunchTool(self, node):
+		properties = node.get('properties')
+		for prp in properties:
+			if (not prp is None):
+				if (prp.typeName in ['BodyCollection']):
+					return self.notYetImplemented(node, prp)
+		return unsupportedNode(node) # Special iFeature and requires the punch tool file -> additional parser!
+
+	def Create_FxiFeature(self, node):
+		properties = node.get('properties')
+		for prp in properties:
+			if (not prp is None):
+				if (prp.typeName in ['BodyCollection']):
+					return self.notYetImplemented(node, node)
+		return unsupportedNode(node)
 
 	def Create_FxUnknown(self, fxNode):
 		logWarning(u"    Can't process unknown Feature '%s' - probably an unsupported iFeature:", fxNode.name)
@@ -4115,12 +4165,11 @@ class FreeCADImporter(object):
 
 			# apply colors stored in graphics segment
 			gr = getModel().getGraphics()
-			for indexDC in gr.indexNodes:
+			for indexDC in gr.bodies:
 				dcNode = dc.indexNodes[indexDC]
 				geometry = dcNode.geometry
-				if (geometry is not None):
-					grNode = gr.indexNodes[indexDC]
-					color  = getBodyColor(grNode)
-					adjustColor(geometry, color)
+				if (geometry):
+					body = gr.bodies[indexDC]
+					adjustBodyColor(geometry, body)
 		else:
 			logWarning(u">>>No content to be displayed for DC<<<")

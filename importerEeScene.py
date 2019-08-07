@@ -22,12 +22,12 @@ class EeSceneReader(StyleReader):
 
 	def Read_ColorAttr(self, offset, node):
 		i = self.skipBlockSize(offset)
-		i = node.ReadUInt8A(i, 2,  'ColorAttr.a0')
-		i = node.ReadColorRGBA(i,  'ColorAttr.c0')
-		i = node.ReadColorRGBA(i,  'ColorAttr.c1')
-		i = node.ReadColorRGBA(i,  'ColorAttr.c2')
-		i = node.ReadColorRGBA(i,  'ColorAttr.c3')
-		i = node.ReadUInt16A(i, 2, 'ColorAttr.a5')
+		i = node.ReadUInt8A(i, 2,  'Color.a0')
+		i = node.ReadColorRGBA(i,  'Color.c0')
+		i = node.ReadColorRGBA(i,  'Color.diffuse')
+		i = node.ReadColorRGBA(i,  'Color.c2')
+		i = node.ReadColorRGBA(i,  'Color.c3')
+		i = node.ReadUInt16A(i, 2, 'Color.a5')
 		return i
 
 	def ReadHeader3dObject(self, node, typeName = None, ref1Name = 'numRef'):

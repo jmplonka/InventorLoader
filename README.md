@@ -90,7 +90,7 @@ That allows it to embed Excel workbooks e.g.
 	chamfers are not supported by FreeCAD. In such cases please import as STEP instead.
 
 - 0.12.0 (2019-01-08): Added support for Surface Features "BoundaryPatch" and "Knit". Both
-         features will be displayed with their own icon in the model browser.
+	features will be displayed with their own icon in the model browser.
 
 - 0.11.0 (2018-11-06): Added support for Meshes
 
@@ -101,7 +101,7 @@ That allows it to embed Excel workbooks e.g.
 - 0.9.4 InventorLoader is now compatible with python 2 and 3
 
 - 0.9.3 Added support of offset surfaces and spring surfaces (circle that is seepted along
-        a helix)
+	a helix)
 
 - 0.9.2 Added named colors to STEP.
 

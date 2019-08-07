@@ -22,7 +22,7 @@ class GraphicsReader(EeSceneReader):
 	def __init__(self, segment):
 		super(GraphicsReader, self).__init__(segment)
 		segment.meshes = {}
-		segment.featureOutlines = {}
+		segment.bodies = {}
 
 	def ReadIndexDC(self, node, i):
 		i = node.ReadUInt32(i, 'indexDC')
@@ -117,11 +117,11 @@ class GraphicsReader(EeSceneReader):
 			node.content += u" lst0=[%04X]" %(u32)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 2, 'a2')
-		i = node.ReadColorRGBA(i,  'ColorAttr.c0')
-		i = node.ReadColorRGBA(i,  'ColorAttr.c1')
-		i = node.ReadColorRGBA(i,  'ColorAttr.c2')
-		i = node.ReadColorRGBA(i,  'ColorAttr.c3')
-		i = node.ReadUInt16A(i, 2, 'ColorAttr.a5')
+		i = node.ReadColorRGBA(i,  'Color.c0')
+		i = node.ReadColorRGBA(i,  'Color.diffuse')
+		i = node.ReadColorRGBA(i,  'Color.c2')
+		i = node.ReadColorRGBA(i,  'Color.c3')
+		i = node.ReadUInt16A(i, 2, 'Color.a5')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt16A(i, 2, 'a0')
 		return i
@@ -578,6 +578,7 @@ class GraphicsReader(EeSceneReader):
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst2')
 		i = node.ReadChildRef(i, 'ref7') # -> 6A6931DC with
+		self.segment.bodies[node.get('indexDC')] = node
 		return i
 
 	def Read_9EA0717F(self, node):
@@ -809,10 +810,10 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'outlines') # list of outlines: key <=> DC-Index!
 		i = self.skipBlockSize(i)
-		i = node.ReadColorRGBA(i, 'c0')
-		i = node.ReadColorRGBA(i, 'c1')
-		i = node.ReadColorRGBA(i, 'c2')
-		i = node.ReadColorRGBA(i, 'c3')
+		i = node.ReadColorRGBA(i, 'Color.c0')
+		i = node.ReadColorRGBA(i, 'Color.diffuse')
+		i = node.ReadColorRGBA(i, 'Color.c2')
+		i = node.ReadColorRGBA(i, 'Color.c3')
 		i = node.ReadFloat32(i, 'f32_0')
 		i = self.skipBlockSize(i)
 		return i

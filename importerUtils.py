@@ -740,15 +740,15 @@ def decode(filename, utf=False):
 def isEmbeddings(names):
 	return 'RSeEmbeddings' in names
 
-def isEqual(a, b):
+def isEqual(a, b, e = 0.0001):
 	if (a is None): return isEqual(b, CENTER)
 	if (b is None): return isEqual(a, CENTER)
-	return ((a - b).Length < 0.0001)
+	return ((a - b).Length < e)
 
-def isEqual1D(a, b):
+def isEqual1D(a, b, e = 0.0001):
 	if (a is None): return isEqual1D(b, 0.0)
 	if (b is None): return isEqual1D(a, 0.0)
-	return abs(a - b) < 0.0001
+	return abs(a - b) < e
 
 def _log(caller, method, msg, args):
 	try:

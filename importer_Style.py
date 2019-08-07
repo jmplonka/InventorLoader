@@ -44,11 +44,11 @@ class StyleReader(SegmentReader):
 
 	def Read_48EB8608(self, node): # Line color style
 		i = self.ReadHeaderStyle(node, 'Style_LineColor')
-		i = node.ReadColorRGBA(i, 'c0')
-		i = node.ReadColorRGBA(i, 'c1')
-		i = node.ReadColorRGBA(i, 'c2')
-		i = node.ReadColorRGBA(i, 'c3')
-		i = node.ReadColorRGBA(i, 'c4')
+		i = node.ReadColorRGBA(i, 'Color.c0')
+		i = node.ReadColorRGBA(i, 'Color.diffuse')
+		i = node.ReadColorRGBA(i, 'Color.c2')
+		i = node.ReadColorRGBA(i, 'Color.c3')
+		i = node.ReadColorRGBA(i, 'Color.c4')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
@@ -85,15 +85,15 @@ class StyleReader(SegmentReader):
 
 	def Read_89CE3F34(self, node):
 		i = self.ReadHeaderStyle(node, 'Style_89CE3F34')
-		return 0 # '<LdddddLB'
+		return i # '<LdddddLB'
 
 	def Read_8F0B160B(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_8F0B160B')
-		i = node.ReadColorRGBA(i, 'c0')
-		i = node.ReadColorRGBA(i, 'c1')
-		i = node.ReadColorRGBA(i, 'c2')
-		i = node.ReadColorRGBA(i, 'c3')
-		i = node.ReadColorRGBA(i, 'c4')
+		i = node.ReadColorRGBA(i, 'Color.c0')
+		i = node.ReadColorRGBA(i, 'Color.diffuse')
+		i = node.ReadColorRGBA(i, 'Color.c2')
+		i = node.ReadColorRGBA(i, 'Color.c3')
+		i = node.ReadColorRGBA(i, 'Color.c4')
 		i = node.ReadUInt16A(i, 2, 'a10')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
