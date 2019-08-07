@@ -5,11 +5,12 @@ importer.py:
 Collection of 3D Mesh importers
 '''
 
-import os, sys, FreeCAD, importerSAT, Import_IPT
+import os, sys, FreeCAD, FreeCADGui, importerSAT, Import_IPT
 import importerUtils, Acis, importerClasses
-from importerUtils   import canImport, logWarning, logError, logAlways, viewAxonometric
+from importerUtils   import canImport, logInfo, logWarning, logError, logAlways
 from olefile         import isOleFile
 from importerFreeCAD import createGroup
+from pivy import coin
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -70,6 +71,19 @@ def releaseMemory():
 	Acis.releaseMemory()
 	importerClasses.releaseModel()
 
+def adjustView(doc):
+	if (FreeCAD.GuiUp):
+		# adjust camara position and orientation
+		g = FreeCADGui.getDocument(doc.Name)
+		v = g.ActiveView
+		c = v.getCameraNode()
+		p = coin.SbVec3f(1, 1, 1)
+		o = coin.SbVec3f(0, 0, 0)
+		u = coin.SbVec3f(0, 1, 0)
+		c.position.setValue(p)
+		c.pointAt( o, u )
+		FreeCADGui.SendMsgToActiveView("ViewFit")
+
 def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
@@ -86,6 +100,8 @@ def insert(filename, docname, skip = [], only = [], root = None):
 				reader.create3dModel(group, doc)
 				viewAxonometric()
 			releaseMemory()
+			FreeCADGui.SendMsgToActiveView("ViewFit")
+			logInfo(u"DONE!")
 		except:
 			open(filename, skip, only, root)
 	return
@@ -104,6 +120,7 @@ def open(filename, skip = [], only = [], root = None):
 		if (reader is not None):
 			# Create 3D-Model in root (None) of document
 			reader.create3dModel(None , doc)
-			viewAxonometric()
+			adjustView(doc)
 		releaseMemory()
+		logInfo(u"DONE!")
 	return

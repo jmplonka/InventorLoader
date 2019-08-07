@@ -1,12 +1,12 @@
 # InventorLoader
-Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD (min. Version 0.17). Until now only
+Loads / Imports Autodesk (R) Inventor (R) files into FreeCAD (min. Version 0.17). Until now only 
 Parts (IPT) but nor assemblies (IAM) nor drawings (IDW) can be displayed.
 
-As Inventor files contains a complete ACIS model representation, SAT and SAB files can also be
+As Inventor files contains a complete ACIS model representation, SAT and SAB files can also be 
 imported into FreeCAD.
 
 ## Status:
-> Release Candidate 1 (RC1)
+> Release Candidate 2 (RC2)
 
 ## Prerequisites
 - The AddOn requires additional python packages in the FreeCAD python installation:
@@ -26,10 +26,10 @@ a) beside FreeCAD's bin folder, or
 b) in user's application data (%APPDATA% on windows) or home folder (on linux/MAC).  
 A new folder "InvetorLoader-master" will be created.
 
-The next time FreeCAD will offer new import formats for ACIS' SAT (\*.sat) files and Autodesk
+The next time FreeCAD will offer new import formats for ACIS' SAT (\*.sat) files and Autodesk 
 Inventor's IPT (\*.ipt) files as supported import formats.
 
-As new python packages are required (ref. "Prerequisites") FreeCAD has to be restarted
+As new python packages are required (ref. "Prerequisites") FreeCAD has to be restarted 
 so that the new packages become available.
 
 ### Solving installation problems
@@ -80,7 +80,9 @@ That allows it to embed Excel workbooks e.g.
  -- STEP based: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History:
-- 0.17.0 (2019-07-04): Missing features added as ACIS models.
+- 0.18.0 (2019-08-07): Added coloring of single faces and changed to default Inventor campera position (RC2).
+
+- 0.17.0 (2019-07-04): Missing features added as ACIS models (RC1).
 
 - 0.16.0 (2019-03-19): Added creation of Shells
 

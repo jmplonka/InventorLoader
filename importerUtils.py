@@ -10,7 +10,7 @@ from PySide.QtCore import *
 from PySide.QtGui  import *
 from uuid          import UUID
 from struct        import Struct, unpack_from, pack
-from FreeCAD       import Vector as VEC, Console, GuiUp, ParamGet
+from FreeCAD       import Vector as VEC, Console, ParamGet
 from olefile       import OleFileIO
 
 __author__     = 'Jens M. Plonka'
@@ -850,12 +850,6 @@ def setInventorFile(file):
 			else:
 				shutil.rmtree(p)
 	return OleFileIO(file)
-
-def viewAxonometric():
-	if (GuiUp):
-		FreeCADGui.activeView().viewAxonometric()
-		FreeCADGui.SendMsgToActiveView("ViewFit")
-	logInfo(u"DONE!")
 
 def isString(value):
 	if (type(value) is str): return True

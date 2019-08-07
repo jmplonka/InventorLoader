@@ -1,7 +1,4 @@
 # IPT file
-## Incomplete Features
-	* Colors
-		* single faces
 
 ## Missing Features
 	* SheetMetal
