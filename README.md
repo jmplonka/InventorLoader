@@ -8,6 +8,9 @@ imported into FreeCAD.
 ## Status:
 **Release Candidate 2 (RC2)**
 
+## Screenshots
+[Demo-Status](https://github.com/jmplonka/InventorLoader/tree/master/Demo-Status/) subdirectory shows examples of this Addon.
+
 ## Prerequisites
 [FreeCAD](https://freecadweb.org/downloads.php) v0.17 or greater required!
 
@@ -56,9 +59,6 @@ Sometimes it can happen that the packages can't be installed.
    3. Run the installation script: `python ./installLibs.py`
       This should install the required packages.
 4. Restart FreeCAD
-
-## Screenshots
-[Demo-Status](https://github.com/jmplonka/InventorLoader/tree/master/Demo-Status/) subdirectory shows examples of this Addon.
 
 #### Constraints in Native-IPT Import:
 Please disable Dimension constraints in user.cfg:
