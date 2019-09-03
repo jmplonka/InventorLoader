@@ -17,17 +17,18 @@ class StyleReader(SegmentReader):
 	def __init__(self, segment):
 		super(StyleReader, self).__init__(segment)
 
+	def Read_48EB8607(self, node):
+		node.typeName = "ObjctStyles"
+		i = self.skipBlockSize(0)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'styles')
+		return i
+
+	####################
 	def ReadHeaderStyle(self, node, typeName=None):
 		if (typeName is not None): node.typeName = typeName
 		i = self.skipBlockSize(0)
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
-		return i
-
-	def Read_48EB8607(self, node):
-		node.typeName = "ObjctStyles"
-		i = self.skipBlockSize(0)
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'styles')
 		return i
 
 	def Read_0AE12F04(self, node): # Object style ...
@@ -66,10 +67,9 @@ class StyleReader(SegmentReader):
 		i = self.ReadHeaderStyle(node, 'Style_7333F86D')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt16A(i, 4, 'a0')
-		if (getFileVersion() > 2018):
-			i = node.ReadFloat64_2D(i, 'a1')
-			i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt16A(i, 2, 'a0')
+		i = self.ReadTransformation3D(node, i)
+		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_824D8FD9(self, node): # Object style ...

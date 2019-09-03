@@ -27,44 +27,11 @@ class NotebookReader(SegmentReader):
 		# TODO: convert RTF to HTML/TEXT
 		return i
 
-	def Read_3C95B7CE(self, node): # Notebook
-		i = node.Read_Header0('Notebook')
-		i = node.ReadUInt32A(i, 2, 'a0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
-		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'ref_0')
-		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt8(i, 'u8_1')
-		return i
-
-	def Read_4C415964(self, node): # Note
-		i = node.Read_Header0('Note')
-		i = node.ReadUInt32A(i, 2, 'a0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		i = self.skipBlockSize(i)
-		i = node.ReadLen32Text16(i)
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst1')
-		i = node.ReadUInt16A(i, 2, 'a1')
-		return i
-
-	def Read_74E34413(self, node): # Folder
-		i = node.Read_Header0('Folder')
-		i = node.ReadUInt32A(i, 2, 'a0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'l1')
-		i = node.ReadFloat64_3D(i, 'a1')
-		return i
-
 	def Read_7ABDF905(self, node):
 		i = node.Read_Header0()
 		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUUID(i, 'uid_0')
-		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
@@ -115,4 +82,35 @@ class NotebookReader(SegmentReader):
 	def Read_E23E5AE6(self, node):
 		i = self.ReadHeaderU32RefU8List3(node)
 		i = node.ReadParentRef(i)
+		return i
+
+	####################
+	# Int List2 sections
+	def ReadHeaderU32Lst2(self, node, typeName = None):
+		i = node.Read_Header0(typeName)
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_3C95B7CE(self, node): # Notebook
+		i = self.ReadHeaderU32Lst2(node, 'Notebook')
+		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt8(i, 'u8_1')
+		return i
+
+	def Read_4C415964(self, node): # Note
+		i = self.ReadHeaderU32Lst2(node, 'Note')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'lst1')
+		i = node.ReadUInt16A(i, 2, 'a1')
+		return i
+
+	def Read_74E34413(self, node): # Folder
+		i = self.ReadHeaderU32Lst2(node, 'Folder')
+		i = node.ReadUInt32(i, 'l1')
+		i = node.ReadFloat64_3D(i, 'a1')
 		return i

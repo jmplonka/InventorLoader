@@ -48,7 +48,18 @@ class BRepReader(NameTableReader):
 		return i
 
 	def Read_0645C2A5(self, node):
-		i = self.ReadHeaderNameTableChild3Node(node)
+		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'u32_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, _TYP_UINT32_, 'lst0')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUUID(i, 'uid')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = self.skipBlockSize(i, 8)
+		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
+		i = node.ReadUInt32(i, 'u32_2')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 10, 'a1')
 		return i
 
 	def Read_07BA7419(self, node):
@@ -93,6 +104,12 @@ class BRepReader(NameTableReader):
 		i = node.ReadUInt32A(i, 4, 'a1')
 		return i
 
+	def Read_0B7296C1(self, node):
+		i = self.ReadHeaderNameTableChild3Node(node)
+		i = node.ReadUInt32A(i, 4,  'a1')
+		i = node.ReadUInt32A(i, 10, 'a3')
+		return i
+
 	def Read_6F891B34(self, node):
 		i = self.ReadHeaderNameTableChild3Node(node)
 		return i
@@ -106,10 +123,6 @@ class BRepReader(NameTableReader):
 		return i
 
 	def Read_7E5D2868(self, node):
-		i = self.ReadHeaderNameTableChild3Node(node)
-		return i
-
-	def Read_8E5D4198(self, node):
 		i = self.ReadHeaderNameTableChild3Node(node)
 		return i
 

@@ -98,7 +98,6 @@ def insert(filename, docname, skip = [], only = [], root = None):
 				name = decode(name)
 				group = insertGroup(doc, name)
 				reader.create3dModel(group, doc)
-				viewAxonometric()
 			releaseMemory()
 			FreeCADGui.SendMsgToActiveView("ViewFit")
 			logInfo(u"DONE!")

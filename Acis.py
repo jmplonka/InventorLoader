@@ -3513,7 +3513,7 @@ class SurfaceSpline(Surface):
 						fill = False
 
 						s = source.Surface
-						if (s.Continuity == 'C0') and (isinstance(s, Part.BSplineCurve)):
+						if (isinstance(s, Part.BSplineCurve)) and (s.Continuity == 'C0'):
 							"""Try to approximate 'in_surf' to C1 continuity, with given tolerance 'tol' """
 							tol = 1e-2
 							tmp = s.copy()

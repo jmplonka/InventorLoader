@@ -17,15 +17,25 @@ repository=https://github.com/jmplonka/InventorLoader
 ; start of optional metadata
 category=
 changelog=The changelog lists the plugin versions and their changes:
-    0.9 - Added conversion to STEP.
-    0.8 - Added handling of Inventor 2019 file format.
-    0.7 - added ACIS file format reading for IPT and SAT files.
-    0.6 - added Coil Feature workaround for installing 3rd Party libraries
-    0.5 - added Sweep, Loft and Thicken Feature
-    0.4 - added Rectangular-/Circular-Pattern, Mirror and Hole Feature
-    0.3 - added Extrude and Revolve Featrues
-    0.2 - added parameter table
-    0.1 - First testing release with 2D-Sketches
+    1.0  - Reorganized section readers.
+    0.18 - Added coloring of single faces (RC2).
+    0.17 - Added missing features as ACIS models (RC1).
+    0.16 - Added creation of Shells.
+    0.15 - Added part variant handling (ak iPart).
+    0.14 - InventorLoader is now a workbench.
+    0.13 - Added support for Fillets and Chamfers.
+    0.12 - Added support for BoundaryPatch and Knit.
+    0.11 - Added support for Meshes.
+    0.10 - Added table for iParts.
+    0.9  - Added conversion to STEP.
+    0.8  - Added handling of Inventor 2019 file format.
+    0.7  - added ACIS file format reading for IPT and SAT files.
+    0.6  - added Coil Feature workaround for installing 3rd Party libraries
+    0.5  - added Sweep, Loft and Thicken Feature
+    0.4  - added Rectangular-/Circular-Pattern, Mirror and Hole Feature
+    0.3  - added Extrude and Revolve Featrues
+    0.2  - added parameter table
+    0.1  - First testing release with 2D-Sketches
 
 ; Tags are in comma separated value format, spaces are allowed within the
 ; tag name.

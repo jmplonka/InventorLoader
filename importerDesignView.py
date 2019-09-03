@@ -22,13 +22,13 @@ class DesignViewReader(SegmentReader):
 
 	def Read_08823621(self, node):
 		i = node.Read_Header0('Camera')
+		i = self.skipBlockSize(i)
 		i = node.ReadFloat64_3D(i, 'target')
 		i = node.ReadFloat64_3D(i, 'eye')
 		i = node.ReadFloat64_3D(i, 'a0')
 		i = node.ReadFloat64(i, 'angle')
 		i = node.ReadFloat64(i, 'f64_0')
 		i = node.ReadFloat64_3D(i, 'up')
-		#aX=[00]
 		return i
 
 	def Read_216B3A55(self, node):
@@ -43,69 +43,6 @@ class DesignViewReader(SegmentReader):
 		i = node.ReadLen32Text16(i)
 		return i
 
-	def Read_47C98A81(self, node):
-		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'ref0')
-		i = node.ReadBoolean(i, 'b0')
-		return i
-
-	def Read_551FB1BF(self, node):
-		i = node.Read_Header0('ViewScale')
-		i = node.ReadFloat64(i, 'scale')
-		i = node.ReadUInt32(i, 'u32_0')
-		return i
-
-	def Read_71C22321(self, node):
-		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'ref0')
-		i = node.ReadBoolean(i, 'b0')
-		return i
-
-	def Read_987C5D0F(self, node):
-		i = node.ReadUInt16A(0, 3, 'a0')
-		i = node.ReadUUID(i, 'uid0')
-		i = node.ReadList2(i, _TYP_LIST_UINT32_A_, 'lst0')
-		return i
-
-	def Read_9B043321(self, node):
-		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'ref0')
-		if (getFileVersion() < 2020):
-			i = node.ReadLen32Text16(i)
-		else:
-			i = node.ReadUInt32(i, 'u32_1')
-		if (getFileVersion() > 2012): i += 4 # skip ?? ?? ?? ??
-		return i
-
-	def Read_BDA7138D(self, node):
-		i = node.Read_Header0()
-		return i
-
-	def Read_D8B8F230(self, node):
-		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'ref0')
-		i = node.ReadBoolean(i, 'b0')
-		i = node.ReadUInt32(i, 'u32_0')
-		return i
-
-	def Read_D9980532(self, node):
-		i = node.Read_Header0()
-		i = node.ReadChildRef(i, 'ref0')
-		i = node.ReadUInt8A(i, 3, 'a0')
-		i = node.ReadUInt32(i, 'u32_0')
-		if (node.get('a0')[1] == 0):
-			i = node.ReadLen32Text16(i, 'txt0')
-			i = node.ReadLen32Text16(i, 'txt1')
-			i = node.ReadUInt16(i, 'u16_0')
-		i = node.ReadUInt32(i, 'u32_1')
-		return i
-
-	def Read_9DC2A241(self, node): # ViewDirection
-		i = node.Read_Header0('ViewDirection')
-		i = node.ReadLen32Text16(i)
-		i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
-		return i
-
 	def Read_301D4138(self, node): # member of ViewDirection.lst0
 		i = node.Read_Header0()
 		i = node.ReadUInt32(i, 'u32_0')
@@ -115,9 +52,88 @@ class DesignViewReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a1')
 		return i
 
+	def Read_47C98A81(self, node):
+		i = node.Read_Header0()
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i, 'ref0')
+		i = self.skipBlockSize(i)
+		i = node.ReadBoolean(i, 'b0')
+		return i
+
+	def Read_71C22321(self, node):
+		i = node.Read_Header0()
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i, 'ref0')
+		i = self.skipBlockSize(i)
+		i = node.ReadBoolean(i, 'b0')
+		return i
+
+	def Read_9B043321(self, node):
+		i = node.Read_Header0()
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i, 'ref0')
+		i = self.skipBlockSize(i)
+		if (getFileVersion() < 2020):
+			i = node.ReadLen32Text16(i)
+		else:
+			i = node.ReadUInt32(i, 'u32_1')
+		if (getFileVersion() > 2012): i += 4 # skip ?? ?? ?? ??
+		return i
+
+	def Read_551FB1BF(self, node):
+		i = node.Read_Header0('ViewScale')
+		i = node.ReadFloat64(i, 'scale')
+		i = node.ReadUInt32(i, 'u32_0')
+		return i
+
 	def Read_8902B593(self, node): # member of ViewDirection.lst0
 		i = node.Read_Header0()
 		i = node.ReadUInt32(i, 'flags')
+		return i
+
+	def Read_987C5D0F(self, node):
+		i = node.ReadUInt16A(0, 3, 'a0')
+		i = self.skipBlockSize(i, 8)
+		i = node.ReadUUID(i, 'uid0')
+		i = node.ReadList2(i, _TYP_LIST_UINT32_A_, 'lst0')
+		return i
+
+	def Read_9DC2A241(self, node): # ViewDirection
+		i = node.Read_Header0('ViewDirection')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
+		return i
+
+	def Read_BDA7138D(self, node):
+		i = node.Read_Header0()
+		return i
+
+	def Read_D8B8F230(self, node):
+		i = node.Read_Header0()
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i, 'ref0')
+		i = self.skipBlockSize(i)
+		i = node.ReadBoolean(i, 'b0')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_0')
+		return i
+
+	def Read_D9980532(self, node):
+		i = node.Read_Header0()
+		i = self.skipBlockSize(i)
+		i = node.ReadChildRef(i, 'ref0')
+		i = self.skipBlockSize(i)
+		i = node.ReadBoolean(i, 'b0')
+		i = self.skipBlockSize(i)
+		if (getFileVersion() > 2011):
+				b, i = getBoolean(node.data, i)
+				i = node.ReadUInt32(i, 'u32_0')
+				i = node.ReadUInt8(i, 'u8_1')
+				if (not b):
+					i = node.ReadLen32Text16(i, 'txt0')
+					i = node.ReadLen32Text16(i, 'txt1')
+					i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def Read_E3684E1C(self, node):
@@ -127,6 +143,7 @@ class DesignViewReader(SegmentReader):
 
 	def Read_EBA31E2E(self, node):
 		i = node.Read_Header0()
+		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		n, i = getUInt32(node.data, i)
 		i = node.ReadUInt16A(i, n, 'a0')

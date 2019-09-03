@@ -19,15 +19,13 @@ class EeDataReader(NameTableReader):
 	def __init__(self, segment):
 		super(EeDataReader, self).__init__(segment)
 
-	def ReadU32Arr(self, node, offset, name, size):
+	def ReadU32Arr(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
 		lst = []
-		node.content += u" lst0=["
 		for j in range(cnt):
-			a, i = getUInt32A(node.data, i, size) # list-index, ASM-ref, number
+			a, i = getUInt32A(node.data, i, 3) # list-index, ASM-ref, number
 			lst.append(a)
-			node.content += u"(%02X,%04X,%6X)" % (a[0], a[1], a[2])
-		node.content += u"]"
+		node.content += u" lst0=[%s]" %(u",".join([u"(%02X,%03X,%04X)" % (a[0], a[1], a[2]) for an in lst]))
 		node.set('lst0', lst)
 		return i
 
@@ -41,7 +39,6 @@ class EeDataReader(NameTableReader):
 		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = self.ReadU32Arr(node, i, 'lst0', 3)
-
+		i = self.ReadU32Arr(node, i, 'lst0')
 		i = node.ReadUInt32A(i, 6, 'a2')
 		return i

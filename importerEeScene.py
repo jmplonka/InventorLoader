@@ -72,20 +72,6 @@ class EeSceneReader(StyleReader):
 		node.edge = True
 		return i
 
-	def ReadHeaderParent(self, node, typeName = None):
-		if (typeName is not None):
-			node.typeName = typeName
-		i = self.skipBlockSize(0, 8)
-		i = node.ReadParentRef(i)
-		i = self.skipBlockSize(i)
-		return i
-
-	def ReadHeaderNumRef(self, node, typeName, name):
-		i = self.ReadHeaderParent(node, typeName)
-		i = node.ReadUInt32(i, name)
-		node.numref = True
-		return i
-
 	def ReadHeaderAttribute(self, node, typeName = None):
 		if (typeName == None):
 			tn = 'Attr_%s' %(node.typeName)
@@ -94,7 +80,6 @@ class EeSceneReader(StyleReader):
 		i = self.ReadHeaderSU32S(node, tn)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def ReadOptionalTransformation(self, node, offset):
@@ -176,6 +161,7 @@ class EeSceneReader(StyleReader):
 
 	def Read_6C6322EB(self, node):
 		i = self.ReadHeaderAttribute(node)
+		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_1')
@@ -186,7 +172,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt32A(0, 3, 'a0')
 		return i
 
-	def Read_A529D1E2(self, node): # GroupNode
+	def Read_A529D1E2(self, node): # Part GroupNode
 		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
 		return i
 
@@ -387,12 +373,47 @@ class EeSceneReader(StyleReader):
 		node.set('lst1', lst)
 		return i
 
+	####################
+	def ReadHeaderNumRef(self, node, typeName = None, name = 'u32_0'):
+		if (typeName is not None):
+			node.typeName = typeName
+		i = self.skipBlockSize(0, 8)
+		i = node.ReadParentRef(i)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, name)
+		node.numref = True
+		return i
+
+	def Read_0BBBEBC8(self, node):
+		i = self.ReadHeaderNumRef(node, 'DefIndex_1', 'u32_0')
+		i = node.ReadUInt32(i, 'index') # reference to a Work-Plane's index
+		node.numref = True
+		return i
+
 	def Read_0BC8EA6D(self, node): # key reference
 		i = self.ReadHeaderNumRef(node, 'RefByKey_1', 'key')
 		return i
 
+	def Read_3D953EB2(self, node):
+		i = self.ReadHeaderNumRef(node, 'RefByIndexPoint', 'u32_0')
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Points's index
+		node.numref = True
+		return i
+
+	def Read_3EA856AC(self, node):
+		i = self.ReadHeaderNumRef(node, 'RefByIndexAxis', 'u32_0')
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Axis's index
+		node.numref = True
+		return i
+
 	def Read_4AD05620(self, node): # key reference
 		i = self.ReadHeaderNumRef(node, 'RefByKey_2', 'key')
+		return i
+
+	def Read_591E9565(self, node): # Index reference
+		i = self.ReadHeaderNumRef(node, 'RefByIndexPlane', 'u32_0')
+		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Plane's index
+		node.numref = True
 		return i
 
 	def Read_5D916CE9(self, node): # index definition
@@ -401,6 +422,11 @@ class EeSceneReader(StyleReader):
 
 	def Read_B9274CE3(self, node): # key reference
 		i = self.ReadHeaderNumRef(node, 'RefByKey_4', 'key')
+		return i
+
+	def Read_BD5BB62B(self, node):
+		i = self.ReadHeaderNumRef(node, 'IndexDef_1', 'index')
+		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
 	def Read_F6ADCC68(self, node): # Index definition
@@ -418,34 +444,4 @@ class EeSceneReader(StyleReader):
 	def Read_424221E2(self, node): # num ref
 		i = self.ReadHeaderNumRef(node, 'RefByKey_6', 'key')
 		i = node.ReadUInt32A(i, 4, 'a0')
-		return i
-
-# _______________________________________
-
-	def Read_3D953EB2(self, node):
-		i = self.ReadHeaderParent(node, 'RefByIndexPoint')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Points's index
-		node.numref = True
-		return i
-
-	def Read_3EA856AC(self, node):
-		i = self.ReadHeaderParent(node, 'RefByIndexAxis')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Axis's index
-		node.numref = True
-		return i
-
-	def Read_591E9565(self, node): # Index reference
-		i = self.ReadHeaderParent(node, 'RefByIndexPlane')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'refIdx') # reference to a Work-Plane's index
-		node.numref = True
-		return i
-
-	def Read_0BBBEBC8(self, node):
-		i = self.ReadHeaderParent(node, 'DefIndex_1')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadUInt32(i, 'index') # reference to a Work-Plane's index
-		node.numref = True
 		return i

@@ -508,6 +508,7 @@ def adjustBodyColor(entity, body):
 							colors[faceIndex] = faceColor.getRGB()
 				entity.ViewObject.DiffuseColor = colors
 				entity.ViewObject.Transparency = 100 - int(color.alpha * 100)
+
 def adjustFxColor(entity, nodColor):
 	if (entity is not None):
 		if (nodColor is not None):

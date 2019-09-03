@@ -1,12 +1,12 @@
 # InventorLoader
-Loads/Imports: Autodesk (R) and Inventor (R) files into FreeCAD (v0.17 or greater). 
-Until now only Parts (IPT) but not assemblies (IAM) nor drawings (IDW) can be displayed.
+Loads/Imports: Autodesk (R) Inventor (R) files into FreeCAD (v0.17 or greater). 
+Until now only Parts (IPT) but not assemblies (IAM) or drawings (IDW) or presentations (IPN) can be displayed.
 
 As Inventor files contains a complete ACIS model representation, SAT and SAB files can also be 
 imported into FreeCAD.
 
 ## Status:
-**Release Candidate 2 (RC2)**
+**Released 1.0**
 
 ## Screenshots
 [Demo-Status](https://github.com/jmplonka/InventorLoader/tree/master/Demo-Status/) subdirectory shows examples of this Addon.
@@ -92,6 +92,7 @@ This allows embedding Excel workbooks e.g.:
   * **STEP based**: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History
+**1.0.0**  (2019-08-26): Reorganized section readers (1.0).  
 **0.18.0** (2019-08-07): Added coloring of single faces and changed to default Inventor campera position (RC2).  
 **0.17.0** (2019-07-04): Missing features added as ACIS models (RC1).  
 **0.16.0** (2019-03-19): Added creation of Shells  

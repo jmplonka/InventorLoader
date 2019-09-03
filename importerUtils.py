@@ -929,3 +929,14 @@ def calcAliasname(name):
 		return 'd' + result
 	return result
 
+def _addEmpty(node, indexes, list):
+	for i in indexes:
+		name = 'lst%d' %(i)
+		node.content += ' %s=[]' %(name)
+		node.set(name, list)
+
+def addEmptyLists(node, indexes):
+	_addEmpty(node, indexes, [])
+
+def addEmptyMaps(node, indexes):
+	_addEmpty(node, indexes, {})

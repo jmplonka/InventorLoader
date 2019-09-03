@@ -218,7 +218,7 @@ class AppReader(SegmentReader):
 
 	def Read_461E402F(self, node):
 		i = self.skipBlockSize(0)
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'ref_0')
 		i = self.skipBlockSize(i)
 		return i
 

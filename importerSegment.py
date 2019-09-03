@@ -46,6 +46,8 @@ def resolveEntityReferences(node, entities):
 		logError(traceback.format_exc())
 	initSatRefs()
 
+def Read_Dummy(self, node): return 0
+
 def dumpSat(nodeIdx, header, entities):
 	with open(u"%s/%04X.sat" %(getDumpFolder(), nodeIdx), 'wb') as sat:
 		sat.write(header.__str__().encode('utf8'))
@@ -306,6 +308,16 @@ class SegmentReader(object):
 		node.set(name, lst)
 		return i
 
+	def ReadU32RefList(self, node, offset, name):
+		cnt, i = getUInt32(node.data, offset)
+		lst = []
+		for j in range(cnt):
+			val, i = getUInt32(node.data, i)
+			ref, i = self.ReadNodeRef(node, i, val, REF_CROSS, name)
+			lst.append([val, ref])
+		node.set(name, lst)
+		return i
+
 	def ReadHeaderSU32S(self, node, typeName=None):
 		if (typeName is not None): node.typeName = typeName
 		i = self.skipBlockSize(0)
@@ -548,7 +560,8 @@ class SegmentReader(object):
 			i = readType(node)
 		except AttributeError:
 			if (self.__class__.__name__ != 'SegmentReader'):
-				logError(u"ERROR> def Read_%s(self, node): missing in %s.py!", node.typeName, self.__module__)
+				logError(u"ERROR> %s.py missing 'def Read_%s(self, node)'!", self.__module__, node.typeName)
+				setattr(self.__class__, 'Read_%s' %(node.typeName), Read_Dummy)
 		except:
 			logError(traceback.format_exc())
 
@@ -561,7 +574,7 @@ class SegmentReader(object):
 					s = " ".join(["%02X" % c for c in node.data])
 				node.content += u"\taX=[%s]" %(s)
 		except:
-			logError(u"ERROR in %s.Read_%s: %s", self.__class__.__name__, node.typeName, traceback.format_exc())
+			logError(u"ERROR in %s.Read_%s: %s", self.__module____name__, node.typeName, traceback.format_exc())
 
 		return
 
