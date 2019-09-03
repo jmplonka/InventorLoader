@@ -50,7 +50,7 @@ class NotebookReader(SegmentReader):
 	def Read_B33B66CF(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUInt32A(i, 2, 'a0')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i, 2)
 		i = node.ReadUInt32A(i, 5, 'a1')
 		return i
 

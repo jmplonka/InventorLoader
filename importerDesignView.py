@@ -93,7 +93,7 @@ class DesignViewReader(SegmentReader):
 
 	def Read_987C5D0F(self, node):
 		i = node.ReadUInt16A(0, 3, 'a0')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i, 2)
 		i = node.ReadUUID(i, 'uid0')
 		i = node.ReadList2(i, _TYP_LIST_UINT32_A_, 'lst0')
 		return i
@@ -134,6 +134,7 @@ class DesignViewReader(SegmentReader):
 					i = node.ReadLen32Text16(i, 'txt1')
 					i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32(i, 'u32_1')
+		if (getFileVersion() > 2017): i += 4
 		return i
 
 	def Read_E3684E1C(self, node):

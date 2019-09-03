@@ -1338,6 +1338,7 @@ class Segment(object):
 		self.indexNodes   = {}
 		self.tree         = DataNode(None)
 		self.acis         = None
+		self.bodies       = {}
 
 	def getDcSatAttributes(self):
 		if (self.acis is None): return []
@@ -1395,6 +1396,8 @@ EMPTY_SEGMENT = Segment()
 class _AbstractEdge_(object):
 	def p2v(self, p, f = 1.0):
 		return VEC(p[0], p[1], p[2]) * f
+	def __repr__(self):
+		return self.__str__()
 
 class LineEdge(_AbstractEdge_):
 	def __init__(self, a):
@@ -1436,8 +1439,6 @@ class ArcOfCircleEdge(ArcOfConicEdge):
 		self.radius = a[9] * 10.0
 	def __str__(self):
 		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g" %(self.center.x, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.radius, self.a, self.b)
-	def __repr__(self):
-		return self.__str__()
 	def getGeometry(self):
 		if (self.isArc()):
 			return Part.ArcOfCircle(Part.Circle(self.center, self.dir, self.radius), self.a, self.b)
@@ -1461,8 +1462,6 @@ class ArcOfEllipseEdge(ArcOfConicEdge):
 		self.minorRadius = a[10]
 	def __str__(self):
 		return u"Circle:(%g,%g,%g), (%g,%g,%g), (%g,%g,%g), %g, %g, %g, %g" %(self.center.x, self.center.y, self.center.z, self.dir.x, self.dir.y, self.dir.z, self.major.x, self.major.y, self.major.z, self.majorRadius, self.minorRadius, self.a, self.b)
-	def __repr__(self):
-		return self.__str__()
 	def getGeometry(self):
 		if (self.isArc()):
 			return Part.ArcOfEllipse(Part.Ellipse(self.center, self.majorRadius, self.minorRadius), self.a, self.b)
@@ -1490,8 +1489,6 @@ class BSplineEdge(_AbstractEdge_):
 		self.a6 = a3[1]
 	def __str__(self):
 		return u"BSpline:(%s),[%s],[%s],[%s],[%s],[%s],[%s]" %(FloatArr2Str(self.a0), FloatArr2Str(self.a1), FloatArr2Str(self.a2), FloatArr2Str(self.a3), FloatArr2Str(self.a4), FloatArr2Str(self.a5), u",".join([u"(%g,%g,%g)"%(p[0], p[1], p[2]) for p in self.a6]))
-	def __repr__(self):
-		return self.__str__()
 	def getGeometry(self):
 		bsc = Part.BSplineCurve()
 		d   = self.a0[2] # TODO get degrees from a0[2 ???]

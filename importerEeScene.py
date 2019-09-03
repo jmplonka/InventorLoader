@@ -47,7 +47,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i, 2)
 		if (getFileVersion() > 2017): i += 1
 		i = node.ReadUInt32(i, 'index')
 		i = node.ReadUInt8(i, 'u8_1')
@@ -57,7 +57,7 @@ class EeSceneReader(StyleReader):
 		if (typeName is None):
 			typeName = 'Surface_%s' %(node.typeName)
 		node.typeName = typeName
-		i = self.skipBlockSize(0, 8)
+		i = self.skipBlockSize(0, 2)
 		i = node.ReadParentRef(i)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'dcIndices', 2) # [dcIndex, SINT_32]*
@@ -106,7 +106,7 @@ class EeSceneReader(StyleReader):
 		i = self.ReadHeader3dObject(node, 'Face', ref1Name='surface')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'edges')
 		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i, 2)
 		i = node.ReadFloat64A(i, 6, 'box') # bounding box
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'key')
@@ -248,22 +248,22 @@ class EeSceneReader(StyleReader):
 		i = self.ReadHeader3dObject(node, 'Spline2D_Curve')
 		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadUInt8A(i, 8, 'a1')
-		i = self.Read_Float32Arr(i, node, 'lst0')
-		i = self.Read_Float32Arr(i, node, 'lst1')
-		i = self.Read_Float64Arr(i, node, 2, 'lst2')
+		i = self.ReadFloat32Arr(node, i, 'lst0')
+		i = self.ReadFloat32Arr(node, i, 'lst1')
+		i = self.ReadFloat64Arr(node, i, 2, 'knots')
 		i = node.ReadUInt8A(i, 8, 'a2')
 		i = node.ReadUInt32A(i, 2, 'a3')
 		i = node.ReadFloat64_2D(i, 'a4')
-		i = self.Read_Float64Arr(i, node, 2, 'lst3')
+		i = self.ReadFloat64Arr(node, i, 2, 'lst3')
 		return i
 
 	def Read_D3A55702(self, node): # Spline3D 3D-Object
 		i = self.ReadHeader3dObject(node, 'Spline3D_Curve')
 		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadUInt8A(i, 8, 'a1')
-		i = self.Read_Float32Arr(i, node, 'lst0')
-		i = self.Read_Float32Arr(i, node, 'lst1')
-		i = self.Read_Float64Arr(i, node, 3, 'knots') # knots
+		i = self.ReadFloat32Arr(node, i, 'lst0')
+		i = self.ReadFloat32Arr(node, i, 'lst1')
+		i = self.ReadFloat64Arr(node, i, 3, 'knots') # knots
 		i = node.ReadUInt8A(i, 8, 'a2')
 		i = node.ReadUInt32A(i, 2, 'a3')
 		i = node.ReadFloat64_2D(i, 'a4')
@@ -361,7 +361,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadFloat64_2D(i, 'a4')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i, 2)
 		cnt, i = getUInt32(node.data, i)
 		lst = []
 		for k in range(cnt):
@@ -377,7 +377,7 @@ class EeSceneReader(StyleReader):
 	def ReadHeaderNumRef(self, node, typeName = None, name = 'u32_0'):
 		if (typeName is not None):
 			node.typeName = typeName
-		i = self.skipBlockSize(0, 8)
+		i = self.skipBlockSize(0, 2)
 		i = node.ReadParentRef(i)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, name)

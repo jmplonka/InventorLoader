@@ -23,7 +23,7 @@ class BRepReader(NameTableReader):
 	def ReadHeaderNameTableChild3Node(self, node, typeName = None):
 		i = self.ReadHeaderNameTableChild1Node(node, typeName)
 		i = node.ReadSInt32A(i, 7, 'a0')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i, 2)
 		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		i = self.ReadRefU32List(node, i, 'a2', REF_CROSS)
 		i = self.skipBlockSize(i)
@@ -55,7 +55,7 @@ class BRepReader(NameTableReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUUID(i, 'uid')
 		i = node.ReadUInt32A(i, 2, 'a0')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i, 2)
 		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		i = node.ReadUInt32(i, 'u32_2')
 		i = self.skipBlockSize(i)

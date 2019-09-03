@@ -73,9 +73,9 @@ SEG_TYPE_READERS = {
 	SEG_NOTEBOOK       : NotebookReader,
 	SEG_RESULT_AM      : ResultReader,
 	SEG_RESULT_PM      : ResultReader,
-#	SEG_SHEET_DC_DL    : SheetReader,
-#	SEG_SHEET_DL_DL    : SheetReader,
-#	SEG_SHEET_SM_DL    : SheetReader,
+#	SEG_SHEET_DC_DL    : SheetDcReader,
+#	SEG_SHEET_DL_DL    : SheetDlReader,
+#	SEG_SHEET_SM_DL    : SheetSmReader,
 }
 
 # F29F85E0-4FF9-1068-AB91-08002B27B3D9

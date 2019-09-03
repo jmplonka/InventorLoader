@@ -85,7 +85,7 @@ class BrowserReader(SegmentReader):
 	def Read_1B16984A(self, node): # Hospital
 		node.typeName = 'Hospital'
 		i = node.ReadUInt16A(0, 3, 'a0')
-		i = self.skipBlockSize(i, 8)
+		i = self.skipBlockSize(i, 2)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst0')
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
@@ -161,7 +161,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadBoolean(i, 'b1')
 		i = node.ReadUInt32A(i, 2, 'a3')
 		i = node.ReadBoolean(i, 'b2')
-		i = self.skipBlockSize(i, 12)
+		i = self.skipBlockSize(i, 3)
 		return i
 
 	def Read_DDC7ED24(self, node):
@@ -252,6 +252,7 @@ class BrowserReader(SegmentReader):
 		i = node.Read_Header0(typeName)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = self.Read_664(i, node)
+		i = self.Read_Str01(i, node)
 		return i
 
 	def Read_19910142(self, node): # 3rdParty
@@ -625,7 +626,7 @@ class BrowserReader(SegmentReader):
 	def Read_E079A121(self, node):
 		i = self.ReadHeaderEntry(node)
 		if (getFileVersion() > 2016):
-			i = node.ReadLen32Text16(i, 'txt0')
+			i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
 	def Read_E14BDF12(self, node): # Pivot plate
@@ -727,7 +728,7 @@ class BrowserReader(SegmentReader):
 
 	def ReadHeaderDxHierarchy(self, node, typeName = None):
 		i = self.ReadHeaderDx(node,typeName)
-		i = node.ReadList2(i, _TYP_NODE_REF_, 'items')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'items')
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt32A(i, 4, 'a1')
@@ -735,7 +736,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a2')
 		i = node.ReadUInt8(i, 'u8_2')
 		i = self.skipBlockSize(i)
-		i = self.Read_Str01(i)
+		i = self.Read_Str01(i, node)
 		return i
 
 	def Read_01E698C4(self, node):
@@ -797,7 +798,22 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_2AB35572(self, node):
-		i = self.ReadHeaderDxHierarchy(node)
+		i = self.ReadHeaderDx(node)
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'items')
+		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt32A(i, 4, 'a1')
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt32A(i, 2, 'a2')
+		i = node.ReadUInt8(i, 'u8_2')
+		i = self.skipBlockSize(i)
+		i = node.ReadLen32Text16(i, 'txt_0')
+		i = node.ReadLen32Text16(i, 'txt_1')
+		b, i = getBoolean(node.data, i)
+		if (b):
+			i = node.ReadUInt32(i, 'u32_1')
+			i = node.ReadUInt16(i, 'u16_1')
+		i = self.skipBlockSize(i)
 		return i
 
 	def Read_6B6FA560(self, node):
@@ -838,14 +854,14 @@ class BrowserReader(SegmentReader):
 
 	def Read_6B6FA569(self, node):
 		i = self.ReadHeaderDxHierarchy(node)
-		i = node.ReadBoolean(i, 'b0')
-		i = node.ReadUInt32A(i, 3, 'a3')
-		i = node.ReadList7(i, _TYP_MAP_KEY_REF_, 'entries')
-		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadBoolean(i, 'b1')
-		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32A(i, 3, 'a3')
+		i = node.ReadList7(i, importerSegNode._TYP_MAP_KEY_REF_, 'entries')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadBoolean(i, 'b2')
-		if not node.get('b1'):
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadBoolean(i, 'b3')
+		if not node.get('b2'):
 			i = node.ReadLen32Text16(i, 'category')
 			i = node.ReadLen32Text16(i, 'id')
 			i = node.ReadUInt16(i, 'u16_1')

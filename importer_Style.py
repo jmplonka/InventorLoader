@@ -83,7 +83,7 @@ class StyleReader(SegmentReader):
 		i = node.ReadFloat64_2D(i, 'a0')
 		return i
 
-	def Read_89CE3F34(self, node):
+	def Read_89CE3F34(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_89CE3F34')
 		return i # '<LdddddLB'
 

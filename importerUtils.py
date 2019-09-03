@@ -154,6 +154,7 @@ _fileVersion     = None
 _fileBeta        = -1
 _can_import      = True
 _use_sheet_metal = True
+_block_size      = 0
 
 __prmPrefOW__ = ParamGet("User parameter:BaseApp/Preferences/OutputWindow")
 __prmPrefIL__ = ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader")
@@ -787,6 +788,10 @@ def getFileBeta():
 	global _fileBeta
 	return _fileBeta
 
+def getBlockSize():
+	global _block_size
+	return _block_size
+
 def getProperty(ole, path, key):
 	p = ole.getproperties([path], convert_time=True)
 	try:
@@ -799,7 +804,7 @@ def getProperty(ole, path, key):
 		return None
 
 def setFileVersion(ole):
-	global _fileVersion, _fileBeta
+	global _fileVersion, _fileBeta, _block_size
 
 	v = None
 	b = getProperty(ole, '\x05Qz4dgm1gRjudbpksAayal4qdGf', 0x16)
@@ -827,6 +832,7 @@ def setFileVersion(ole):
 		logInfo(u"    created with Autodesk Inventor %s", v)
 	else:
 		logInfo(u"    created with Autodesk Inventor %s (Build %d)", _fileVersion, b)
+	_block_size = 4 if (_fileVersion < 2011) else 0
 
 def getInventorFile():
 	global _inventor_file

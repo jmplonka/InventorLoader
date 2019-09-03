@@ -500,10 +500,6 @@ class AppReader(SegmentReader):
 		i = self.readHeaderStyle(node)
 		return i
 
-	def Read_958DB976(self, node):
-		i = self.skipBlockSize(0, 8)
-		return i
-
 	def Read_9E11F9F6(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUUID(i, 'uid_0')
@@ -593,11 +589,6 @@ class AppReader(SegmentReader):
 		i = node.ReadUInt8A(i, 3, 'a2')
 		return i
 
-	def Read_C435E97C(self, node):
-		i = self.skipBlockSize(0, 8)
-		i = node.ReadLen32Text16(i)
-		return i
-
 	def Read_CCA8D815(self, node):
 		i = node.Read_Header0()
 		i = node.ReadUInt32A(i, 2, 'a0')
@@ -655,20 +646,6 @@ class AppReader(SegmentReader):
 		i = node.ReadFloat32_3D(i, 'a2')
 		i = node.ReadUInt8(i, 'u8_4')
 		i = node.ReadFloat32_3D(i, 'a3')
-		return i
-
-	def Read_D8577FC4(self, node):
-		node.typeName = 'TextStyle'
-		i = self.skipBlockSize(0, 8)
-		i = node.ReadLen32Text16(i)
-		i = node.ReadUInt8A(i, 9, 'a0')
-		i = node.ReadLen32Text8(i, 'txt_0')
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadLen32Text8(i, 'txt_1')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
 	def Read_DA6B0B3E(self, node): # SheetMetalUnfold
@@ -754,18 +731,41 @@ class AppReader(SegmentReader):
 		i = node.ReadUUID(i, 'uid')
 		return i
 
+	def Read_958DB976(self, node):
+		i = self.skipBlockSize(0, 2)
+		return i
+
+	def Read_C435E97C(self, node):
+		i = self.skipBlockSize(0, 2)
+		i = node.ReadLen32Text16(i)
+		return i
+
+	def Read_D8577FC4(self, node):
+		node.typeName = 'TextStyle'
+		i = self.skipBlockSize(0, 2)
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt8A(i, 9, 'a0')
+		i = node.ReadLen32Text8(i, 'txt_0')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
+		i = node.ReadLen32Text8(i, 'txt_1')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadUInt32(i, 'u32_1')
+		return i
+
 	def Read_FD1E8992(self, node):
-		i = self.skipBlockSize(0, 8)
+		i = self.skipBlockSize(0, 2)
 		i = node.ReadColorRGBA(i, 'color')
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
 	def Read_FD1E8995(self, node):
-		i = self.skipBlockSize(0, 8)
+		i = self.skipBlockSize(0, 2)
 		return i
 
 	def Read_FD1E8997(self, node):
-		i = self.skipBlockSize(0, 8)
+		i = self.skipBlockSize(0, 2)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 

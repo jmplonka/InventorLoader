@@ -14,6 +14,7 @@ from importerUtils          import *
 from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, initSatRefs, createNode, setHeader, getNameMatchAttributes, getDcAttributes, setScale
 from importerSAT            import readEntityBinary, int2version, Header, History
 from uuid                   import UUID
+import importerUtils
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -231,7 +232,7 @@ def resolveParentNodes(nodes):
 				child.parent = parent
 			elif (ref.index > parent.index):
 				if (ref.type == REF_CHILD):
-					if (child.parent is None):
+					if (child is not None and child.parent is None):
 						child.parent = parent
 					else:
 						ref.type = REF_CROSS
@@ -282,7 +283,6 @@ class SegmentReader(object):
 	def __init__(self, segment):
 		self.segment = segment
 		self.nodeCounter = 0
-		self.fmt_old = (getFileVersion() < 2011)
 
 	def postRead(self):
 		for node in self.segment.elementNodes.values():
@@ -335,12 +335,46 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		return i
 
+	def ReadFloat32Arr(self, node, offset, name):
+		cnt0, i = getUInt32(node.data, offset)
+		i = node.ReadUInt32A(i, 2, 'Float32Arr_' + name)
+
+		lst = []
+		l2  = []
+		for j in range(cnt0):
+			a1, i = getFloat32_2D(node.data, i)
+			lst.append(a1)
+			vec = FloatArr2Str(a1)
+			l2.append('(%s)' %(vec))
+
+		if (len(l2) > 0):
+			node.content += ' {%s}' %(','.join(l2))
+		node.set(name, lst)
+		return i
+
 	def ReadFloat64A(self, node, i, cnt, name, size):
 		lst = []
 		for j in range(cnt):
 			a, i = getFloat64A(node.data, i, size)
 			lst.append(a)
 		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(FloatArr2Str(a)) for a in lst]))
+		node.set(name, lst)
+		return i
+
+	def ReadFloat64Arr(self, node, offset, size, name):
+		cnt0, i = getUInt32(node.data, offset)
+		i = node.ReadUInt32A(i, 2, 'Float64Arr_' + name)
+
+		lst = []
+		l2 = []
+		for j in range(cnt0):
+			a1, i = getFloat64A(node.data, i, size)
+			lst.append(a1)
+			vec = FloatArr2Str(a1)
+			l2.append('(%s)' %(vec))
+
+		if (len(l2) > 0):
+			node.content += ' {%s}' %(','.join(l2))
 		node.set(name, lst)
 		return i
 
@@ -393,14 +427,14 @@ class SegmentReader(object):
 		node.content += u" transformation=%r" %(val)
 		return i
 
-	def ReadTransformation3D(self, node, offset):
+	def ReadTransformation3D(self, node, offset, name='transformation'):
 		'''
 		Read the 3D transformation matrix
 		'''
 		val = Transformation3D()
 		i = val.read(node.data, offset)
-		node.set('transformation', val)
-		node.content += u" transformation=%r" %(val)
+		node.set(name, val)
+		node.content += u" %s=%r" %(name, val)
 		return i
 
 	def Read_5F9D0021(self, node): # SystemOfUnitsCollection
@@ -595,10 +629,8 @@ class SegmentReader(object):
 		self.HandleBlock(node)
 		return node
 
-	def skipBlockSize(self, offset, l = 4):
-		if (self.fmt_old):
-			return offset + l
-		return offset
+	def skipBlockSize(self, offset, l = 1):
+		return offset + l * importerUtils._block_size
 
 	def ReadRefU32AList(self, node, offset, name, size, type):
 		cnt, i = getUInt32(node.data, offset)
