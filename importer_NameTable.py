@@ -123,6 +123,20 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'satAtrs', 5) # -> LoftSection.label.u32_4
 		return i
 
+	def Read_8E5D4198(self, node):
+		i = self.ReadHeaderNameTableOtherNode(node)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.ReadNtEntryList(node, i, 'entries')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt8(i, 'u8_0')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a1')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a2')
+		i = node.ReadUInt8(i, 'u8_1')
+		i = node.ReadUInt32A(i, 2, 'a3')
+		return i
+
 	# The name table itself
 
 	def Read_CCE92042(self, node): # NameTable

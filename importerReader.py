@@ -19,6 +19,9 @@ from importerEeScene     import EeSceneReader
 from importerFBAttribute import FBAttributeReader
 from importerGraphics    import GraphicsReader
 from importerNotebook    import NotebookReader
+#from importerSheetDC     import SheetDcReader
+#from importerSheetDL     import SheetDlReader
+#from importerSheetSM     import SheetSmReader
 from importerResults     import ResultReader
 from importerUtils       import *
 from xlutils.copy        import copy

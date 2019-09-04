@@ -308,12 +308,7 @@ class AppReader(SegmentReader):
 			i = node.ReadUUID(i, 'uid_0')
 		else:
 			node.content += u" u16_2=0000 txt_1='' txt_2='' txt_3='' txt_4='' a2=[0000,0000] uid_0=None"
-		i = node.ReadColorRGBA(i, 'Color.c0')
-		i = node.ReadColorRGBA(i, 'Color.diffuse')
-		i = node.ReadColorRGBA(i, 'Color.c2')
-		i = node.ReadColorRGBA(i, 'Color.c3')
-		i = node.ReadFloat32(i, 'f32_0')
-		i = self.skipBlockSize(i)
+		i = node.ReadMaterial(i, 2)
 		i = node.ReadLen32Text16(i, 'FileMapTexture')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadFloat32A(i, 4, 'vec4d_0')

@@ -206,12 +206,7 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'outlines') # list of outlines: key <=> DC-Index!
 		i = self.skipBlockSize(i)
-		i = node.ReadColorRGBA(i, 'Color.c0')
-		i = node.ReadColorRGBA(i, 'Color.diffuse')
-		i = node.ReadColorRGBA(i, 'Color.c2')
-		i = node.ReadColorRGBA(i, 'Color.c3')
-		i = node.ReadFloat32(i, 'f32_0')
-		i = self.skipBlockSize(i)
+		i = node.ReadMaterial(i, 2)
 		return i
 
 	def Read_D4824069(self, node): # ClientFeatureNode

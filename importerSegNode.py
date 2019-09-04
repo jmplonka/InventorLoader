@@ -336,7 +336,16 @@ class SecNode(AbstractData):
 		x, i = getColorRGBA(self.data, offset)
 		self.set(name, x)
 		self.content += ' %s=%s' %(name, x)
-		i = self.reader.skipBlockSize(i)
+		i += getBlockSize()
+		return i
+
+	def ReadMaterial(self, offset, count):
+		i = self.ReadColorRGBA(offset, 'Color.c0')
+		i = self.ReadColorRGBA(i, 'Color.diffuse')
+		for j in range(count):
+			i = self.ReadColorRGBA(i, 'Color.c%d' %(j+1))
+		i = self.ReadFloat32(i, 'Color.f')
+		i += getBlockSize()
 		return i
 
 	def ReadBoolean(self, offset, name):
@@ -578,22 +587,26 @@ class SecNode(AbstractData):
 		return self.__getList2NumsA(name, offset, cnt, arraysize, 'd', 8, u"%g")
 
 	def getListFonts(self, name, offset, cnt, arraysize):
-		lst = []
-		i   = offset
+		lst  = []
+		i    = offset
+		skip = 2 * getBlockSize()
+		FONT_A = Struct('<LHHHHBBHH').unpack_from
+		FONT_B = Struct('<ffBBB').unpack_from
 		for j in range(cnt):
 			val = GraphicsFont()
-			a   = Struct('<LHHHHBBHH').unpack_from(self.data, i)
+			a   = FONT_A(self.data, i)
 			val.number = a[0]
 			val.ukn1   = a[1:5]
 			val.ukn2   = a[5:7]
 			val.ukn3   = a[7:]
 			i += 18
 			val.name, i   = getLen32Text16(self.data, i)
-			a = Struct('<ffBBB').unpack_from(self.data, i)
+			a = FONT_B(self.data, i)
 			val.ukn4 = a[0:2]
 			val.ukn5 = a[2:]
 			i += 11
 			lst.append(val)
+			i += skip
 		self.content += u" %s={%s}" %(name, u",".join([u"(%s)" %(l) for l in lst]))
 		self.set(name, lst)
 		return i
@@ -602,9 +615,9 @@ class SecNode(AbstractData):
 		lst = []
 		i   = offset
 		if (getFileVersion() > 2010):
-			fmt = '<Hffffffffffffddddddfffffff'
+			LIGHTNING = Struct('<Hffffffffffffddddddfffffff').unpack_from
 			for j in range(cnt):
-				vals = Struct(fmt).unpack_from(self.data, i)
+				vals = LIGHTNING(self.data, i)
 				i += 126
 				val = Lightning()
 				val.n1 = vals[0]
@@ -615,9 +628,9 @@ class SecNode(AbstractData):
 				val.a2 = vals[19:]
 				lst.append(val)
 		else:
-			fmt = '<HffffLffffLffffLddddddfffffffL'
+			LIGHTNING = Struct('<HffffLffffLffffLddddddfffffffL').unpack_from
 			for j in range(cnt):
-				vals = Struct(fmt).unpack_from(self.data, i)
+				vals = LIGHTNING(self.data, i)
 				i += 142
 				val = Lightning()
 				val.n1 = vals[0]
@@ -635,13 +648,17 @@ class SecNode(AbstractData):
 		lst = []
 		i   = offset
 		skip = (getFileVersion() < 2011)
+		if (skip):
+			APP_1 = Struct('<ddLLBBBBL').unpack_from
+		else:
+			APP_1 = Struct('<ddLBBBB').unpack_from
 		for j in range(cnt):
 			if (skip):
-				a = Struct('<ddLLBBBBL').unpack_from(self.data, i)
+				a = APP_1(self.data, i)
 				val = a[0:3] + a[4:8]
 				i += 32
 			else:
-				val = Struct('<ddLBBBB').unpack_from(self.data, i)
+				val = APP_1(self.data, i)
 				i += 24
 			lst.append(val)
 		self.content += u" %s={%s}" %(name, u",".join([u"(%g,%g,%06X,%02X,%02X,%02X,%02X)" %(a[0], a[1], a[2], a[3], a[4], a[5], a[6]) for a in lst]))
@@ -651,7 +668,7 @@ class SecNode(AbstractData):
 	def getListApp2(self, name, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		skip = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		for j in range(cnt):
 			n1, i = getUInt32(self.data, i)
 			t1, i = getLen32Text16(self.data, i)
@@ -682,7 +699,7 @@ class SecNode(AbstractData):
 		lst  = []
 		i    = offset
 		c    = self.content
-		skip = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		for j in range(cnt):
 			n1, i = getUInt32(self.data, i)
 			t1, i = getLen32Text16(self.data, i)
@@ -701,7 +718,7 @@ class SecNode(AbstractData):
 	def getListApp4(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip = 8 if (getFileVersion() < 2011) else 0
+		skip = 2 * getBlockSize()
 		for j in range(cnt):
 			n1, n2, n3, f1, f2 = APP_4_A(self.data, i)
 			i += 18
@@ -717,7 +734,7 @@ class SecNode(AbstractData):
 	def getListApp5(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		for j in range(cnt):
 			f1, f2, n1 = APP_5_A(self.data, i)
 			i += 20
@@ -744,7 +761,7 @@ class SecNode(AbstractData):
 	def getListMdlrTxnMgr(self, name, offset, cnt, arraysize):
 		lst = []
 		i = offset
-		skip1 = 0 if (getFileVersion() > 2010) else 4
+		skip1 = getBlockSize()
 		skip2 = 1 if (getFileVersion() > 2018) else 0
 		structLen = 9 + skip1 + skip2 # 2 x UInt32 + 1 x UInt8
 		for j in range(cnt):
@@ -793,7 +810,7 @@ class SecNode(AbstractData):
 		lst  = []
 		i    = offset
 		c    = self.content
-		skip = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		for j in range(cnt):
 			u1, i = getUInt32(self.data, i)
 			i = self.ReadList4(i, _TYP_UINT32_, name)
@@ -815,7 +832,7 @@ class SecNode(AbstractData):
 	def getListResult2(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		for j in range(cnt):
 			d, i = getUInt32A(self.data, i, 2)
 			i += skip
@@ -828,7 +845,7 @@ class SecNode(AbstractData):
 		lst  = []
 		i    = offset
 		RESULT_3 = Struct('<LHBBdddddd').unpack_from
-		skip = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		for j in range(cnt):
 			d = RESULT_3(self.data, i)
 			i += 56 + skip
@@ -840,12 +857,12 @@ class SecNode(AbstractData):
 	def getListResult4(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip1 = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		c    = self.content
 		for j in range(cnt):
 			u, i = getUInt32(self.data, i)
 			i = self.ReadList4(i, _TYP_UINT32_, name)
-			i += skip1
+			i += skip
 			l = self.get(name)
 			self.delete(name)
 			lst.append((u, l))
@@ -854,9 +871,9 @@ class SecNode(AbstractData):
 		return i
 
 	def getListResult5(self, name, offset, cnt, arraysize):
-		lst  = []
-		i    = offset
-		skip1 = 4 if (getFileVersion() < 2011) else 0
+		lst   = []
+		i     = offset
+		skip1 = getBlockSize()
 		skip2 = 1 if (getFileVersion() > 2017) else 0
 		c    = self.content
 		for j in range(cnt):
@@ -907,7 +924,7 @@ class SecNode(AbstractData):
 	def getListListXRefs(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		for j in range(cnt):
 			i += skip
 			tmp0 = u"%s[%02X][0]" %(name, j)
@@ -923,7 +940,7 @@ class SecNode(AbstractData):
 
 	def getListResults(self, name, offset, cnt, arraysize):
 		lst  = []
-		skip = 4 if (getFileVersion() < 2011) else 0
+		skip = getBlockSize()
 		for j in range(cnt):
 			r = ResultItem4()
 			r.a0, i = getUInt16A(self.data, i, 4)
@@ -1181,7 +1198,7 @@ class SecNode(AbstractData):
 		i   = offset
 		c = self.content
 		self.content = u""
-		skip = 0 if (getFileVersion() > 2010) else 4
+		skip = getBlockSize()
 		for j in range(cnt):
 			val = ModelerTxnMgr()
 			val.node, i  = getUInt32(self.data, i)
@@ -1248,7 +1265,7 @@ class SecNode(AbstractData):
 	def Read_Header0(self, typeName = None):
 		u32_0, i = getUInt32(self.data, 0)
 		u16_0, i = getUInt16(self.data, i)
-		i = self.reader.skipBlockSize(i)
+		i += getBlockSize()
 
 		hdr = Header0(u32_0, u16_0)
 		self.set('hdr', hdr)
