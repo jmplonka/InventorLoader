@@ -394,13 +394,13 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadFloat32A(i, 4, 'a4')
 		return i
 
-#	def Read_2E56FF78(self, node): # Attribute ...
-#		i = self.ReadHeaderAttribute(node)
-#		return i
+	def Read_2E56FF78(self, node): # Attribute ...
+		i = self.ReadHeaderAttribute(node)
+		return i
 
-#	def Read_337E7C53(self, node): # Attribute ...
-#		i = self.ReadHeaderAttribute(node)
-#		return i
+	def Read_337E7C53(self, node): # Attribute ...
+		i = self.ReadHeaderAttribute(node)
+		return i
 
 	def Read_35E93051(self, node): # Attribute ...
 		i = self.ReadHeaderAttribute(node)
@@ -414,13 +414,13 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
 
-#	def Read_5A972561(self, node): # Attribute ...
-#		i = self.ReadHeaderAttribute(node)
-#		return i
+	def Read_5A972561(self, node): # Attribute ...
+		i = self.ReadHeaderAttribute(node)
+		return i
 
-#	def Read_6399C27C(self, node): # Attribute ...
-#		i = self.ReadHeaderAttribute(node)
-#		return i
+	def Read_6399C27C(self, node): # Attribute ...
+		i = self.ReadHeaderAttribute(node)
+		return i
 
 	def Read_76986821(self, node): # Attribute ...
 		i = self.ReadHeaderAttribute(node)
@@ -508,9 +508,9 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
-#	def Read_F9437786(self, node): # Attribute ...
-#		i = self.ReadHeaderAttribute(node)
-#		return i
+	def Read_F9437786(self, node): # Attribute ...
+		i = self.ReadHeaderAttribute(node)
+		return i
 
 	#########################
 	# 3D object sections

@@ -613,133 +613,136 @@ def readListTxtStrUid(data, offset, log, txt):
 def read(data):
 	global schema
 
-	ufrx = UFRxDocument()
-	with io.open(u"%s/UFRxDoc.log" %(getDumpFolder()), 'w', encoding='utf8') as log:
-		try:
-			ufrx.schema, i  = readUInt16(data,   0, log, 'schema')
-			schema = ufrx.schema
-			cnt, i           = getUInt16(data,    i)
-			ufrx.arr1, i     = readUInt16A(data,  i, log, 'arr1', cnt)
-			ufrx.arr2, i     = readUInt16A(data,  i, log, 'arr2', 4)
-			ufrx.dat1, i     = readDateTime(data, i, log, 'dat1')
-			ufrx.arr3, i     = readUInt16A(data,  i, log, 'arr3', 4)
-			ufrx.dat2, i     = readDateTime(data, i, log, 'dat2')
-			ufrx.comment, i  = readText16(data,   i, log, 'comm')
-			ufrx.arr4, i     = readUInt16A(data,  i, log, 'arr4', 12)
-			ufrx.dat3, i     = readDateTime(data, i, log, 'dat3') # creation date of version 1
-			ufrx.revision, i = readUID(data,      i, log, 'revision')
-			ufrx.flags, i    = readUInt32(data,   i, log, 'flags')
-			ufrx.uid2, i     = readUID(data,      i, log, 'uid2')
-			ufrx.fName, i    = readText16(data,   i, log, 'fName')
-			ufrx.n0, i       = readUInt16(data,   i, log, 'n0')
-			cnt, i = getUInt32(data, i)
-			log.write(u"arr5: count=%d\n" %(cnt))
-			for j in range(cnt):
-				n1, i = getUInt16(data, i)
-				n2, i = getUInt16(data, i)
-				t, i = getLen32Text16(data, i)
-				n3, i = getUInt8(data, i)
-				n4, i = getUInt8(data, i)
-				ufrx.arr5.append((n1, n2, t, n3, n4))
-				log.write(u"  [%02X]: %03X,%03X,'%s',%02X,%02X\n" %(j, n1, n2, t, n3, n4))
-			ufrx.exports, i = readExports(data,  i, log, 'exports')
-			ufrx.n1, i      = readUInt32(data,   i, log, 'n1')
-
-			if (ufrx.schema >= 0x0B): ufrx.txt1, i = getLen32Text16(data, i)
-			log.write(u"txt1:\t'%s'\n" %(ufrx.txt1))
-
-			ufrx.arr6, i    = readUInt16A(data,  i, log, 'arr6', 10)
-
-			if (ufrx.schema >= 0x0C):
-				ufrx.n2, i   = getUInt16(data, i)
-				ufrx.uid3, i = getUUID(data, i)
-				ufrx.uid4, i = getUUID(data, i)
-			log.write(u"n2:\t%04X\n" %(ufrx.n2))
-			log.write(u"uid3:\t{%s}\n" %(ufrx.uid3))
-			log.write(u"uid4:\t{%s}\n" %(ufrx.uid4))
-
-			ufrx.n3, i = readUInt16(data, i, log, 'n3')
-
-			ufrx.iamRefs, i = readIamRefs(data, i, log, 'iamRefs')
-			ufrx.iptRefs, i = readIptRefs(data, i, log, 'iptRefs')
-			ufrx.b1,      i = readBoolean(data,  i, log, 'b1')
-
-			if (ufrx.schema >= 0x0C):
-				a, i = getUInt16(data, i)
-			else:
-				a, i = getUInt8(data, i)
-			assert a == 0, u"a = %X" %(a)
-			ufrx.n4, i       = readUInt16(data,   i, log, 'n4')
-			ufrx.fileRefs, i = readFileRefs(data, i, log, 'fRefs')
-			if (ufrx.schema >= 0x0C):
-				a, i = getUInt8(data, i)
-				assert a == 0, u"a = %X" %(a)
-
-			ufrx.lst1, i     = readL7BHLst1(data, i, log, 'lst1')
-			ufrx.lst2, i     = readTxt2I(data,    i, log, 'lst2')
-			ufrx.n5, i       = readUInt32(data,   i, log, 'n5')
-			ufrx.settings, i = readSettings(data, i, log, 'settings')
-			ufrx.n6, i       = readUInt16(data,   i, log, 'n6')
-			ufrx.uids, i     = readListUID(data,  i, log, 'uids')
-			ufrx.envList, i  = readListEnv(data,  i, log, 'environments')
-
-			if (ufrx.schema >= 0x0B):
-				ufrx.n7, i = getUInt32(data, i)
-				b, i = getUInt16(data, i)
-				if (b == 1):
-					ufrx.arr7, i = getUInt16A(data, i, 3)
-			log.write(u"n7:\t%04X\n" %(ufrx.n7))
-			log.write(u"arr7:\t[%s]\n" %(FloatArr2Str(ufrx.arr7)))
-
-			ufrx.n8, i   = readUInt8(data,          i, log, 'n8')
-			ufrx.obj1, i = readInLengthFactor(data, i, log, 'obj1')
-			ufrx.n9, i   = readUInt16(data,         i, log, 'n9')
-
-			if (ufrx.schema >= 0x0C): ufrx.n10, i = getUInt16(data, i)
-			log.write(u"n10:\t%04X\n" %(ufrx.n10))
-
-			if (ufrx.schema >= 0x0B): ufrx.n11, i = getUInt16(data, i)
-			log.write(u"n11:\t%03X\n" %(ufrx.n11))
-
-			ufrx.lst3, i   = readListTxtStrUid(data, i, log, 'lst3')
-			if (ufrx.n6 == 1):
-				ufrx.posMin, i = readFloat32_3D(data,    i, log, 'min')
-				ufrx.posMin, i = readFloat32_3D(data,    i, log, 'max')
-
-			n, j = getUInt32(data, i)
-			if (n > 2):
-				cnt = n
-				i = j
-				# iMates:
-				log.write(u"iMates: count=%d\n" %(cnt))
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		ufrx = UFRxDocument()
+		with io.open(u"%s/UFRxDoc.log" %(dumpFolder), 'w', encoding='utf8') as log:
+			try:
+				ufrx.schema, i  = readUInt16(data,   0, log, 'schema')
+				schema = ufrx.schema
+				cnt, i           = getUInt16(data,    i)
+				ufrx.arr1, i     = readUInt16A(data,  i, log, 'arr1', cnt)
+				ufrx.arr2, i     = readUInt16A(data,  i, log, 'arr2', 4)
+				ufrx.dat1, i     = readDateTime(data, i, log, 'dat1')
+				ufrx.arr3, i     = readUInt16A(data,  i, log, 'arr3', 4)
+				ufrx.dat2, i     = readDateTime(data, i, log, 'dat2')
+				ufrx.comment, i  = readText16(data,   i, log, 'comm')
+				ufrx.arr4, i     = readUInt16A(data,  i, log, 'arr4', 12)
+				ufrx.dat3, i     = readDateTime(data, i, log, 'dat3') # creation date of version 1
+				ufrx.revision, i = readUID(data,      i, log, 'revision')
+				ufrx.flags, i    = readUInt32(data,   i, log, 'flags')
+				ufrx.uid2, i     = readUID(data,      i, log, 'uid2')
+				ufrx.fName, i    = readText16(data,   i, log, 'fName')
+				ufrx.n0, i       = readUInt16(data,   i, log, 'n0')
+				cnt, i = getUInt32(data, i)
+				log.write(u"arr5: count=%d\n" %(cnt))
 				for j in range(cnt):
-					t, i = getBoolean(data, i)
-					if (t):
-						t1, i = getLen32Text16(data, i)
-						t2, i = getLen32Text16(data, i)
-						b, i  = getUInt8(data, i)
-						u, i  = getUUID(data, i)
-						a, i  = getUInt32A(data, i, 2)
-						log.write(u"  [%02X]: %02X,'%s','%s',%02X,%s,[%s]\n" %(j, t, t1, t2, b, u, IntArr2Str(a, 4)))
-						ufrx.iMates.append((t, (t1, t2, b, u, a)))
-				if (len(ufrx.iMates) > 0):
-					ufrx.iMate, i  = readText16(data, i, log, 'sel.') # selected iMate
-			elif (n == 0):
-				ufrx.arr8, i = readUInt32A(data, i, log, 'arr8', 2)
+					n1, i = getUInt16(data, i)
+					n2, i = getUInt16(data, i)
+					t, i = getLen32Text16(data, i)
+					n3, i = getUInt8(data, i)
+					n4, i = getUInt8(data, i)
+					ufrx.arr5.append((n1, n2, t, n3, n4))
+					log.write(u"  [%02X]: %03X,%03X,'%s',%02X,%02X\n" %(j, n1, n2, t, n3, n4))
+				ufrx.exports, i = readExports(data,  i, log, 'exports')
+				ufrx.n1, i      = readUInt32(data,   i, log, 'n1')
 
-			ufrx.arr9, i  = readUInt16A(data, i, log, 'arr9', 4)
+				if (ufrx.schema >= 0x0B): ufrx.txt1, i = getLen32Text16(data, i)
+				log.write(u"txt1:\t'%s'\n" %(ufrx.txt1))
 
-			if (ufrx.schema >= 0x0C): ufrx.n12, i = getUInt8(data, i)
-			log.write(u"n12:\t%02X\n" %(ufrx.n12))
-		except Exception as e:
-			logError(traceback.format_exc())
-			logError(str(e))
+				ufrx.arr6, i    = readUInt16A(data,  i, log, 'arr6', 10)
 
-		if (i < len(data)):
-			if (sys.version_info.major < 3):
-				b = " ".join(["%02X" %(ord(c)) for c in data[i:]])
-			else:
-				b = " ".join(["%02X" %(c) for c in data[i:]])
-			aX = re.sub(u"( [2-7][0-9a-fA-F] 00){2,}", u":''", b)
-			log.write(u"aX=%02X,%04X: [%s]" %(ufrx.schema, ufrx.n4, aX))
-	return ufrx
+				if (ufrx.schema >= 0x0C):
+					ufrx.n2, i   = getUInt16(data, i)
+					ufrx.uid3, i = getUUID(data, i)
+					ufrx.uid4, i = getUUID(data, i)
+				log.write(u"n2:\t%04X\n" %(ufrx.n2))
+				log.write(u"uid3:\t{%s}\n" %(ufrx.uid3))
+				log.write(u"uid4:\t{%s}\n" %(ufrx.uid4))
+
+				ufrx.n3, i = readUInt16(data, i, log, 'n3')
+
+				ufrx.iamRefs, i = readIamRefs(data, i, log, 'iamRefs')
+				ufrx.iptRefs, i = readIptRefs(data, i, log, 'iptRefs')
+				ufrx.b1,      i = readBoolean(data,  i, log, 'b1')
+
+				if (ufrx.schema >= 0x0C):
+					a, i = getUInt16(data, i)
+				else:
+					a, i = getUInt8(data, i)
+				assert a == 0, u"a = %X" %(a)
+				ufrx.n4, i       = readUInt16(data,   i, log, 'n4')
+				ufrx.fileRefs, i = readFileRefs(data, i, log, 'fRefs')
+				if (ufrx.schema >= 0x0C):
+					a, i = getUInt8(data, i)
+					assert a == 0, u"a = %X" %(a)
+
+				ufrx.lst1, i     = readL7BHLst1(data, i, log, 'lst1')
+				ufrx.lst2, i     = readTxt2I(data,    i, log, 'lst2')
+				ufrx.n5, i       = readUInt32(data,   i, log, 'n5')
+				ufrx.settings, i = readSettings(data, i, log, 'settings')
+				ufrx.n6, i       = readUInt16(data,   i, log, 'n6')
+				ufrx.uids, i     = readListUID(data,  i, log, 'uids')
+				ufrx.envList, i  = readListEnv(data,  i, log, 'environments')
+
+				if (ufrx.schema >= 0x0B):
+					ufrx.n7, i = getUInt32(data, i)
+					b, i = getUInt16(data, i)
+					if (b == 1):
+						ufrx.arr7, i = getUInt16A(data, i, 3)
+				log.write(u"n7:\t%04X\n" %(ufrx.n7))
+				log.write(u"arr7:\t[%s]\n" %(FloatArr2Str(ufrx.arr7)))
+
+				ufrx.n8, i   = readUInt8(data,          i, log, 'n8')
+				ufrx.obj1, i = readInLengthFactor(data, i, log, 'obj1')
+				ufrx.n9, i   = readUInt16(data,         i, log, 'n9')
+
+				if (ufrx.schema >= 0x0C): ufrx.n10, i = getUInt16(data, i)
+				log.write(u"n10:\t%04X\n" %(ufrx.n10))
+
+				if (ufrx.schema >= 0x0B): ufrx.n11, i = getUInt16(data, i)
+				log.write(u"n11:\t%03X\n" %(ufrx.n11))
+
+				ufrx.lst3, i   = readListTxtStrUid(data, i, log, 'lst3')
+				if (ufrx.n6 == 1):
+					ufrx.posMin, i = readFloat32_3D(data,    i, log, 'min')
+					ufrx.posMin, i = readFloat32_3D(data,    i, log, 'max')
+
+				n, j = getUInt32(data, i)
+				if (n > 2):
+					cnt = n
+					i = j
+					# iMates:
+					log.write(u"iMates: count=%d\n" %(cnt))
+					for j in range(cnt):
+						t, i = getBoolean(data, i)
+						if (t):
+							t1, i = getLen32Text16(data, i)
+							t2, i = getLen32Text16(data, i)
+							b, i  = getUInt8(data, i)
+							u, i  = getUUID(data, i)
+							a, i  = getUInt32A(data, i, 2)
+							log.write(u"  [%02X]: %02X,'%s','%s',%02X,%s,[%s]\n" %(j, t, t1, t2, b, u, IntArr2Str(a, 4)))
+							ufrx.iMates.append((t, (t1, t2, b, u, a)))
+					if (len(ufrx.iMates) > 0):
+						ufrx.iMate, i  = readText16(data, i, log, 'sel.') # selected iMate
+				elif (n == 0):
+					ufrx.arr8, i = readUInt32A(data, i, log, 'arr8', 2)
+
+				ufrx.arr9, i  = readUInt16A(data, i, log, 'arr9', 4)
+
+				if (ufrx.schema >= 0x0C): ufrx.n12, i = getUInt8(data, i)
+				log.write(u"n12:\t%02X\n" %(ufrx.n12))
+			except Exception as e:
+				logError(traceback.format_exc())
+				logError(str(e))
+
+			if (i < len(data)):
+				if (sys.version_info.major < 3):
+					b = " ".join(["%02X" %(ord(c)) for c in data[i:]])
+				else:
+					b = " ".join(["%02X" %(c) for c in data[i:]])
+				aX = re.sub(u"( [2-7][0-9a-fA-F] 00){2,}", u":''", b)
+				log.write(u"aX=%02X,%04X: [%s]" %(ufrx.schema, ufrx.n4, aX))
+		return ufrx
+	return None

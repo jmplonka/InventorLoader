@@ -50,26 +50,31 @@ def resolveEntityReferences(node, entities):
 def Read_Dummy(self, node): return 0
 
 def dumpSat(nodeIdx, header, entities):
-	with open(u"%s/%04X.sat" %(getDumpFolder(), nodeIdx), 'wb') as sat:
-		sat.write(header.__str__().encode('utf8'))
-		for ntt in entities:
-			if ntt.index >= 0: sat.write((u"-%d " %(ntt.index)).encode('utf8'))
-			sat.write((u"%s " %(ntt.name)).encode('utf8'))
-			for c in ntt.chunks:
-				sat.write(c.__str__().encode('utf8'))
-			sat.write(b'\n')
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		with open(u"%s/%04X.sat" %(dumpFolder, nodeIdx), 'wb') as sat:
+			sat.write(header.__str__().encode('utf8'))
+			for ntt in entities:
+				if ntt.index >= 0:
+					sat.write((u"-%d " %(ntt.index)).encode('utf8'))
+				sat.write((u"%s " %(ntt.name)).encode('utf8'))
+				for c in ntt.chunks:
+					sat.write(c.__str__().encode('utf8'))
+				sat.write(b'\n')
 
 def dumpHistory(nodeIdx, history, entities):
-	with open(u"%s/%04X_sat.history" %(getDumpFolder(), nodeIdx), 'wb') as dump:
-		dump.write((u"%s:\n" %(history)).encode('utf8'))
-		ds = history.getRoot()
-		while (ds):
-			dump.write((u"%r\n" %(ds)).encode('utf8'))
-			for bb in ds.bulletin_boards:
-				dump.write((u"\t%s\n" %(bb)).encode('utf8'))
-				for b in bb.bulletins:
-					dump.write((u"\t\t%s\n" %(b)).encode('utf8'))
-			ds = ds.getNext()
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		with open(u"%s/%04X_sat.history" %(dumpFolder, nodeIdx), 'wb') as dump:
+			dump.write((u"%s:\n" %(history)).encode('utf8'))
+			ds = history.getRoot()
+			while (ds):
+				dump.write((u"%r\n" %(ds)).encode('utf8'))
+				for bb in ds.bulletin_boards:
+					dump.write((u"\t%s\n" %(bb)).encode('utf8'))
+					for b in bb.bulletins:
+						dump.write((u"\t\t%s\n" %(b)).encode('utf8'))
+				ds = ds.getNext()
 	return
 
 def checkReadAll(node, i, l):
@@ -135,30 +140,31 @@ def getBranchNode(data):
 	data.node = nodeCls(data)
 
 def __dumpBranch(file, ref, branch, level, prefix):
-	# branch can be either an branch node or an text representation!
-	file.write('\t' * level)
-	file.write(prefix)
-	if (ref is not None):
-		file.write(ref.attrName)
-		if (ref.number is not None):
-			t = type(ref.number)
-			if ((t is list) or (t is dict)):
-				file.write(u"%s = " %(ref.number))
-			elif (isString(t)):
-				file.write(u"['%s'] = " %(ref.number))
-			elif (t is UUID):
-				file.write(u"[{%s}] = " %(str(ref.number).upper()))
-			elif (t is int):
-				file.write(u"[%04X] = " %(ref.number))
-			elif (t is tuple):
-				file.write(u"[%s] =" %(",".join("%s" %(n) for n in ref.number)))
+	if (not file is None):
+		# branch can be either an branch node or an text representation!
+		file.write('\t' * level)
+		file.write(prefix)
+		if (ref is not None):
+			file.write(ref.attrName)
+			if (ref.number is not None):
+				t = type(ref.number)
+				if ((t is list) or (t is dict)):
+					file.write(u"%s = " %(ref.number))
+				elif (isString(t)):
+					file.write(u"['%s'] = " %(ref.number))
+				elif (t is UUID):
+					file.write(u"[{%s}] = " %(str(ref.number).upper()))
+				elif (t is int):
+					file.write(u"[%04X] = " %(ref.number))
+				elif (t is tuple):
+					file.write(u"[%s] =" %(",".join("%s" %(n) for n in ref.number)))
+				else:
+					file.write(u"[%s] = " %(ref.number))
 			else:
-				file.write(u"[%s] = " %(ref.number))
-		else:
-			file.write(u" = ")
+				file.write(u" = ")
 
-	file.write(branch)
-	file.write(u"\n")
+		file.write(branch)
+		file.write(u"\n")
 	return
 
 def buildBranch(parent, file, data, level, ref):
@@ -395,6 +401,13 @@ class SegmentReader(object):
 		if (t == 0x17): # 3D-Line: Point1, Point2
 			a, i = getFloat64A(node.data, i, 6)
 			return LineEdge(a), i
+		if (t == 0x28): # ??? Bezier ???
+			a, i = getUInt32A(node.data, i, 3)
+			b = []
+			for j in range(a[0]):
+				c, i = getFloat64A(node.data, i, 3)
+				b.append(c)
+			return BezierEdge(a, b), i
 		if (t == 0x2A): # 3D-BSpline
 			a0 = Struct(u"<LLLd").unpack_from(node.data, i)
 			i  += 20
@@ -585,6 +598,8 @@ class SegmentReader(object):
 	def Read_2F6A0C3F(self, node): return self.Read_Unit(node, 'mol'      , 'Mol'                       , 0.0, 1.0         , True)
 	# without Unit:
 	def Read_5F9D0023(self, node): return self.Read_Unit(node, ''         , 'Empty'                     , 0.0, 1.0         , True)
+
+	def Read_791C333D(self, node): return self.Read_Unit(node, 'XXX',     'User'                        , 0.0, 0.0) # not supported -> Tuner.iam?
 
 	def HandleBlock(self, node):
 		i = 0

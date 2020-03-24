@@ -217,13 +217,14 @@ class DCReader(EeDataReader):
 			i = node.ReadCrossRef(i, name)
 		i = node.ReadUInt32(i, 'flags')
 		i = self.skipBlockSize(i)
-		i = node.ReadParentRef(i)
+		i = node.ReadCrossRef(i)
 		i = node.ReadUInt32(i, 'index')
 
 		flags = node.get('flags')
 		node.visible             = (flags & 0x00000400) > 0
 		node.dimensioningVisible = (flags & 0x00800000) > 0
 		self.segment.indexNodes[node.get('index')] = node
+		node.Item = True
 		return i
 
 	def Read_033E027B(self, node):
@@ -6771,11 +6772,13 @@ class DCReader(EeDataReader):
 		if (size > 0):
 			i += 8
 			buffer = node.data[i:i+size]
-			filename = u"%s/%s_%04X.xls" %(getDumpFolder(), node.typeName, node.index)
-			with open(filename, 'wb') as xls:
-				xls.write(buffer)
-				node.set('filename', filename)
-				node.set('workbook', open_workbook(file_contents=buffer))
+			dumpFolder = getDumpFolder()
+			if (not (dumpFolder is None)):
+				filename = u"%s/%s_%04X.xls" %(dumpFolder, node.typeName, node.index)
+				with open(filename, 'wb') as xls:
+					xls.write(buffer)
+					node.set('filename', filename)
+					node.set('workbook', open_workbook(file_contents=buffer))
 			# logInfo(u"    INFO - found workbook: stored as %s!", filename)
 		i += size
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
@@ -6796,8 +6799,12 @@ class DCReader(EeDataReader):
 		i = node.Read_Header0()
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = self.ReadTransformation3D(node, i)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadLen32Text16(i)
+#		if (getFileVersion() < 2014):
+#			i = node.ReadUInt32A(i, 4, 'a0')
+#		else:
+#			i = node.ReadUInt32(i, 'u32_0')
+#			i = node.ReadLen32Text16(i)
+#			i = node.ReadUUID(i, 'uid')
 		return i
 
 	def Read_258EC6E1(self, node):

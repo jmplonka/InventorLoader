@@ -91,33 +91,39 @@ def dumpRSeDBFile(db, log):
 	return
 
 def dumpRSeDB(db):
-	with io.open(u"%s/RSeDb.log" %(getDumpFolder()), mode='w', encoding='utf-8') as log:
-		dumpRSeDBFile(db, log)
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		with io.open(u"%s/RSeDb.log" %(dumpFolder), mode='w', encoding='utf-8') as log:
+			dumpRSeDBFile(db, log)
 	return
 
 def dumpiProperties(iProps):
-	with io.open(u"%s/iProperties.log" %(getDumpFolder()), mode='w', encoding="utf-8") as file:
-		setNames = sorted(iProps.keys())
-		for setName in setNames:
-			file.write(u"%s:\n" %(setName))
-			setProps = iProps[setName]
-			prpNames = sorted(setProps.keys())
-			for prpNum in prpNames:
-				val = setProps[prpNum]
-				prpName = val[0]
-				prpVal  = val[1]
-				if (isinstance(prpVal, datetime.datetime)):
-					if (prpVal.year > 1900):
-						file.write(u"%3d - %26s: %s\n" %(prpNum, prpName, prpVal.strftime("%Y/%m/%d %H:%M:%S.%f")))
-				else:
-					file.write(u"%3d - %26s: %r\n" %(prpNum, prpName, prpVal))
-			file.write(u"\n")
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		with io.open(u"%s/iProperties.log" %(dumpFolder), mode='w', encoding="utf-8") as file:
+			setNames = sorted(iProps.keys())
+			for setName in setNames:
+				file.write(u"%s:\n" %(setName))
+				setProps = iProps[setName]
+				prpNames = sorted(setProps.keys())
+				for prpNum in prpNames:
+					val = setProps[prpNum]
+					prpName = val[0]
+					prpVal  = val[1]
+					if (isinstance(prpVal, datetime.datetime)):
+						if (prpVal.year > 1900):
+							file.write(u"%3d - %26s: %s\n" %(prpNum, prpName, prpVal.strftime("%Y/%m/%d %H:%M:%S.%f")))
+					else:
+						file.write(u"%3d - %26s: %r\n" %(prpNum, prpName, prpVal))
+				file.write(u"\n")
 	return
 
 def dumpRevisionInfo(revisions):
-	with io.open(u"%s/RSeDbRevisionInfo.log" %(getDumpFolder()), mode='w', encoding="utf-8") as file:
-		for rev in revisions.infos:
-			file.write(u"%s\n" %(rev))
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		with io.open(u"%s/RSeDbRevisionInfo.log" %(dumpFolder), mode='w', encoding="utf-8") as file:
+			for rev in revisions.infos:
+				file.write(u"%s\n" %(rev))
 	return
 
 def read(doc, filename, readProperties):
@@ -211,7 +217,9 @@ def read(doc, filename, readProperties):
 		doc.Comment += '\n'
 	doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), filename)
 
-	logInfo(u"Dumped data to folder: '%s'", getDumpFolder())
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		logInfo(u"Dumped data to folder: '%s'", dumpFolder)
 
 	return True
 

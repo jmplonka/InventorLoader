@@ -341,6 +341,7 @@ class AppReader(SegmentReader):
 			i = node.ReadFloat32A(i, 7, 'a10')
 		color = node.get('Color.diffuse')
 		setColor(node.name, color.red, color.green, color.blue)
+		if (getFileVersion() > 2018): i+= 8 # skip 00 00 00 00 00 00 00 00
 		return i
 
 	def Read_6759D870(self, node): # Settings
@@ -437,6 +438,7 @@ class AppReader(SegmentReader):
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_TEXT16_REF_, 'lst0')
 		i = node.ReadUInt32(i, 'codpage')
 		i = self.skipBlockSize(i)
+		if (getFileVersion() > 2012): i += 4 # skip 00 00 00 00
 		return i
 
 	def Read_6EAE8DFD(self, node):
@@ -538,6 +540,8 @@ class AppReader(SegmentReader):
 
 	def Read_ADAF9728(self, node):
 		i = node.Read_Header0()
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'ref_0')
 		return i
 
 	def Read_AEB2BD47(self, node):

@@ -245,40 +245,45 @@ def ReadOtherProperties(properties, path, keynames={}):
 def ReadProtein(data):
 	size, i = getSInt32(data, 0)
 	zip = data[4: size]
-
-	with open (u"%s/Protein.zip" %(getDumpFolder()), 'wb') as protein:
-		protein.write(zip)
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		with open (u"%s/Protein.zip" %(dumpFolder), 'wb') as protein:
+			protein.write(zip)
 
 	return size + 4
 
 def ReadWorkbook(doc, data, name, stream):
-	##create a new Spreadsheet in new document
-	wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
-	for nameValues in wbk.name_obj_list:
-		rng = nameValues.area2d()
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		##create a new Spreadsheet in new document
+		wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
+		for nameValues in wbk.name_obj_list:
+			rng = nameValues.area2d()
 
-	for idx in range(0, wbk.nsheets):
-		sht = wbk.sheet_by_index(idx)
-		rows = sht.nrows
-		cols = sht.ncols
-		shtName = stream + '_' + sht.name
-		#TODO handle merged cells
-		#TODO handle cell names
-		for c in range(0, cols):
-			#spreadsheet.setColumnWidth(chr(0x41+c), sht.computed_column_width(c))
-			for r in range(0, rows):
-				rng = '%s%d' %(chr(0x41+c), r+1)
-		idx += 1
+		for idx in range(0, wbk.nsheets):
+			sht = wbk.sheet_by_index(idx)
+			rows = sht.nrows
+			cols = sht.ncols
+			shtName = stream + '_' + sht.name
+			#TODO handle merged cells
+			#TODO handle cell names
+			for c in range(0, cols):
+				#spreadsheet.setColumnWidth(chr(0x41+c), sht.computed_column_width(c))
+				for r in range(0, rows):
+					rng = '%s%d' %(chr(0x41+c), r+1)
+			idx += 1
 
-	xls = copy(wbk)
-	xls.save(u"%s/%s.xls" %(getDumpFolder(), name))
+		xls = copy(wbk)
+		xls.save(u"%s/%s.xls" %(dumpFolder, name))
 	return len(data)
 
 def ReadOle10Native(doc, stream, fnames):
-	ole = importerOle10Nateive.olenative()
-	ole.read(stream)
-	with open(u"%s/%s" %(getDumpFolder(), ole.label), 'wb') as f:
-		f.write(ole.data)
+	dumpFolder = getDumpFolder()
+	if (not (dumpFolder is None)):
+		ole = importerOle10Nateive.olenative()
+		ole.read(stream)
+		with open(u"%s/%s" %(dumpFolder, ole.label), 'wb') as f:
+			f.write(ole.data)
 	return
 
 def ReadRSeSegment(data, offset, idx, count):
@@ -749,15 +754,20 @@ def getReader(seg):
 def ReadRSeMetaDataB(dataB, seg):
 	reader = getReader(seg)
 	if (reader):
-		with codecs.open(u"%s/%s.log" %(getDumpFolder(), seg.name), 'wb', 'utf8') as newFile:
+		newFile = None
+		dumpFolder = getDumpFolder()
+		if (not (dumpFolder is None)):
+			newFile = codecs.open(u"%s/%s.log" %(dumpFolder, seg.name), 'wb', 'utf8')
 			newFile.write('[%s]\n' %(getFileVersion()))
-			i = 0
-			uid, i = getUUID(dataB, i)
-			n, i = getUInt16(dataB, i)
-			z = zlib.decompressobj()
-			data = z.decompress(dataB[i:])
+		i = 0
+		uid, i = getUUID(dataB, i)
+		n, i = getUInt16(dataB, i)
+		z = zlib.decompressobj()
+		data = z.decompress(dataB[i:])
 
-			reader.ReadSegmentData(newFile, data)
+		reader.ReadSegmentData(newFile, data)
+		if (not (newFile is None)):
+			newFile.close()
 	return
 
 def ReadRSeMetaDataM(dataM, name):

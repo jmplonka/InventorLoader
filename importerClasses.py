@@ -1516,6 +1516,14 @@ class BSplineEdge(_AbstractEdge_):
 			)
 		return bsc
 
+class BezierEdge(_AbstractEdge_):
+	def __init__(self, a0, a1):
+		super(BezierEdge, self).__init__()
+		self.a0 = a0
+		self.a1 = a1
+	def __str__(self):
+		return u"Bezier:(%s: %s)" %(IntArr2Str(self.a0[1:], 3), ",".join([u"(%g,%g,%g)" %a for a in self.a1]))
+
 class Header0(object):
 	def __init__(self, m, x):
 		self.m = m

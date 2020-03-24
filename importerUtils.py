@@ -161,6 +161,7 @@ __prmPrefIL__ = ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader"
 
 # The file the be imported
 _inventor_file = None
+_dump_folder   = None
 
 STRATEGY_SAT    = 0
 STRATEGY_NATIVE = 1
@@ -348,8 +349,9 @@ def writeThumbnail(data):
 	global _thumbnail
 	_thumbnail = Thumbnail(data)
 
-	if (ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
-		with open(u"%s/_.%s" %(getDumpFolder(), _thumbnail.type.lower()), 'wb') as thumbnail:
+	dumpFolder = getDumpFolder()
+	if ((not (dumpFolder is None)) and ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
+		with open(u"%s/_.%s" %(dumpFolder, _thumbnail.type.lower()), 'wb') as thumbnail:
 			thumbnail.write(_thumbnail.getData())
 
 	return _thumbnail
@@ -839,22 +841,64 @@ def getInventorFile():
 	return _inventor_file
 
 def getDumpFolder():
-	global _inventor_file
-	return u"%s_%s" %(_inventor_file[0:-4], _inventor_file[-3:])
+	global _dump_folder
+	return _dump_folder
+
+def cleanDumpFolder():
+	folder = getDumpFolder()
+	for f in os.listdir(folder):
+		p = os.path.join(folder, f)
+		if os.path.isfile(p):
+			os.unlink(p)
+		else:
+			shutil.rmtree(p)
 
 def setInventorFile(file):
 	global _inventor_file
+	global _dump_folder
+
 	_inventor_file = os.path.abspath(file)
-	folder   = getDumpFolder()
-	if (not os.path.exists(folder)):
-		os.mkdir(folder)
+	_dump_folder = u"%s_%s" %(_inventor_file[0:-4], _inventor_file[-3:])
+
+	if (os.path.exists(_dump_folder)):
+		cleanDumpFolder()
 	else:
-		for f in os.listdir(folder):
-			p = os.path.join(folder, f)
-			if os.path.isfile(p):
-				os.unlink(p)
+		try:
+			os.mkdir(_dump_folder)
+		except:
+			_dump_folder = None
+			# can't create folder, e.g. insuficien usr right.
+			tmp = os.getenv('TEMP')
+			if ((tmp is None) or (not os.path.exists(tmp))):
+				# strange - maybe it's UNIX
+				tmp = os.getenv('TMP')
+				if ((tmp is None) or (not os.path.exists(tmp))):
+					# even more stange - maybe it's RiscOS
+					tmp = os.getenv('TMPDIR')
+					if ((tmp is None) or (not os.path.exists(tmp))):
+						tmp = os.path.expanduser('~')
+						tmp = os.path.join(tmp, "_InventorLoader_Dump")
+						if (not os.path.exists(tmp)):
+							try:
+								os.mkdir(tmp)
+								logWarning(u"Can't locate system's TEMP folder! - using '%s'" %(tmp))
+							except:
+								tmp = None
+			if (not tmp is None):
+				ifile = os.path.splitext(os.path.basename(_inventor_file))
+				_dump_folder = os.path.join(tmp, "%s_%s" %(ifile[0], ifile[1][1:]))
+				try:
+					if (not os.path.exists(_dump_folder)):
+						os.mkdir(_dump_folder)
+					else:
+						cleanDumpFolder()
+				except:
+					_dump_folder = None
+			if (_dump_folder is None):
+				logWarning(u"Can't locate any dump folder! Ignoring dump files!")
 			else:
-				shutil.rmtree(p)
+				logWarning(u"Using TEMP folder for dumping files: '%s'" %(_dump_folder))
+
 	return OleFileIO(file)
 
 def isString(value):

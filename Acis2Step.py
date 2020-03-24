@@ -5,7 +5,7 @@ Acis2Step.py:
 '''
 
 from datetime      import datetime
-from importerUtils import isEqual
+from importerUtils import isEqual, getDumpFolder
 from FreeCAD       import Vector as VEC
 from importerUtils import logInfo, logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS, getColorDefault
 import traceback, inspect, os, sys, Acis, math, re, Part
@@ -1438,22 +1438,17 @@ def export(filename, satHeader, satBodies):
 	global _scale
 	_scale = satHeader.scale
 
-	path, f = os.path.split(filename)
-	name, x = os.path.splitext(f)
-	path = path.replace('\\', '/')
-
-	# Dump subtype-table for the surfaces (debugging purposes)
-	subpath = "%s/%s" %(path, name)
-	if (not os.path.exists(subpath)):
-		os.makedirs(subpath)
-
-	appPrtDef    = APPLICATION_PROTOCOL_DEFINITION()
+	appPrtDef = APPLICATION_PROTOCOL_DEFINITION()
 	bodies = []
 	for body in satBodies:
 		bodies += _convertBody(body, appPrtDef)
 	PRODUCT_RELATED_PRODUCT_CATEGORY('part', bodies)
 
+	path, f = os.path.split(filename)
+	name, x = os.path.splitext(f)
+	path = getDumpFolder().replace('\\', '/')
 	stepfile = "%s/%s.step" %(path, name)
+
 	step = u"ISO-10303-21;\n"
 	step += u"HEADER;\n"
 	step += u"FILE_DESCRIPTION(('FreeCAD Model'),'2;1');\n"
@@ -1478,7 +1473,7 @@ def export(filename, satHeader, satBodies):
 
 	with open(stepfile, 'wb') as stepFile:
 		_writeStep(stepFile, step)
-		logInfo(u"    File written to '%s'.", stepfile)
+		logAlways(u"STEP file written to '%s'.", stepfile)
 
 	_finalizeExport()
 
