@@ -392,9 +392,15 @@ class SegmentReader(object):
 
 		if (t == 0x0203): t, i = getUInt32(node.data, i)
 
+		if (t == 0x05): # Point: Center
+			a, i = getFloat64A(node.data, i, 3)
+			return PointEdge(a), i
 		if (t == 0x0B): # 3D-Circle: Center, normal, m, radius, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 12)
 			return ArcOfCircleEdge(a), i
+		if (t == 0x13): # ???: 		objects[02D3] = (10B3): 617931B4 flags=0200 index=0C1D pos=(-2.75,-2.22045e-16,-0.6)	aX=[t ffffff
+			a, i = getFloat64A(node.data, i, 6)
+			return LineEdge(a), i
 		if (t == 0x11): # 3D-Ellipse: Center, dirMajor, dirMinor, rMajor, rMinor, startAngle, sweepAngle
 			a, i = getFloat64A(node.data, i, 13)
 			return ArcOfEllipseEdge(a), i

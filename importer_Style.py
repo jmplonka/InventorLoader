@@ -62,7 +62,7 @@ class StyleReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16A(i, 2, 'a0')
-		i = self.ReadTransformation3D(node, i)
+		if (node.get('u32_1') == 0x64): i = self.ReadTransformation3D(node, i)
 		i = node.ReadUInt32(i, 'u32_2')
 		return i
 

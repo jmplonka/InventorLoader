@@ -653,16 +653,16 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
 		return i
 
-	def Read_4E86F047(self, node):
+	def Read_4E86F047(self, node): # Assembly: Placement-Constaint
 		i = self.ReadHeaderContent(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'ref_1') # participants
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst1')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'selection')
+		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'values') # 0=offset, 1=min, 2=max
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt32(i, 'u32_0')
 		if (getFileVersion() > 2010): i += 4 # skip 00 00 00 00
@@ -6799,22 +6799,22 @@ class DCReader(EeDataReader):
 		i = node.Read_Header0()
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		i = self.ReadTransformation3D(node, i)
-#		if (getFileVersion() < 2014):
-#			i = node.ReadUInt32A(i, 4, 'a0')
-#		else:
-#			i = node.ReadUInt32(i, 'u32_0')
-#			i = node.ReadLen32Text16(i)
-#			i = node.ReadUUID(i, 'uid')
+		i = node.ReadUInt32(i, 'u32_0')
+		if (getFileVersion() < 2015):
+			i = node.ReadUInt32A(i, 2, 'a0')
+		else:
+			i = node.ReadLen32Text16(i)
+			i = node.ReadUUID(i, 'uid1')
+			i = node.ReadUUID(i, 'uid2')
 		return i
 
 	def Read_258EC6E1(self, node):
 		i = node.Read_Header0()
+		i = node.ReadUInt8(i, 'n_0')
 		if (getFileVersion() > 2010):
-			n, i = getUInt16(node.data, i)
+			i = node.ReadUInt8(i, 'idx')
 		else:
-			n, i = getUInt8(node.data, i)
-		node.set('n_0', n)
-		node.content += u" n_0=%03X" %(n)
+			node.content += u" idx=00"
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'n_1')
 		return i

@@ -1399,6 +1399,13 @@ class _AbstractEdge_(object):
 	def __repr__(self):
 		return self.__str__()
 
+class PointEdge(_AbstractEdge_):
+	def __init__(self, a):
+		super(PointEdge, self).__init__()
+		self.p = self.p2v(a, 10.0)
+	def __str__(self):
+		return u"Point:(%g,%g,%g)" %(self.p.x, self.p.y, self.p.z)
+
 class LineEdge(_AbstractEdge_):
 	def __init__(self, a):
 		super(LineEdge, self).__init__()
