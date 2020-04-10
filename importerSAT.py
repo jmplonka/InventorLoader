@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import tokenize, sys, FreeCAD, Part, re, Acis, traceback, datetime, ImportGui
-from importerUtils import logInfo, logWarning, logError, getUInt8A, chooseImportStrategyAcis, STRATEGY_SAT
+from importerUtils import logInfo, logWarning, logError, getUInt8A, getUInt32, chooseImportStrategyAcis, STRATEGY_SAT, setDumpFolder
 from Acis2Step     import export
 from math          import fabs
 
@@ -174,15 +174,20 @@ class Header(object):
 			Acis.setVersion(self.version)
 		return
 	def readBinary(self, data):
-		c, i = Acis.readNextSabChunk(data, 0)
-		self.version = c.val
-		c, i = Acis.readNextSabChunk(data, i)
-		self.records = c.val
-		c, i = Acis.readNextSabChunk(data, i)
-		self.bodies  = c.val
-		c, i = Acis.readNextSabChunk(data, i)
-		self.flags   = c.val
-		c, i = Acis.readNextSabChunk(data, i)
+		if (data[0:16] == b'ACIS BinaryFile('):
+#			c, i = Acis.readNextSabChunk(data, 0)
+#			self.version = c.val
+#			c, i = Acis.readNextSabChunk(data, i)
+#			self.records = c.val
+#			c, i = Acis.readNextSabChunk(data, i)
+#			self.bodies  = c.val
+#			c, i = Acis.readNextSabChunk(data, i)
+#			self.flags   = c.val
+			self.version = 100
+			c, i = Acis.readNextSabChunk(data, 0x1F)
+		else:
+			self.version = 700
+			c, i = Acis.readNextSabChunk(data, 0)
 		self.prodId  = c.val
 		c, i = Acis.readNextSabChunk(data, i)
 		self.prodVer = c.val
@@ -326,7 +331,8 @@ def readEntityBinary(data, index, end):
 	if (not entity.name.startswith('End-of-')):
 		while ((c.tag != Acis.TAG_TERMINATOR) and (i < end)):
 			c, i = Acis.readNextSabChunk(data, i)
-			entity.chunks.append(c)
+			if (c is not None):
+				entity.chunks.append(c)
 
 	return entity, i
 
@@ -351,11 +357,11 @@ def readEntityText(tokenizer, index):
 	return entity, id + 1
 
 def resolveEntityReferences(entities, lst, history):
-	progress = FreeCAD.Base.ProgressIndicator()
-	progress.start("Resolving references...", len(lst))
+#	progress = FreeCAD.Base.ProgressIndicator()
+#	progress.start("Resolving references...", len(lst))
 	map = entities
 	for entity in lst:
-		progress.next()
+#		progress.next()
 		if (entity.name == "Begin-of-ACIS-History-Data"):
 			if (history is None):
 				map = {}
@@ -370,7 +376,7 @@ def resolveEntityReferences(entities, lst, history):
 					ref.entity = map[ref.index]
 				except:
 					ref.entity = None
-	progress.stop()
+#	progress.stop()
 	return
 
 def resolveNode(entity):
@@ -378,8 +384,7 @@ def resolveNode(entity):
 		if (len(entity.name) > 0):
 			return Acis.createNode(entity)
 	except Exception as e:
-#		logError(u"ERROR: Can't resolve '%s' - %s", entity, e)
-		logError(traceback.format_exc())
+		logError(u"ERROR: Can't resolve '%s' - %s", entity, e)
 	return
 
 def resolveSurfaceRefs(face):
@@ -403,7 +408,6 @@ def resolveSurfaceRefs(face):
 
 def resolveNodes():
 	Acis.init()
-
 	bodies = []
 	faces  = []
 	model = getEntities()
@@ -523,7 +527,9 @@ def convertModel(group, docName):
 
 def readText(fileName):
 	global _fileName
+
 	_fileName = fileName
+	setDumpFolder(fileName)
 	header    = Header()
 	history   = None
 	index     = 0
@@ -570,7 +576,9 @@ def readText(fileName):
 
 def readBinary(fileName):
 	global _fileName
+
 	_fileName = fileName
+	setDumpFolder(fileName)
 	header    = Header()
 	history   = None
 	index     = 0
@@ -581,9 +589,10 @@ def readBinary(fileName):
 	Acis.setHeader(header)
 	Acis.clearEntities()
 
-	with open(fileName, 'rU') as file:
+	with open(fileName, 'rb') as file:
 		data = file.read()
-		header.readBinary(data)
+		e = len(data)
+		i = header.readBinary(data)
 		index = 0
 		entities = {}
 		while (i < e):
@@ -605,12 +614,15 @@ def readBinary(fileName):
 				index = entityIdx
 				map = entities
 			elif (entity.name == "End-of-ACIS-data"):
-				del map[entity.index]
 				entity.index = -1
+				try:
+					del map[entity.index]
+				except:
+					pass
 				break
 	resolveEntityReferences(entities, lst, history)
 	setEntities(lst)
-	return
+	return True
 
 def create3dModel(group, doc):
 	strategy = chooseImportStrategyAcis()

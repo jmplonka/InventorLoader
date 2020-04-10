@@ -3707,7 +3707,6 @@ class FreeCADImporter(object):
 		plate      = getProperty(properties, 0) # FxPlate 'Plate1'
 
 		return self.getGeometry(plate)
-		return
 
 	def Create_FxFlange(self, flangeNode):
 		properties = flangeNode.get('properties')

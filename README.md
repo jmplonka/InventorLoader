@@ -92,6 +92,7 @@ This allows embedding Excel workbooks e.g.:
   * **STEP based**: The ACIS model will be converted into STEP and imported afterwards.
 
 ## History
+**1.0.1**  (2020-04-10): Fixed finding of SAB import.  
 **1.0.0**  (2019-08-26): Reorganized section readers (1.0).  
 **0.18.0** (2019-08-07): Added coloring of single faces and changed to default Inventor campera position (RC2).  
 **0.17.0** (2019-07-04): Missing features added as ACIS models (RC1).  

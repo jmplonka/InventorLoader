@@ -609,7 +609,6 @@ class SegmentReader(object):
 
 	def HandleBlock(self, node):
 		i = 0
-
 		try:
 			readType = getattr(self, 'Read_%s' %(node.typeName))
 			i = readType(node)

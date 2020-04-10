@@ -660,12 +660,13 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'ref_1') # participants
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadUInt8(i, 'style') # 1: mate, 2: flush, 3: angle, 14: symmetry
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'selection')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'values') # 0=offset, 1=min, 2=max
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt32(i, 'u32_0')
 		if (getFileVersion() > 2010): i += 4 # skip 00 00 00 00
+		if (getFileVersion() > 2012): i += 1 # skip 03
 		return i
 
 	def Read_4E8F7EE5(self, node): # ModelFeatureControlFrame
@@ -1078,7 +1079,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i, 2)
 		if (getFileVersion() > 2018): i += 4 # skip FF FF FF FF
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'value')
 		return i
 
 	def Read_90874D67(self, node):

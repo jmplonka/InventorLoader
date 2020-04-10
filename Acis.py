@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__                 import unicode_literals
 
 '''
 Acis.py:
 Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) files.
 '''
 
-import traceback, FreeCAD, Part, Draft, os
+from __future__                 import unicode_literals
+import traceback, Part, Draft, os
 from importerUtils              import *
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
 from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
@@ -122,6 +122,7 @@ TAG_POSITION      = 19	 # 3D-Vector scaled (scaling will be done later because o
 TAG_VECTOR_3D     = 20	 # 3D-Vector normalized
 TAG_ENUM_VALUE    = 21	 # value of an enumeration
 TAG_VECTOR_2D     = 22	 # U-V-Vector
+TAG_INT64         = 23   # used by AutoCAD ASM int64 attributes
 
 # TAG_FALSE, TAG_TRUE value mappings
 RANGE        = {TAG_FALSE: 'I',            TAG_TRUE: 'F'}
@@ -163,6 +164,7 @@ _nameMtchAttr        = {}
 _refs                = {} # dict of AcisRefs
 _dcIdxAttributes     = {} # dict of an attribute list
 _header              = None
+autoCAD_ASM          = False
 
 def getSatRefs():
 	global _refs
@@ -341,6 +343,14 @@ def getVersion():
 	global version
 	return version
 
+def setAutoCADSAT(isAutoCADSAT):
+	global autoCAD_ASM
+	autoCAD_ASM = isAutoCADSAT
+
+def getAutoCADSAT():
+	global autoCAD_ASM
+	return autoCAD_ASM
+
 def createNode(entity):
 	global references
 
@@ -373,8 +383,9 @@ def createNode(entity):
 			references[entity.index] = node
 		if (hasattr(node, 'set')):
 			entity.node = node
-			node.entity = entity
-			node.set(entity)
+			if not node is None:
+				node.entity = entity
+				node.set(entity)
 	return node
 
 def getValue(chunks, index):
@@ -386,7 +397,7 @@ def getRefNode(entity, index, name):
 	if (isinstance(val, AcisRef)):
 		ref = val.entity
 		if (name is not None) and (ref is not None) and (ref.name.endswith(name) == False):
-			raise Exception("Excpeced %s but found %s" %(name, ref.name))
+			raise Exception("Expected %s but found %s" %(name, ref.name))
 		return ref, i
 	raise Exception("Chunk at index=%d, is not a reference" %(index))
 
@@ -511,7 +522,7 @@ def getClosure(chunks, index):
 	return closure, i
 
 def getSingularity(chunks, index):
-	if (getVersion() > 4):
+	if (getVersion() > 4 or autoCAD_ASM):
 		return getEnumByValue(chunks, index, SINGULARITY)
 	return 'full', index
 
@@ -1514,12 +1525,12 @@ class Entity(object):
 		self._attrib = None
 		self.entity  = None
 		self.history = None
-
+		self.autoCAD_ASM = getAutoCADSAT()
 	def set(self, entity):
 		try:
-			references[entity.index] = self
 			self._attrib, i = getRefNode(entity, 0, None)
-			if (getVersion() > 6):
+			references[entity.index] = self
+			if (getVersion() > 6 or self.autoCAD_ASM):
 				self.history, i = getInteger(entity.chunks, i)
 		except Exception as e:
 			logError(traceback.format_exc())
@@ -1600,7 +1611,7 @@ class Topology(Entity):
 		i = super(Topology, self).set(entity)
 		if (getVersion() > 10.0):
 			i += 1 # skip ???
-		if (getVersion() > 6.0):
+		if (getVersion() > 6.0 or self.autoCAD_ASM):
 			i += 1 # skip ???
 		return i
 class Body(Topology):
@@ -1669,7 +1680,7 @@ class Shell(Topology):
 		self._next, i  = getRefNode(entity, i, 'shell')
 		self._shell, i = getRefNode(entity, i, None)
 		self._face, i  = getRefNode(entity, i, 'face')
-		if (getVersion() > 1.7):
+		if (getVersion() > 1.7 or self.autoCAD_ASM):
 			self._wire, i  = getRefNode(entity, i, 'wire')
 		self._owner, i = getRefNode(entity, i, 'lump')
 		return i
@@ -1741,7 +1752,7 @@ class Face(Topology):
 		self._surface, i                = getRefNode(entity, i, 'surface')
 		self.sense, i                   = getSense(entity.chunks, i)
 		self.sides, self.containment, i = getSides(entity.chunks, i)
-		if (getVersion() > 9.0):
+		if (getVersion() > 9.0 or self.autoCAD_ASM):
 			self.unknown2, i = getUnknownFT(entity.chunks, i)
 		return i
 	def getLoops(self):
@@ -1927,7 +1938,7 @@ class CoEdge(Topology):
 		self._owner    = None      # The coedge's owner
 		self._curve    = None
 	def set(self, entity):
-		i = i = super(CoEdge, self).set(entity)
+		i = super(CoEdge, self).set(entity)
 		self._next, i     = getRefNode(entity, i, 'coedge')
 		self._previous, i = getRefNode(entity, i, 'coedge')
 		self._partner, i  = getRefNode(entity, i, 'coedge')
@@ -1969,24 +1980,24 @@ class Edge(Topology):
 		self._end   = None # The end vertex
 		self._owner = None # The edge's coedge
 		self._curve = None # Lying on one the Adjacent faces
-		self.sense  = 'forwared'
+		self.sense  = 'forward'
 		self.text   = ''
 	def set(self, entity):
 		i = super(Edge, self).set(entity)
 		self._start, i = getRefNode(entity, i, 'vertex')
-		if (getVersion() > 4.0):
+		if (getVersion() > 4.0 or self.autoCAD_ASM):
 			self.parameter1, i = getFloat(entity.chunks, i)
 		else:
 			self.parameter1 = 0.0
 		self._end, i   = getRefNode(entity, i, 'vertex')
-		if (getVersion() > 4.0):
+		if (getVersion() > 4.0 or self.autoCAD_ASM):
 			self.parameter2, i = getFloat(entity.chunks, i)
 		else:
 			self.parameter2 = 1.0
 		self._owner, i = getRefNode(entity, i, 'coedge')
 		self._curve, i = getRefNode(entity, i, 'curve')
 		self.sense, i  = getSense(entity.chunks, i)
-		if (getVersion() > 5.0):
+		if (getVersion() > 5.0 or self.autoCAD_ASM):
 			self.text, i = getText(entity.chunks, i)
 		self.unknown, i = getUnknownFT(entity.chunks, i)
 		return i
@@ -2045,7 +2056,7 @@ class Geometry(Entity):
 		i = super(Geometry, self).set(entity)
 		if (getVersion() > 10.0):
 			i += 1 # skip ???
-		if (getVersion() > 6.0):
+		if (getVersion() > 6.0 or self.autoCAD_ASM):
 			i += 1 # skip ???
 		return i
 	def __repr__(self):
@@ -2126,8 +2137,10 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 				else:
 					ellipse = Part.ArcOfEllipse(ellipse, (a + pi/2) % (2*pi), (b + pi/2) % (2*pi))
 		return ellipse.toShape()
+
 class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def __init__(self, name = ''):
+		self.autoCAD_ASM = getAutoCADSAT()
 		super(CurveInt, self).__init__(name + 'intcurve')
 		self.sense    = 'forward' # The IntCurve's reversal flag
 		self.range    = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
@@ -2197,7 +2210,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		if (getVersion() > 15.0):
 			i += 2
 		range2, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		if (getVersion() >= 2.0):
+		if (getVersion() >= 2.0 or self.autoCAD_ASM):
 			a1, i       = getFloatArray(chunks, i)
 			a2, i       = getFloatArray(chunks, i)
 			a3, i       = getFloatArray(chunks, i)
@@ -2225,7 +2238,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			ruC1, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		curve2, i   = readBS2Curve(chunks, i)
 		ruC2, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
-		if (getVersion() >= 2.0):
+		if (getVersion() >= 2.0 or self.autoCAD_ASM):
 			a1, i       = getFloatArray(chunks, i)
 			a2, i       = getFloatArray(chunks, i)
 			a3, i       = getFloatArray(chunks, i)
@@ -2259,7 +2272,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		return i
 	def setExact(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor)
-		if (getVersion() >= 2.0):
+		if (getVersion() >= 2.0 or self.autoCAD_ASM):
 			if (inventor):
 				x3, i = getFloat(chunks, i)
 			if (getVersion() > 15.0):
@@ -2417,6 +2430,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				if (isinstance(self.curve, Curve)):
 					self.shape = self.curve.build(start, end)
 		return self.shape
+
 class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 	def __init__(self):
 		super(CurveIntInt, self).__init__('intcurve-')
@@ -2498,6 +2512,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 			elif (self.type == 'exppc'):
 				self.shape = createBSplinesPCurve(self.pcurve, self.surface, self.sense)
 		return self.shape
+
 class CurveStraight(Curve):# straight curve "straight-curve"
 	def __init__(self):
 		super(CurveStraight, self).__init__('straight')
@@ -2516,6 +2531,7 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 			start = line.value(start)
 			end = line.value(end)
 		return createLine(start, end)
+
 class Surface(Geometry):
 	def __init__(self, name):
 		super(Surface, self).__init__(name)
@@ -2528,6 +2544,7 @@ class Surface(Geometry):
 		i = self.setSubtype(entity.chunks, i)
 		return i
 	def build(self): return None
+
 class SurfaceCone(Surface):
 	def __init__(self):
 		super(SurfaceCone, self).__init__('cone')
@@ -2813,7 +2830,7 @@ class SurfaceSpline(Surface):
 	def setSurfaceShape(self, chunks, index, inventor):
 		spline, self.tolerance, i = readSplineSurface(chunks, index, True)
 		self.shape = createBSplinesSurface(spline)
-		if (getVersion() >= 2.0):
+		if (getVersion() >= 2.0 or self.autoCAD_ASM):
 			arr, i  = readArrayFloats(chunks, i, inventor)
 		return i
 	def setBlendSupply(self, chunks, index, inventor):
@@ -2993,7 +3010,7 @@ class SurfaceSpline(Surface):
 		return i
 	def setExact(self, chunks, index, inventor):
 		i = self.setSurfaceShape(chunks, index, inventor)
-		if (getVersion() > 2.0):
+		if (getVersion() > 2.0 or self.autoCAD_ASM):
 			rU, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			rV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			if (inventor):
@@ -3440,9 +3457,7 @@ class SurfaceSpline(Surface):
 		return i
 	def setBulk(self, chunks, index):
 		self.type, i = getValue(chunks, index)
-
 		if (self.type == 'ref'):                   return self.setRef(chunks, i)
-
 		try:
 			prm = SURFACE_TYPES[self.type]
 			fkt = getattr(self, prm[0])
@@ -4194,6 +4209,15 @@ class AcisShortChunk(AcisNumberChunk):
 	def read(self, data, offset):
 		self.val, i = getSInt16(data, offset)
 		return i
+
+class AcisInt64Chunk(AcisNumberChunk):
+	'''32Bit signed value'''
+	def __init__(self, value = None):
+		super(AcisInt64Chunk, self).__init__(TAG_INT64, value)
+	def read(self, data, offset):
+		self.val, i = getSInt64(data, offset)
+		return i
+
 class AcisLongChunk(AcisNumberChunk):
 	'''32Bit signed value'''
 	def __init__(self, value = None):
@@ -4364,6 +4388,7 @@ ACIS_VALUE_CHUNKS = {
 	TAG_POSITION     : AcisPositionChunk,
 	TAG_VECTOR_2D    : AcisVector2dChunk,
 	TAG_VECTOR_3D    : AcisVector3dChunk,
+	TAG_INT64        : AcisInt64Chunk
 }
 class AcisEntity(object):
 	def __init__(self, name):
@@ -4747,5 +4772,5 @@ ENTITY_TYPES = {
 	"cell":                                                                                        Cell,
 	"cell3d-cell":                                                                                 Cell3d,
 	"cface":                                                                                       CFace,
-	"cshell":                                                                                      CShell,
+	"cshell":                                                                                      CShell
 }

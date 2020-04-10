@@ -227,9 +227,13 @@ def _exportList_(a):
 	return step
 
 def _createCurveComp(acisCurve):
-	return curve
+    # TODO
+	return acisCurve
+
 def _createCurveDegenerate(acisCurve):
-	return curve
+    # TODO
+	return acisCurve
+
 def _createCurveEllipse(acisCurve):
 	global _ellipses
 	key = '%s,%s,%s,%s' %(acisCurve.center, acisCurve.axis, acisCurve.major, acisCurve.ratio)
@@ -244,6 +248,7 @@ def _createCurveEllipse(acisCurve):
 		circle.placement = _createAxis2Placement3D('', acisCurve.center, 'Origin', acisCurve.axis, 'center_axis', acisCurve.major, 'ref_axis')
 		_ellipses[key] = circle
 	return circle
+
 def _createCurveInt(acisCurve):
 	global _curveBSplines
 	shape = acisCurve.getShape()
@@ -288,10 +293,15 @@ def _createCurveInt(acisCurve):
 			return line
 	logError(u"Int-Curve not created for (%s)", acisCurve.__str__()[:-1])
 	return None
+
 def _createCurveIntInt(acisCurve):
-	return curve
+    # TODO
+	return acisCurve
+
 def _createCurveP(acisCurve):
-	return curve
+    # TODO
+	return acisCurve
+
 def _createCurveStraight(acisCurve):
 	global _lines
 
@@ -372,8 +382,10 @@ def _createSurfaceCone(acisSurface):
 			cone = CONICAL_SURFACE('', plc, radius, math.fabs(angle))
 		_cones[key] = cone
 	return cone
+
 def _createSurfaceMesh(acisSurface):
-	return surface
+	return acisSurface
+
 def _createSurfacePlane(acisSurface):
 	global _planes
 
@@ -391,6 +403,7 @@ def _createSurfacePlane(acisSurface):
 		plane.placement = _createAxis2Placement3D('', acisSurface.root, 'Origin', acisSurface.normal, 'center_axis', ref, 'ref_axis')
 		_planes[key] = plane
 	return plane
+
 def _createSurfaceSphere(acisSurface):
 	global _spheres
 	key = "%s,%r" %(acisSurface.center, acisSurface.radius)
@@ -401,6 +414,7 @@ def _createSurfaceSphere(acisSurface):
 		sphere.placement = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.pole, 'center_axis', acisSurface.uvorigin, 'ref_axis')
 		_spheres[key] = sphere
 	return sphere
+
 def _createSurfaceSpline(acisSurface):
 	shape = acisSurface.build()
 	if (hasattr(shape, 'Surface')):

@@ -10,7 +10,7 @@ import importerUtils, Acis, importerClasses
 from importerUtils   import canImport, logInfo, logWarning, logError, logAlways
 from olefile         import isOleFile
 from importerFreeCAD import createGroup
-from pivy import coin
+from pivy            import coin
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -43,6 +43,7 @@ def read(doc, filename, readProperties):
 		if (importerSAT.readText(filename)):
 			return importerSAT
 	elif (ext == '.sab'):
+		Acis.setAutoCADSAT(True) # TODO - how to determine between True or False?
 		if (importerSAT.readBinary(filename)):
 			return importerSAT
 	elif (ext == '.iam'):

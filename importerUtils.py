@@ -365,6 +365,7 @@ UINT16     = Struct('<H').unpack_from
 SINT16     = Struct('<h').unpack_from
 UINT32     = Struct('<L').unpack_from
 SINT32     = Struct('<l').unpack_from
+SINT64     = Struct('<q').unpack_from
 FLOAT32    = Struct('<f').unpack_from
 FLOAT32_2D = Struct('<ff').unpack_from
 FLOAT32_3D = Struct('<fff').unpack_from
@@ -459,7 +460,7 @@ def getUInt16A(data, offset, size):
 
 def getSInt16(data, offset):
 	'''
-	Returns a single singned 16-Bit value.
+	Returns a single signed 16-Bit value.
 	Args:
 		data
 			A binary string.
@@ -474,7 +475,7 @@ def getSInt16(data, offset):
 
 def getSInt16A(data, offset, size):
 	'''
-	Returns an array of single singned 16-Bit values.
+	Returns an array of single signed 16-Bit values.
 	Args:
 		data
 			A binary string.
@@ -523,22 +524,37 @@ def getUInt32A(data, offset, size):
 
 def getSInt32(data, offset):
 	'''
-	Returns a single singned 32-Bit value.
+	Returns a single signed 32-Bit value.
 	Args:
 		data
 			A binary string.
 		offset
-			The zero based offset of the singned 32-Bit value.
+			The zero based offset of the signed 32-Bit value.
 	Returns:
-		The singned 32-Bit value at offset.
+		The signed 32-Bit value at offset.
 		The new position in the 'stream'.
 	'''
 	val, = SINT32(data, offset)
 	return val, offset + 4
 
+def getSInt64(data, offset):
+	'''
+	Returns a single signed 64-Bit value.
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the signed 32-Bit value.
+	Returns:
+		The signed 32-Bit value at offset.
+		The new position in the 'stream'.
+	'''
+	val, = SINT64(data, offset)
+	return val, offset + 8
+
 def getSInt32A(data, offset, size):
 	'''
-	Returns an array of singned 32-Bit values.
+	Returns an array of signed 32-Bit values.
 	Args:
 		data
 			A binary string.
@@ -853,12 +869,10 @@ def cleanDumpFolder():
 		else:
 			shutil.rmtree(p)
 
-def setInventorFile(file):
-	global _inventor_file
+def setDumpFolder(anyInputFile):
 	global _dump_folder
-
-	_inventor_file = os.path.abspath(file)
-	_dump_folder = u"%s_%s" %(_inventor_file[0:-4], _inventor_file[-3:])
+	fileParts = os.path.splitext(anyInputFile)
+	_dump_folder = u"%s_%s" %(fileParts[0], fileParts[1][1:])
 
 	if (os.path.exists(_dump_folder)):
 		cleanDumpFolder()
@@ -873,7 +887,7 @@ def setInventorFile(file):
 				# strange - maybe it's UNIX
 				tmp = os.getenv('TMP')
 				if ((tmp is None) or (not os.path.exists(tmp))):
-					# even more stange - maybe it's RiscOS
+					# even more strange - maybe it's RiscOS
 					tmp = os.getenv('TMPDIR')
 					if ((tmp is None) or (not os.path.exists(tmp))):
 						tmp = os.path.expanduser('~')
@@ -885,7 +899,7 @@ def setInventorFile(file):
 							except:
 								tmp = None
 			if (not tmp is None):
-				ifile = os.path.splitext(os.path.basename(_inventor_file))
+				ifile = os.path.splitext(os.path.basename(anyInputFile))
 				_dump_folder = os.path.join(tmp, "%s_%s" %(ifile[0], ifile[1][1:]))
 				try:
 					if (not os.path.exists(_dump_folder)):
@@ -899,6 +913,13 @@ def setInventorFile(file):
 			else:
 				logWarning(u"Using TEMP folder for dumping files: '%s'" %(_dump_folder))
 
+
+def setInventorFile(file):
+	global _inventor_file
+	global _dump_folder
+
+	_inventor_file = os.path.abspath(file)
+	setDumpFolder(_inventor_file)
 	return OleFileIO(file)
 
 def isString(value):

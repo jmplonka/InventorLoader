@@ -1235,7 +1235,7 @@ class CircleNode(DataNode):
 					points += u", (%g,%g,%g)" %(p.x, p.y, p.z)
 		if (self.typeName[-2:] == '2D'):
 			c = self.get('center')
-			return u"(%04X): %s" %(self.index, self.typeName)
+			#return u"(%04X): %s" %(self.index, self.typeName)
 			p = c.get('pos')
 			return u"(%04X): %s - (%g,%g), r=%g%s" %(self.index, self.typeName, p.x, p.y, r, points)
 		p = self.get('pos')
@@ -1365,7 +1365,7 @@ class Segment(object):
 		return (self.type in SEGMENTS_DOC)
 
 	def isDesignView(self):
-		return (self.type in SEGMENTS_DGW)
+		return (self.type in SEGMENTS_DVW)
 
 	def isDirectory(self):
 		return (self.name in SEGMENTS_DIR)
@@ -1459,7 +1459,7 @@ class ArcOfCircleEdge(ArcOfConicEdge):
 			if (isinstance(curve, Part.ArcOfCircle)):
 				if (isEqual(curve.Center, self.center)):
 					if (isEqual1D(curve.Radius, self.radius)):
-						return  (isEqual1(edge.FirstParmeter, self.a) and isEqual1(edge.LastParameter, self.b))
+						return  (isEqual1D(edge.FirstParmeter, self.a) and isEqual1D(edge.LastParameter, self.b))
 		return False
 
 class ArcOfEllipseEdge(ArcOfConicEdge):
@@ -1481,7 +1481,7 @@ class ArcOfEllipseEdge(ArcOfConicEdge):
 		else:
 			if (isinstance(curve, Part.ArcOfEllipse)):
 				if (isEqual(curve.Center, self.center) and isEqual1D(curve.MajorRadius, self.majorRadius) and isEqual1D(curve.MinorRadius, self.minorRadius)):
-					return  (isEqual1(edge.FirstParmeter, self.a) and isEqual1(edge.LastParameter, self.b))
+					return  (isEqual1D(edge.FirstParmeter, self.a) and isEqual1D(edge.LastParameter, self.b))
 		return False
 
 class BSplineEdge(_AbstractEdge_):
