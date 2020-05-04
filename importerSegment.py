@@ -281,7 +281,7 @@ def readTypedFloatArr(data, offset, size = 1):
 	a, i = getUInt32A(data, i, 2)
 	b, i = getFloat64A(data, i, n * size)
 	if (size > 1):
-		b = reshape(b, size).tolist()
+		b = reshape(b, size)
 	return (a, b), i
 
 class SegmentReader(object):
