@@ -464,13 +464,12 @@ class SecNode(AbstractData):
 	def __getList2NumsA(self, name, offset, cnt, arraysize, s, w, fmt, skipLen = True):
 		if (skipLen):
 			val = Struct('<' + s*arraysize*cnt).unpack_from(self.data, offset)
-			val = reshape(val, arraysize)
+			lst = reshape(val, arraysize)
 			i   = offset + (w * arraysize) * cnt
 		else:
 			val = Struct('<' + (s*arraysize+'L')*cnt).unpack_from(self.data, offset)
-			val = reshape([n for i, n in enumerate(val) if (i % (arraysize + 1)) != arraysize], arraysize)
+			lst = reshape([n for i, n in enumerate(val) if (i % (arraysize + 1)) != arraysize], arraysize)
 			i   = offset + (w * arraysize + 4) * cnt # w + 4Bytes for blocklen
-		lst = val.tolist()
 
 		if (arraysize > 1):
 			if (len(lst) > 100):

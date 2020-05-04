@@ -1736,6 +1736,7 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i, 21, 'a8')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadFloat64A(i, 45, 'a9')
+		node.isAttr = True
 		return i
 
 	def Read_B382A87C(self, node): # MatchedLoop
@@ -4886,6 +4887,7 @@ class DCReader(EeDataReader):
 
 	def Read_7F4A3E30(self, node):
 		i = self.ReadHeadersss2S16s(node)
+		node.isAttr = True
 		node.delete('next')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
@@ -4982,6 +4984,7 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i, 6, 'a11')
 		if (vers > 2010):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
+		node.isAttr = True
 		return i
 
 	def Read_E70647C2(self, node):
@@ -5033,6 +5036,7 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i, 13, 'a4')
 		if (getFileVersion() > 2012):
 			i += 3*8 # same as a4[-3:]
+		node.isAttr = True
 		return i
 
 	#######################
@@ -5425,6 +5429,7 @@ class DCReader(EeDataReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadChildRef(i, 'next')
 		i = self.skipBlockSize(i)
+		node.isAttr = True
 		return i
 
 	def Read_01E7910C(self, node):

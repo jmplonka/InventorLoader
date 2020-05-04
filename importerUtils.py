@@ -1028,8 +1028,8 @@ def addEmptyLists(node, indexes):
 def addEmptyMaps(node, indexes):
 	_addEmpty(node, indexes, {})
 
-def rehsape(nums, size):
+def reshape(nums, size):
 #	from numpy import reshape as np_reshape
 #	return np_reshape(values, (-1, size))
 	if size == 1: return nums
-	return [[nums[size * i + j] for j in range(size)] for i in range(len(data) // size)]
+	return [[nums[size * i + j] for j in range(size)] for i in range(len(nums) // size)]

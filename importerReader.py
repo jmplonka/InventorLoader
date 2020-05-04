@@ -490,15 +490,15 @@ def ReadRSeDb15(db, data, offset):
 	return i
 
 def ReadRSeDb1A(db, data, offset):
-	db.arr2,       i = getUInt16A(data, offset, 4)
-	db.dat2,       i = getDateTime(data, i)
+	db.arr2,          i = getUInt16A(data, offset, 4)
+	db.dat2,          i = getDateTime(data, i)
 	db.segInfo.text,  i = getLen32Text16(data, i)
 	db.segInfo.arr1,  i = getUInt16A(data, i, 12)
 	db.segInfo.date,  i = getDateTime(data, i)
 	db.segInfo.uid,   i = getUUID(data, i)
 	db.segInfo.u16,   i = getUInt16(data, i)
 	db.segInfo.arr2,  i = getUInt32A(data, i, 2)
-	db.txt,        i = getLen32Text16(data, i)
+	db.txt,           i = getLen32Text16(data, i)
 	db.segInfo.arr3,  i = getUInt32A(data, i, 2)
 	db.segInfo.text2, i = getLen32Text16(data, i)
 	db.segInfo.arr4,  i = getUInt32A(data, i, 4)

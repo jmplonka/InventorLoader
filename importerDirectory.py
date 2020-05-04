@@ -25,7 +25,7 @@ class DirectoryReader(SegmentReader):
 
 	def Read_3E9F410E(self, node):
 		i = node.Read_Header0()
-		i = node.ReadList2(i, importerSegNode._TYP_APP_1_, 'lst0') 
+		i = node.ReadList2(i, importerSegNode._TYP_APP_1_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
