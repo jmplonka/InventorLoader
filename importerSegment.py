@@ -6,7 +6,7 @@ importerSegment.py:
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import re, traceback,  numpy as np
+import re, traceback
 from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_, REF_PARENT, REF_CHILD, REF_CROSS
@@ -281,7 +281,7 @@ def readTypedFloatArr(data, offset, size = 1):
 	a, i = getUInt32A(data, i, 2)
 	b, i = getFloat64A(data, i, n * size)
 	if (size > 1):
-		b = np.reshape(b, (-1, size)).tolist()
+		b = reshape(b, size).tolist()
 	return (a, b), i
 
 class SegmentReader(object):

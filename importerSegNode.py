@@ -10,7 +10,6 @@ from importerClasses        import AbstractData, Header0, Angle, GraphicsFont, L
 from importerUtils          import *
 from math                   import log10, pi
 from importerTransformation import Transformation3D
-import numpy as np
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -465,11 +464,11 @@ class SecNode(AbstractData):
 	def __getList2NumsA(self, name, offset, cnt, arraysize, s, w, fmt, skipLen = True):
 		if (skipLen):
 			val = Struct('<' + s*arraysize*cnt).unpack_from(self.data, offset)
-			val = np.reshape(val, (-1, arraysize))
+			val = reshape(val, arraysize)
 			i   = offset + (w * arraysize) * cnt
 		else:
 			val = Struct('<' + (s*arraysize+'L')*cnt).unpack_from(self.data, offset)
-			val = np.reshape([n for i, n in enumerate(val) if (i % (arraysize + 1)) != arraysize], (-1, arraysize))
+			val = reshape([n for i, n in enumerate(val) if (i % (arraysize + 1)) != arraysize], arraysize)
 			i   = offset + (w * arraysize + 4) * cnt # w + 4Bytes for blocklen
 		lst = val.tolist()
 

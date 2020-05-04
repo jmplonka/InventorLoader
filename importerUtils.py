@@ -5,7 +5,7 @@ importerUtils.py:
 Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import os, sys, datetime, FreeCADGui, numpy, json, shutil, re
+import os, sys, datetime, FreeCADGui, json, shutil, re
 from PySide.QtCore import *
 from PySide.QtGui  import *
 from uuid          import UUID
@@ -361,6 +361,7 @@ def getThumbnailImage():
 	return _thumbnail
 
 UINT8      = Struct('<B').unpack_from
+SINT8      = Struct('<b').unpack_from
 UINT16     = Struct('<H').unpack_from
 SINT16     = Struct('<h').unpack_from
 UINT32     = Struct('<L').unpack_from
@@ -391,6 +392,21 @@ def getBoolean(data, offset):
 	if (val == 1): return True, offset + 1
 	if (val == 0): return False, offset + 1
 	raise ValueError(u"Expected either 0 or 1 but found %02X" %(val))
+
+def getSInt8(data, offset):
+	'''
+	Returns a single unsingned 8-Bit value (byte).
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the byte.
+	Returns:
+		The unsigned 8-Bit value at offset.
+		The new position in the 'stream'.
+	'''
+	val, = SINT8(data, offset)
+	return val, offset + 1
 
 def getUInt8(data, offset):
 	'''
@@ -1011,3 +1027,9 @@ def addEmptyLists(node, indexes):
 
 def addEmptyMaps(node, indexes):
 	_addEmpty(node, indexes, {})
+
+def rehsape(nums, size):
+#	from numpy import reshape as np_reshape
+#	return np_reshape(values, (-1, size))
+	if size == 1: return nums
+	return [[nums[size * i + j] for j in range(size)] for i in range(len(data) // size)]
