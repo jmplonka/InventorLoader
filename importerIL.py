@@ -5,7 +5,7 @@ importer.py:
 Collection of 3D Mesh importers
 '''
 
-import os, sys, FreeCAD, FreeCADGui, importerSAT, Import_IPT
+import os, sys, FreeCAD, FreeCADGui, importerSAT, importerDXF, Import_IPT
 import importerUtils, Acis, importerClasses
 from importerUtils   import canImport, logInfo, logWarning, logError, logAlways
 from olefile         import isOleFile
@@ -43,9 +43,11 @@ def read(doc, filename, readProperties):
 		if (importerSAT.readText(filename)):
 			return importerSAT
 	elif (ext == '.sab'):
-		Acis.setAutoCADSAT(True) # TODO - how to determine between True or False?
 		if (importerSAT.readBinary(filename)):
 			return importerSAT
+	elif (ext == '.dxf'):
+		if (importerDXF.read(filename)):
+			return importerDXF
 	elif (ext == '.iam'):
 		logError(u"Sorry, AUTODESK's Inventor assemblies not yet supported!")
 	elif (ext == '.ipn'):

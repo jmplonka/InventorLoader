@@ -8,7 +8,7 @@ from datetime      import datetime
 from importerUtils import isEqual, getDumpFolder
 from FreeCAD       import Vector as VEC
 from importerUtils import logInfo, logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS, getColorDefault
-import traceback, inspect, os, sys, Acis, math, re, Part
+import traceback, inspect, os, sys, Acis, math, re, Part, io
 
 #############################################################
 # private variables
@@ -22,11 +22,13 @@ _lines           = {}
 _ellipses        = {}
 _vectors         = {}
 _cones           = {}
+_cylinders       = {}
 _planes          = {}
 _spheres         = {}
 _curveBSplines   = {}
 _assignments     = {}
 _entities        = []
+_colorPalette    = {}
 
 #############################################################
 # private functions
@@ -39,29 +41,23 @@ def _getE(o):
 
 def _dbl2str(d):
 	if (d == 0.0):
-		return "0."
+		return u"0."
 	if (math.fabs(d) > 5e5):
 		s = ('%E' % d).split('E')
 		return s[0].rstrip('0') + 'E+' + s[1][1:].lstrip('0')
 	if (math.fabs(d) < 5e-5):
 		s = ('%E' % d).split('E')
 		return s[0].rstrip('0') + 'E-' + s[1][1:].lstrip('0')
-	s = "%r" %(d)
+	s = u"%r" %(d)
 	return s.rstrip('0')
 
 def _bool2str(v):
-	return '.T.' if v else '.F.'
-
-def _int2str(i):
-	return u"%d" %(i)
+	return u".T." if v else u".F."
 
 def _str2str(s):
 	if (s is None):
 		return '$'
 	return u"'%s'" %(s)
-
-def _enum2str(e):
-	return u"%r" %(e)
 
 def _entity2str(e):
 	if (isinstance(e, AnonymEntity)):
@@ -73,7 +69,7 @@ def _lst2str(l):
 
 def _obj2str(o):
 	if (o is None):                   return _str2str(o)
-	if (type(o) == int):              return _int2str(o)
+	if (type(o) == int):              return u"%d" %(o)
 	if (sys.version_info.major < 3):
 		if (type(o) == long):         return _int2str(o)
 		if (type(o) == unicode):      return _str2str(o)
@@ -81,7 +77,7 @@ def _obj2str(o):
 	if (type(o) == bool):             return _bool2str(o)
 	if (type(o) == str):              return _str2str(o)
 	if (isinstance(o, AnyEntity)):    return "*"
-	if (isinstance(o, E)):            return _enum2str(o)
+	if (isinstance(o, E)):            return u"%r" %(o)
 	if (isinstance(o, AnonymEntity)): return _entity2str(o)
 	if (type(o) == list):             return _lst2str(o)
 	if (type(o) == tuple):            return _lst2str(o)
@@ -89,9 +85,6 @@ def _obj2str(o):
 
 def _values3D(v):
 	return [v.x, v.y, v.z]
-
-def _writeStep(file, txt):
-	file.write(txt.encode(ENCODING_FS))
 
 def getColor(entity):
 	global _colorPalette
@@ -251,7 +244,7 @@ def _createCurveEllipse(acisCurve):
 
 def _createCurveInt(acisCurve):
 	global _curveBSplines
-	shape = acisCurve.getShape()
+	shape = acisCurve.build()
 	if (isinstance(shape, Part.Edge)):
 		bsc = shape.Curve
 		if (isinstance(bsc, Part.BSplineCurve)):
@@ -291,7 +284,6 @@ def _createCurveInt(acisCurve):
 				line.dir = _createVector(bsc.Direction)
 				_lines[key] = line
 			return line
-	logError(u"Int-Curve not created for (%s)", acisCurve.__str__()[:-1])
 	return None
 
 def _createCurveIntInt(acisCurve):
@@ -364,131 +356,141 @@ def _createBoundaries(acisLoops):
 			boundaries.append(face)
 	return boundaries
 
-def _createSurfaceCone(acisSurface):
+def _calculateRef(axis):
+	if (isEqual1D(axis.x, 1.0)):  return Acis.DIR_Y
+	if (isEqual1D(axis.x, -1.0)): return -Acis.DIR_Y
+	return Acis.DIR_X.cross(axis) # any perpendicular vector to normal?!?
+
+def _createSurfaceBSpline(bss, acisSurface, sense):
+	points = []
+	for u in bss.getPoles():
+		p = [_createCartesianPoint(v, 'Ctrl Pts') for v in u]
+		points.append(p)
+	if (bss.isURational()):
+		p0 = BOUNDED_SURFACE()
+		p1 = B_SPLINE_SURFACE(bss.UDegree, bss.VDegree, points, 'UNSPECIFIED', bss.isUClosed(), bss.isVClosed(), False)
+		p2 = B_SPLINE_SURFACE_WITH_KNOTS(uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
+		p3 = GEOMETRIC_REPRESENTATION_ITEM()
+		p4 = RATIONAL_B_SPLINE_SURFACE(bss.getWeights())
+		p5 = REPRESENTATION_ITEM('')
+		p6 = SURFACE()
+		spline = ListEntity(p0, p1, p2, p3, p4, p5, p6)
+	else:
+		spline = B_SPLINE_SURFACE_WITH_KNOTS(name='', uDegree=bss.UDegree, vDegree=bss.VDegree, points=points, form='UNSPECIFIED', uClosed=bss.isUClosed(), vClosed=bss.isVClosed(), selfIntersecting=False, uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
+	spline.__acis__ = acisSurface
+	return spline, sense == 'forward'
+
+def _createSurfaceCone(center, axis, cosine, sine, major, sense):
 	global _cones
-	key = "%s,%s,%s,%s,%s" %(acisSurface.center, acisSurface.axis, acisSurface.major, acisSurface.ratio, acisSurface.sine)
+	key = "%s,%s,%s,%s,%s,%s" %(center, axis, major, cosine, sine, major)
 	try:
 		cone = _cones[key]
 	except:
-		if (acisSurface.cosine * acisSurface.sine < 0):
-			plc    = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis.negative(), 'center_axis',  acisSurface.major, 'ref_axis')
+		if (cosine * sine < 0):
+			plc = _createAxis2Placement3D('', center, 'Origin', axis.negative(), 'center_axis',  major, 'ref_axis')
 		else:
-			plc    = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis, 'center_axis',  acisSurface.major, 'ref_axis')
-		radius = acisSurface.major.Length
-		if (isEqual1D(acisSurface.sine, 0.0)):
+			plc = _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis',  major, 'ref_axis')
+		radius = major.Length
+		if (isEqual1D(sine, 0.0)):
 			cone = CYLINDRICAL_SURFACE('', plc, radius)
 		else:
-			angle  = math.asin(acisSurface.sine)
-			cone = CONICAL_SURFACE('', plc, radius, math.fabs(angle))
+			angle = math.fabs(math.asin(sine))
+			cone  = CONICAL_SURFACE('', plc, radius, angle)
 		_cones[key] = cone
-	return cone
+	if( cosine < 0.0):
+		return cone, (sense != 'forward')
+	return cone, (sense == 'forward')
 
-def _createSurfaceMesh(acisSurface):
-	return acisSurface
+def _createSurfaceCylinder(center, axis, radius, sense):
+	global _cylinders
+	key = "%s,%s,%s" %(center, axis, radius)
+	try:
+		cylinder = _cylinders[key]
+	except:
+		ref = _calculateRef(axis)
+		plc = _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis',  ref, 'ref_axis')
+		cylinder = CYLINDRICAL_SURFACE('', plc, radius)
+		_cylinders[key] = cylinder
+	return cylinder, (sense == 'forward')
 
-def _createSurfacePlane(acisSurface):
+def _createSurfacePlane(center, axis, sense):
 	global _planes
 
-	key = "%s,%s" %(acisSurface.root, acisSurface.normal)
+	key = "%s,%s" %(center, axis)
 	try:
 		plane = _planes[key]
 	except:
-		if (isEqual1D(acisSurface.normal.x, 1.0)):
-			ref = VEC(0.0, 1.0, 0.0)
-		elif (isEqual1D(acisSurface.normal.x, -1.0)):
-			ref = VEC(0.0, -1.0, 0.0)
-		else:
-			ref = acisSurface.normal.cross(VEC(-1, 0, 0)) # any perpendicular vector to normal?!?
+		ref = _calculateRef(axis)
 		plane = PLANE('', None)
-		plane.placement = _createAxis2Placement3D('', acisSurface.root, 'Origin', acisSurface.normal, 'center_axis', ref, 'ref_axis')
+		plane.placement = _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis', ref, 'ref_axis')
 		_planes[key] = plane
-	return plane
+	return plane, sense == 'forward'
 
-def _createSurfaceSphere(acisSurface):
+def _createSurfaceSphere(origin, radius, center, ref_axis, sense):
 	global _spheres
-	key = "%s,%r" %(acisSurface.center, acisSurface.radius)
+	key = "%s,%r" %(origin, radius)
 	try:
 		sphere = _spheres[key]
 	except:
-		sphere = SPHERICAL_SURFACE('', None, acisSurface.radius)
-		sphere.placement = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.pole, 'center_axis', acisSurface.uvorigin, 'ref_axis')
+		sphere = SPHERICAL_SURFACE('', None, radius)
+		sphere.placement = _createAxis2Placement3D('', origin, 'Origin', center, 'center_axis', ref_axis, 'ref_axis')
 		_spheres[key] = sphere
-	return sphere
+	return sphere, (sense == 'forward')
 
-def _createSurfaceSpline(acisSurface):
-	shape = acisSurface.build()
-	if (hasattr(shape, 'Surface')):
-		if (isinstance(shape.Surface, Part.BSplineSurface)):
-			bss = shape.Surface
-			points = []
-			for u in bss.getPoles():
-				p = [_createCartesianPoint(v, 'Ctrl Pts') for v in u]
-				points.append(p)
-			if (bss.isURational()):
-				p0 = BOUNDED_SURFACE()
-				p1 = B_SPLINE_SURFACE(bss.UDegree, bss.VDegree, points, 'UNSPECIFIED', bss.isUClosed(), bss.isVClosed(), False)
-				p2 = B_SPLINE_SURFACE_WITH_KNOTS(uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
-				p3 = GEOMETRIC_REPRESENTATION_ITEM()
-				p4 = RATIONAL_B_SPLINE_SURFACE(bss.getWeights())
-				p5 = REPRESENTATION_ITEM('')
-				p6 = SURFACE()
-				spline = ListEntity(p0, p1, p2, p3, p4, p5, p6)
-			else:
-				spline = B_SPLINE_SURFACE_WITH_KNOTS(name='', uDegree=bss.UDegree, vDegree=bss.VDegree, points=points, form='UNSPECIFIED', uClosed=bss.isUClosed(), vClosed=bss.isVClosed(), selfIntersecting=False, uMults=bss.getUMultiplicities(), vMults=bss.getVMultiplicities(), uKnots=bss.getUKnots(), vKnots=bss.getVKnots(), form2='UNSPECIFIED')
-			spline.__acis__ = acisSurface
-			return spline
-		if (isinstance(shape.Surface, Part.SurfaceOfRevolution)):
-			revolution = shape.Surface
-			spline = SURFACE_OF_REVOLUTION()
-			spline.curve     = _createCurve(acisSurface.profile)
-			spline.placement = _createAxis1Placement('', revolution.Location, '', revolution.Direction, '')
-			return spline
-		if (isinstance(shape.Surface, Part.Cylinder)):
-			srf = shape.Surface
-			spline = CYLINDRICAL_SURFACE()
-			spline.placement = _createAxis2Placement3D('', srf.Center, '', srf.Axis, '', srf.Axis.cross(VEC(0, 1, 0)), '')
-			spline.radius    = shape.Surface.Radius
-			return spline
-	logError(u"Spline-Surface not created for (%s)", acisSurface.__str__()[:-1])
+def _createSurfaceToroid(major, minor, center, axis, sense):
+	torus = TOROIDAL_SURFACE('', None, major, math.fabs(minor))
+	ref = _calculateRef(axis)
+	torus.placement = _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis', ref, 'ref_axis')
+	if (minor < 0.0): return torus, (sense != 'forward')
+	return torus, (sense == 'forward')
+
+def _createSurfaceFaceShape(acisFace, shape):
+	surface = acisFace._surface.getSurface()
+	if (isinstance(shape, Part.BSplineSurface)):
+		return _createSurfaceBSpline(shape, surface, acisFace.sense)
+#	if (isinstance(shape, Part.Mesh)):
+#		return _createSurfaceMesh(shape, acisFace.sense)
+	if (isinstance(surface, Acis.SurfaceCone)):
+		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
+	if (isinstance(shape, Part.Cone)):
+		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
+	if (isinstance(shape, Part.Cylinder)):
+		return _createSurfaceCylinder(shape.Center, shape.Axis, shape.Radius, acisFace.sense)
+	if (isinstance(shape, Part.Plane)):
+		return _createSurfacePlane(shape.Position, shape.Axis, acisFace.sense)
+	if (isinstance(shape, Part.Sphere)):
+		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, surface.uvorigin, acisFace.sense)
+	if (isinstance(shape, Part.Toroid)):
+		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
+	if (isinstance(surface, Acis.SurfaceTorus)):
+		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
+	logWarning("Can't export surface '%s' - using BSplineCurve instead!" %(shape.__class__.__name__))
+	print(acisFace._surface.getSurface())
 	return None
-def _createSurfaceTorus(acisSurface):
-	torus = TOROIDAL_SURFACE('', None, acisSurface.major, math.fabs(acisSurface.minor))
-	torus.placement = _createAxis2Placement3D('', acisSurface.center, 'Origin', acisSurface.axis, 'center_axis', acisSurface.uvorigin, 'ref_axis')
-	return torus
 
 def _createSurface(acisFace):
-	acisSurface = acisFace.getSurface()
-	if (isinstance(acisSurface, Acis.SurfaceMesh)):   return (_createSurfaceMesh(acisSurface),   (acisFace.sense == 'forward'))
-	if (isinstance(acisSurface, Acis.SurfacePlane)):  return (_createSurfacePlane(acisSurface),  (acisFace.sense == 'forward'))
-	if (isinstance(acisSurface, Acis.SurfaceSphere)): return (_createSurfaceSphere(acisSurface), (acisFace.sense == 'forward'))
-	if (isinstance(acisSurface, Acis.SurfaceSpline)): return (_createSurfaceSpline(acisSurface), (acisFace.sense == 'forward'))
-	if (isinstance(acisSurface, Acis.SurfaceCone)):
-		surface = _createSurfaceCone(acisSurface)
-		if( acisSurface.cosine < 0.0):
-			return surface, (acisFace.sense != 'forward')
-		return surface, (acisFace.sense == 'forward')
-	if (isinstance(acisSurface, Acis.SurfaceTorus)):
-		surface = _createSurfaceTorus(acisSurface)
-		if (acisSurface.minor < 0.0):
-			return surface, (acisFace.sense != 'forward')
-		return surface, (acisFace.sense == 'forward')
-	logError("Can't create surface for Acis.%s!" %(acisSurface.__class__.__name__))
-	return None, False
+	faces = []
+	shape = acisFace.build() # will Return Face!
+	if (shape):
+		for face in shape.Faces:
+			f = _createSurfaceFaceShape(acisFace, face.Surface)
+			if (f):
+				faces.append(f)
+	return faces
 
 def _convertFace(acisFace, representation, parentColor, context):
-	surface, sense = _createSurface(acisFace)
-	if (surface is None):
-		return None
-
-	face = ADVANCED_FACE('', surface, sense)
-	face.bounds = _createBoundaries(acisFace.getLoops())
-
 	color = getColor(acisFace)
 	if (color is None):
 		color = parentColor
-	assignColor(color, face, context)
+	shells = []
+	faces = _createSurface(acisFace)
+	for surface, sense in faces:
+		face = ADVANCED_FACE('', surface, sense)
+		face.bounds = _createBoundaries(acisFace.getLoops())
+		assignColor(color, face, context)
+		shells.append(face)
 
-	return face
+	return shells
 
 def _convertShell(acisShell, representation, shape, parentColor):
 	# FIXME how to distinguish between open or closed shell?
@@ -499,9 +501,8 @@ def _convertShell(acisShell, representation, shape, parentColor):
 		shell = OPEN_SHELL('',[])
 
 		for acisFace in faces:
-			face = _convertFace(acisFace, representation, defColor, representation.context)
-			if (face is not None):
-				shell.faces.append(face)
+			faces = _convertFace(acisFace, representation, defColor, representation.context)
+			shell.faces += faces
 
 			assignColor(defColor, shell, representation.context)
 		return shell
@@ -546,49 +547,9 @@ def _convertBody(acisBody, appPrtDef):
 	return bodies
 
 def _initExport():
-	global _pointsVertex
-	global _pointsCartesian
-	global _directions
-	global _edgeCurves
-	global _lines
-	global _ellipses
-	global _vectors
-	global _cones
-	global _planes
-	global _spheres
-	global _curveBSplines
-	global _assignments
-	global _colorPalette
-	global _entities
-
-	_pointsVertex    = {}
-	_pointsCartesian = {}
-	_directions      = {}
-	_edgeCurves      = {}
-	_lines           = {}
-	_ellipses        = {}
-	_vectors         = {}
-	_cones           = {}
-	_planes          = {}
-	_spheres         = {}
-	_curveBSplines   = {}
-	_assignments     = {}
-	_colorPalette    = {}
-	_entities        = []
-	return
-
-def _finalizeExport():
-	global _pointsVertex
-	global _pointsCartesian
-	global _directions
-	global _edgeCurves
-	global _lines
-	global _ellipses
-	global _vectors
-	global _cones
-	global _planes
-	global _spheres
-	global _curveBSplines
+	global _pointsVertex, _pointsCartesian, _directions, _vectors
+	global _edgeCurves, _lines, _ellipses, _curveBSplines
+	global _cones, _cylinders, _planes, _spheres
 	global _assignments
 	global _colorPalette
 	global _entities
@@ -601,6 +562,32 @@ def _finalizeExport():
 	_ellipses.clear()
 	_vectors.clear()
 	_cones.clear()
+	_cylinders.clear()
+	_planes.clear()
+	_spheres.clear()
+	_curveBSplines.clear()
+	_assignments.clear()
+	_colorPalette.clear()
+	_entities[:]= []
+	return
+
+def _finalizeExport():
+	global _pointsVertex, _pointsCartesian, _directions, _vectors
+	global _edgeCurves, _lines, _ellipses, _curveBSplines
+	global _cones, _cylinders, _planes, _spheres
+	global _assignments
+	global _colorPalette
+	global _entities
+
+	_pointsVertex.clear()
+	_pointsCartesian.clear()
+	_directions.clear()
+	_edgeCurves.clear()
+	_lines.clear()
+	_ellipses.clear()
+	_vectors.clear()
+	_cones.clear()
+	_cylinders.clear()
 	_planes.clear()
 	_spheres.clear()
 	_curveBSplines.clear()
@@ -682,10 +669,7 @@ class ExportEntity(AnonymEntity):
 			try:
 				a = k
 				if (isinstance(a, ReferencedEntity)):
-					try:
-						step += a.exportSTEP()
-					except:
-						logError(traceback.format_exc())
+					step += a.exportSTEP()
 				elif (type(a) == list):
 					step += _exportList_(a)
 				elif (type(a) == tuple):
@@ -698,7 +682,7 @@ class ExportEntity(AnonymEntity):
 			return ''
 		step = u""
 		if (hasattr(self, '__acis__')):
-			if (self.__acis__.type == 'ref'):
+			if (self.__acis__.subclass == 'ref'):
 				step += u"/*\n * ref = %d\n */\n" %(self.__acis__.ref)
 			else:
 				step += u"/*\n * $%d\n */\n" %(self.__acis__.index)
@@ -897,7 +881,7 @@ class ListEntity(ReferencedEntity):
 			return ''
 		step = u""
 		if (hasattr(self, '__acis__')):
-			if (self.__acis__.type == 'ref'):
+			if (self.__acis__.subclass == 'ref'):
 				step += u"/*\n * ref = %d\n */\n" %(self.__acis__.ref)
 			else:
 				step += u"/*\n * $%d\n */\n" %(self.__acis__.index)
@@ -1121,6 +1105,7 @@ class SHAPE_DEFINITION_REPRESENTATION(ReferencedEntity):
 		return self.definition.definition.formation.product
 	def getAppContext(self):
 		return self.definition.definition.frame.context
+
 class PRODUCT_DEFINITION_FORMATION(NamedEntity):
 	def __init__(self, name, context):
 		super(PRODUCT_DEFINITION_FORMATION, self).__init__('')
@@ -1485,9 +1470,10 @@ def export(filename, satHeader, satBodies):
 	step += u"ENDSEC;\n"
 	step += u"END-ISO-10303-21;"
 
-	with open(stepfile, 'wb') as stepFile:
-		_writeStep(stepFile, step)
-		logAlways(u"STEP file written to '%s'.", stepfile)
+	with io.open(stepfile, 'wt', encoding="UTF-8") as stepFile:
+		stepFile.write(step)
+#		logAlways(u"STEP file written to '%s'.", stepfile)
+		logInfo(u"STEP file written to '%s'.", stepfile)
 
 	_finalizeExport()
 

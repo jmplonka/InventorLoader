@@ -15,8 +15,9 @@ from importerUtils     import *
 from importerReader    import *
 from importerClasses   import Inventor
 from importerFreeCAD   import FreeCADImporter
-from importerSAT       import readEntities, importModel, convertModel
+from importerSAT       import importModel, convertModel
 from uuid              import UUID
+from Acis              import setReader
 
 def ReadIgnorable(fname):
 	logInfo(u"    IGNORED: '%s'" %(fname[-1]))
@@ -243,16 +244,14 @@ def resolveLinks():
 	return
 
 def create3dModel(root, doc):
-#	resolveLinks()
 	strategy = getStrategy()
 	if (strategy == STRATEGY_NATIVE):
 		creator = FreeCADImporter()
 		creator.importModel(root)
 	else:
 		brep = getModel().getBRep()
-		importerSAT._fileName = getInventorFile()
 		for asm in brep.AcisList:
-			readEntities(asm)
+			setReader(asm.get('SAT'))
 			if (strategy == STRATEGY_SAT):
 				importModel(root)
 			elif (strategy == STRATEGY_STEP):

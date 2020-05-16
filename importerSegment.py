@@ -6,13 +6,13 @@ importerSegment.py:
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import re, traceback
+import re, traceback, io
 from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_, REF_PARENT, REF_CHILD, REF_CROSS
 from importerUtils          import *
-from Acis                   import clearEntities, readNextSabChunk, setVersion, TAG_ENTITY_REF, getInteger, getSatRefs, initSatRefs, createNode, setHeader, getNameMatchAttributes, getDcAttributes, setScale
-from importerSAT            import readEntityBinary, int2version, Header, History
+from Acis                   import clearEntities, AcisReader, setVersion, TAG_ENTITY_REF, getInteger, createNode, getNameMatchAttributes, getDcAttributes
+from importerSAT            import dumpSat
 from uuid                   import UUID
 import importerUtils
 
@@ -24,45 +24,23 @@ _listPattern = re.compile('[^\x00]\x00\x00\x30')
 
 _fmt_new = False
 
-def resolveEntityReferences(node, entities):
-	header, lst, history = node.get('SAT')
-
+def resolveEntityReferences(node):
+	acis = node.get('SAT')
 	try:
-		dumpSat(node.index, header, lst)
-
-		# until now each ref only knows the ID of the targeting entity -> resolve it
-		refs = getSatRefs()
-		for index in refs:
-			ref = refs[index]
-			ref.entity = entities.get(index, None)
-
 		# create a node for each entity
-		for entity in lst:
+		for entity in acis.getEntities():
 			createNode(entity)
 
+		dumpSat("%04X" %(node.index), acis)
 		# resolve the roll-back information from the history
-		history.resolveDeltaStates(entities)
-		dumpHistory(node.index, history, entities)
+		acis.history.resolveDeltaStates()
+		dumpHistory(node.index, acis.history)
 	except:
 		logError(traceback.format_exc())
-	initSatRefs()
 
 def Read_Dummy(self, node): return 0
 
-def dumpSat(nodeIdx, header, entities):
-	dumpFolder = getDumpFolder()
-	if (not (dumpFolder is None)):
-		with open(u"%s/%04X.sat" %(dumpFolder, nodeIdx), 'wb') as sat:
-			sat.write(header.__str__().encode('utf8'))
-			for ntt in entities:
-				if ntt.index >= 0:
-					sat.write((u"-%d " %(ntt.index)).encode('utf8'))
-				sat.write((u"%s " %(ntt.name)).encode('utf8'))
-				for c in ntt.chunks:
-					sat.write(c.__str__().encode('utf8'))
-				sat.write(b'\n')
-
-def dumpHistory(nodeIdx, history, entities):
+def dumpHistory(nodeIdx, history):
 	dumpFolder = getDumpFolder()
 	if (not (dumpFolder is None)):
 		with open(u"%s/%04X_sat.history" %(dumpFolder, nodeIdx), 'wb') as dump:
@@ -261,20 +239,6 @@ def buildTree(file, nodes):
 		if (node.parent is None):
 			buildBranch(roots, file, node, 0, None)
 	return roots
-
-# Some of the ASM entities have extra chunks that needs to be deleted to ACIS conform
-def convert2Version7(entity):
-	if ((getFileVersion() > 2012) and (entity.name == 'coedge')):
-		del entity.chunks[len(entity.chunks) - 3]
-	elif (entity.name == 'vertex'):
-		del entity.chunks[len(entity.chunks) - 3]
-	elif (entity.name == 'tvertex-vertex'):
-		del entity.chunks[7]
-		del entity.chunks[6]
-		del entity.chunks[4]
-	elif ((getFileVersion() > 2012) and (entity.name == 'tcoedge-coedge')):
-		del entity.chunks[9]
-	return
 
 def readTypedFloatArr(data, offset, size = 1):
 	n, i = getUInt32(data, offset)
@@ -682,82 +646,34 @@ class SegmentReader(object):
 			if (i == len(node.data)): return i
 		else:
 			if (i + 4 == len(node.data)): return i + 4
-		txt, i = getText8(node.data, i, 15) # 'ACIS BinaryFile' or from 20214 on 'ASM BinaryFile4'
+		txt, ignore = getText8(node.data, i, 15) # 'ACIS BinaryFile' or from 20214 on 'ASM BinaryFile4'
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
-
-		header  = Header()
-		history = None
-		header.version, i = getUInt32(node.data, i)
-		header.records, i = getUInt32(node.data, i)
-		header.bodies, i  = getUInt32(node.data, i)
-		header.flags, i   = getUInt32(node.data, i)
-		c, i = readNextSabChunk(node.data, i)
-		header.prodId = c.val
-		c, i = readNextSabChunk(node.data, i)
-		header.prodVer = c.val
-		c, i = readNextSabChunk(node.data, i)
-		header.date = c.val
-		c, i = readNextSabChunk(node.data, i)
-		header.scale = c.val
-		c, i = readNextSabChunk(node.data, i)
-		header.resabs = c.val
-		c, i = readNextSabChunk(node.data, i)
-		header.resnor = c.val
-		self.version = int2version(header.version)
-		setVersion(7.0)
-		setScale(header.scale)
-
-		setHeader(header)
-		index = 0
-		clearEntities()
-		entities = {}
-		initSatRefs()
-		map = entities
-		lst = []
 		e = len(node.data) - 17
 		vers = getFileVersion()
-		if (vers > 2010): e -=1
 		if (vers > 2018): e -=1
 		if (vers < 2011): e -=8
-		while (i < e):
-			entity, i = readEntityBinary(node.data, i, e)
-			entity.index = index
-			map[entity.index] = entity
-			lst.append(entity)
-			convert2Version7(entity)
-			if (entity.name == "Begin-of-ACIS-History-Data"):
-				del map[entity.index]
-				entity.index = -1
-				history = History(entity)
-				entityIdx = index
-				index = 0
-				map = history.delta_states
-			elif (entity.name == "End-of-ACIS-History-Section"):
-				del map[entity.index]
-				entity.index = -1
-				index = entityIdx
-				map = entities
-			elif (entity.name == "End-of-ACIS-data"):
-				del map[entity.index]
-				entity.index = -1
-			else:
-				index += 1
-		node.set('SAT', [header, lst, history])
-		resolveEntityReferences(node, entities)
-		node.set('nameMatches', getNameMatchAttributes())
-		node.set('dcAttributes', getDcAttributes())
-		self.segment.AcisList.append(node)
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'selectedKey')
-		i += 1 # skip 00
-		i = node.ReadSInt32(i, 'delta_state') # active delta-state
-		i = self.skipBlockSize(i)
-		if (getFileVersion() > 2018): i += 1 # skip 00
-		i = node.ReadChildRef(i, 'history')
-		i += 4 # skip FF FF FF FF
-		if (self.segment.acis is None):
-			self.segment.acis = node
+
+		stream = io.BytesIO(node.data[i:e])
+		reader = AcisReader(stream)
+		reader.name = "%04X" %(node.index)
+		if (reader.readBinary()):
+			i = e
+			node.set('SAT', reader)
+			resolveEntityReferences(node)
+			node.set('nameMatches', getNameMatchAttributes())
+			node.set('dcAttributes', getDcAttributes())
+			self.segment.AcisList.append(node)
+			i = self.skipBlockSize(i)
+			i = node.ReadUInt32(i, 'selectedKey')
+			i += 1 # skip 00
+			i = node.ReadSInt32(i, 'delta_state') # active delta-state
+			i = self.skipBlockSize(i)
+			if (getFileVersion() > 2018): i += 1 # skip 00
+			i = node.ReadChildRef(i, 'history')
+			i += 4 # skip FF FF FF FF
+			if (self.segment.acis is None):
+				self.segment.acis = node
 		return i
 
 	def Read_F8A779F8(self, node):

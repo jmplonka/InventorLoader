@@ -3,14 +3,13 @@
 '''
 importerFreeCAD.py
 '''
-import sys, FreeCAD, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, importerSAT, Acis, re
+import sys, FreeCAD, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, Acis, re
 
 from importerClasses import *
 from importerUtils   import *
 from importerSegNode import SecNode, SecNodeRef, setParameter
 from math            import sqrt, tan, degrees, pi
 from FreeCAD         import Vector as VEC, Rotation as ROT, Placement as PLC, Version, ParamGet
-from importerSAT     import resolveSurfaceRefs
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -1086,12 +1085,9 @@ class FreeCADImporter(object):
 		for attr in mappings.attributes:
 			owner = attr.getOwner()
 			if (isinstance(owner, Acis.Face)):
-				resolveSurfaceRefs(owner)
 				face = owner.build()
 				if (face):
 					faces += face.Faces
-				if (-1 in Acis._invSubTypTblSurfLst):
-					del Acis._invSubTypTblSurfLst[-1]
 		if (len(faces) > 0):
 			reference = newObject('Part::Feature', fxNode.name)
 			reference.Shape = Part.Compound(faces)
@@ -3392,7 +3388,6 @@ class FreeCADImporter(object):
 			shell = newObject("Part::Thickness", name)
 			faceNames = ["Face%d"%(idx) for idx in faces[idxCreator]]
 			base = fxNode.segment.indexNodes[idxCreator].geometry
-			print(base, faceNames)
 			shell.Faces = (base, faceNames)
 			shell.Join  = u"Intersection"
 			if (direction.node.getValueText() == 'inside'):

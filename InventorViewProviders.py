@@ -824,11 +824,11 @@ class _Coil(_ObjectProxy):
 			assert fp.Revolutions > 0, "Revolutions must be greater than zero!"
 			fp.Height = fp.Pitch * fp.Revolutions
 		elif (fp.CoilType == 'RevolutionAndHeight'):
-			assert fp.Height > 0, "Height mus be greater than zeor!"
+			assert fp.Height > 0, "Height mus be greater than zero!"
 			assert fp.Revolutions > 0, "Revolutions must be greater than zero!"
 			fp.Pitch = fp.Height / fp.Revolutions
 		elif (fp.CoilType == 'PitchAndHeight'):
-			assert fp.Height > 0, "Height mus be greater than zeor!"
+			assert fp.Height > 0, "Height mus be greater than zero!"
 			assert fp.Pitch > 0, "Pitch must be greater than zero!"
 			fp.Revolutions = fp.Height / fp.Pitch
 		else:
