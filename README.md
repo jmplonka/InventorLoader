@@ -6,7 +6,7 @@ As Inventor files contains a complete ACIS model representation, SAT and SAB fil
 imported into FreeCAD.
 
 ## Status:
-**Released 1.0**
+**Released 1.1**
 
 ## Screenshots
 [Demo-Status](https://github.com/jmplonka/InventorLoader/tree/master/Demo-Status/) subdirectory shows examples of this Addon.
@@ -68,7 +68,7 @@ Please disable Dimension constraints in user.cfg:
 ```
 
 ## Limitations
-Export will not be supported - neither to IPT nor to SAT file.
+Export will not be supported - neither IPT nor SAT/SAB or DXF.
 
 ### Feature Based Import
 
@@ -91,7 +91,12 @@ This allows embedding Excel workbooks e.g.:
   * **SAT based**: like STEP file, model will be imported based on FACE, EDGES and VERTICES.
   * **STEP based**: The ACIS model will be converted into STEP and imported afterwards.
 
+### DXF import
+DXF files contains sometimes 3D-Solids. These are represented as SAT/SAB content.
+The solids can be imported either using native of STEP conversion.
+
 ## History
+**1.1**    (2020-05-04): Added importing of 3D-Solids from DXF files.
 **1.0.1**  (2020-04-10): Fixed finding of SAB import.  
 **1.0.0**  (2019-08-26): Reorganized section readers (1.0).  
 **0.18.0** (2019-08-07): Added coloring of single faces and changed to default Inventor campera position (RC2).  

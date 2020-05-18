@@ -26,8 +26,8 @@
 
 # SAT files
 ## Incomplete Features
-	* spline-surface - missing creation of helical lines, vertex-blends and summary surfaces
-	* references - sometime references can't be resolved :(
+	* intcurves      - missing creation of helical lines
+	* spline-surface - missing creation of vertex-blends, summary and law-surfaces
 
 ## missing Features
 	* compu-, int-int-curves
