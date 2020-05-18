@@ -624,7 +624,7 @@ def getDiscontinuityInfo(chunks, index, inventor):
 	a4, i = getFloatArray(chunks, i)
 	a5, i = getFloatArray(chunks, i)
 	a6, i = getFloatArray(chunks, i)
-	if (inventor and chunks[i].tag in (TAG_TRUE, TAG_FALSE)):
+	if (inventor):
 		e, i = getBoolean(chunks, i)
 	else:
 		e = False
@@ -2667,7 +2667,7 @@ class SurfaceCone(Surface):
 				if (ellipse):
 					cone = ellipse.toShape().extrude((2e6) * self.axis)
 					cone.translate((-1e6) * self.axis)
-					self.shape = cone.Faces[0].Surface
+					self.shape = cone.Faces[0]
 			else:
 				# Workaround: can't generate Part.Cone!
 				l = Part.LineSegment(self.apex, self.center + self.major).toShape()
@@ -2676,7 +2676,7 @@ class SurfaceCone(Surface):
 					logWarning(u"    ... Can't create cone surface with elliptical base - skipped!")
 				else:
 					cone = l.revolve(self.center, self.axis, 360.0)
-					self.shape = cone.Faces[0].Surface
+					self.shape = cone.Faces[0]
 		return self.shape
 class SurfaceMesh(Surface):
 	def __init__(self):
@@ -3696,7 +3696,7 @@ class SurfaceTorus(Surface):
 			circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
 			circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
 			torus = circle.revolve(self.center, self.axis, 360)
-			self.shape = torus.Faces[0].Surface
+			self.shape = torus.Faces[0]
 		return self.shape
 
 class Point(Geometry):
