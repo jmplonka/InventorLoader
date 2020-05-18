@@ -2667,17 +2667,16 @@ class SurfaceCone(Surface):
 				if (ellipse):
 					cone = ellipse.toShape().extrude((2e6) * self.axis)
 					cone.translate((-1e6) * self.axis)
-					self.shape = cone.Faces[0]
+					self.shape = cone.Faces[0].Surface
 			else:
 				# Workaround: can't generate Part.Cone!
-				l = Part.Line(self.apex, self.center + self.major)
-				e = Part.LineSegment(self.apex, l.value(MAX_LEN)).toShape()
+				l = Part.LineSegment(self.apex, self.center + self.major).toShape()
 				if (self.ratio != 1):
 					# TODO: apply scaling for ratios != 1.0!
 					logWarning(u"    ... Can't create cone surface with elliptical base - skipped!")
 				else:
-					cone = e.revolve(self.center, self.axis, 360.0)
-					self.shape = cone.Faces[0]
+					cone = l.revolve(self.center, self.axis, 360.0)
+					self.shape = cone.Faces[0].Surface
 		return self.shape
 class SurfaceMesh(Surface):
 	def __init__(self):
@@ -3697,7 +3696,7 @@ class SurfaceTorus(Surface):
 			circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
 			circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
 			torus = circle.revolve(self.center, self.axis, 360)
-			self.shape = torus.Faces[0]
+			self.shape = torus.Faces[0].Surface
 		return self.shape
 
 class Point(Geometry):

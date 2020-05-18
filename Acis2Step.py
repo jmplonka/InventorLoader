@@ -71,7 +71,7 @@ def _obj2str(o):
 	if (o is None):                   return _str2str(o)
 	if (type(o) == int):              return u"%d" %(o)
 	if (sys.version_info.major < 3):
-		if (type(o) == long):         return _int2str(o)
+		if (type(o) == long):         return u"%d" %(o)
 		if (type(o) == unicode):      return _str2str(o)
 	if (type(o) == float):            return _dbl2str(o)
 	if (type(o) == bool):             return _bool2str(o)
