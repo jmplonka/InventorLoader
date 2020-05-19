@@ -457,7 +457,7 @@ def _createSurfaceFaceShape(acisFace, shape):
 	if (isinstance(surface, Acis.SurfaceCone)):
 		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
 	if (isinstance(surface, Acis.SurfacePlane)):
-		return _createSurfacePlane(surface.root, surface.nromal, acisFace.sense)
+		return _createSurfacePlane(surface.root, surface.normal, acisFace.sense)
 	if (isinstance(surface, Acis.SurfaceSphere)):
 		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, acisFace.sense)
 	if (isinstance(surface, Acis.SurfaceTorus)):

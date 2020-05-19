@@ -27,14 +27,11 @@ def read(filename):
 			if (reader.readBinary()):
 				_3dSolids.append(reader)
 		elif (entry.is_sat):
-			stream = io.StringIO(entry.acis)
+			sat = u"\n".join(entry.acis)
+			stream = io.StringIO(sat)
 			reader = AcisReader(stream)
 			reader.name = entry.handle
-			if (readTextData(file)):
-				satFile = _getSatFileName(reader.name)
-				f = open(satFile, "wt", encoding="utf-8")
-				f.write(entry.acis)
-				f.close()
+			if (reader.readText()):
 				_3dSolids.append(reader)
 	return True
 
