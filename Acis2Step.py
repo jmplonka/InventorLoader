@@ -440,7 +440,7 @@ def _createSurfaceSphere(origin, radius, center, sense):
 		sphere = _spheres[key]
 	except:
 		sphere = SPHERICAL_SURFACE('', None, radius)
-		ref = _calculateRef(axis)
+		ref = _calculateRef(Acis.DIR_Z)
 		sphere.placement = _createAxis2Placement3D('', origin, 'Origin', center, 'center_axis', ref, 'ref_axis')
 		_spheres[key] = sphere
 	return sphere, (sense == 'forward')
