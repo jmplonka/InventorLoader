@@ -2713,7 +2713,7 @@ class SurfaceSphere(Surface):
 		super(SurfaceSphere, self).__init__('sphere')
 		self.center   = CENTER
 		self.radius   = 0.0
-		self.uvorigin = CENTER
+		self.uvorigin = DIR_X
 		self.pole     = DIR_Z
 		self.sensev   = 'forward_v'
 		self.urange   = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
@@ -3828,12 +3828,20 @@ class AttribGenName(AttribGen):
 				i += 4 # [(keep|copy) , (keep_keep), (ignore), (copy)]
 			self.text, i = getText(entity.chunks, i)
 		return i
-class AttribGenNameInteger(AttribGenName):
+class AttribGenNameInt32(AttribGenName):
 	def __init__(self):
-		super(AttribGenNameInteger, self).__init__()
+		super(AttribGenNameInt32, self).__init__()
 		self.value = 0
 	def set(self, entity):
-		i = super(AttribGenNameInteger, self).set(entity)
+		i = super(AttribGenNameInt32, self).set(entity)
+		self.value, i = getInteger(entity.chunks, i)
+		return i
+class AttribGenNameInt64(AttribGenName):
+	def __init__(self):
+		super(AttribGenNameInt64, self).__init__()
+		self.value = 0
+	def set(self, entity):
+		i = super(AttribGenNameInt64, self).set(entity)
 		self.value, i = getInteger(entity.chunks, i)
 		return i
 class AttribGenNameString(AttribGenName):
@@ -5070,7 +5078,8 @@ RECORD_2_NODE = {
 	"label-fdi-attrib":                                                                            AttribFdiLabel,
 	"gen-attrib":                                                                                  AttribGen,
 	"name_attrib-gen-attrib":                                                                      AttribGenName,
-	"integer_attrib-name_attrib-gen-attrib":                                                       AttribGenNameInteger,
+	"integer_attrib-name_attrib-gen-attrib":                                                       AttribGenNameInt32,
+	"int64_attrib-name_attrib-gen-attrib":                                                         AttribGenNameInt64,
 	"string_attrib-name_attrib-gen-attrib":                                                        AttribGenNameString,
 	"real_attrib-name_attrib-gen-attrib":                                                          AttribGenNameReal,
 	"kc_id-attrib":                                                                                AttribKcId,
