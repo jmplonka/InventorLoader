@@ -3696,6 +3696,18 @@ class SurfaceTorus(Surface):
 			circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
 			circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
 			torus = circle.revolve(self.center, self.axis, 360)
+			self.profile = CurveEllipse()
+			self.profile.center = circleCenter
+			self.profile.axis   = circleAxis
+			if (isEqual1D(circleAxis.x, 1.0)):
+				self.profile.major = DIR_Y
+			elif (isEqual1D(circleAxis.x, -1.0)):
+				self.profile.major = -DIR_Y
+			else:
+				self.profile.major = DIR_X.cross(circleAxis) # any perpendicular vector to normal?!?
+
+			self.profile.ratio  = 1.0
+			self.profile.range  = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
 			self.shape = torus.Faces[0]
 		return self.shape
 

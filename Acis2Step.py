@@ -426,14 +426,22 @@ def _createSurfacePlane(center, axis, sense):
 		_planes[key] = plane
 	return plane, sense == 'forward'
 
-def _createSurfaceSphere(origin, radius, center, ref_axis, sense):
+def _createSurfaceRevolution(curve, center, axis, sense):
+	ref = _calculateRef(axis)
+	revolution = SURFACE_OF_REVOLUTION('', None, None)
+	revolution.curve = _createCurve(curve)
+	revolution.placement =  _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis', ref, 'ref_axis')
+	return revolution, (sense == 'forward')
+
+def _createSurfaceSphere(origin, radius, center, sense):
 	global _spheres
 	key = "%s,%r" %(origin, radius)
 	try:
 		sphere = _spheres[key]
 	except:
 		sphere = SPHERICAL_SURFACE('', None, radius)
-		sphere.placement = _createAxis2Placement3D('', origin, 'Origin', center, 'center_axis', ref_axis, 'ref_axis')
+		ref = _calculateRef(axis)
+		sphere.placement = _createAxis2Placement3D('', origin, 'Origin', center, 'center_axis', ref, 'ref_axis')
 		_spheres[key] = sphere
 	return sphere, (sense == 'forward')
 
@@ -446,12 +454,18 @@ def _createSurfaceToroid(major, minor, center, axis, sense):
 
 def _createSurfaceFaceShape(acisFace, shape):
 	surface = acisFace._surface.getSurface()
+	if (isinstance(surface, Acis.SurfaceCone)):
+		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
+	if (isinstance(surface, Acis.SurfacePlane)):
+		return _createSurfacePlane(surface.root, surface.nromal, acisFace.sense)
+	if (isinstance(surface, Acis.SurfaceSphere)):
+		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, acisFace.sense)
+	if (isinstance(surface, Acis.SurfaceTorus)):
+		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
 	if (isinstance(shape, Part.BSplineSurface)):
 		return _createSurfaceBSpline(shape, surface, acisFace.sense)
 #	if (isinstance(shape, Part.Mesh)):
 #		return _createSurfaceMesh(shape, acisFace.sense)
-	if (isinstance(surface, Acis.SurfaceCone)):
-		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
 	if (isinstance(shape, Part.Cone)):
 		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
 	if (isinstance(shape, Part.Cylinder)):
@@ -459,13 +473,12 @@ def _createSurfaceFaceShape(acisFace, shape):
 	if (isinstance(shape, Part.Plane)):
 		return _createSurfacePlane(shape.Position, shape.Axis, acisFace.sense)
 	if (isinstance(shape, Part.Sphere)):
-		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, surface.uvorigin, acisFace.sense)
+		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, acisFace.sense)
+	if (isinstance(shape, Part.SurfaceOfRevolution)):
+		return _createSurfaceRevolution(surface.profile, surface.center, surface.axis, acisFace.sense)
 	if (isinstance(shape, Part.Toroid)):
 		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
-	if (isinstance(surface, Acis.SurfaceTorus)):
-		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
-	logWarning("Can't export surface '%s' - using BSplineCurve instead!" %(shape.__class__.__name__))
-	print(acisFace._surface.getSurface())
+	logWarning("Can't export surface '%s.%s'!" %(shape.__class__.__module__, shape.__class__.__name__))
 	return None
 
 def _createSurface(acisFace):
