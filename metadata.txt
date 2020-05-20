@@ -7,9 +7,9 @@ name=InventorLoader
 email=jens.m.plonka@gmail.com
 author=jmplonka
 qgisMinimumVersion=2.0
-description=This plugin enables FreeCAD to import Inventor part files (*.IPT) and ACIS SAT files
+description=This plugin enables FreeCAD to import Inventor part files (*.IPT), ACIS files (*.SAT, *.SAB) and 3D-Solids from DXF files
 about=
-version=version 0.9
+version=version 1.1
 tracker=https://github.com/jmplonka/InventorLoader/issues
 repository=https://github.com/jmplonka/InventorLoader
 ; end of mandatory metadata
@@ -17,6 +17,7 @@ repository=https://github.com/jmplonka/InventorLoader
 ; start of optional metadata
 category=
 changelog=The changelog lists the plugin versions and their changes:
+    1.1  - Added DXF 3D-solids import.
     1.0  - Reorganized section readers.
     0.18 - Added coloring of single faces (RC2).
     0.17 - Added missing features as ACIS models (RC1).
@@ -41,7 +42,7 @@ changelog=The changelog lists the plugin versions and their changes:
 ; tag name.
 ; Tags should be in English language. Please also check for existing tags and
 ; synonyms before creating a new one.
-tags=Autodesk,Inventor,IPT,ACIS,SAT
+tags=Autodesk,Inventor,IPT,ACIS,SAT,DXF,3D-Solids
 
 ; these metadata can be empty, they will eventually become mandatory.
 homepage=https://github.com/jmplonka/InventorLoader

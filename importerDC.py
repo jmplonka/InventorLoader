@@ -5651,7 +5651,6 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderLinkedElement(node, 'NameTableKeyDef')
 		i = node.ReadUInt32(i, 'ntKey') # the key that is referenced by the name table entry.
 		key = node.get('ntKey')
-		#assert self.segment.ntKeys.get(key, None) is None
 		self.segment.ntKeys[key] = node
 		return i
 
