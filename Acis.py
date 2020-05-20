@@ -3789,6 +3789,14 @@ class AttribADeskColor(AttribADesk):
 		i = super(AttribADeskColor, self).set(entity)
 		coloridx, i = getInteger(entity.chunks, i)
 		return i
+class AttribADeskMaterial(AttribADesk):
+	def __init__(self):
+		super(AttribADeskMaterial, self).__init__()
+	def set(self, entity):
+		i = super(AttribADeskMaterial, self).set(entity)
+		self.val1, i = getInteger(entity.chunks, i)
+		self.val2, i = getInteger(entity.chunks, i)
+		return i
 class AttribADeskTrueColor(AttribADesk):
 	def __init__(self):
 		super(AttribADeskTrueColor, self).__init__()
@@ -3798,11 +3806,11 @@ class AttribADeskTrueColor(AttribADesk):
 		self.blue  = .749
 	def set(self, entity):
 		i = super(AttribADeskTrueColor, self).set(entity)
-		rgba, i = getText(entity.chunks, i)
-		self.alhpa = ((int(rgba) >> 24) & 0xFF) / 255.0
-		self.red   = ((int(rgba) >> 16) & 0xFF) / 255.0
-		self.green = ((int(rgba) >>  8) & 0xFF) / 255.0
-		self.blue  = ((int(rgba) >>  0) & 0xFF) / 255.0
+		rgba, i = getInteger(entity.chunks, i)
+		self.alhpa = ((rgba >> 24) & 0xFF) / 255.0
+		self.red   = ((rgba >> 16) & 0xFF) / 255.0
+		self.green = ((rgba >>  8) & 0xFF) / 255.0
+		self.blue  = ((rgba >>  0) & 0xFF) / 255.0
 		return i
 class AttribAnsoft(Attrib):
 	def __init__(self): super(AttribAnsoft, self).__init__()
@@ -5062,6 +5070,7 @@ RECORD_2_NODE = {
 	"attrib":                                                                                      Attrib,
 	"adesk-attrib":                                                                                AttribADesk,
 	"color-adesk-attrib":                                                                          AttribADeskColor,
+	"material-adesk-attrib":                                                                       AttribADeskMaterial,
 	"truecolor-adesk-attrib":                                                                      AttribADeskTrueColor,
 	"ansoft-attrib":                                                                               AttribAnsoft,
 	"id-ansoft-attrib":                                                                            AttribAnsoftId,

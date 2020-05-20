@@ -433,15 +433,15 @@ def _createSurfaceRevolution(curve, center, axis, sense):
 	revolution.placement =  _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis', ref, 'ref_axis')
 	return revolution, (sense == 'forward')
 
-def _createSurfaceSphere(origin, radius, center, sense):
+def _createSurfaceSphere(center, radius, pole, sense):
 	global _spheres
-	key = "%s,%r" %(origin, radius)
+	key = "%s,%r" %(center, radius)
 	try:
 		sphere = _spheres[key]
 	except:
 		sphere = SPHERICAL_SURFACE('', None, radius)
-		ref = _calculateRef(Acis.DIR_Z)
-		sphere.placement = _createAxis2Placement3D('', origin, 'Origin', center, 'center_axis', ref, 'ref_axis')
+		ref = _calculateRef(pole)
+		sphere.placement = _createAxis2Placement3D('', center, 'Origin', pole, 'center_axis', ref, 'ref_axis')
 		_spheres[key] = sphere
 	return sphere, (sense == 'forward')
 
