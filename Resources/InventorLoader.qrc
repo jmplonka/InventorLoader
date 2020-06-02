@@ -1,31 +1,31 @@
 <RCC>
     <qresource>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Align_Horizontal.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Align_Vertical.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Concentric.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Diameter.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_EqualLength.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Fix.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Horizontal.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_HorizontalDistance.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_InternalAngleLine.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_InternalAnglePoint.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Length.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Length_Driven.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Offset.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Parallel.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Perpendicular.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_PointOnObject.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_PointOnPoint.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Polygon.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Radius.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_SplineFitPoint.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_SymmetricLine.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_SymmetricPoint.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Tangent.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_Vertical.svg</file>
-        <file>Mod/InventorLoader/Resources/icons/Constraint_VerticalDistance.svg</file>
-        <!-- file>Mod/InventorLoader/Resources/translations/InventorLoader_de.qm</file -->
-        <file>Mod/InventorLoader/Resources/ui/PrefsInventorLoader.ui</file>
+        <file>../icons/Constraint_Align_Horizontal.svg</file>
+        <file>../icons/Constraint_Align_Vertical.svg</file>
+        <file>../icons/Constraint_Concentric.svg</file>
+        <file>../icons/Constraint_Diameter.svg</file>
+        <file>../icons/Constraint_EqualLength.svg</file>
+        <file>../icons/Constraint_Fix.svg</file>
+        <file>../icons/Constraint_Horizontal.svg</file>
+        <file>../icons/Constraint_HorizontalDistance.svg</file>
+        <file>../icons/Constraint_InternalAngleLine.svg</file>
+        <file>../icons/Constraint_InternalAnglePoint.svg</file>
+        <file>../icons/Constraint_Length.svg</file>
+        <file>../icons/Constraint_Length_Driven.svg</file>
+        <file>../icons/Constraint_Offset.svg</file>
+        <file>../icons/Constraint_Parallel.svg</file>
+        <file>../icons/Constraint_Perpendicular.svg</file>
+        <file>../icons/Constraint_PointOnObject.svg</file>
+        <file>../icons/Constraint_PointOnPoint.svg</file>
+        <file>../icons/Constraint_Polygon.svg</file>
+        <file>../icons/Constraint_Radius.svg</file>
+        <file>../icons/Constraint_SplineFitPoint.svg</file>
+        <file>../icons/Constraint_SymmetricLine.svg</file>
+        <file>../icons/Constraint_SymmetricPoint.svg</file>
+        <file>../icons/Constraint_Tangent.svg</file>
+        <file>../icons/Constraint_Vertical.svg</file>
+        <file>../icons/Constraint_VerticalDistance.svg</file>
+        <!-- file>../translations/InventorLoader_de.qm</file -->
+        <file>../ui/PrefsInventorLoader.ui</file>
     </qresource>
 </RCC>
