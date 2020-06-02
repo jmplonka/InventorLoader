@@ -6,7 +6,7 @@ Acis2Step.py:
 
 from datetime      import datetime
 from importerUtils import isEqual, getDumpFolder
-from FreeCAD       import Vector as VEC
+from FreeCAD       import Vector as VEC, Placement as PLC
 from importerUtils import logInfo, logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS, getColorDefault
 import traceback, inspect, os, sys, Acis, math, re, Part, io
 
@@ -29,6 +29,8 @@ _curveBSplines   = {}
 _assignments     = {}
 _entities        = []
 _colorPalette    = {}
+
+TRANSFORM_NONE   = PLC()
 
 #############################################################
 # private functions
@@ -505,7 +507,7 @@ def _convertFace(acisFace, representation, parentColor, context):
 
 	return shells
 
-def _convertShell(acisShell, representation, shape, parentColor):
+def _convertShell(acisShell, representation, shape, parentColor, transformation):
 	# FIXME how to distinguish between open or closed shell?
 	faces = acisShell.getFaces()
 	if (len(faces) > 0):
@@ -522,7 +524,8 @@ def _convertShell(acisShell, representation, shape, parentColor):
 
 	return None
 
-def _convertLump(acisLump, name, appContext, parentColor):
+def _convertLump(acisLump, name, appContext, parentColor, transformation):
+	# TODO how to attach placement to a shell?
 
 	name = "%s_L_%02d" %(name, acisLump.index)
 	shape = SHAPE_DEFINITION_REPRESENTATION(name, appContext)
@@ -537,7 +540,7 @@ def _convertLump(acisLump, name, appContext, parentColor):
 	color = getColor(acisLump)
 	defColor = parentColor if (color is None) else color
 	for acisShell in acisLump.getShells():
-		shell = _convertShell(acisShell, shapeRepresentation, shape, defColor)
+		shell = _convertShell(acisShell, shapeRepresentation, shape, defColor, transformation)
 		if (shell is not None):
 			lump.items.append(shell)
 
@@ -552,8 +555,13 @@ def _convertBody(acisBody, appPrtDef):
 	if ((name is None) or (len(name) == 0)):
 		name = "Body_%02d" %(acisBody.index)
 
+	transform = acisBody.getTransform()
+	if (transform):
+		transformation = transform.getPlacement()
+	else:
+		transformation = TRANSFORM_NONE
 	for acisLump in acisBody.getLumps():
-		shape = _convertLump(acisLump, name, appPrtDef.application, getColor(acisBody))
+		shape = _convertLump(acisLump, name, appPrtDef.application, getColor(acisBody), transformation)
 		if (shape is not None):
 			bodies.append(shape.getProduct())
 

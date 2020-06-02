@@ -394,7 +394,7 @@ def getEnumByTag(chunks, index, values):
 			chunk.val = list(values.keys())[list(values.values()).index(chunk.val)]
 		chunks[index] = chunk
 	elif (type(chunk) == AcisChunkDouble):
-		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, int(chunk.val) + 10)
+		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, 11 - int(chunk.val))
 		chunks[index] = chunk
 #	assert isinstance(chunk, AcisChunkEnumValue)
 	try:
@@ -4581,9 +4581,10 @@ class Header(object):
 		self.resnor  = 1e-10
 
 	def __str__(self):
-		sat = "%d %d %d %d\n" %(int(self.version * 100), self.records, self.bodies, self.flags)
-		sat += "%d %s %d %s %d %s\n" %(len(self.prodId), self.prodId, len(self.prodVer), self.prodVer, len(self.date), self.date)
-		sat += "%g %g %g\n" %(self.scale, self.resabs, self.resnor)
+		sat = "%d %d %d %d\n" %(version2int(self.version), self.records, self.bodies, self.flags)
+		if (self.version >= 2.0):
+			sat += "%d %s %d %s %d %s\n" %(len(self.prodId), self.prodId, len(self.prodVer), self.prodVer, len(self.date), self.date)
+			sat += "%g %g %g\n" %(self.scale, self.resabs, self.resnor)
 		return sat
 
 def getNextText(data):
@@ -4595,6 +4596,11 @@ def getNextText(data):
 
 def int2version(num):
 	return float("%d.%d" %(num / 100, num % 100))
+
+def version2int(version):
+	major = int(version)
+	minor = int((version - major) * 10)
+	return int(major*100 + minor)
 
 ACIS_REF_NONE = AcisChunkEntityRef(-1)
 
