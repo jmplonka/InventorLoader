@@ -149,7 +149,9 @@ def createPrimitive(name):
 		primitive.ViewObject.Transparency = body.ViewObject.Transparency
 		primitive.ViewObject.DisplayMode  = body.ViewObject.DisplayMode
 		doc.recompute()
-		view.setEdit(box.Name)
+		FreeCADGui.SendMsgToActiveView("ViewFit")
+		FreeCADGui.ActiveDocument.setEdit(primitive.Name)
+		FreeCADGui.activateWorkbench("InventorWorkbench")
 
 class _CmdNoCommand(object):
 	def __init__(self, menuText = None, toolTip = None, pixmap = None, accel=None):
