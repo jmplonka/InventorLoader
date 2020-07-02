@@ -10,9 +10,8 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 def checkImports():
 	def missingDependency(file):
-		libfolder = os.path.join(os.path.dirname(EmptyFile.__file__), "libs")
-		module    = os.path.join(libfolder, file)
-		subprocess.call("python.exe -m pip install %s" %(module))
+		module = os.path.join(os.path.dirname(EmptyFile.__file__), "libs", file)
+		subprocess.call(u"\"%s\" -m pip install \"%s\"" %(sys.executable, module))
 
 	import os, subprocess, traceback, FreeCAD, FreeCADGui, EmptyFile
 	try:
