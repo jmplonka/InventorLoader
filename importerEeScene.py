@@ -48,7 +48,7 @@ class EeSceneReader(StyleReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_1')
 		i = self.skipBlockSize(i, 2)
-		if (getFileVersion() > 2017): i += 1
+		if (self.version > 2017): i += 1
 		i = node.ReadUInt32(i, 'index')
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
@@ -174,6 +174,20 @@ class EeSceneReader(StyleReader):
 
 	def Read_A529D1E2(self, node): # Part GroupNode
 		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
+		return i
+
+	def Read_36ABFE49(self, node): # Assembly GroupNode
+		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_X_REF_, 'lst1')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_28461343(self, node):
+		i = self.ReadHeaderU32RefU8List3(node)
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_X_REF_, 'lst1')
+		i = self.skipBlockSize(i)
 		return i
 
 	def Read_41305114(self, node):
@@ -354,7 +368,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadUInt32A(i, 3, 'a1')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadChildRef(i, 'body')
-		if (getFileVersion() < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
+		if (self.version < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32A(i, 5, 'a3')

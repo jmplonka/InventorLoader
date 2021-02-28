@@ -183,11 +183,10 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_E82BC461(self, node): # Slot Pattern
-		vers = getFileVersion()
 		i = node.ReadUInt32(0, 'u32_2')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst1')
-		if (vers > 2015):
+		if (self.version > 2015):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst2')
 		else:
 			i = node.ReadChildRef(i, 'ref_1')
@@ -206,7 +205,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUUID(i, 'uid_0')
 		i = node.ReadUInt32(i, 'u32_3')
 		i += 4 # skip 00 00 00 00
-		if (vers > 2011): i += 4 # skip FF FF FF FF
+		if (self.version > 2011): i += 4 # skip FF FF FF FF
 		node.Entry = True
 		return i
 
@@ -259,13 +258,125 @@ class BrowserReader(SegmentReader):
 		i = self.ReadHeaderFolderItem(node, '3rdParty')
 		return i
 
+	def Read_1A05345D(self, node): # AmFlushEntry
+		i = self.ReadHeaderFolderItem(node, '3rdParty')
+		return i
+
+	def Read_2178C7DA(self, node): # AmAssemblyFeaturePatternOccurrence
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_2524F6EB(self, node): # AmDocEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadCrossRef(i, 'ref_0')
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadBoolean(i, 'b4')
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = node.ReadCrossRef(i, 'ref_3')
+		i = node.ReadCrossRef(i, 'ref_4')
+		i = node.ReadCrossRef(i, 'ref_5')
+		if (self.version > 2010): i += 4
+		return i
+
+	def Read_2AFABC56(self, node): # AmWeldSymMember
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
+		return i
+
+	def Read_2C57678C(self, node): # AmAssemblyFeaturesFolder
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_390F605A(self, node): # AmRepresentationFolder
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadCrossRef(i, 'ref_0')
+		return i
+
+	def Read_3D5CABE0(self, node): # AmCylindricalJointEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_41289EFF(self, node): # AmAssemblyFeatureParticipant
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
+		return i
+
 	def Read_44664C6F(self, node): # PartInterfaceFolderEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_44A91CA8(self, node): # AmAnnotationFolder
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_474E0249(self, node): # AmWeldJointEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_48344B92(self, node): # AmRelateRotateTranslateEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_562BDC08(self, node): # AmConfiguration
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUUID(i, 'uid')
+		i = node.ReadUInt32(i, 'u32_2')
+		return i
+
+	def Read_58732973(self, node): # AmAssemblyFeaturesFolder
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_3')
+		return i
+
+	def Read_5900CD82(self, node): # AmConfigurationsFolder
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_3')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_5913EBD7(self, node): # AmAssemblyFeature
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32A(i, 2, 'a1')
+		i += 4
+		return i
+
+	def Read_60BEF47B(self, node): # BrowserFolder
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_3')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_684507FA(self, node): # AmAssemblyFeaturesFolder
 		i = self.ReadHeaderFolderItem(node)
 		return i
 
 	def Read_716B5CD1(self, node): # ATEntry
 		i = self.ReadHeaderFolderItem(node, 'AnalysisToolEntry')
 		i = node.ReadUInt32A(i, 2, 'a0')
+		return i
+
+	def Read_7427F757(self, node): # AmAssemblyFeature
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_1')
+		i += 4
+		return i
+
+	def Read_767A2031(self, node): # AmPartInstEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt8(i, 'u8_4')
+		i = node.ReadUInt8(i, 'u8_5')
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadLen32Text16(i, 'txt_2')
+		if (node.get('u8_4') == 0):
+			i = node.ReadUInt16(i, 'u16_1')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_76D92543(self, node): # AmAnnotationEntry
+		i = self.ReadHeaderFolderItem(node)
 		return i
 
 	def Read_7DFCC817(self, node): # ConstructionFolderEntry
@@ -280,8 +391,105 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt32A(i, 2, 'a0')
 		return i
 
+	def Read_8326B9DD(self, node): # AmTransitionalEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_83FB036D(self, node):
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32A(i, 4, 'a4')
+		return i
+
+	def Read_9180FF9E(self, node): # OriginEntryFolder
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_9180FF9F(self, node): # OriginWorkFeatureEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt8(i, 'u8_6')
+		return i
+
+	def Read_98D79BB0(self, node): # AmMateEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32A(i, 5, 'a4')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_1')
+		return  i
+
+	def Read_98D79BB1(self, node): # AmFlushEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadFloat64(i, 'offset') # offset in cm
+		i = node.ReadUInt32A(i, 3, 'a4')
+		i = self.skipBlockSize(i)
+		return i
+
 	def Read_9E77CCC1(self, node): # AssmInterfaceFolderEntry
 		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_9FFCDAFC(self, node): # AmConfigurationsFolder
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_3')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_6CDE7496(self, node): # AmAssemblyFeaturePatter
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_A742A7CD(self, node): # AmAssemblyFeature
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt8(i, 'u8_6')
+		return i
+
+	def Read_AA7B1426(self, node): # AmTranslationJointEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_AB12B392(self, node): # AssmMateInterfaceResultEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32A(i, 5, 'a4')
+		i = self.skipBlockSize(i, 2)
+		i = node.ReadUInt32(i, 'u32_3')
+		return i
+
+	def Read_AB12B393(self, node): # AssmFlushInterfaceResultEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32A(i, 5, 'a4')
+		i = self.skipBlockSize(i, 2)
+		return i
+
+	def Read_AB12B394(self, node): # AssmAngleInterfaceResultEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_AB12B396(self, node): # AssmInsertInterfaceResultEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32A(i, 5, 'a4')
+		i = self.skipBlockSize(i, 2)
+		return i
+
+	def Read_CA52E762(self, node): # AmBallJointEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_CA0059C5(self, node): # AmWeldingSymbol
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
+		return i
+
+	def Read_CAFCADC8(self, node): # AmSymmetryEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32A(i, 5, 'a4')
+		return i
+
+	def Read_CC79C7E9(self, node): # AmRepresentationFolder
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32(i, 'u32_3')
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'ref_0')
+		if (self.version < 2012): i += 4 # skip REF
 		return i
 
 	def Read_D95A2DF2(self, node): # OleLinkAndEmbedEntry
@@ -290,6 +498,49 @@ class BrowserReader(SegmentReader):
 		i = node.ReadLen32Text16(i, 'str2')
 		i = node.ReadLen32Text16(i, 'str3')
 		i = node.ReadChildRef(i, 'ref_0')
+		return i
+
+	def Read_DAB388B1(self, node): # AmWeldsFolder
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_E4DF20BB(self, node): # AmUCSEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_E50694D7(self, node): # AmPatternElementEntry
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt32A(i, 2, 'a4')
+		return i
+
+	def Read_E9AC0931(self, node): # AmViewRep
+		i = self.ReadHeaderFolderItem(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32(i, 'u32_2')
+		return i
+
+	def Read_EA6894C1(self, node): # AmConstraintsEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_F02052E0(self, node): # AmConfiguration
+		i = self.ReadHeaderFolderItem(node)
+		i = self.skipBlockSize(i)
+		i = node.ReadUUID(i, 'uid')
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadLen32Text16(i)
+		i = node.ReadUInt16A(i, 3, 'a4')
+		i = self.skipBlockSize(i)
+		return i
+
+	def Read_F9EDBED1(self, node): # AmRevoluteJointEntry
+		i = self.ReadHeaderFolderItem(node)
+		return i
+
+	def Read_FEFA39AB(self, node): # AmDeselTable
+		i = self.ReadHeaderFolderItem(node)
+		i = node.ReadUInt16A(i, 3, 'a4')
+		i = node.ReadLen32Text16(i, 'txt_2')
 		return i
 
 	####################
@@ -315,6 +566,11 @@ class BrowserReader(SegmentReader):
 		i = self.ReadHeaderHospitalItem(node)
 		i = node.ReadUInt32(i, 'u32_2')
 		i = self.skipBlockSize(i)
+		return i
+
+	def Read_2AFDB131(self, node):
+		i = self.ReadHeaderHospitalItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_44DBCB35(self, node):
@@ -343,6 +599,12 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_9B451345(self, node):
+		i = self.ReadHeaderHospitalItem(node)
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt32(i, 'u32_3')
+		return i
+
+	def Read_CCA058B3(self, node):
 		i = self.ReadHeaderHospitalItem(node)
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt32(i, 'u32_3')
@@ -444,7 +706,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_33DDFC82(self, node): # Reference
 		i = self.ReadHeaderEntry(node, 'Reference')
-		if (getFileVersion() > 2016):
+		if (self.version > 2016):
 			i = node.ReadLen32Text16(i, 'path')
 		return i
 
@@ -486,8 +748,8 @@ class BrowserReader(SegmentReader):
 		i = self.ReadHeaderEntry(node, '3dObject')
 		i = node.ReadUInt8(i, 'u8_5')
 
-		if (getFileVersion() > 2016):
-			dummy, i = getUInt32A(node.data, i, 2)
+		if (self.version > 2016): i += 8 # skip ?? ?? ?? ?? ?? ?? ?? ??
+		if (self.version > 2020): i += 4 # skip ?? ?? ?? ??
 		return i
 
 	def Read_6531C640(self, node): # Flange
@@ -625,7 +887,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_E079A121(self, node):
 		i = self.ReadHeaderEntry(node)
-		if (getFileVersion() > 2016):
+		if (self.version > 2016):
 			i = node.ReadLen32Text16(i, 'txt_0')
 		return i
 
@@ -662,7 +924,7 @@ class BrowserReader(SegmentReader):
 		i = self.ReadHeaderEntry(node, 'Feature')
 		i = node.ReadUUID(i, 'uid_0')
 		i = node.ReadUInt32(i, 'u32_2')
-		if (getFileVersion() > 2011):
+		if (self.version > 2011):
 			i = node.ReadLen32Text16(i, 'txt_0')
 			i = node.ReadSInt32(i, 's32_0')
 		else:
@@ -682,6 +944,32 @@ class BrowserReader(SegmentReader):
 	def Read_FCF044C3(self, node): # Part reference
 		i = self.ReadHeaderEntry(node, 'ReferencePart')
 		return i
+
+	####################
+	# Constraint sections
+	def ReadHeaderEntryConstraint(self, node, typeName = None):
+		i = self.ReadHeaderFolderItem(node, typeName)
+		i = node.ReadFloat64(i, 'f0')
+		i = node.ReadUInt32A(i, 3, 'a4')
+		i = self.skipBlockSize(i)
+		return i
+
+	# Constraint items
+	def Read_48344B91(self, node): # Relate Rotation Constraint
+		i = self.ReadHeaderEntryConstraint(node)
+		return i
+
+	def Read_98D79BB2(self, node): # Tangent Constraint
+		i = self.ReadHeaderEntryConstraint(node)
+		return  i
+
+	def Read_B60617B3(self, node): # Insert Constraint
+		i = self.ReadHeaderEntryConstraint(node)
+		return i
+
+	def Read_D37599BD(self, node): # Angle Constraint
+		i = self.ReadHeaderEntryConstraint(node)
+		return  i
 
 	####################
 	# Part Interface sections
@@ -750,7 +1038,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_2F111558(self, node):
 		i = self.ReadHeaderDxHierarchy(node, 'Tweak')
-		if (getFileVersion() > 2017):
+		if (self.version > 2017):
 			x, i = getFloat64(node.data, i) # skip
 		return i
 

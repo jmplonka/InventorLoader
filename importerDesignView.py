@@ -73,11 +73,11 @@ class DesignViewReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i, 'ref0')
 		i = self.skipBlockSize(i)
-		if (getFileVersion() < 2020):
+		if (self.version < 2020):
 			i = node.ReadLen32Text16(i)
 		else:
 			i = node.ReadUInt32(i, 'u32_1')
-		if (getFileVersion() > 2012): i += 4 # skip ?? ?? ?? ??
+		if (self.version > 2012): i += 4 # skip ?? ?? ?? ??
 		return i
 
 	def Read_551FB1BF(self, node):
@@ -102,10 +102,23 @@ class DesignViewReader(SegmentReader):
 		i = node.Read_Header0('ViewDirection')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
+		i = node.ReadUInt32(i, 'flags')
+		i = node.ReadUInt16(i, 'CodePage')
+		# list2 of what?
+		return i
+
+	def Read_6E2FE45A(self, node):
+		i = node.Read_Header0()
 		return i
 
 	def Read_BDA7138D(self, node):
 		i = node.Read_Header0()
+		return i
+
+	def Read_D4DDE1F5(self, node): # member of ViewDirection.lst0
+		i = node.Read_Header0()
+		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadLen32Text16(i)
 		return i
 
 	def Read_D8B8F230(self, node):
@@ -125,7 +138,7 @@ class DesignViewReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		i = node.ReadBoolean(i, 'b0')
 		i = self.skipBlockSize(i)
-		if (getFileVersion() > 2011):
+		if (self.version > 2011):
 				b, i = getBoolean(node.data, i)
 				i = node.ReadUInt32(i, 'u32_0')
 				i = node.ReadUInt8(i, 'u8_1')
@@ -134,7 +147,7 @@ class DesignViewReader(SegmentReader):
 					i = node.ReadLen32Text16(i, 'txt1')
 					i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt32(i, 'u32_1')
-		if (getFileVersion() > 2017): i += 4
+		if (self.version > 2017): i += 4
 		return i
 
 	def Read_E3684E1C(self, node):
@@ -148,4 +161,10 @@ class DesignViewReader(SegmentReader):
 		i = node.ReadUInt32(i, 'u32_0')
 		n, i = getUInt32(node.data, i)
 		i = node.ReadUInt16A(i, n, 'a0')
+		return i
+
+	def Read_F2E6BC0B(self, node):
+		i = node.Read_Header0()
+		i = node.ReadChildRef(i, 'ref_0')
+		i = node.ReadBoolean(i, 'b0')
 		return i

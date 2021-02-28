@@ -20,7 +20,8 @@ def isList(data, code):
 
 F_2010  = Struct('<fL').unpack_from
 APP_4_A = Struct('<LHLff').unpack_from
-APP_4_B = Struct('<ffHB').unpack_from
+APP_4_B1 = Struct('<ffHB').unpack_from
+APP_4_B2 = Struct('<ffHH').unpack_from
 APP_5_A = Struct('<ddL').unpack_from
 APP_5_B = Struct('<BBH').unpack_from
 MTM_LST = Struct('<LBL').unpack_from
@@ -105,14 +106,16 @@ _TYP_MAP_X_REF_REF_         = 0x700D
 _TYP_MAP_X_REF_FLOAT64_     = 0x700E
 _TYP_MAP_X_REF_2D_UINT32_   = 0x700F
 _TYP_MAP_X_REF_X_REF_       = 0x7010
-_TYP_MAP_X_REF_LIST2_XREF_  = 0x7011
-_TYP_MAP_UUID_UINT32_       = 0x7012
-_TYP_MAP_UUID_X_REF         = 0x7013
-_TYP_MAP_UUID_REF           = 0x7014
-_TYP_MAP_U16_U16_           = 0x7015
-_TYP_MAP_KEY_APP_1_         = 0x7016
-_TYP_MAP_KEY_MAP_APP_1_     = 0x7017
-_TYP_MAP_TXT16_UINT32_7_    = 0x7018
+_TYP_MAP_U32_LIST2_XREF_    = 0x7011
+_TYP_MAP_X_REF_LIST2_XREF_  = 0x7012
+_TYP_MAP_UID_UINT32_        = 0x7013
+_TYP_MAP_UID_X_REF_         = 0x7014
+_TYP_MAP_UID_REF_           = 0x7015
+_TYP_MAP_U16_U16_           = 0x7016
+_TYP_MAP_U16_XREF_          = 0x7017
+_TYP_MAP_KEY_APP_1_         = 0x7018
+_TYP_MAP_KEY_MAP_APP_1_     = 0x7019
+_TYP_MAP_TXT16_UINT32_7_    = 0x7020
 
 _TYP_MAP_MDL_TXN_MGR_       = 0x6001
 
@@ -192,6 +195,7 @@ TYP_ARRAY_FUNC = {
 
 TYP_MAP_FUNC = {
 	_TYP_MAP_U16_U16_:          'getMapU16U16',
+	_TYP_MAP_U16_XREF_:         'getMapU16XRef',
 	_TYP_MAP_U32_U8_:           'getMapU32U8',
 	_TYP_MAP_U32_U32_:          'getMapU32U32',
 	_TYP_MAP_U32_F64_:          'getMapU32F64',
@@ -202,10 +206,11 @@ TYP_MAP_FUNC = {
 	_TYP_MAP_X_REF_FLOAT64_:    'getMapXRefF64',
 	_TYP_MAP_X_REF_X_REF_:      'getMapXRefXRef',
 	_TYP_MAP_X_REF_2D_UINT32_:  'getMapXRefU2D',
+	_TYP_MAP_U32_LIST2_XREF_:   'getMapU32XRefL',
 	_TYP_MAP_X_REF_LIST2_XREF_: 'getMapXRefXRefL',
-	_TYP_MAP_UUID_UINT32_:      'getMapUidU32',
-	_TYP_MAP_UUID_REF:          'getMapUidCRef',
-	_TYP_MAP_UUID_X_REF:        'getMapUidXRef',
+	_TYP_MAP_UID_UINT32_:       'getMapUidU32',
+	_TYP_MAP_UID_REF_:          'getMapUidCRef',
+	_TYP_MAP_UID_X_REF_:        'getMapUidXRef',
 	_TYP_MAP_TEXT8_REF_:        'getMapT8Ref',
 	_TYP_MAP_TEXT8_X_REF_:      'getMapT8XRef',
 	_TYP_MAP_TEXT8_3D_F32_:     'getMapT83dF64',
@@ -602,6 +607,7 @@ class SecNode(AbstractData):
 		lst    = []
 		i      = offset
 		skip   = 2 * getBlockSize()
+		if (self.segment.segment.version.major >= 25): skip += 1 # skip 00
 		FONT_A = Struct('<LHHHHBBHH').unpack_from
 		FONT_B = Struct('<ffBBB').unpack_from
 		for j in range(cnt):
@@ -730,15 +736,22 @@ class SecNode(AbstractData):
 	def getListApp4(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		skip = 2 * getBlockSize()
+
+		if (self.segment.segment.version.major >= 25):
+			APP_4_B = APP_4_B2
+			block_size = 12 + 2 * getBlockSize()
+		else:
+			APP_4_B = APP_4_B1
+			block_size = 11 + 2 * getBlockSize()
+
 		for j in range(cnt):
 			n1, n2, n3, f1, f2 = APP_4_A(self.data, i)
 			i += 18
 			t1, i = getLen32Text16(self.data, i)
 			f3, f4, n4, n5 = APP_4_B(self.data, i)
-			i += 11
-			i += skip
+			i += block_size
 			lst.append((n1, n2,  n3,  f1, f2,  t1,  f3, f4, n4, n5))
+
 		self.content += u" %s={%s}" %(name, u",".join([u"(%d, %d, %04X, %g, %g, '%s', %g, %g, %03X, %02X)" %(a[0], a[1], a[2], a[3], a[4], a[5],  a[6], a[7], a[8], a[9]) for a in lst]))
 		self.set(name, lst)
 		return i
@@ -1065,6 +1078,16 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
+	def	getMapU16XRef(self, name, offset, cnt):
+		lst = {}
+		i   = offset
+		for j in range(cnt):
+			key, i = getUInt16(self.data, i)
+			i = self.ReadCrossRef(i, name, key)
+			lst[key] = self.get(name)
+		self.set(name, lst)
+		return i
+
 	def	getMapU32U8(self, name, offset, cnt):
 		lst = {}
 		i   = offset
@@ -1172,6 +1195,21 @@ class SecNode(AbstractData):
 			val, i = getFloat64(self.data, i)
 			lst[key] = val
 		self.content += u" %s=[%s]" % (name, u",".join([u"[%s: %g]" %(key, lst[key]) for key in lst]))
+		self.set(name, lst)
+		return i
+
+	def	getMapU32XRefL(self, name, offset, cnt):
+		lst = {}
+		i   = offset
+		c = self.content
+		self.content = u""
+		for j in range(cnt):
+			key, i = getUInt32(self.data, i)
+			tmp = u"%s[%04X]" %(name, key)
+			i = self.ReadList2(i, _TYP_NODE_X_REF_, tmp)
+			lst[key] = self.get(tmp)
+			self.delete(tmp)
+		self.content = c + u" %s=[%s]" % (name, u",".join([u"[%s: (%s)]" %(key, u"),(".join([u"%s" %(getIndex(h)) for h in lst[key]])) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -1372,7 +1410,6 @@ class SecNode(AbstractData):
 
 		hdr = Header0(u32_0, u16_0)
 		self.set('hdr', hdr)
-#		self.content += ' hdr=(%r)' %(hdr)
 		if (typeName is not None): self.typeName = typeName
 
 		return i

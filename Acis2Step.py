@@ -686,9 +686,8 @@ class ExportEntity(AnonymEntity):
 	def exportProperties(self):
 		step = u""
 		variables = self._getParameters()
-		for k in variables:
+		for a in variables:
 			try:
-				a = k
 				if (isinstance(a, ReferencedEntity)):
 					step += a.exportSTEP()
 				elif (type(a) == list):
@@ -1461,6 +1460,7 @@ def export(filename, satHeader, satBodies):
 	appPrtDef = APPLICATION_PROTOCOL_DEFINITION()
 	bodies = []
 	for body in satBodies:
+		body.name = filename
 		bodies += _convertBody(body, appPrtDef)
 	PRODUCT_RELATED_PRODUCT_CATEGORY('part', bodies)
 

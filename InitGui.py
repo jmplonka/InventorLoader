@@ -26,22 +26,22 @@ def checkImports():
 	try:
 		import olefile
 	except:
-		missingDependency("olefile-0.46.zip")
+		missingDependency("olefile")
 
 	try:
 		import xlrd
 	except:
-		missingDependency("xlrd-1.2.0.tar.gz")
+		missingDependency("xlrd")
 
 	try:
 		import xlwt
 	except:
-		missingDependency("xlwt-1.3.0.tar.gz")
+		missingDependency("xlwt")
 
 	try:
 		import xlutils
 	except:
-		missingDependency("xlutils-2.0.0.tar.gz")
+		missingDependency("xlutils")
 
 	import importerUtils
 	try:

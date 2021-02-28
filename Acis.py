@@ -10,7 +10,6 @@ import traceback, Part, Draft, os, FreeCAD, re
 from importerUtils              import *
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
 from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
-from BOPTools.GeneralFuseResult import GeneralFuseResult
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -655,14 +654,14 @@ def isOnLine(sEdge, fEdge):
 	return False
 
 def isOnCircle(sEdge, fEdge):
-	sp = [v.Point for v in sEdge.Vertexes]
-	fp = [v.Point for v in fEdge.Vertexes]
 	sc = sEdge.Curve
 	fc = fEdge.Curve
-	if (isEqual(sp[0], fp[0])):
+	if (isEqual1D(fc.Radius, sc.Radius)):
 #		if (isEqual(fc.Axis, sc.Axis) or isEqual(-1 * fc.Axis, sc.Axis)):
 		if (isEqual(fc.Axis, sc.Axis)):
-			return isEqual1D(fc.Radius, sc.Radius)
+			sp = [v.Point for v in sEdge.Vertexes]
+			fp = [v.Point for v in fEdge.Vertexes]
+			return (isEqual(sp[0], fp[0]))
 	return False
 
 def isOnEllipse(se, fe):
@@ -726,22 +725,14 @@ def eliminateOuterFaces(faces, edges):
 	if (len(_faces) == 1):
 		return _faces[0]
 
-	result = {}
 	for face in _faces:
-		matches = 0
+		matching = True
 		for e in edges:
-			if (isSeam(e, face)):
-				matches += 1
-		try:
-			lst = result[matches]
-		except:
-			lst = []
-			result[matches] = lst
-		lst.append(face)
-	faces = findMostMatches(result)
-	if (len(faces) == 1):
-		return faces[0]
-	return faces[0].multiFuse(faces[1:])
+			if (not isSeam(e, face)):
+				matching = False
+		if (matching):
+			return face
+	return None
 
 def createCircle(center, normal, radius):
 	circle = Part.Circle(center, normal, radius.Length)
@@ -1723,12 +1714,18 @@ class Face(Topology):
 				self.shape = self._surface.build()
 				if (self.shape is not None):
 					if (len(edges) > 0):
-						compound, elements = self.shape.generalFuse(edges)
-						self.shape = eliminateOuterFaces(elements[0], edges)
-				# edges can be empty because not all edges can be created right now :(
-			if (self.shape is None):
-				for edge in edges:
-					Part.show(edge)
+						component, elements = self.shape.generalFuse(edges)
+						face = eliminateOuterFaces(elements[0], edges)
+						if (face is None):
+							if (len(elements[0]) == 0):
+								logWarning("    can't create face (no elements) for %s" %(self._surface))
+							else:
+								# edges can be empty because not all edges can be created right now :(
+								logWarning("    can't create face for %s" %(self._surface))
+								for f in elements[0]:
+									Part.show(f)
+						else:
+							self.shape = face
 		return self.shape
 	def isCone(self):   return isinstance(self.getSurface(), SurfaceCone)
 	def isMesh(self):   return isinstance(self.getSurface(), SurfaceMesh)
@@ -2162,6 +2159,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			self.d11, i = getValue(chunks, i)
 			self.d12, i = getFloat(chunks, i)
 			self.d13, i = getInteger(chunks, i)
+			if (getVersion() > 225) and isASM():
+				self.d16, i = getLong(chunks, i)
 			self.d14, i = getFloat(chunks, i)
 			i = self.d15.setSubtype(chunks, i)
 			self.d2, i  = getVector(chunks, i)
@@ -2178,7 +2177,43 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				self.a1 = reshape(a, 2)
 			else:
 				self.a1 = []
-		else:
+		elif (self.d1 == 6):
+			self.d2, i  = getVector(chunks, i)
+			self.d3, i  = getVector(chunks, i)
+			self.d4, i  = getVector(chunks, i)
+			self.d5, i  = getVector(chunks, i)
+			self.d6, i  = getFloat(chunks, i)
+			self.d7, i  = getBoolean(chunks, i)
+			self.d8, i  = getBoolean(chunks, i)
+			self.d9, i  = getBoolean(chunks, i)
+			self.d10, i = getInteger(chunks, i)
+			self.d11, i = readSurface(chunks, i)
+			self.d12, i = getLong(chunks, i)
+			self.d13, i = getBoolean(chunks, i)
+			self.d14, i = getFloat(chunks, i)
+			if (getVersion() > 225) and isASM():
+				self.d15, i = getLong(chunks, i)
+			self.d16, i = getFloat(chunks, i)
+			self.d17 = CurveInt()
+			i = self.d17.setSubtype(chunks, i)
+			self.d18, i = getVector(chunks,i )
+			self.d19, i = getVector(chunks,i )
+			self.d20, i = getVector(chunks,i )
+			self.d21, i = getVector(chunks,i )
+			self.d22, i = getFloat(chunks, i)
+			self.d23, i = getBoolean(chunks, i)
+			self.d24, i = getBoolean(chunks, i)
+			self.d25, i = getBoolean(chunks, i)
+			self.d26, i = getVector(chunks,i )
+			self.d27, i = getVector(chunks,i )
+			self.d28, i = getVector(chunks,i )
+			self.d29, i = getVector(chunks,i )
+			self.d30, i = getFloat(chunks, i)
+			self.d31, i = getBoolean(chunks, i)
+			self.d32, i = getBoolean(chunks, i)
+			self.d33, i = getBoolean(chunks, i)
+			self.d34, i = getLong(chunks, i)
+		else: # d1 == 3
 			self.d2, i  = getVector(chunks, i)
 			self.d3, i  = getVector(chunks, i)
 			self.d4, i  = getVector(chunks, i)
@@ -2345,6 +2380,10 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setSilhouetteParameter(self, chunks, index, inventor):
 		i = self.setSilhouette(chunks, index, inventor, 'para_silh_int_cur')
 		self.parameter, i = getFloat(chunks, i)
+		if (getVersion() > 225.0) and (isASM() == True):
+			r, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
+			v, i = getVector(chunks, i)
+			d, i = getFloat(chunks, i)
 		return i
 	def setSilhouetteTaper(self, chunks, index, inventor):
 		i = self.setSilhouette(chunks, index, inventor, 'taper_silh_int_cur')
@@ -2661,13 +2700,17 @@ class SurfaceCone(Surface):
 	def build(self, face = None):
 		if (self.shape is None):
 			if (isEqual1D(self.sine, 0.)): # 90 Deg
-				# Workaround: create ellipse and extrude in both directions
-				ellipse = createEllipse(self.center, self.axis, self.major, self.ratio)
-				# make a gigantic extrusion as it will be beautyfied later
-				if (ellipse):
-					cone = ellipse.toShape().extrude((2e6) * self.axis)
-					cone.translate((-1e6) * self.axis)
-					self.shape = cone.Faces[0]
+				if (self.ratio != 1):
+					circle = createCircle(self.center, self.axis, self.major)
+					self.shape = Part.Cylinder(circle).toShape()
+				else:
+					# Workaround: create ellipse and extrude in both directions
+					ellipse = createEllipse(self.center, self.axis, self.major, self.ratio)
+					# make a gigantic extrusion as it will be beautyfied later
+					if (ellipse):
+						cone = ellipse.toShape().extrude((2e6) * self.axis)
+						cone.translate((-1e6) * self.axis)
+						self.shape = cone.Faces[0]
 			else:
 				# Workaround: can't generate Part.Cone!
 				l = Part.LineSegment(self.apex, self.center + self.major).toShape()
@@ -2998,7 +3041,7 @@ class SurfaceSpline(Surface):
 		return i
 	def setDefm(self, chunks, index, inventor):
 		self.surface, i = readSurface(chunks, index)
-		t1, i = getInteger(chunks, i) # 1, 3, 5, 8
+		t1, i = getInteger(chunks, i) # 1, 3, 5, 6, 8
 		if (t1 == 1):
 			v11, i = getVector(chunks, i)
 			v12, i = getVector(chunks, i)
@@ -3052,6 +3095,8 @@ class SurfaceSpline(Surface):
 			e31, i = getBoolean(chunks, i)
 			f32, i = getFloat(chunks, i)
 			i33, i = getInteger(chunks, i)
+			if (getVersion() > 225) and isASM():
+				i34, i = getEnumByTag(chunks, i, [])
 			f34, i = getFloat(chunks, i)
 			self.curve = CurveInt()
 			i = self.curve.setSubtype(chunks, i)
@@ -3067,6 +3112,42 @@ class SurfaceSpline(Surface):
 			if (t2 > 0):
 				a1, i = getFloats(chunks, i, 3*t2)
 				a1 = reshape(a1, 3)
+		elif (t1 == 6):
+			v11, i = getVector(chunks, i)
+			v12, i = getVector(chunks, i)
+			v13, i = getVector(chunks, i)
+			v14, i = getVector(chunks, i)
+			t2,  i = getFloat(chunks, i)
+			b1,  i = getBoolean(chunks, i)
+			b2,  i = getBoolean(chunks, i)
+			b3,  i = getBoolean(chunks, i)
+			t2,  i = getInteger(chunks, i)
+			srf, i = readSurface(chunks, i)
+			v14, i = getLong(chunks, i) # 0
+			b4,  i = getBoolean(chunks, i) # F
+			v15, i = getFloat(chunks, i)
+			if (getVersion() > 225) and isASM():
+				v16, i = getLong(chunks, i)
+			v17, i = getFloat(chunks, i)
+			d17 = CurveInt()
+			i = d17.setSubtype(chunks, i)
+			d18, i = getVector(chunks,i )
+			d19, i = getVector(chunks,i )
+			d20, i = getVector(chunks,i )
+			d21, i = getVector(chunks,i )
+			d22, i = getFloat(chunks, i)
+			d23, i = getBoolean(chunks, i)
+			d24, i = getBoolean(chunks, i)
+			d25, i = getBoolean(chunks, i)
+			d26, i = getVector(chunks,i )
+			d27, i = getVector(chunks,i )
+			d28, i = getVector(chunks,i )
+			d29, i = getVector(chunks,i )
+			d30, i = getFloat(chunks, i)
+			d31, i = getBoolean(chunks, i)
+			d32, i = getBoolean(chunks, i)
+			d33, i = getBoolean(chunks, i)
+			d34, i = getLong(chunks, i)
 		elif (t1 == 8):
 			v11, i = getVector(chunks, i)
 			v12, i = getVector(chunks, i)
@@ -3561,7 +3642,7 @@ class SurfaceSpline(Surface):
 		self.rangeU, i = getInterval(chunks, i + 1, MIN_INF, MAX_INF, getScale())
 		self.rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
-	def build(self):
+	def build(self, face = None):
 		if (self.shape is None):
 			if (getattr(self, 'failed', False)):
 				return None
@@ -3822,6 +3903,17 @@ class AttribDxid(Attrib):
 	def __init__(self): super(AttribDxid, self).__init__()
 class AttribCustom(Attrib):
 	def __init__(self): super(AttribCustom, self).__init__()
+class AttribDesigner(Attrib):
+	def __init__(self): super(AttribDesigner, self).__init__()
+class AttribDesignerHistory(AttribDesigner):
+	# 0, 0
+	def __init__(self): super(AttribDesignerHistory, self).__init__()
+class AttribDesignerSurfaceId(AttribDesigner):
+	# 0, 65539, 0
+	def __init__(self): super(AttribDesignerSurfaceId, self).__init__()
+class AttribDesignerOwnerTag(AttribDesigner):
+	# no more values!
+	def __init__(self): super(AttribDesignerOwnerTag, self).__init__()
 class AttribEye(Attrib):
 	def __init__(self): super(AttribEye, self).__init__()
 class AttribEyeFMesh(AttribEye):
@@ -4087,6 +4179,9 @@ class AttribNamingMatchingNMxTagWeldLumpFaceName(AttribNamingMatching):
 class AttribNamingMatchingNMxWeld(AttribNamingMatching):
 	# n
 	def __init__(self): super(AttribNamingMatchingNMxWeld, self).__init__()
+class AttribNamingMatchingNMxWireTag(AttribNamingMatching):
+	# float
+	def __init__(self): super(AttribNamingMatchingNMxWireTag, self).__init__()
 class AttribNamingMatchingNMxFeatureOrientation(AttribNamingMatching):
 	def __init__(self):
 		super(AttribNamingMatchingNMxFeatureOrientation, self).__init__()
@@ -5097,6 +5192,10 @@ RECORD_2_NODE = {
 	"entatt_color-bt-attrib":                                                                      AttribBtEntityColor,
 	"DXID-attrib":                                                                                 AttribDxid,
 	"ATTRIB_CUSTOM-attrib":                                                                        AttribCustom,
+	"Designer-attrib":                                                                             AttribDesigner,
+	"history-Designer-attrib":                                                                     AttribDesignerHistory,
+	"SURFACE_ID-Designer-attrib":                                                                  AttribDesignerSurfaceId,
+	"OWNER_TAG-Designer-attrib":                                                                   AttribDesignerOwnerTag,
 	"eye-attrib":                                                                                  AttribEye,
 	"fmesh-eye-attrib":                                                                            AttribEyeFMesh,
 	"ptlist-eye-attrib":                                                                           AttribEyePtList,
@@ -5210,6 +5309,7 @@ RECORD_2_NODE = {
 	"NMxAttribTagWeldLateralFaceName-NamingMatching-attrib":                                       AttribNamingMatchingNMxTagWeldLateralFaceName,
 	"NMxAttribTagWeldLumpFaceName-NamingMatching-attrib":                                          AttribNamingMatchingNMxTagWeldLumpFaceName,
 	"NMx_Weld_Attrib-NamingMatching-attrib":                                                       AttribNamingMatchingNMxWeld,
+	"NMxWireTagAttribute-NamingMatching-attrib":                                                   AttribNamingMatchingNMxWireTag,
 	"render-rbase-attrib":                                                                         AttribRBaseRender,
 	"RFbase-attrib":                                                                               AttribRfBase,
 	"RFFaceTracker-RFbase-attrib":                                                                 AttribRfBaseFaceTracker,

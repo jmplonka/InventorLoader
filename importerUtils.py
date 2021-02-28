@@ -8,7 +8,6 @@ Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) f
 import os, sys, datetime, FreeCADGui, json, shutil, re
 from PySide.QtCore import *
 from PySide.QtGui  import *
-from uuid          import UUID
 from struct        import Struct, unpack_from, pack
 from FreeCAD       import Vector as VEC, Console, ParamGet
 from olefile       import OleFileIO
@@ -150,7 +149,7 @@ UUID_NAMES = {
 
 ENCODING_FS      = 'utf8'
 
-_fileVersion     = None
+_fileVersion = 0
 _fileBeta        = -1
 _can_import      = True
 _use_sheet_metal = True
@@ -672,20 +671,56 @@ def getColorRGBA(data, offset):
 	c = Color(r, g, b, a)
 	return c, offset + 0x10
 
+class UID(object):
+	def __init__(self, str = None, bytes_le = None):
+		if (bytes_le):
+			self.time_low = (bytes_le[ 3] << 24) | (bytes_le[2] << 16) | (bytes_le[1] << 8) | bytes_le[0]
+			self.val1 = (bytes_le[ 5] <<  8) |  bytes_le[4]
+			self.val2 = (bytes_le[ 7] <<  8) |  bytes_le[6]
+			self.val3 = (bytes_le[ 8] <<  8) |  bytes_le[9]
+			self.val4 = (bytes_le[10] << 40) | (bytes_le[11] << 32) | (bytes_le[12] << 24) | (bytes_le[13] << 16) | (bytes_le[12] << 24) | (bytes_le[13] << 16) | (bytes_le[14] << 8) | bytes_le[15]
+		elif (str):
+			vals = str.split('-')
+			self.time_low = int(vals[0], 16)
+			self.val1 = int(vals[1], 16)
+			self.val2 = int(vals[2], 16)
+			self.val3 = int(vals[3], 16)
+			self.val4 = int(vals[4], 16)
+		else:
+			raise AttributeError("wrong argument type")
+	@property
+	def hex(self): return  "%08x%04x%04x%04x%012x"%(self.time_low, self.val1, self.val2, self.val3, self.val4)
+	def __str__(self): return "%08X-%04X-%04X-%04X-%012X"%(self.time_low, self.val1, self.val2, self.val3, self.val4)
+	def __repr__(self): return self.__str__()
+	def __hash__(self): return hash((type(self),) + tuple(self.__dict__.values()))
+	def __eq__(self, other):
+		if (type(other) in ['tuple', 'list']) and len(other) == 8:
+			if (self.time_low != (other[ 3] << 24) | (other[2] << 16) | (other[1] << 8) | other[0]): return False
+			if (self.val1 != (other[ 5] <<  8) |  other[4]): return False
+			if (self.val2 != (other[ 7] <<  8) |  other[6]): return False
+			if (self.val3 != (other[ 8] <<  8) |  other[9]): return False
+			return self.val4 == (other[10] << 40) | (other[11] << 32) | (other[12] << 24) | (other[13] << 16) | (other[12] << 24) | (other[13] << 16) | (other[14] << 8) | other[15]
+		if (isinstance(other, UID)):
+			if (self.time_low != other.time_low): return False
+			if (self.val1 != other.val1): return False
+			if (self.val2 != other.val2): return False
+			if (self.val3 != other.val3): return False
+			return self.val4 == other.val4
+		return False
 def getUUID(data, offset):
 	'''
-	Returns a UUID.
+	Returns a UID.
 	Args:
 		data
 			A binary string.
 		offset
-			The zero based offset of the UUID.
+			The zero based offset of the UID.
 	Returns:
-		The UUID at offset.
+		The UID at offset.
 		The new position in the 'stream'.
 	'''
 	end = offset + 16
-	val = UUID(bytes_le=data[offset:end])
+	val = UID(bytes_le=data[offset:end])
 	return val, end
 
 def getDateTime(data, offset):
@@ -837,36 +872,10 @@ def getProperty(ole, path, key):
 	except:
 		return None
 
-def setFileVersion(ole):
-	global _fileVersion, _fileBeta, _block_size
-
-	v = None
-	b = getProperty(ole, '\x05Qz4dgm1gRjudbpksAayal4qdGf', 0x16)
-
-	if (b is not None):
-		if ((b // 10000000) == 14):
-			_fileVersion = 2010
-		else:
-			_fileVersion = 2009
-	else:
-		b = 0
-		_fileVersion = 2008
-	_fileBeta = -1
-	v = getProperty(ole, '\x05PypkizqiUjudbposAayal4qdGf', 0x43)
-	if (v is not None):
-		_fileVersion = int(float(v[0:v.index(' ')])) # float because of service pack numbers!
-		beta = IS_BETA.search(v)
-		if (beta):
-			_fileBeta = int(beta.group(1))
-			logWarning("   File was created with a BETA version (%s) - patching file version!", v)
-			if (_fileBeta < 2) and (_fileVersion < 2018):
-				_fileVersion -= 1
-		if (_fileVersion == 134): # early version of 2010
-			_fileVersion = 2010
-		logInfo(u"    created with Autodesk Inventor %s", v)
-	else:
-		logInfo(u"    created with Autodesk Inventor %s (Build %d)", _fileVersion, b)
-	_block_size = 4 if (_fileVersion < 2011) else 0
+def setFileVersion(version):
+	global _fileVersion, _block_size
+	_fileVersion = version
+	_block_size = 0 if (_fileVersion > 2010) else 4
 
 def getInventorFile():
 	global _inventor_file

@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import sys, os, Part
-from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, getFileVersion, isEqual, isEqual1D
+from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, isEqual, isEqual1D
 from math          import degrees, radians, pi
 from FreeCAD       import Vector as VEC
 from PySide.QtCore import *
@@ -32,6 +32,7 @@ SEG_BROWSER_AM      = 'AmBRxSegmentType'
 SEG_BROWSER_DL      = 'DlBRxSegmentType'
 SEG_BROWSER_DX      = 'DxBRxSegmentType'
 SEG_BROWSER_PM      = 'PmBRxSegmentType'
+SEG_BROWSER_PM_OLD  = 'PmBrowserSegment'
 SEG_DC_AM           = 'AmDcSegmentType'
 SEG_DC_DL           = 'DlDocDcSegmentType'
 SEG_DC_DX           = 'DxDcSegmentType'
@@ -66,21 +67,36 @@ SEGMENTS_NTB = [SEG_NOTEBOOK]
 SEGMENTS_RSX = [SEG_RESULT_AM, SEG_RESULT_PM]
 SEGMENTS_SHT = [SEG_SHEET_DC_DL, SEG_SHEET_DL_DL, SEG_SHEET_SM_DL]
 
+class VersionInfo(object):
+	def __init__(self):
+		self.revision = 0
+		self.minor    = 0
+		self.major    = 0
+		self.data     = (0, 0, 0, 0, 0)
+	def getDisplayName(self):
+		if (self.major > 11):
+			return "Version %d.%d%d" %(self.major + 1996, self.minor, self.revision)
+		return "Version %d.%d%d" %(self.major, self.minor, self.revision)
+	def getBits(self): return 64 if ((self.data[0] & 0x40)) > 0 else 32
+	def __str__(self): return "Version %d.%d.%d [%s]" %(self.major, self.minor, self.revision, IntArr2Str(self.data, 2))
+	def __repr__(self): return self.__str__()
+
 class RSeDatabase(object):
 	def __init__(self):
 		self.segInfo = RSeSegInformation()
 		self.uid     = None # Internal-Name of the object
 		self.schema  = -1
-		self.arr1    = []
+		self.vers1   = None
 		self.dat1    = None
 		self.arr2    = []
+		self.vers2   = None
 		self.dat2    = None
 		self.txt     = u""
 
 class RSeSegInformation(object):
 	def __init__(self):
 		self.text     = u""
-		self.arr1     = []
+		self.vers     = []
 		self.date     = None
 		self.uid      = None
 		self.arr2     = []
@@ -127,11 +143,13 @@ class RSeSegment(object):
 		self.metaData    = None
 		self.arr1        = [] # ???, ???, ???, numSec1, ???
 		self.arr2        = []
+		self.version     = None
+		self.value2      = 0
 		self.objects     = []
 		self.nodes       = []
 
 	def __str__(self):
-		return u"%s:%s, count=(%d/%d), ID={%s}, value1=%04X, arr1=[%s], arr2=[%s]" %(self.type, self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.arr1, 4), IntArr2Str(self.arr2, 4))
+		return u"%s:%s, count=(%d/%d), ID={%s}, value1=%04X, arr1=[%s], arr2=[%s], value2=%04X, %s" %(self.type, self.name, self.count1, self.count2, self.ID, self.value1, IntArr2Str(self.arr1, 4), IntArr2Str(self.arr2, 4), self.value2, self.version)
 
 	def __repr__(self):
 		return self.__str__()
@@ -288,6 +306,7 @@ class RSeRevisions(object):
 	def __del__(self):
 		self.mapping.clear()
 		self.infos[:] = []
+
 class Inventor(object):
 	def __init__(self):
 		self.UFRxDoc            = None
@@ -301,7 +320,7 @@ class Inventor(object):
 
 	def __repr__(self):
 		if (getInventorFile() is None): return u"#NV#"
-		return u"[%d]: %s" %(getFileVersion(), os.path.split(os.path.abspath(getInventorFile()))[-1])
+		return u"[%d]: %s" %(self.RSeDb.vers1.DisplayName(), os.path.split(os.path.abspath(getInventorFile()))[-1])
 
 	def getApp(self):
 		'''
@@ -1216,7 +1235,11 @@ class LineNode(DataNode):
 			p1 = p1.get('pos')
 			return u"(%04X): %s - (%g,%g) - (%g,%g)" %(self.index, self.typeName, p0.x, p0.y, p1.x, p1.y)
 		p1 = self.get('pos')
-		p2 = self.get('dir') + p1
+		if (p1 is None):
+			p1 = VEC(0,0,0)
+			p2 = VEC(0,0,0)
+		else:
+			p2 = self.get('dir') + p1
 		return u"(%04X): %s (%g,%g,%g)-(%g,%g,%g)" %(self.index, self.typeName, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z)
 
 class CircleNode(DataNode):
@@ -1536,10 +1559,8 @@ class Header0(object):
 		self.m = m
 		self.x = x
 
-	def __str__(self):
-		return 'm=%X x=%03X' %(self.m, self.x)
-	def __repr__(self):
-		return '%X,%03X' %(self.m, self.x)
+	def __str__(self):  return 'm=%X x=%03X' %(self.m, self.x)
+	def __repr__(self): return '(%04X,%03X)' %(self.m, self.x)
 
 class ModelerTxnMgr(object):
 	def __init__(self):

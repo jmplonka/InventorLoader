@@ -33,11 +33,11 @@ def insertGroup(doc, filename):
 
 	return root
 
-def read(doc, filename, readProperties):
+def read(doc, filename):
 	name, ext = os.path.splitext(filename)
 	ext = ext.lower()
 	if (ext == '.ipt'):
-		if (Import_IPT.read(doc, filename, readProperties)):
+		if (Import_IPT.read(doc, filename)):
 			return Import_IPT
 	elif (ext == '.sat'):
 		if (importerSAT.readText(filename)):
@@ -118,7 +118,7 @@ def open(filename, skip = [], only = [], root = None):
 		name = os.path.splitext(os.path.basename(filename))[0]
 		doc = FreeCAD.newDocument(decode(name))
 		doc.Label = name
-		reader = read(doc, filename, True)
+		reader = read(doc, filename)
 		if (reader is not None):
 			# Create 3D-Model in root (None) of document
 			reader.create3dModel(None , doc)

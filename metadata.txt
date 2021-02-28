@@ -17,6 +17,7 @@ repository=https://github.com/jmplonka/InventorLoader
 ; start of optional metadata
 category=
 changelog=The changelog lists the plugin versions and their changes:
+    1.2  - Addes support for Inventor 2021 file format
     1.1  - Added DXF 3D-solids import.
     1.0  - Reorganized section readers.
     0.18 - Added coloring of single faces (RC2).

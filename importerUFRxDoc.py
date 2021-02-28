@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 importerUFRxDoc.py:
-Simple approach to read/analyse Autodesk (R) Invetor (R) files.
+UFRxDoc files were introduced with Inventor v11 in 2006!
 '''
 
 __author__     = "Jens M. Plonka"
@@ -10,739 +10,893 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 import traceback, io, re
 from importerUtils   import *
+from importerClasses import VersionInfo
+from FreeCAD import BoundBox
+from winsound import Beep
 
-schema = 0
+_magic  = []
+__fv__ = None
 
-class UfrxObject(object):
-	def __str__(self): return ''
+def getFileVersion():
+	global __fv__
+	return __fv__
+
+def getUFRxVersion(sectionIndex):
+	global _magic
+	#   11: 0x08 [1D 10 06 10 00 02 02 02 01 03 01 02 06 02 02 01 00 01 02}
+	# 2008: 0x08 [1E 11 08 10 00 02 03 02 01 03 01 02 06 02 02 03 00 01 02]
+	# 2009: 0x09 [1E 12 09 12 00 02 03 02 01 03 01 02 06 02 02 03 00 01 02 00]
+	# 2010: 0x0A [1F 12 0B 12 01 02 03 02 01 03 01 02 06 02 02 05 00 01 02 00 00]
+	# 2011: 0x0A [1F 12 0B 12 01 02 03 02 01 03 01 02 06 02 02 05 00 01 02 00 00]
+	# 2012: 0x0B [1F 13 0C 12 01 02 04 02 01 03 01 02 06 02 02 05 00 01 02 00 00 00 00]
+	# 2013: 0x0B [1F 13 0C 12 01 02 04 02 01 03 01 02 06 02 02 05 00 01 02 00 00 00 00]
+	# 2014: 0x0B [1F 13 0C 12 01 02 04 02 01 05 01 02 06 02 02 05 00 01 02 00 00 00 00]
+	# 2015: 0x0C [1F 14 0D 14 02 03 05 03 01 05 01 02 07 02 03 06 00 02 03 00 01 00 01 00]
+	# 2016: 0x0C [1F 14 0D 14 02 03 05 03 01 05 01 02 07 02 03 07 00 02 03 00 01 00 01 00]
+	# 2017: 0x0C [1F 14 0D 15 02 03 05 03 01 05 01 02 07 02 03 07 00 02 03 00 01 00 01 00]
+	# 2018: 0x0C [1F 15 0D 15 02 03 05 03 01 05 01 02 07 02 03 07 00 02 03 00 01 00 01 00]
+	# 2019: 0x0C [1F 15 0D 15 02 03 05 03 01 05 01 02 07 02 03 07 00 02 03 00 01 00 01 00]
+	# 2020: 0x0C [1F 15 0D 15 02 03 05 03 01 05 01 02 07 02 03 07 00 02 03 00 01 00 01 00]
+	# 2021: 0x0C [1F 15 0D 15 02 03 05 03 01 05 01 02 07 02 03 07 00 02 03 00 01 00 01 00]
+	#                   |  |  |              |                 |        |     |
+	# 2: HEADER_2 ------+  |  |              |                 |        |     |
+	# 3: OCCURENCES--------+  |              |                 |        |     |
+	# 4: INVENTOR_FILES-------+              |                 |        |     |
+	# 9: PROPERTIES--------------------------+                 |        |     |
+	# 15: OLE_FILES--------------------------------------------+        |     |
+	# 18: I_PROPERTIES--------------------------------------------------+     |
+	# 20: APPENDIX------------------------------------------------------------+
+	if (sectionIndex < len(_magic)): return _magic[sectionIndex]
+	return -1
+
+class UFRxObject(object):
 	def __repr__(self): return self.__str__()
 
-class UFRxDocument(object):
+class UFRxExport(UFRxObject):
 	def __init__(self):
-		self.schema   = 0                                            # UInt16
-		self.arr1     = []                                           # UInt16A[]
-		self.arr2     = []*4                                         # UInt16A[4]
-		self.dat1     = None                                         # DateTime
-		self.arr3     = []*4                                         # UInt16A[4]
-		self.dat2     = None                                         # DateTime
-		self.comment  = u""                                          # UTF_16_LE
-		self.arr4     = []*12                                        # UInt16A[12]
-		self.dat3     = None                                         # creation date of 1st version
-		self.revision = UUID('00000000-0000-0000-0000-000000000000') # UID
-		self.flags    = 0                                            # UInt32
-		self.uid2     = UUID('00000000-0000-0000-0000-000000000000') # UID
-		self.fName    = u""                                          # UTF_16_LE
-		self.n0       = 0                                            # UInt16A
-		self.arr5     = []                                           # ???
-		self.exports  = []                                           # readExports
-		self.n1       = 0                                            # UInt32
-		self.txt1     = u""                                          # UTF_16_LE
-		self.arr6     = [0]*10                                       # UInt16A[10]
-		self.n2       = 0                                            # UInt16
-		self.uid3     = UUID('4d29b490-11d0-49b2-077e-c39300000006') # UUID
-		self.uid4     = UUID('4d29b490-11d0-49b2-077e-c39300000006') # UUID
-		self.n3       = 0                                            # UInt16
-		self.iamRefs  = []                                           # readIamRefs
-		self.iptRefs  = []                                           # readIptRefs
-		self.b1       = False                                        # Boolean
-		self.n4       = 0                                            # UInt16
-		self.fileRefs = []                                           # readFileRefs
-		self.lst1     = []                                           # readL7BHLst1
-		self.lst2     = []                                           # readL7BHLst1
-		self.n5       = 0                                            # UInt32
-		self.settings = []                                           # readSettings
-		self.n6       = 0                                            # UInt16
-		self.uids     = []                                           # UID[]
-		self.envList  = []                                           # readListEnv
-		self.n7       = 0                                            # UInt8
-		self.arr7     = []                                           # Float64[]
-		self.n8       = 0                                            # UInt8
-		self.obj1     = None                                         # (UTF_16_LE, UTF_16_LE, UTF_16_LE, Float64, UInt16)?
-		self.n9       = 0                                            # UInt16
-		self.n10      = 0                                            # UInt16
-		self.n11      = 0                                            # UInt16
-		self.lst3     = []                                           # readListTxtStrUid
-		self.posMin   = (0., 0., 0.)                                 # Float64[3]
-		self.posMax   = (0., 0., 0.)                                 # Float64[3]
-		self.iMates   = []                                           # (UTF_16_LE, UTF_16_LE, UInt8, UID, UInt16)[]
-		self.iMate    = u""                                          # UTF_16_LE
+		self.type_name  = ''
+		self.name       = ''
+		self.guid       = None
+		self.flags      = 0
+		self.unknown    = 0
+		self.properties = []
+		self.settings   = []
 
-		self.arr8     = []                                           # UInt8
-		self.n12      = 0                                            # UInt8
-
-class UfrxBBLTvL(UfrxObject):
+class UFRxDocument(UFRxObject):
 	def __init__(self):
-		super(UfrxBBLTvL, self).__init__()
+		self.header1       = None
+		self.lodToc        = None
+		self.header2       = None
+		self.lod_list      = None
+		self.inventorFiles = None
+		self.partFiles     = None
+		self.occurences    = None
+		self.properties    = None
+		self.abschnitt1    = None
+		self.abschnitt2    = None
+		self.unknown2      = None
+		self.bomRecord     = None
+		self.unknown3      = None
+		self.exportBlocks  = None
+		self.rangeBox      = None
+		self.iProperties   = None
+		self.appendix      = None
+
+class UFRxHeader1(UFRxObject):
+	def __init__(self):
+		self.schema     = 0
+		self.magic      = []
+		self.vrs_inf_1  = None
+		self.dat1       = None
+		self.vrs_inf_2  = None # Version ????
+		self.dat2       = None
+		self.comment    = ''
+		self.vrs_inf_3  = None # Version ????
+		self.dat3       = None
+		self.vrs_inf_4  = None # Version the file was created
+		self.dat4       = None
+		self.revision   = None
+		self.padding    = 0
+		self.name_ntrnl = None # InternalName
+		self.fName      = ''   # original file name
+		self.iPartFlags = 0
+
+class UFRxLodToc(UFRxObject):
+	def __init__(self):
+		self.n1 = 0
+		self.n2 = 0
+		self.t  = ''
+		self.n3 = 0
+		self.n4 = 0
+	def __str__(self): return "%03X,%03X,'%s',%02X,%02X" %(self.n1, self.n2, self.t, self.n3, self.n4)
+
+class UFRxHeader2(UFRxObject):
+	def __init__(self):
+		self.pairs = []
+		self.lastActiveLOD_1   = (0, 0)
+		self.activeDesignView  = ''
+		self.lastActiveLOD_2   = (0, 0)
+		self.version_Flag      = 0
+		self.maxOccRc          = 0
+		self.next_LOD_to_apply = 0
+		self.always_1          = 0
+		self.max_inv_file_ref  = 0
+		self.max_ole_file_ref  = 0
+		self.doc_Sub_Typ_1     = None
+		self.doc_Sub_Typ_2     = None
+
+class UFRxInvFiles(UFRxObject):
+	def __init__(self):
+		self.caption = ''
+		self.padding = 0
+		self.fils    = []
+
+class UFRxInvFile(UFRxObject):
+	def __init__(self):
+		self.path       = ''
+		self.lib_id     = 0
+		self.lib_name   = ''
+		self.i_1        = 0
+		self.t_1        = ''
+		self.buf        = ()
+		self.name       = None
+		self.db         = None
+		self.id         = 0
+		self.occurences = 0
+		self.version    = 0
+		self.flags      = 0
+	def __str__(self): return "'%s', %d, '%s', %d, '%s', [%s], {%s}, {%s}, %d, %d, %04X, %04X\n" %(self.path, self.lib_id, self.lib_name, self.i_1, self.t_1, IntArr2Str(self.buf, 2), self.name, self.db, self.id, self.occurences, self.version, self.flags)
+
+class UFRxOleFile(UFRxObject):
+	def __init__(self):
+		self.n1 = 0
+		self.d1 = None
+		self.n2 = 0
+		self.n3 = 0
+		self.t1 = ''
+		self.n4 = 0
+		self.t2 = ''
+		self.n5 = 0
+		self.t3 = ''
+		self.a1 = (0, 0, 0, 0)
+	def __str__(self): return "%04x, %s, %04x, %04x, '%s', %d, '%s', %03X, '%s', [%s]\n" %(self.n1, self.d1, self.n2, self.n3, self.t1, self.n4, self.t2, self.n3, self.t3, IntArr2Str(self.a1, 3))
+
+class UFRxOccSecProperty(UFRxObject):
+	TYP_STRING  = (0x05, 0x1E)
+	TYP_UINT_8  = (0x07, 0x0D, 0x0F, 0x10, 0x1D)
+	TYP_UINT_32 = (0x19, )
+	TYP_UID     = (0x02, 0x03, 0x11, 0x12, 0x13, 0x15, 0x16, 0x17, 0x18, 0x1C, 0x1F, 0x20, 0x22, 0x23, 0x24, 0x25, 0x2A, 0x2B)
+	def __init__(self):
+		super(UFRxOccSecProperty, self).__init__()
 		self.b  = False
 		self.t  = 0
 		self.n1 = 0
 		self.v  = None
-	def getValueAsStr(self):
-		if (self.t in [0x10]):
-			return u",({%s},{%s}" %(self.v[0], self.v[1])
-		return u"%s" %(self.v)
-
-	def __str__(self):
-		s = u"%02X,%s,%04X" %(self.t, self.b, self.n1)
-		s += self.getValueAsStr()
-		return s
-
-class UfrxBBLTvLNew(UfrxBBLTvL):
-	def __init__(self):
-		super(UfrxBBLTvLNew, self).__init__()
 		self.n2 = 0
-	def getValueAsStr(self):
-		if (isinstance(self.v, UUID)): return u",{%s}" %(self.v)
-		if (type(self.v) == str):      return u",'%s'" %(self.v)
-		if (t in [0x19]):            return u",%04X" %(self.v)
-		if (t in [0x10]):            return u",%02X" %(self.v)
-		return u"%s" %(self.v)
-	def __str__(self):
-		s = super(UfrxBBLTvLNew, self).__str__()
-		return s + u",%04X" %(self.n2)
-
-class UfrxPartRef(UfrxObject):
-	def __init__(self):
-		super(UfrxPartRef, self).__init__()
-		self.n1 = 0
-		self.n2 = 0
-		self.n3 = 0
-		self.a1 = [0,0,0]
-		self.u1	= None
-		self.u2 = None
-		self.a2 = [0, 0, 0, 0]
-		self.t1 = u""
-		self.t2 = u""
-		self.t3 = u""
-	def __str__(self):
-		return u"%04X,%04X,%03X,%s,{%s},{%s},%s,'%s','%s','%s'" %(self.n1, self.n2, self.n3, IntArr2Str(self.a1, 3), self.u1, self.u2, IntArr2Str(self.a2, 4), self.t1, self.t2, self.t3)
-
-class UfrxExport(UfrxObject):
-	def __init__(self):
-		super(UfrxExport, self).__init__()
-		self.s = u""
-		self.u = None
-		self.t = u""
-	def __str__(self):
-		return u"'%s',{%s},\"%s\"" %(self.s, self.u, self.t)
-
-class UfrxFileRef(UfrxObject):
-	def __init__(self):
-		super(UfrxObject, self).__init__()
-		self.n1   = 0
-		self.fDat = None
-		self.a1   = []
-		self.fNam = u""
-		self.n2   = -1
-		self.wks  = u""
-		self.n3   = 0
-		self.t3   = u""
-		self.a2   = [0,0,0,0]
-		self.su   = None
-	def __str__(self):
-		return u"%04X,#%s#,%s,'%s',%d,'%s',%03X,'%s',%s\n" %(self.n1, self.fDat, IntArr2Str(self.a1, 4), self.fNam, self.n2, self.wks, self.n3, self.t3, IntArr2Str(self.a2, 3))
-
-class UfrxL7HHL(UfrxObject):
-	def __init__(self):
-		super(UfrxL7HHL, self).__init__()
-		self.a1      = []
-		self.n1      = 0
-		self.n2      = 0
-		self.l1      = []
-		self.l2      = []
-		self.exports = []
-		self.a2      = []
-		self.a3      = []
-		self.a4      = []
-		self.su      = None
-	def __str__(self):
-		s = u"%s,%03X,%02X,%s,%s" %(IntArr2Str(self.a1, 4), self.n1, self.n2, IntArr2Str(self.a2, 2), IntArr2Str(self.a4, 2))
-		if (self.su is None):
-			s += u",NULL"
+	def readValues(self, data, offset):
+		self.b, i  = getBoolean(data, offset)
+		self.t, i  = getUInt8(data, i)
+		self.n1, i = getUInt32(data, i)
+		t, i    = getUInt8(data, i)
+		assert t == self.t, "UFRxOccSecProperty.readValues(): expected %02X, but found %02X!"%(self.t, t)
+		if (t in UFRxOccSecProperty.TYP_STRING):
+			self.v, i = getLen32Text16(data, i)
+		elif (t in UFRxOccSecProperty.TYP_UINT_8):
+			self.v, i = getUInt8(data, i)
+		elif (t in UFRxOccSecProperty.TYP_UINT_32):
+			self.v, i = getUInt32(data, i)
+		elif (t in UFRxOccSecProperty.TYP_UID):
+			self.v, i  = getUUID(data, i)
 		else:
-			s += u",('%s',{%s})" %(self.su[0], self.su[1])
-		return s
+			raise ValueError(u"Unknown type %02X for array element in Occurence Section 1!" %(t))
+		self.n2, i = getUInt32(data, i)
+		return i
+	def getValueAsStr(self):
+		if (self.t in UFRxOccSecProperty.TYP_STRING):
+			return "'%s'" %(self.v)
+		if (self.t in UFRxOccSecProperty.TYP_UINT_8):
+			return "%d" %(self.v)
+		if (self.t in UFRxOccSecProperty.TYP_UINT_32):
+			return "%04X" %(self.v)
+		if (self.t in UFRxOccSecProperty.TYP_UID):
+			return "{%s}" %(self.v)
+		return "%s" %(self.v)
+	def __str__(self):  return u"%02X, %5s, %04X, %s, %04X" %(self.t, self.b, self.n1, self.getValueAsStr(), self.n2)
 
-class UfrxEnv(UfrxObject):
+class UFRxOccSection(UFRxObject):
 	def __init__(self):
-		super(UfrxEnv, self).__init__()
-		self.u = None
-		self.a = []
 		self.n = 0
+		self.properties = {}
+
+class UFRxOccSecItem(UFRxObject):
+	TYP_UID = (0x12, 0x16, 0x17, 0x18, 0x23, 0x24, 0x25, 0x2A)
+	TYP_UINT_8  = (0x07,)
+	TYP_UINT_32 = (0x19,)
+	def __init__(self):
 		self.b = False
-		self.t = u""
-
+		self.t = 0
+		self.p = 0
+		self.l = []
+	def readValues(self, data, offset):
+		self.b, i = getBoolean(data, offset)
+		self.t, i = getUInt8(data, i)
+		cnt, i = getUInt32(data, i)
+		for j in range(cnt):
+			t, i = getUInt8(data, i)
+			assert t == self.t
+			if (t in UFRxOccSecItem.TYP_UID):
+				v, i = getUUID(data, i)
+			elif (t in UFRxOccSecItem.TYP_UINT_8):
+				v, i = getUInt8(data, i)
+			elif (t in UFRxOccSecItem.TYP_UINT_32):
+				v, i = getUInt32(data, i)
+			else:
+				raise ValueError(u"Unknown type %02X for array element in readOccSetItem!" %(t))
+			self.l.append(v)
+		self.p, i = getUInt32(data, i)
+		return i
+	def __val_2_str__(self, v):
+		if (self.t in UFRxOccSecItem.TYP_UID): return "{%s}" %(v)
+		elif (self.t in UFRxOccSecItem.TYP_UINT_8): return "%d" %(v)
+		elif (self.t in UFRxOccSecItem.TYP_UINT_32): return "%04X" %(v)
+		return "%s" %(v)
 	def __str__(self):
-		return u"{%s}, %s, %04X, %s, '%s'\n" %(self.u, IntArr2Str(self.a, 4), self.n, self.b, self.t)
+	    return "%s, %02X, %d, (%s)" %(self.b, self.t, self.p, ",".join([self.__val_2_str__(v) for v in self.l]))
 
-class UfrxTSU(UfrxObject):
+class UFRxOccSetting(UFRxObject):
 	def __init__(self):
-		super(UfrxTSU, self).__init__()
-		self.s  = u""
-		self.t  = u""
-		self.u  = None
-		self.m  = 0
-		self.a1 = []
-		self.a2 = []
-		self.p  = {}
-		self.a2 = []
-		self.v1 = None
-		self.v2 = None
-		self.n = 0
+		self.num = 0
+		self.values = []
 
-	def __str__(self):
-		if (self.u is None):
-			u = 'NULL'
-		else:
-			u = u"{%s}" %(self.u)
-		return u"\"%s\",'%s',%s,%s,%s,%02X" %(self.s, self.t, u.upper(), IntArr2Str(self.a1, 3), IntArr2Str(self.a2, 3), self.n)
-
-class UfrxS2I(UfrxObject):
+class UFRxOccSettingValue(UFRxObject):
 	def __init__(self):
-		super(UfrxS2I, self).__init__()
-		self.t   = u""
-		self.lst = [0]*2
-		self.a2  = [0]*5
-		self.n   = 0
-	def __str__(self):
-		return u"'%s',%s,%02X" %(self.t, IntArr2Str(self.a2,4), self.n)
+		self.t1 = ''
+		self.id = None
+		self.t2 = ''
+	def __str__(self): return "'%s', {%s}, '%s'" %(self.t1, self.id, self.t2)
+
+class UFRxOccExport(UFRxObject):
+	def __init__(self):
+		self.buf  = ()
+		self.val = None
+
+class UFRxIProperty(UFRxObject):
+	def __init__(self):
+		self.b  = False
+		self.t1 = ''
+		self.t2 = ''
+		self.n1 = 0
+		self.id = None
+		self.p  = (0, 0)
+	def __str__(self): return "%s, '%s', '%s', %04X, {%s}, [%s]" %(self.b, self.t1, self.t2, self.n1, self.id, IntArr2Str(self.p, 2))
+
+class UFRxIProperties(UFRxObject):
+	def __init__(self):
+		self.selected   = ''
+		self.properties = []
+		self.b = False
+
+class UFRxOccurence(UFRxObject):
+	def __init__(self):
+		self.a1   = (0, 0, 0, 0) # (EndStringFlag, Ref2IDFromSection5, OccurrenceID, Unknown_1)
+		self.size = 0
+		self.a2   = ''
+		self.a3   = (0, 0, 0, 0, 0)
+		self.sec1 = None
+		self.sec2 = None
+		self.set  = None
+		self.exp  = None
+	def __str__(self): return "[%s], %s, '%s', [%s]" %(IntArr2Str(self.a1, 4), self.size, self.a2, IntArr2Str(self.a3, 2))
+
+class UFRxAppendix(UFRxObject):
+	def __init__(self):
+		self.p1 = ()
+		self.p2 = 0
+
+class UFRxBOM(UFRxObject):
+	def __init__(self):
+		self.unit  = ''
+		self.name  = ''
+		self.repr  = ''
+		self.value = 0.0
+		self.pad   = 0
+	def __str__(self): return "BOM: %s = %s (%04X)" %(self.name, self.repr, self.pad)
 
 def readBoolean(data, offset, log, txt):
 	v, i = getBoolean(data, offset)
-	log.write(u"%s:\t%s\n" %(txt, v))
+	log.write("\t%s:\t%s\n" %(txt, v))
 	return v, i
 
 def readDateTime(data, offset, log, txt):
 	v, i = getDateTime(data, offset)
-	log.write(u"%s:\t#%s#\n" %(txt, v))
+	log.write("\t%s:\t%s\n" %(txt, v))
+	return v, i
+
+def readVersionInfo(data, offset, log, txt):
+	v = VersionInfo() # [00 00 18 40 00 00 A0 41]
+	v.revision, i = getUInt8(data, offset)
+	v.minor,    i = getUInt8(data, i)
+	v.major,    i = getUInt8(data, i)
+	v.data,     i = getUInt8A(data, i, 5)
+	log.write("\t%s:\t%s\n" %(txt, v))
 	return v, i
 
 def readFloat32_3D(data, offset, log, txt):
 	v, i = getFloat32_3D(data, offset)
-	log.write(u"%s:\t(%s)\n" %(txt, FloatArr2Str(v)))
+	log.write("\t%s:\t(%s)\n" %(txt, FloatArr2Str(v)))
+	return v, i
+
+def readFloat64(data, offset, log, txt):
+	v, i = getFloat64(data, offset)
+	log.write("\t%s:\t%s\n" %(txt, v))
 	return v, i
 
 def readUInt8(data, offset, log, txt):
 	v, i = getUInt8(data, offset)
-	log.write(u"%s:\t%02X\n" %(txt, v))
+	log.write("\t%s:\t%02X\n" %(txt, v))
 	return v, i
 
 def readUInt8A(data, offset, log, txt, cnt):
 	v, i = getUInt8A(data, offset, cnt)
-	log.write(u"%s:\t[%s]\n" %(txt, IntArr2Str(v, 2)))
+	log.write("\t%s:\t[%s]\n" %(txt, IntArr2Str(v, 2)))
 	return v, i
 
 def readUInt16(data, offset, log, txt):
 	v, i = getUInt16(data, offset)
-	log.write(u"%s:\t%04X\n" %(txt, v))
+	log.write("\t%s:\t%03X\n" %(txt, v))
 	return v, i
 
 def readUInt16A(data, offset, log, txt, cnt):
 	v, i = getUInt16A(data, offset, cnt)
-	log.write(u"%s:\t[%s]\n" %(txt, IntArr2Str(v, 3)))
+	log.write("\t%s:\t[%s]\n" %(txt, IntArr2Str(v, 3)))
 	return v, i
 
 def readUInt32(data, offset, log, txt):
 	v, i = getUInt32(data, offset)
-	log.write(u"%s:\t%06X\n" %(txt, v))
+	log.write("\t%s:\t%04X\n" %(txt, v))
 	return v, i
 
 def readUInt32A(data, offset, log, txt, cnt):
 	v, i = getUInt32A(data, offset, cnt)
-	log.write(u"%s:\t[%s]\n" %(txt, IntArr2Str(v, 4)))
-	return v, i
-
-def readSInt32(data, offset, log, txt):
-	v, i = getSInt32(data, offset)
-	log.write(u"%s:\t%d\n" %(txt, v))
+	log.write("\t%s:\t[%s]\n" %(txt, IntArr2Str(v, 4)))
 	return v, i
 
 def readUID(data, offset, log, txt):
 	v, i = getUUID(data, offset)
-	log.write(u"%s:\t{%s}\n" %(txt, v))
+	log.write("\t%s:\t{%s}\n" %(txt, v))
 	return v, i
 
 def readText16(data, offset, log, txt):
 	v, i = getLen32Text16(data, offset)
-	log.write(u"%s:\t'" %(txt))
-	log.write(v)
-	log.write(u"'\n")
+	log.write("\t%s:\t'%s'\n" %(txt, v))
 	return v, i
 
-def readBBLTvL(data, offset):
-	# BBLTvL:
-	# BB:  UInt16
-	# L:  UInt32
-	# Tv: UInt8
-	#     v = UInt8   <=> T in [10h]
-	#     v = UInt32  <=> T in [19h]
-	#     v = BSTR_16 <=> T in [05h, 1Eh]
-	#     v = UUID    <=> T in [12h, 16h, 17h, 18h, 1Ch, 1Fh, 20h, 22h, 24h, 25h, 2Ah, 2Bh]
-	a      = {}
-	n, i   = getUInt32(data, offset)
-	cnt, i = getUInt32(data, i)
-	for j in range(cnt):
-		o = UfrxBBLTvL()
-		o.b, i  = getBoolean(data, i)
-		o.t, i  = getUInt8(data, i)
-		o.n1, i = getUInt32(data, i)
-		t, i    = getUInt8(data, i)
-		assert t == o.t
-		if (t in [0x12]):
-			u1, i  = getUUID(data, i)
-			u2, i  = getUUID(data, i)
-			v = (u1, u2)
-		else:
-			raise ValueError(u"Unknown type %02X for array element in BBLTvL2!" %(t))
-		o.n2, i = getUInt32(data, i)
-		a[t] = o
-	return (n, a), i
+def readHeader1(data, offset, log):
+	global _magic, __fv__
+	header = UFRxHeader1()
+	log.write("HEADER_1\n")
+	header.schema,     i = readUInt16(data,       offset, log, 'schema')
+	cnt,               i = getUInt16(data,        i)
+	header.magic,      i = readUInt16A(data,      i, log, 'magic', cnt)
+	header.vrs_inf_1,  i = readVersionInfo(data,  i, log, 'VersionInfo_1_1') # Version the file was saved
+	header.dat1,       i = readDateTime(data,     i, log, 'FileTime_1_1')
+	header.vrs_inf_2,  i = readVersionInfo(data,  i, log, 'VersionInfo_1_2') # Version ????
+	header.dat2,       i = readDateTime(data,     i, log, 'FileTime_1_1')
+	header.comment,    i = readText16(data,       i, log, 'Comment')
+	header.vrs_inf_3,  i = readVersionInfo(data,  i, log, 'VersionInfo_2_1') # Version ????
+	header.dat3,       i = readDateTime(data,     i, log, 'FileTime_2_1')
+	header.vrs_inf_4,  i = readVersionInfo(data,  i, log, 'VersionInfo_2_2') # Version the file was created
+	header.dat4,       i = readDateTime(data,     i, log, 'FileTime_2_2')
+	header.revision,   i = readUID(data,          i, log, 'DataBaseRevisionID')
+	header.padding,    i = readUInt32(data,       i, log, 'Padding')         # schema >=0x09, < 0x09: UInt16!
+	header.name_ntrnl, i = readUID(data,          i, log, 'InternalName')
+	header.fName,      i = readText16(data,       i, log, 'OriginalFileName')
+	header.iPartFlags, i = readUInt16(data,       i, log, 'iPartFlag')
+	_magic = header.magic
+	__fv__ = header.vrs_inf_1.major
+	if (__fv__ > 11): __fv__ += 1996
+	log.write("\n")
+	return header, i
 
-def readBBLTvLNew(data, offset):
-	# BBLTvL:
-	# BB:  UInt16
-	# L:  UInt32
-	# Tv: UInt8
-	#     v = UInt8   <=> T in [10h]
-	#     v = UInt32  <=> T in [19h]
-	#     v = BSTR_16 <=> T in [05h, 1Eh]
-	#     v = UUID    <=> T in [12h, 16h, 17h, 18h, 1Ch, 1Fh, 20h, 22h, 24h, 25h, 2Ah, 2Bh]
-	a      = {}
-	n, i   = getUInt32(data, offset)
-	cnt, i = getUInt32(data, i)
+def readLodToc(data, offset, log):
+	secVrs = getUFRxVersion(1)
+	log.write("LOD-TOCs\n")
+	lod_toc = []
+	cnt, i = readUInt32(data, offset, log, 'count')
 	for j in range(cnt):
-		o = UfrxBBLTvLNew()
-		o.b, i  = getBoolean(data, i)
-		o.t, i  = getUInt8(data, i)
-		o.n1, i = getUInt32(data, i)
-		t, i    = getUInt8(data, i)
-		assert t == o.t
-		if (t in [0x11, 0x12, 0x13, 0x16, 0x17, 0x18, 0x1C, 0x1F, 0x20, 0x22, 0x23, 0x24, 0x25, 0x2A, 0x2B]):
-			v, i  = getUUID(data, i)
-		elif (t in [0x05, 0x1E]):
-			v, i  = getLen32Text16(data, i)
-		elif (t in [0x19]):
-			v, i  = getUInt32(data, i)
-		elif (t in [0x10]):
-			v, i  = getUInt8(data, i)
-		else:
-			raise ValueError(u"Unknown type %02X for array element in BBLTvL!" %(t))
-		o.n2, i = getUInt32(data, i)
-		a[t] = o
-	return (n, a), i
+		lodToc = UFRxLodToc()
+		lodToc.n1, i = getUInt16(data, i)
+		lodToc.n2, i = getUInt16(data, i)
+		lodToc.t, i  = getLen32Text16(data, i)
+		lodToc.n3, i = getUInt8(data, i)
+		lodToc.n4, i = getUInt8(data, i)
+		lod_toc.append(lodToc)
+		log.write(u"\t\tLOD-TOC[%02X]: %s\n" %(j, lodToc))
+	log.write("\n")
+	return lod_toc, i
 
-def readExports(data, offset, log, txt):
-	exports = {}
-	cnt, i  = getUInt32(data, offset)
-	log.write(u"%s: count=%d\n" %(txt, cnt))
+def readHeader2(data, offset, log):
+	header = UFRxHeader2()
+	log.write("HEADER_2\n")
+	secVrs = getUFRxVersion(2)
+
+	cnt, i = readUInt32(data, offset, log, 'string_pairs')
 	for j in range(cnt):
 		k, i = getLen32Text16(data, i)
 		v, i = getLen32Text16(data, i)
-		exports[k] = v
-		log.write(u"  [%02X]: '%s'='%s'\n" %(j, k, v))
-	return exports, i
-
-def readIamRefs(data, offset, log, txt):
-	refs   = []
-	if (schema >= 0x0C):
-		cnt, i = getUInt16(data, offset)
+		header.pairs.append((k, v))
+		log.write(u"\t\t'%s'='%s'\n" %(k, v))
+	header.lastActiveLOD_1,   i = readUInt16A(data, i, log, 'LastActiveLOD_1', 2)
+	if (secVrs >= 0x0C): header.activeDesignView, i = readText16(data, i, log, 'ActiveDesignView')
+	if (secVrs >= 0x07): header.lastActiveLOD_2,   i = readUInt16A(data, i, log, 'LastActiveLOD_2', 2)
+	header.version_Flag,      i = readUInt16(data, i, log, 'VersionFlag')
+	header.maxOccRc,          i = readUInt32(data, i, log, 'HighestOccRecID')
+	header.next_LOD_to_apply, i = readUInt16(data, i, log, 'NextLODID2apply')
+	header.always_1,          i = readUInt16(data, i, log, 'Always_1')
+	if (header.always_1 != 1): logError("    NOT 1")
+	header.max_inv_file_ref,  i = readUInt32(data, i, log, 'HighestInvFileRefID')
+	header.max_ole_file_ref,  i = readUInt32(data, i, log, 'NextOtherFileRefID')
+	if (secVrs >= 0x0D):
+		header.doc_Sub_Typ_1, i = getUUID(data,    i)
+		header.doc_Sub_Typ_2, i = getUUID(data,    i)
 	else:
-		cnt, i = getUInt32(data, offset)
-	log.write(u"%s: count=%d\n" %(txt, cnt))
+		header.doc_Sub_Typ_1 = UID('4d29b490-11d0-49b2-077e-c39300000006') # IPT, IAM={E60F81E1-11D0-49B3-077E-C39300000006}, IPN={?}, IDW={?}
+		header.doc_Sub_Typ_2 = UID('4d29b490-11d0-49b2-077e-c39300000006') # IPT, IAM={E60F81E1-11D0-49B3-077E-C39300000006}, IPN={?}, IDW={?}
+	log.write(u"\tDocumentSubTypeID_1:\t{%s}\n" %(header.doc_Sub_Typ_1))
+	log.write(u"\tDocumentSubTypeID_2:\t{%s}\n" %(header.doc_Sub_Typ_2))
+	log.write("\n")
+	return header, i
+
+def readLODs(data, offset, log):
+	log.write("LOD\n")
+	lods = []
+	cnt, i = readUInt32(data, offset, log, 'count')
+	#for j in range(cnt):
+	if (cnt>0): logError("    Don't know how to read LOD's")
+	log.write("\n")
+	return lods, i
+
+def readInvFile(data, offset, log):
+	inv = UFRxInvFile()
+	inv.path,       i = getLen32Text16(data, offset)
+	inv.lib_id,     i = getUInt32(data,      i)
+	inv.lib_name,   i = getLen32Text16(data, i)
+	inv.i_1,        i = getUInt16(data,      i)
+	inv.t_1,        i = getLen32Text16(data, i)
+	inv.buf,        i = getUInt16A(data,     i, 4)
+	inv.name,       i = getUUID(data,        i)
+	inv.db,         i = getUUID(data,        i)
+	inv.id,         i = getUInt32(data,      i)
+	inv.occurences, i = getUInt32(data,      i)
+	inv.version,    i = getUInt32(data,      i)
+	inv.flags,      i = getUInt32(data,      i)
+	return inv, i
+
+def readInvFiles(data, offset, log):
+	invFiles = UFRxInvFiles()
+	log.write("INVENTOR-FILES\n")
+	secVrs = getUFRxVersion(4)
+
+	cnt, i = readUInt32(data, offset, log, 'count')
+	invFiles.caption, i = readText16(data, i, log, 'Caption')
+	invFiles.padding, i = readUInt32(data, i, log, 'Padding')
 	for j in range(cnt):
-		n1, i = getUInt8(data, i)
-		t1, i = getLen32Text16(data, i)
-		a1, i = getUInt16A(data, i, 4)
-		refs.append([n1, t1] + list(a1))
-		log.write(u"  [%02X]: %02X,'%s',%s\n" %(j, n1, t1, IntArr2Str(a1, 3)))
-	return refs, i
+		invFile, i = readInvFile(data, i, log)
+		invFiles.fils.append(invFile)
+		log.write(u"\t\tINV-FILE[%02X]: %s\n" %(j, invFile))
+	if (secVrs >= 0x02): i += 1 # skip 00
+	log.write("\n")
+	return invFiles, i
 
-def readIptRefs(data, offset, log, txt):
-	refs   = []
-	cnt, i = getUInt32(data, offset)
-	nam, i = getLen32Text16(data, i)
-	log.write(u"%s: '%s' count=%d\n" %(txt, nam, cnt))
+def readOleFile(data, offset, log):
+	ole = UFRxOleFile()
+	secVrs = getUFRxVersion(15)
+
+	ole.n1, i = getUInt32(data, offset)
+	ole.d1, i = getDateTime(data, i)
+	ole.n2, i = getUInt32(data, i)
+	if (secVrs >= 0x07): i += 4 # skip 00 00 00 00
+	ole.n3, i = getUInt32(data, i)
+	ole.t1, i = getLen32Text16(data, i)
+	ole.n4, i = getSInt32(data, i)
+	ole.t2, i = getLen32Text16(data, i)
+	ole.n5, i = getUInt16(data, i)
+	ole.t3, i = getLen32Text16(data, i)
+	ole.a1, i = getUInt16A(data, i, 4)
+
+	return ole, i
+
+def readOleFiles(data, offset, log):
+	oleFiles = []
+	secVrs = getUFRxVersion(15)
+	log.write("OLE-FILES\n")
+
+	cnt, i = readUInt32(data, offset, log, 'count')
 	for j in range(cnt):
-		ref = UfrxPartRef()
-		ref.n1, i = getUInt32(data, i)      # index
-		ref.t1, i = getLen32Text16(data, i) # filepath
-		ref.n2, i = getUInt32(data, i)
-		ref.t2, i = getLen32Text16(data, i) # workspace
-		ref.n3, i = getUInt16(data, i)
-		ref.t3, i = getLen32Text16(data, i) # name
-		ref.a1, i = getUInt16A(data, i, 4)
-		ref.u1, i = getUUID(data, i)
-		ref.u2, i = getUUID(data, i)
-		ref.a2, i = getUInt32A(data, i, 3)
-		refs.append(ref)
-		log.write(u"  [%02X]: %s\n" %(j, ref))
+		ole, i = readOleFile(data, i, log)
+		oleFiles.append(ole)
+		log.write(u"\t\tOLE-FILE[%02X]: %s\n" %(j, ole))
+	if (secVrs >= 0x06): i += 1 # skip 00
+	log.write("\n")
+	return oleFiles, i
 
-	return (nam, refs), i
+def readOccSection(data, offset, log, index):
+	occSec = UFRxOccSection()
 
-def readFileRefs(data, offset, log, txt):
-	files  = []
-	cnt, i = getUInt32(data, offset)
-	log.write(u"%s: count=%d\n" %(txt, cnt))
+	occSec.n, i = getUInt32(data, offset)
+	cnt, i = getUInt32(data, i)
+	log.write("\t\tSection %d: count = %d\n" %(index, cnt))
 	for j in range(cnt):
-		ref = UfrxFileRef()
-		ref.n1, i   = getUInt32(data, i)      # index
-		ref.fDat, i = getDateTime(data, i)	  # file's date
-		n, k = getUInt32(data, i)
-		while (n < 0xFFFF):
-			ref.a1.append(n)
-			n, k = getUInt32(data, k)
-		ref.a1 = ref.a1[:-1]
-		ref.fNam, i = getLen32Text16(data, k - 8) # file's path
-		ref.n2, i   = getSInt32(data, i)
-		ref.wks, i  = getLen32Text16(data, i)     # workspace
-		ref.n3, i   = getUInt16(data, i)
-		ref.t3, i   = getLen32Text16(data, i)     # ???.fins
-		ref.a2, i   = getUInt16A(data, i, 4)
-		log.write("  [%02X]: %s\n" %(j, ref))
-		files.append(ref)
-	return files, i
+		prp = UFRxOccSecProperty()
+		i = prp.readValues(data, i)
+		occSec.properties[prp.t] = prp
+		log.write("\t\t\tOCC-Section-Property[%02X]: %s\n" %(j, prp))
+	return occSec, i
 
-def readXprtList(data, offset):
-	lst = []
-	cnt, i = getUInt32(data, offset)
+def readOccSettingValue(data, offset):
+	value = UFRxOccSettingValue()
+	value.t1, i = getLen32Text16(data, offset)
+	value.id, i = getUUID(data, i)
+	value.t2, i = getLen32Text8(data, i)
+	return value, i
+
+def readOccSettings(data, offset, log):
+	set = UFRxOccSetting()
+	cnt, i = getUInt32(data, offset )
+	log.write("\t\tSettings: count = %d\n" %(cnt))
 	for j in range(cnt):
-		xprt = UfrxExport()
-		xprt.s, i = getLen32Text16(data, i) # name
-		xprt.u, i = getUUID(data, i)
-		xprt.t, i = getLen32Text8(data, i)  # Export
-		lst.append(xprt)
-	return lst, i
+		v, i = readOccSettingValue(data, i)
+		set.values.append(v)
+		log.write("\t\tSettings-Value[%d]:%s" %(j, v))
+	return set, i
 
-def logWritePresentations(log, txt, v):
-	if (v is not None):
-		log.write(u"    %s: count=%X\n" %(txt, len(v)))
-		for j, o in enumerate(v):
-			log.write(u"      [%02X]: '%s',{%s},\"%s\"\n" %(j, o[0], o[1], o[2]))
+def readOccExport(data, offset, log):
+	exp = UFRxOccExport()
 
-def logWriteBBLTVLst(log, txt, v):
-	if (v is not None):
-		log.write(u"    %s: n=%d, count=%X\n" %(txt, v[0], len(v[1])))
-		for j, o in enumerate(v[1]):
-			log.write(u"      [%02X]: %s\n" %(j, o))
-
-def readL7BHLst1(data, offset, log, txt):
-	lst = []
-	cntJ, i = getUInt32(data, offset)
-	log.write(u"%s: count=%d\n" %(txt, cntJ))
-	for j in range(cntJ):
-		l7bhls = UfrxL7HHL()
-		l7bhls.a1, i = getUInt32A(data, i, 7)
-		if (schema >= 0x0C):
-			l7bhls.n1, i = getUInt16(data, i)
+	exp.buf, i = getUInt8A(data, offset, 10)
+	log.write("\t\tValue: [%s]" %(IntArr2Str(exp.buf, 1)))
+	if (getFileVersion() >= 2015): i += 1 # skip 00
+	val, j  = getUInt32(data, i)
+	val2, k = getUInt32(data, j)
+	if (val > 1) or (val==1 and (val2 > 1)):
+		if (val2 > 0xFFFF):
+			st1, i = getLen32Text16(data, i)
+			su1, i = getUUID(data, i)
+			st2, i = getLen32Text8(data, i)
+			exp.val = (st1, su1, st2)
+			log.write(", '%s', {%s}, '%s'\n" %(st1, su1, st2))
 		else:
-			l7bhls.n1, i = getUInt8(data, i)
-		tst, k = getUInt8A(data, i + 1, 3)
-		if (tst != (0,0,0)):
-			l7bhls.n2, i = getUInt8(data, i)
-		l7bhls.l1, i      = readBBLTvLNew(data, i)
-		l7bhls.l2, i      = readBBLTvLNew(data, i)
-		l7bhls.exports, i = readXprtList(data, i)
-		if (schema >= 0x0C): l7bhls.a2, i = getUInt8A(data, i, 1)
-		cntK, i = getUInt32(data, i)
-		for k in range(cntK):
-			t, i = getLen32Text16(data, i)
-			u, i = getUUID(data, i)
-			s, i = getLen32Text8(data, i)
-			l7bhls.a3.append((t, u, s))
-		l7bhls.a4, i = getUInt8A(data, i, 6)
-		if (l7bhls.a1[0] == 1):
-			s, i = getLen32Text16(data, i) # name
-			u, i = getUUID(data, i)        # UID
-			l7bhls.su = (s, u)
-		log.write(u"  [%02X]: %s\n" %(j, l7bhls))
-		logWritePresentations(log, 'presentations', l7bhls.a3)
-		logWriteBBLTVLst(log, 'bbltvl1', l7bhls.l1)
-		logWriteBBLTVLst(log, 'bbltvl2', l7bhls.l2)
-		log.write(u"  exports: count=%X\n" %(len(l7bhls.exports)))
-		for k, o in enumerate(l7bhls.exports):
-			log.write(u"      [%02X]: %s\n" %(k, o))
-		lst.append(l7bhls)
-	return  lst, i
+			log.write(", count = %d\n" %(val))
+			exp.val = []
+			i = j
+			for k in range(val):
+				t, i = getLen32Text16(data, i)
+				l, i = readExportItems(data, i, log)
+				p, i = getUInt32A(data, i, 3)
+				exp.val.append((t, l))
+				if (getFileVersion() >= 2018): i += 1 # skip 00
+	else:
+		i = j
+		log.write(", count = %d\n" %(val))
+	return exp, i
 
-def readTxt2I(data, offset, log, txt):
-	lst = []
+def readOccHeader(data, offset, log):
+	occ = UFRxOccurence()
+	secVrs = getUFRxVersion(3)
+
+	occ.a1,   i = getUInt32A(data, offset, 4) # (EndStringFlag, Ref2IDFromSection5, OccurrenceID, Unknown_1)
+	occ.size, i = getUInt32(data, i) # Unknown_2:  [UInt32]
+	# Title:      [Text16]
+	# Unknown_3:  [UInt32]
+	# Unknown_4:  [UInt16r]
+	# Padding_21: [UInt8]
+	if (occ.size == 1):
+		occ.a2, i = getLen32Text16(data, i)
+	elif (occ.size > 1):
+		occ.a2, i = getLen32Text16(data, i - 4)
+	occ.a3,   i = getUInt8A(data, i, 5)
+	if (secVrs >= 0x14): i += 1 # skip 00 00
+	if (secVrs >= 0x15): i += 1 # skip 00 00
+	return occ, i
+
+def readOccurences(data, offset, log):
+	secVrs = getUFRxVersion(3)
+	occurences = []
 	cnt, i = getUInt32(data, offset)
-	log. write(u"%s: count=%d\n" %(txt, cnt))
+	log.write("OCCURENCES: count = %d\n" %(cnt))
 	for j in range(cnt):
-		o = UfrxS2I()
-		o.t, i   = getLen32Text16(data, i)
-		o.lst, i = readBBLTvL(data, i)
-		o.a2, i  = getUInt32A(data, i, 3)
-		if (o.lst[0] > 0): o.n, i   = getUInt8(data, i)
-		log.write(u"  [%02X] %s\n" %(j, o))
-		logWriteBBLTVLst(log, 'btl', o.lst)
-	return lst, i
+		occ, i = readOccHeader(data, i, log)
+		log.write("\tOccurence[%02X]: %s\n" %(j, occ))
+		occ.sec1, i = readOccSection(data, i, log, 1)
+		occ.sec2, i = readOccSection(data, i, log, 2)
+		occ.set, i  = readOccSettings(data, i, log)
+		occ.exp, i  = readOccExport(data, i, log)
+		occurences.append(occ)
+	if (cnt == 0):
+		padding, i = readUInt32(data, i, log, 'Padding')
+	log.write("\n")
+	return occurences, i
 
-def readSettings(data, offset, log, txt):
-	settings = {}
-	cnt, i   = getUInt32(data, offset)
-	log.write(u"%s: count=%d\n" %(txt, cnt))
+def readProperties(data, offset, log):
+	secVrs = getUFRxVersion(9)
+	log.write("PROPERTIES:\n")
+	version, i = readUInt32(data, offset, log, 'Version')
+	cnt,     i = readUInt32(data, i, log, 'Count')
+	# 0x11: ModelGeometryVersions
+	# 0x12: GeometricRevision
+	# 0x13: MassPropRevisions
+	# 0x15: DocumentSubType
+	# 0x16, 0x17, 0x18, 0x24, 0x25: DesignView
+	# 0x1C: BOMRevision
+	# 0x1F: ActiveLODonSaveCheckSum
+	if (secVrs >= 0x05):
+		SINGLES = [0x12, 0x15, 0x1A, 0x1B, 0x1C, 0x20, 0x23, 0x28, 0x29, 0x2B]
+		DOUBLES = [0x11, 0x13, 0x1F, 0x16, 0x17, 0x24, 0x25, 0x18, 0x2A]
+	else:
+		SINGLES = [0x11, 0x12, 0x15, 0x1A, 0x1B, 0x1C, 0x20, 0x23, 0x28, 0x29, 0x2B]
+		DOUBLES = [0x13, 0x1F, 0x16, 0x17, 0x24, 0x25, 0x18, 0x2A]
+	d = {}
 	for j in range(cnt):
 		t, i = getUInt8(data, i)
+		log.write("\t[%02X]: " %(t))
 		if (t in [0x04]):
 			v, i = getLen32Text16(data, i)
-			log.write(u"  %02X = '%s'\n" %(t, v))
-		elif (t in [0x0F, 0x10, 0x1D]):
+			log.write("'%s'\n" %(v))
+		elif (t in [0x0F, 0x10, 0x1D]): # (AdaptivelyUsedInAssembly, LastSavedWithoutUpdating, BOMUpdatePending)
 			v, i = getUInt8(data, i)
-			log.write(u"  %02X = %02X\n" %(t, v))
-		elif (t in [0x12, 0x15, 0x1A, 0x1B, 0x1C, 0x20, 0x23, 0x28, 0x29, 0x2B]):
+			log.write("%d\n" %(v))
+		elif (t in SINGLES):
 			v, i = getUUID(data, i)
-			log.write(u"  %02X = {%s}\n" %(t, v))
-		elif (t in [0x13, 0x16, 0x17, 0x18, 0x1F, 0x24, 0x25, 0x2A]):
+			log.write("{%s}\n" %(v))
+		elif (t in DOUBLES):
 			u1, i = getUUID(data, i)
 			u2, i = getUUID(data, i)
-			v = [u1, u2]
-			log.write(u"  %02X = {%s},{%s}\n" %(t, u1, u2))
-		elif (t in [0x11]):
-			v, i = getUUID(data, i)
-			u, j = getUUID(data, i)
-			if (v == u):
-				i = j
-			log.write(u"  %02X = {%s}\n" %(t, v))
+			log.write("({%s},{%s})\n" %(u1, u2))
+			v = (u1, u2)
 		else:
-			raise ValueError(u"Unknown UFRxDoc type %02X!" %(t))
-		settings[t] = v
-	return settings, i
+			raise ValueError(u"Unknown type %02X for array element in readProperties!" %(t))
+		d[t] = v
 
-def readListUID(data, offset, log, txt):
-	uids   = []
-	cnt, i = getUInt32(data, offset)
-	log.write(u"%s: count=%d\n" %(txt, cnt))
+	log.write("\n")
+	return (version, d), i
+
+def readNextAbschnitt1(data, offset, log):
+	log.write("NEXT Abschnitt 1:\n")
+	n, i = readUInt16(data, offset, log, 'unknown_1')
+	cnt, i = readUInt32(data, i, log, 'UIDS')
+	l = []
 	for j in range(cnt):
 		u, i = getUUID(data, i)
-		log.write(u"  [%02X]: {%s}\n" %(j, u))
-		uids.append(u)
-	return uids, i
+		log.write("\t\t[%02X] - {%s}\n" %(j, u))
+	log.write("\n")
+	return (n, l), i
 
-def readListEnv(data, offset, log, txt):
-	lst = []
+def readNextAbschnitt2(data, offset, log):
 	cnt, i = getUInt32(data, offset)
-	log.write(u"%s: count=%d\n" %(txt, cnt))
-	for j in range(cnt):
-		e = UfrxEnv()
-		e.u, i = getUUID(data, i)
-		e.a, i = getUInt32A(data, i, 2)
-		e.n, i = getUInt16(data, i)
-		e.b, i = getUInt8(data, i)
-		e.t, i = getLen32Text16(data, i)
-		lst.append(e)
-		log.write(u"  [%02X]: %s\n" %(j, e))
-	return lst, i
+	log.write("NEXT Abschnitt 2: count  = %d\n" %(cnt))
+	l = []
+	for j in range(cnt): # UID L L h B ""
+		u, i = getUUID(data, i)
+		a, i = getUInt32A(data, i, 2)
+		h, i = getUInt16(data, i)
+		b, i = getUInt8(data, i)
+		t, i = getLen32Text16(data, i)
+		log.write("\t\t[%02X] - {%s},[%s],%03X,%02X,'%s'\n" %(j, u, IntArr2Str(a,4), h, b, t))
+	log.write("\n")
+	return l, i
 
-def readInLengthFactor(data, offset, log, txt):
-	b, i = getBoolean(data, offset)
+def readUnknown2(data, offset, log):
+	log.write("UNKNOWN 2:\n")
+	l =	 []
+	a = ()
+	if (getFileVersion() >= 2012):
+		n1,  i = readUInt32(data, offset, log, 'Data')
+		cnt, i = getUInt32(data, i)
+		for j in range(cnt):
+			t1, i = getLen32Text16(data, i)
+			t2 = ''
+			if (len(t1)):
+				t2, i = getLen32Text16(data, i)
+			log.write("\tText[%02X]: '%s'='%s'\n" %(j, t1, t2))
+		n2, i = getUInt8(data, i)
+	else:
+		i = offset
+		n1 = 0
+		n2 = 0
+		l.append(('',))
+	log.write('\tPadding: %d\n' %(n2))
+	return (n1, l, n2), i
+
+def readBomRecord(data, offset, log):
+	bom = None
+	log.write("BOM-RECORD:\n")
+	b, i = readBoolean(data, offset, log, 'Has-BOM')
 	if (b):
-		t1, i = getLen32Text16(data, i)
-		t2, i = getLen32Text16(data, i)
-		t3, i = getLen32Text16(data, i)
-		f1, i = getFloat64(data, i)
-		n1, i = getUInt16(data, i)
-		log.write(u"%s:\t'%s' '%s' '%s', %g, %04X\n" %(txt, t1, t2, t3, f1, n1))
-		return (t1, t2, t3, f1, n1), i
-	log.write(u"%s:\tNULL\n" %(txt))
-	return None, i
+		bom = UFRxBOM()
+		bom.unit, i  = getLen32Text16(data, i)
+		bom.name, i  = getLen32Text16(data, i)
+		bom.repr, i  = getLen32Text16(data, i)
+		bom.value, i = getFloat64(data, i)
+		bom.pad, i   = getUInt16(data, i)
+		log.write("\t%s\n" %(bom))
+	log.write("\n")
+	return bom, i
 
-def readListTxtStrUid(data, offset, log, txt):
-	lst    = []
-	cnt, i = getUInt32(data, offset)
-	log.write(u"%s: count=%d\n" %(txt, cnt))
-	for j in range(cnt):
-		o = UfrxTSU()
-		o.s, i  = getLen32Text8(data, i)
-		o.t, i  = getLen32Text16(data, i)
-		o.u, i  = getUUID(data, i)
-		if (schema >= 0x0B):
-			o.m, i  = getUInt16(data, i)
-		else:
-			o.m, i  = getUInt8(data, i)
-		o.a1, i = getUInt16A(data, i, 2)
-		cntK, i = getUInt32(data, i)
-		for k in range(cntK):
-			t, i = getUInt8(data, i)
-			if (t in [0x27]):
-				v, i = getUInt32(data, i)
-			elif (t in [0x10]):
-				v, i = getUInt8(data, i)
-			elif (t in [0x13]):
-				v = None
-			elif (t in [0x11, 0x22, 0x29]):
-				v, i = getUUID(data, i)
-			elif (t in [0x16, 0x17, 0x18, 0x1F, 0x24, 0x25, 0x2A]):
-				u1, i  = getUUID(data, i)
-				u2, i  = getUUID(data, i)
-				v = [u1, u2]
-			else:
-				raise ValueError(u"Unknown type %02X for array element in arr9!" %(t))
-			o.p[t] = v
-		o.a2, i  = getUInt16A(data, i, 2)
-		b, i = getBoolean(data, i)
-		if (b):
-			o.v1, i = readBBLTvLNew(data, i)
-			o.v2, i = readBBLTvLNew(data, i)
-		if (schema >= 0x0C):
-			o.n, i = getUInt8(data, i)
-		log.write(u"  [%02X]: %s\n" %(j, o))
-		logWriteBBLTVLst(log, 'bbltvl1', o.v1)
-		logWriteBBLTVLst(log, 'bbltvl2', o.v2)
-		keys = o.p.keys()
-		if (sys.version_info.major < 3):
-			keys.sort()
-		else:
-			keys = sorted(keys)
-		for t in keys:
-			log.write(u"    [%02X]: " %(t))
-			if (t in [0x27]):
-				log.write(u"%04X\n" %(o.p[t]))
-			elif (t in [0x10]):
-				log.write(u"%02X\n" %(o.p[t]))
-			elif (t in [0x13]):
-				log.write(u"\n")
-			elif (t in [0x11, 0x22, 0x29]):
-				log.write(u"{%s}\n" %(o.p[t]))
-			elif (t in [0x16, 0x17, 0x18, 0x1F, 0x24, 0x25, 0x2A]):
-				v = o.p[t]
-				log.write(u"{%s},{%s}\n" %(v[0], v[1]))
-		lst.append(o)
+def readUnknown3(data, offset, log):
+	log.write("UNKNOWN_3\n")
+	a, i = readUInt8A(data, offset, log, 'Padding1', 3)
+	n1 = 6
+	if (getFileVersion() >= 2015):
+		n1, i = getUInt16(data, i)
+	n2 = 0
+	if (getFileVersion() >= 2012):
+		n2, i = getUInt8(data, i)
+	log.write("\tUnknown: %03X, %02X\n\n" %(n1, n1))
+	return (a, n1, n2), i
+
+def readExportBlock(data, offset, log):
+	export = UFRxExport()
+	export.type_name, i = getLen32Text8(data, offset)
+	export.name,      i = getLen32Text16(data, i)
+	export.guid,      i = getUUID(data, i)
+	if (getFileVersion() >= 2012):
+		export.flags, i = getUInt16(data, i)
+	else:
+		export.flags, i = getUInt8(data, i)
+	export.unknown,   i = getUInt32(data, i)
+	return export, i
+
+def readExportProperty(data, offset):
+	if (getUFRxVersion(9) >= 4):
+		SINGLES = [0x22, 0x29]
+		DOUBLES = [0x16, 0x17, 0x18, 0x24, 0x25, 0x2A]
+	else:
+		SINGLES = [0x16, 0x17, 0x18, 0x22, 0x24, 0x25, 0x29]
+		DOUBLES = [0x2A]
+
+	t, i   = getUInt8(data, offset)
+	if (t in [0x27]):
+		v, i = getUInt32(data, i)
+	elif (t in SINGLES):
+		v, i = getUUID(data, i)
+	elif (t in DOUBLES):
+		u1, i = getUUID(data, i)
+		u2, i = getUUID(data, i)
+		v = (u1, u2)
+	else:
+		raise ValueError(u"Unknown type %02X for array element in readExportProperty!" %(t))
+	return (t, v), i
+
+def readExportItems(data, offset, log):
+	m, i = getUInt32A(data, offset, 2)
+	assert m[0] == m[1]
+	lst = []
+	for j in range(m[0]):
+		osi = UFRxOccSecItem()
+		i = osi.readValues(data, i)
+		lst.append(osi)
+		log.write("\t\t\t\t[%02X] - %s,\n" %(j, osi))
 	return lst, i
+
+def readExportBlocks(data, offset, log):
+	cnt, i = getUInt32(data, offset)
+	log.write("EXPORTS: count = %d\n" %(cnt))
+	exports = []
+	for j in range(cnt):
+		export, i = readExportBlock(data, i, log)
+		exports.append(export)
+		log.write("\tExport[%02X]\n" %(j))
+		log.write("\t\tType:       %s {%s}\n" %(export.type_name, export.guid))
+		log.write("\t\tName:       '%s'\n" %(export.name))
+		log.write("\t\tFlags:      %s\n" %(export.flags))
+		log.write("\t\tUnknown:    %s\n" %(export.unknown))
+		cnt, i = getUInt32(data, i)
+		log.write("\t\tProperties: count = %d\n" %(cnt))
+		for j in range(cnt):
+			property, i = readExportProperty(data, i)
+			log.write("\t\t\tProperty[%02X]: %s\n" %(j, property))
+			export.properties.append(property)
+		cnt = 6 if (getFileVersion() >= 2015) else 5
+		log.write("\t\tSettings:   count = %d\n" %(cnt))
+		for j in range(cnt):
+			log.write("\t\t\tSetting[%02X]: ")
+			b, i = getBoolean(data, i)
+			if b:
+				l1, i = readExportItems(data, i, log)
+				l2, i = readExportItems(data, i, log)
+				export.settings.append((l1, l2))
+			else:
+				export.settings.append(None)
+				log.write("None\n")
+	log.write("\n")
+	return exports, i
+
+def readBoundBox(data, offset, log):
+	a, i = getFloat32A(data, offset, 6)
+	log.write("BOUND-BOX: (%g,%g,%g)-(%g,%g,%g)\n\n" %(a[0], a[1], a[2], a[3], a[4], a[5]))
+	return BoundBox(VEC(a[0: 3]), VEC(a[3:])), i
+
+def readIProperty(data, offset):
+	iProp = UFRxIProperty()
+	iProp.b, i  = getBoolean(data, offset)
+	iProp.t1, i = getLen32Text16(data, i)
+	iProp.t2, i = getLen32Text16(data, i)
+	iProp.b,  i = getUInt8(data, i)
+	iProp.u,  i = getUUID(data, i)
+	iProp.p,  i = getUInt32A(data, i, 2)
+	return iProp, i
+
+def readiProperties(data, offset, log):
+	secVrs = getUFRxVersion(18)
+	log.write("I-PROPERTIES:\n")
+	iProperties = UFRxIProperties()
+	i = offset
+	if ((len(data) - i) > 9):
+		cnt, i = getUInt32(data, i)
+		for j in range(cnt):
+			iPrp, i = readIProperty(data, i)
+			log.write("\t\tValue[%02X]: %s\n" %(j, iPrp))
+			iProperties.properties.append(iPrp)
+		iProperties.selected, i = readText16(data, i, log, 'Selected')
+		if (secVrs >= 0x03):
+			iProperties.b, i = readBoolean(data, i, log, 'Unknown4')
+		else:
+			log.writelines("\tUnknown4: False\n")
+	log.write("\n")
+	return iProperties, i
+
+def readAppendix(data, offset, log):
+	secVrs = getUFRxVersion(20)
+	log.write("APPENDIX:\n")
+	appendix = UFRxAppendix()
+	appendix.p1, i = readUInt32A(data, offset, log, 'Data', 2)
+	if (secVrs >= 0x01):
+		appendix.p2, i = readUInt8(data, i, log, 'Unknown')
+	else:
+		log.write("\tUnknown: 00\n")
+	log.write("\n")
+	return appendix, i
 
 def read(data):
-	global schema
-
-	dumpFolder = getDumpFolder()
-	if (not (dumpFolder is None)):
-		ufrx = UFRxDocument()
-		with io.open(u"%s/UFRxDoc.log" %(dumpFolder), 'w', encoding='utf8') as log:
-			try:
-				ufrx.schema, i  = readUInt16(data,   0, log, 'schema')
-				schema = ufrx.schema
-				cnt, i           = getUInt16(data,    i)
-				ufrx.arr1, i     = readUInt16A(data,  i, log, 'arr1', cnt)
-				ufrx.arr2, i     = readUInt16A(data,  i, log, 'arr2', 4)
-				ufrx.dat1, i     = readDateTime(data, i, log, 'dat1')
-				ufrx.arr3, i     = readUInt16A(data,  i, log, 'arr3', 4)
-				ufrx.dat2, i     = readDateTime(data, i, log, 'dat2')
-				ufrx.comment, i  = readText16(data,   i, log, 'comm')
-				ufrx.arr4, i     = readUInt16A(data,  i, log, 'arr4', 12)
-				ufrx.dat3, i     = readDateTime(data, i, log, 'dat3') # creation date of version 1
-				ufrx.revision, i = readUID(data,      i, log, 'revision')
-				ufrx.flags, i    = readUInt32(data,   i, log, 'flags')
-				ufrx.uid2, i     = readUID(data,      i, log, 'uid2')
-				ufrx.fName, i    = readText16(data,   i, log, 'fName')
-				ufrx.n0, i       = readUInt16(data,   i, log, 'n0')
-				cnt, i = getUInt32(data, i)
-				log.write(u"arr5: count=%d\n" %(cnt))
-				for j in range(cnt):
-					n1, i = getUInt16(data, i)
-					n2, i = getUInt16(data, i)
-					t, i = getLen32Text16(data, i)
-					n3, i = getUInt8(data, i)
-					n4, i = getUInt8(data, i)
-					ufrx.arr5.append((n1, n2, t, n3, n4))
-					log.write(u"  [%02X]: %03X,%03X,'%s',%02X,%02X\n" %(j, n1, n2, t, n3, n4))
-				ufrx.exports, i = readExports(data,  i, log, 'exports')
-				ufrx.n1, i      = readUInt32(data,   i, log, 'n1')
-
-				if (ufrx.schema >= 0x0B): ufrx.txt1, i = getLen32Text16(data, i)
-				log.write(u"txt1:\t'%s'\n" %(ufrx.txt1))
-
-				ufrx.arr6, i    = readUInt16A(data,  i, log, 'arr6', 10)
-
-				if (ufrx.schema >= 0x0C):
-					ufrx.n2, i   = getUInt16(data, i)
-					ufrx.uid3, i = getUUID(data, i)
-					ufrx.uid4, i = getUUID(data, i)
-				log.write(u"n2:\t%04X\n" %(ufrx.n2))
-				log.write(u"uid3:\t{%s}\n" %(ufrx.uid3))
-				log.write(u"uid4:\t{%s}\n" %(ufrx.uid4))
-
-				ufrx.n3, i = readUInt16(data, i, log, 'n3')
-
-				ufrx.iamRefs, i = readIamRefs(data, i, log, 'iamRefs')
-				ufrx.iptRefs, i = readIptRefs(data, i, log, 'iptRefs')
-				ufrx.b1,      i = readBoolean(data,  i, log, 'b1')
-
-				if (ufrx.schema >= 0x0C):
-					a, i = getUInt16(data, i)
-				else:
-					a, i = getUInt8(data, i)
-				assert a == 0, u"a = %X" %(a)
-				ufrx.n4, i       = readUInt16(data,   i, log, 'n4')
-				ufrx.fileRefs, i = readFileRefs(data, i, log, 'fRefs')
-				if (ufrx.schema >= 0x0C):
-					a, i = getUInt8(data, i)
-					assert a == 0, u"a = %X" %(a)
-
-				ufrx.lst1, i     = readL7BHLst1(data, i, log, 'lst1')
-				ufrx.lst2, i     = readTxt2I(data,    i, log, 'lst2')
-				ufrx.n5, i       = readUInt32(data,   i, log, 'n5')
-				ufrx.settings, i = readSettings(data, i, log, 'settings')
-				ufrx.n6, i       = readUInt16(data,   i, log, 'n6')
-				ufrx.uids, i     = readListUID(data,  i, log, 'uids')
-				ufrx.envList, i  = readListEnv(data,  i, log, 'environments')
-
-				if (ufrx.schema >= 0x0B):
-					ufrx.n7, i = getUInt32(data, i)
-					b, i = getUInt16(data, i)
-					if (b == 1):
-						ufrx.arr7, i = getUInt16A(data, i, 3)
-				log.write(u"n7:\t%04X\n" %(ufrx.n7))
-				log.write(u"arr7:\t[%s]\n" %(FloatArr2Str(ufrx.arr7)))
-
-				ufrx.n8, i   = readUInt8(data,          i, log, 'n8')
-				ufrx.obj1, i = readInLengthFactor(data, i, log, 'obj1')
-				ufrx.n9, i   = readUInt16(data,         i, log, 'n9')
-
-				if (ufrx.schema >= 0x0C): ufrx.n10, i = getUInt16(data, i)
-				log.write(u"n10:\t%04X\n" %(ufrx.n10))
-
-				if (ufrx.schema >= 0x0B): ufrx.n11, i = getUInt16(data, i)
-				log.write(u"n11:\t%03X\n" %(ufrx.n11))
-
-				ufrx.lst3, i   = readListTxtStrUid(data, i, log, 'lst3')
-				if (ufrx.n6 == 1):
-					ufrx.posMin, i = readFloat32_3D(data,    i, log, 'min')
-					ufrx.posMin, i = readFloat32_3D(data,    i, log, 'max')
-
-				n, j = getUInt32(data, i)
-				if (n > 2):
-					cnt = n
-					i = j
-					# iMates:
-					log.write(u"iMates: count=%d\n" %(cnt))
-					for j in range(cnt):
-						t, i = getBoolean(data, i)
-						if (t):
-							t1, i = getLen32Text16(data, i)
-							t2, i = getLen32Text16(data, i)
-							b, i  = getUInt8(data, i)
-							u, i  = getUUID(data, i)
-							a, i  = getUInt32A(data, i, 2)
-							log.write(u"  [%02X]: %02X,'%s','%s',%02X,%s,[%s]\n" %(j, t, t1, t2, b, u, IntArr2Str(a, 4)))
-							ufrx.iMates.append((t, (t1, t2, b, u, a)))
-					if (len(ufrx.iMates) > 0):
-						ufrx.iMate, i  = readText16(data, i, log, 'sel.') # selected iMate
-				elif (n == 0):
-					ufrx.arr8, i = readUInt32A(data, i, log, 'arr8', 2)
-
-				ufrx.arr9, i  = readUInt16A(data, i, log, 'arr9', 4)
-
-				if (ufrx.schema >= 0x0C): ufrx.n12, i = getUInt8(data, i)
-				log.write(u"n12:\t%02X\n" %(ufrx.n12))
-			except Exception as e:
-				logError(traceback.format_exc())
-				logError(str(e))
-
-			if (i < len(data)):
-				if (sys.version_info.major < 3):
-					b = " ".join(["%02X" %(ord(c)) for c in data[i:]])
-				else:
-					b = " ".join(["%02X" %(c) for c in data[i:]])
-				aX = re.sub(u"( [2-7][0-9a-fA-F] 00){2,}", u":''", b)
-				log.write(u"aX=%02X,%04X: [%s]" %(ufrx.schema, ufrx.n4, aX))
-		return ufrx
+#	dumpFolder = getDumpFolder()
+#	if (not (dumpFolder is None)):
+#		ufrx = UFRxDocument()
+#		with io.open(u"%s/UFRxDoc.log" %(dumpFolder), 'w', encoding='utf8') as log:
+#			i = 0
+#			try:
+#				ufrx.header1,       i = readHeader1(data,        i, log)
+#				ufrx.lodToc,        i = readLodToc(data,         i, log)
+#				ufrx.header2,       i = readHeader2(data,        i, log)
+#				ufrx.lod_list,      i = readLODs(data,           i, log)
+#				ufrx.inventorFiles, i = readInvFiles(data,       i, log)
+#				ufrx.partFiles,     i = readOleFiles(data,       i, log)
+#				ufrx.occurences,    i = readOccurences(data,     i, log)
+#				ufrx.properties,    i = readProperties(data,     i, log)
+#				ufrx.abschnitt1,    i = readNextAbschnitt1(data, i, log)
+#				ufrx.abschnitt2,    i = readNextAbschnitt2(data, i, log)
+#				ufrx.unknown2,      i = readUnknown2(data,       i, log)
+#				ufrx.bomRecord,     i = readBomRecord(data,      i, log)
+#				ufrx.unknown3,      i = readUnknown3(data,       i, log)
+#				ufrx.exportBlocks,  i = readExportBlocks(data,   i, log)
+#				ufrx.rangeBox,      i = readBoundBox(data,       i, log)
+#				ufrx.iProperties,   i = readiProperties(data,    i, log)
+#				ufrx.appendix,      i = readAppendix(data,       i, log)
+#			except Exception as ex:
+#				Beep(880, 250)
+#				logError(traceback.format_exc())
+#				logError(str(ex))
+#				log.write('\n')
+#			if (i < len(data)):
+#				if (sys.version_info.major < 3):
+#					b = " ".join(["%02X" %(ord(c)) for c in data[i:]])
+#				else:
+#					b = " ".join(["%02X" %(c) for c in data[i:]])
+#				l = 0x20*3
+#				for j in range(0, len(b), l):
+#					log.write(b[j:j+l])
+#					log.write('\n')
+#				with io.open(u"%s/UFRxDoc.ax" %(dumpFolder), 'w', encoding='utf8') as ax:
+#					ax.write(b)
+#					ax.write('\n')
+#		return ufrx
 	return None

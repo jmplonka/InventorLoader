@@ -6,6 +6,7 @@ from importerUtils import setDumpFolder, getDumpFolder, chooseImportStrategyAcis
 from dxfgrabber    import readfile
 from importerSAT   import dumpSat, importModel, convertModel
 from Acis          import setReader, setVersion, AcisReader
+from dxfgrabber.dxfentities import Body
 
 _3dSolids = []
 
@@ -20,19 +21,20 @@ def read(filename):
 	setDumpFolder(filename)
 	doc = readfile(filename)
 	for entry in doc.entities:
-		if (entry.is_sab):
-			stream = io.BytesIO(entry.acis)
-			reader = AcisReader(stream)
-			reader.name = entry.handle
-			if (reader.readBinary()):
-				_3dSolids.append(reader)
-		elif (entry.is_sat):
-			sat = u"\n".join(entry.acis)
-			stream = io.StringIO(sat)
-			reader = AcisReader(stream)
-			reader.name = entry.handle
-			if (reader.readText()):
-				_3dSolids.append(reader)
+		if (isinstance(entry, Body)):
+			if (entry.is_sab):
+				stream = io.BytesIO(entry.acis)
+				reader = AcisReader(stream)
+				reader.name = entry.handle
+				if (reader.readBinary()):
+					_3dSolids.append(reader)
+			elif (entry.is_sat):
+				sat = u"\n".join(entry.acis)
+				stream = io.StringIO(sat)
+				reader = AcisReader(stream)
+				reader.name = entry.handle
+				if (reader.readText()):
+					_3dSolids.append(reader)
 	return True
 
 def create3dModel(group, doc):

@@ -1905,10 +1905,10 @@ class FreeCADImporter(object):
 		if (SKIP_CONSTRAINTS & BIT_DIM_RADIUS == 0): return
 		circle    = dimensionNode.get('circle')
 		index     = circle.sketchIndex
-		dimension = getDimension(dimensionNode, 'parameter')
 		if (index is not None):
 			key = 'Radius_%s' %(index)
 			if (not key in self.mapConstraints):
+				dimension = getDimension(dimensionNode, 'parameter')
 				radius = circle.geometry.Radius
 				constraint = Sketcher.Constraint('Radius',  index, radius)
 				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key)
@@ -1947,13 +1947,11 @@ class FreeCADImporter(object):
 		if (index is not None):
 			key = 'Diameter_%s' %(index)
 			if (not key in self.mapConstraints):
-				#TODO: add a 2D-construction-line, pin both ends to the circle, pin circle's center on this 2D-line and add dimension constraint to 2D-construction-line
-				radius = circle.geometry.Radius
-				constraint = Sketcher.Constraint('Radius',  index, radius)
 				dimension = getDimension(dimensionNode, 'parameter')
+				constraint = Sketcher.Constraint('Diameter', index, dimension.getValue())
 				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key, False)
 				dimensionNode.setGeometry(constraint, index)
-				logInfo(u"        ... added diameter '%s' = %s (r = %s mm)", constraint.Name, dimension.getValue(), radius)
+				logInfo(u"        ... added diameter '%s' = %s", constraint.Name, dimension.getValue())
 		return
 
 	def addSketch_Dimension_Angle3Point2D(self, dimensionNode, sketchObj):

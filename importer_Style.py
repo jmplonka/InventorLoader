@@ -103,7 +103,7 @@ class StyleReader(SegmentReader):
 	def Read_9795E56A(self, node): # Object style ...
 		i = self.ReadHeaderStyle(node, 'Style_9795E56A')
 		i = node.ReadFloat64_3D(i, 'vec')
-		if (getFileVersion() > 2013):
+		if (self.version > 2013):
 			i = node.ReadFloat64_3D(i, 'dir')
 		return i
 

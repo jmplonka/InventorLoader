@@ -113,7 +113,20 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = self.ReadNtEntryU8List(node, i, 'lst2')
 		i = self.ReadNtEntryD64List(node, i, 'a5')
 		i = self.ReadNtEntryD64List(node, i, 'a6')
-		if (getFileVersion() > 2010): i += 16
+		if (self.version > 2010): i += 16
+		return i
+
+	def Read_22916CC1(self, node): # Name table root node
+		i = self.ReadHeaderNameTableOtherNode(node)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		return i
+
+	def Read_2D0AE083(self, node):
+		i = self.ReadHeaderNameTableOtherNode(node)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = node.ReadUInt32(i, 'u32_1')
+		i = self.skipBlockSize(i)
+		i = node.ReadUInt32A(i, 5, 'a1')
 		return i
 
 	def Read_436D821A(self, node):
@@ -121,6 +134,14 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
 		i = self.skipBlockSize(i)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'satAtrs', 5) # -> LoftSection.label.u32_4
+		return i
+
+	def Read_47BDD5FD(self, node):
+		i = self.ReadHeaderNameTableOtherNode(node)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_A_, 'lst1', 2)
+		i = self.ReadNtEntry(node, i, 'edge')
+		cnt, i = getUInt32(node.data, i)
+		i = node.ReadUInt32A(i, cnt, 'a2')
 		return i
 
 	def Read_8E5D4198(self, node):
@@ -135,6 +156,10 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadUInt32A(i, cnt, 'a2')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt32A(i, 2, 'a3')
+		return i
+
+	def Read_DE0996B8(self, node): # Name table root node
+		i = self.ReadHeaderNameTableOtherNode(node)
 		return i
 
 	# The name table itself
@@ -268,7 +293,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		cnt, i = getUInt32(node.data, i)
 		i = node.ReadUInt32A(i, cnt, 'a4')
 		i = node.ReadUInt32A(i, 3, 'a5')
-		if (getFileVersion() > 2019): i += 4 # skip 00 00 00 00
+		if (self.version > 2019): i += 4 # skip 00 00 00 00
 		return i
 
 	def Read_F4360D18(self, node): # Name table root node
@@ -350,7 +375,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt32A(i, 4, 'a1')
-		if (getFileVersion() > 2011): i += 1
+		if (self.version > 2011): i += 1
 		return i
 
 	def Read_31D7A200(self, node): # Name table child node

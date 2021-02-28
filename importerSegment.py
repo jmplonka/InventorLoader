@@ -252,6 +252,9 @@ class SegmentReader(object):
 
 	def __init__(self, segment):
 		self.segment = segment
+		self.version = segment.segment.version.major
+		if (self.version > 11): self.version += 1996
+		setFileVersion(self.version)
 		self.nodeCounter = 0
 
 	def postRead(self):
@@ -642,7 +645,7 @@ class SegmentReader(object):
 		i = node.ReadUInt32(i, 'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'schema')
-		if (getFileVersion() > 2010):
+		if (self.version > 2010):
 			if (i == len(node.data)): return i
 		else:
 			if (i + 4 == len(node.data)): return i + 4
@@ -650,9 +653,8 @@ class SegmentReader(object):
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
 		e = len(node.data) - 17
-		vers = getFileVersion()
-		if (vers > 2018): e -=1
-		if (vers < 2011): e -=8
+		if (self.version > 2018): e -=1
+		if (self.version < 2011): e -=8
 
 		stream = io.BytesIO(node.data[i:e])
 		reader = AcisReader(stream)
@@ -669,7 +671,7 @@ class SegmentReader(object):
 			i += 1 # skip 00
 			i = node.ReadSInt32(i, 'delta_state') # active delta-state
 			i = self.skipBlockSize(i)
-			if (getFileVersion() > 2018): i += 1 # skip 00
+			if (self.version > 2018): i += 1 # skip 00
 			i = node.ReadChildRef(i, 'history')
 			i += 4 # skip FF FF FF FF
 			if (self.segment.acis is None):
@@ -684,7 +686,7 @@ class SegmentReader(object):
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt16A(i, 9, 'a2')
 		i = node.ReadUInt8(i, 'u8_2')
-		if (getFileVersion() > 2017):
+		if (self.version > 2017):
 			i = node.ReadUInt16A(i, 3, 'a3')
 		else:
 			node.content += u" a3=[000,000,000]"
@@ -702,7 +704,7 @@ class SegmentReader(object):
 
 	def ReadTrailer(self, buffer, offset):
 		i = offset
-		if (getFileVersion() > 2014):
+		if (self.version > 2014):
 			trailing, i = getBoolean(buffer, i)
 			if (trailing):
 				n, i = getUInt32(buffer, i)

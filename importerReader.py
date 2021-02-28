@@ -60,6 +60,7 @@ SEG_TYPE_READERS = {
 	SEG_BROWSER_DL     : BrowserReader,
 	SEG_BROWSER_DX     : BrowserReader,
 	SEG_BROWSER_PM     : BrowserReader,
+	SEG_BROWSER_PM_OLD : BrowserReader,
 	SEG_DC_AM          : DCReader,
 	SEG_DC_DL          : DCReader,
 	SEG_DC_DX          : DCReader,
@@ -286,17 +287,24 @@ def ReadOle10Native(doc, stream, fnames):
 			f.write(ole.data)
 	return
 
-def ReadRSeSegment(data, offset, idx, count):
+def ReadRSeSegment(data, offset, idx, schema):
 	seg = RSeSegment()
-	seg.name, i = getLen32Text16(data, offset)
-	seg.ID, i = getUUID(data, i)
+	seg.name,        i = getLen32Text16(data, offset)
+	seg.ID,          i = getUUID(data, i)
 	seg.revisionRef, i = getUUID(data, i)
-	seg.value1, i = getUInt32(data, i)
-	seg.count1, i = getUInt32(data, i)
-	seg.arr1, i = getUInt32A(data, i, 5) # ???, ???, ???, numSec1, ???
-	seg.count2, i = getUInt32(data, i)
-	seg.type, i = getLen32Text16(data, i)
-	seg.arr2, i = getUInt16A(data, i, count)
+	seg.value1,      i = getUInt32(data, i)
+	seg.count1,      i = getUInt32(data, i)
+	seg.arr1,        i = getUInt32A(data, i, 5) # ???, ???, ???, numSec1, ???
+	seg.count2,      i = getUInt32(data, i)
+	seg.type,        i = getLen32Text16(data, i)
+	if (schema < 0x11):
+		seg.arr2, i = getUInt32A(data, i, 1)
+		seg.arr2 += (0, )
+	else:
+		seg.arr2, i = getUInt32A(data, i, 2)
+	seg.version, i = getVersionInfo(data, i)
+	if (schema > 0x10):
+		seg.value2, i = getUInt32(data, i)
 	seg.objects = []
 	seg.nodes = []
 	getModel().RSeDb.segInfo.segments[seg.ID] = seg
@@ -321,6 +329,14 @@ def ReadRSeSegmentNode(seg, data, offset, count, idx):
 	node.number, i = getUInt16(data, i)
 	seg.nodes.append(node)
 	return i
+
+def getVersionInfo(data, offset):
+	v = VersionInfo() # getUInt8A(data, i, 8) # Rev_u8,Min_u8,Maj_u8,Flg_u8, Unknown_u32 [00 00 18 40 00 00 A0 41]
+	v.revision, i = getUInt8(data, offset)
+	v.minor,    i = getUInt8(data, i)
+	v.major,    i = getUInt8(data, i)
+	v.data,     i = getUInt8A(data, i, 5)
+	return v, i
 
 def ReadRSeSegmentType10(seg, data, offset):
 	i = offset
@@ -378,14 +394,14 @@ def ReadRSeSegmentType1F(seg, data, offset):
 def ReadRSeSegInfo10(db, data, offset):
 	cnt, i = getSInt32(data, offset)
 	for idx in range(cnt):
-		seg, i = ReadRSeSegment(data, i, idx, 6)
+		seg, i = ReadRSeSegment(data, i, idx, db.schema)
 		i = ReadRSeSegmentType10(seg, data, i)
 	return i
 
 def ReadRSeSegInfo15(db, data, offset):
 	cnt, i = getSInt32(data, offset)
 	for idx in range(cnt):
-		seg, i = ReadRSeSegment(data, i, idx, 6)
+		seg, i = ReadRSeSegment(data, i, idx, db.schema)
 		i = ReadRSeSegmentType15(seg, data, i)
 	db.segInfo.val, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
@@ -401,7 +417,7 @@ def ReadRSeSegInfo15(db, data, offset):
 def ReadRSeSegInfo1A(db, data, offset):
 	cnt, i = getSInt32(data, offset)
 	for idx in range(cnt):
-		seg, i = ReadRSeSegment(data, i, idx, 8)
+		seg, i = ReadRSeSegment(data, i, idx, db.schema)
 		i = ReadRSeSegmentType1A(seg, data, i)
 	db.segInfo.arr1, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
@@ -417,7 +433,7 @@ def ReadRSeSegInfo1A(db, data, offset):
 def ReadRSeSegInfo1D(db, data):
 	cnt, i = getSInt32(data, 0)
 	for idx in range(cnt):
-		seg, i = ReadRSeSegment(data, i, idx, 8)
+		seg, i = ReadRSeSegment(data, i, idx, db.schema)
 		i = ReadRSeSegmentType1D(seg, data, i)
 	db.segInfo.arr1, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
@@ -433,7 +449,7 @@ def ReadRSeSegInfo1D(db, data):
 def ReadRSeSegInfo1E(db, data):
 	cnt, i = getSInt32(data, 0)
 	for idx in range(cnt):
-		seg, i = ReadRSeSegment(data, i, idx, 10)
+		seg, i = ReadRSeSegment(data, i, idx, db.schema)
 		i = ReadRSeSegmentType1E(seg, data, i)
 	db.segInfo.arr1, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
@@ -453,7 +469,7 @@ def ReadRSeSegInfo1E(db, data):
 def ReadRSeSegInfo1F(db, data):
 	cnt, i = getSInt32(data, 0)
 	for idx in range(cnt):
-		seg, i = ReadRSeSegment(data, i, idx, 10)
+		seg, i = ReadRSeSegment(data, i, idx, db.schema)
 		i = ReadRSeSegmentType1F(seg, data, i)
 	db.segInfo.arr1, i = getUInt16A(data, i, 2)
 	cnt, i = getUInt32(data, i)
@@ -470,7 +486,7 @@ def ReadRSeSegInfo1F(db, data):
 
 def ReadRSeDb10(db, data, offset):
 	db.segInfo.arr1, i = getUInt16A(data, offset, 8)
-	db.arr2,         i = getUInt16A(data, i, 4)
+	db.vers2,        i = getVersionInfo(data, i)
 	db.dat2,         i = getDateTime(data, i)
 	db.segInfo.uid,  i = getUUID(data, i)
 	db.segInfo.arr2, i = getUInt32A(data, i, 2)
@@ -479,8 +495,8 @@ def ReadRSeDb10(db, data, offset):
 	return i
 
 def ReadRSeDb15(db, data, offset):
-	db.arr2,      i = getUInt16A(data, offset, 4)
-	db.dat2,      i = getDateTime(data, i)
+	db.vers2,        i = getVersionInfo(data, offset)
+	db.dat2,         i = getDateTime(data, i)
 	db.segInfo.arr1, i = getUInt16A(data, i, 14)
 	db.segInfo.date, i = getDateTime(data, i)
 	db.segInfo.uid,  i = getUUID(data, i)
@@ -490,7 +506,7 @@ def ReadRSeDb15(db, data, offset):
 	return i
 
 def ReadRSeDb1A(db, data, offset):
-	db.arr2,          i = getUInt16A(data, offset, 4)
+	db.vers2,         i = getVersionInfo(data, offset)
 	db.dat2,          i = getDateTime(data, i)
 	db.segInfo.text,  i = getLen32Text16(data, i)
 	db.segInfo.arr1,  i = getUInt16A(data, i, 12)
@@ -505,15 +521,15 @@ def ReadRSeDb1A(db, data, offset):
 	return i
 
 def ReadRSeDb1F(db, data, offset):
-	db.arr2, i = getUInt16A(data, offset, 4)
-	db.dat2, i = getDateTime(data, i)
-	db.txt, i  = getLen32Text16(data, i)
+	db.vers2, i = getVersionInfo(data, offset)
+	db.dat2, i  = getDateTime(data, i)
+	db.txt, i   = getLen32Text16(data, i)
 	return i
 
 def ReadRSeDb(db, data):
 	db.uid, i    = getUUID(data, 0)
 	db.schema, i = getUInt32(data, i)
-	db.arr1, i   = getUInt16A(data, i, 4)
+	db.vers1, i  = getVersionInfo(data, i)
 	db.dat1, i   = getDateTime(data, i)
 
 	if (db.schema in [0x1D, 0x1E, 0x1F]):
@@ -529,6 +545,7 @@ def ReadRSeDb(db, data):
 		i = ReadRSeSegInfo1A(db, data, i)
 	else:
 		logError(u"ERROR> Reading RSeDB version %X - unknown format!", getModel().RSeDb.schema)
+
 	return db
 
 def ReadRSeDbRevisionInfo(revisions, data):
@@ -758,7 +775,7 @@ def ReadRSeMetaDataB(dataB, seg):
 		dumpFolder = getDumpFolder()
 		if (not (dumpFolder is None)):
 			newFile = codecs.open(u"%s/%s.log" %(dumpFolder, seg.name), 'wb', 'utf8')
-			newFile.write('[%s]\n' %(getFileVersion()))
+			newFile.write('[%s]\n' %(reader.version))
 		i = 0
 		uid, i = getUUID(dataB, i)
 		n, i = getUInt16(dataB, i)
