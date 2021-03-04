@@ -12,7 +12,6 @@ import traceback, io, re
 from importerUtils   import *
 from importerClasses import VersionInfo
 from FreeCAD import BoundBox
-from winsound import Beep
 
 _magic  = []
 __fv__ = None
