@@ -881,7 +881,6 @@ def read(data):
 #				ufrx.iProperties,   i = readiProperties(data,    i, log)
 #				ufrx.appendix,      i = readAppendix(data,       i, log)
 #			except Exception as ex:
-#				Beep(880, 250)
 #				logError(traceback.format_exc())
 #				logError(str(ex))
 #				log.write('\n')

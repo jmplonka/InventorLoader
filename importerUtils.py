@@ -743,8 +743,10 @@ def getDateTime(data, offset):
 def getText8(data, offset, l):
 	i = offset
 	end = i + l
-	txt = data[i: end].decode(ENCODING_FS)
-
+	try:
+		txt = data[i: end].decode(ENCODING_FS)
+	except:
+		txt = data[i: end].decode('ansi')
 	if (txt[-1:] == '\0'):
 		txt = txt[:-1]
 
@@ -760,7 +762,11 @@ def getLen8Text8(data, offset):
 
 def getLen32Text8(data, offset):
 	l, i = getUInt32(data, offset)
-	txt, i = getText8(data, i, l)
+	try:
+		txt, i = getText8(data, i, l)
+	except UnicodeDecodeError:
+		txt = data[i:i+l]
+		i += l
 	return txt, i
 
 def getLen32Text16(data, offset):

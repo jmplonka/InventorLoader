@@ -69,6 +69,7 @@ Please disable Dimension constraints in user.cfg:
 
 ## Limitations
 Export will not be supported - neither IPT nor SAT/SAB or DXF.
+Only files from INVENTOR V2010 or newer are supported.
 
 ### Feature Based Import
 
@@ -83,7 +84,7 @@ STEP converts the ACIS data from SAT or IPT files. Therefore any limitation is i
 
 Autodesk Inventor files have OLE2 files.  
 This allows embedding Excel workbooks e.g.:  
-* The addon is able to read Inventor files from 2010 till 2019.
+* The addon is able to read Inventor files from 2010 or newer.
 * Read the iProperties (Note: only a few can be applied in FreeCAD).
 * Display embedded workbooks as a new spreadsheet when importing as features.
 * Three strategies are provided:  

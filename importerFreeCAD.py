@@ -239,10 +239,15 @@ def getCoincidentPos(sketchObj, point, entity):
 	return -1
 
 def addSketch2D(sketchObj, geometry, mode, entityNode):
-	geometry.Construction = mode
 	index = sketchObj.addGeometry(geometry, mode)
 	newGeo = sketchObj.Geometry[index]
 	entityNode.setGeometry(newGeo, index)
+	if (hasattr(geometry, 'Construction')):
+		# till FC .. v0.18
+		geometry.Construction = mode
+	else:
+		# from FC 0.19 ..
+		sketchObj.setConstruction(index, mode)
 	return newGeo
 
 def addSketch3D(sketchObj, geometry, mode, entityNode):

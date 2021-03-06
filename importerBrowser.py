@@ -294,10 +294,6 @@ class BrowserReader(SegmentReader):
 		i = node.ReadCrossRef(i, 'ref_0')
 		return i
 
-	def Read_3D5CABE0(self, node): # AmCylindricalJointEntry
-		i = self.ReadHeaderFolderItem(node)
-		return i
-
 	def Read_41289EFF(self, node): # AmAssemblyFeatureParticipant
 		i = self.ReadHeaderFolderItem(node)
 		i = node.ReadUInt32(i, 'u32_2')
@@ -308,10 +304,6 @@ class BrowserReader(SegmentReader):
 		return i
 
 	def Read_44A91CA8(self, node): # AmAnnotationFolder
-		i = self.ReadHeaderFolderItem(node)
-		return i
-
-	def Read_474E0249(self, node): # AmWeldJointEntry
 		i = self.ReadHeaderFolderItem(node)
 		return i
 
@@ -410,20 +402,6 @@ class BrowserReader(SegmentReader):
 		i = node.ReadUInt8(i, 'u8_6')
 		return i
 
-	def Read_98D79BB0(self, node): # AmMateEntry
-		i = self.ReadHeaderFolderItem(node)
-		i = node.ReadUInt32A(i, 5, 'a4')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32(i, 'u32_1')
-		return  i
-
-	def Read_98D79BB1(self, node): # AmFlushEntry
-		i = self.ReadHeaderFolderItem(node)
-		i = node.ReadFloat64(i, 'offset') # offset in cm
-		i = node.ReadUInt32A(i, 3, 'a4')
-		i = self.skipBlockSize(i)
-		return i
-
 	def Read_9E77CCC1(self, node): # AssmInterfaceFolderEntry
 		i = self.ReadHeaderFolderItem(node)
 		return i
@@ -441,10 +419,6 @@ class BrowserReader(SegmentReader):
 	def Read_A742A7CD(self, node): # AmAssemblyFeature
 		i = self.ReadHeaderFolderItem(node)
 		i = node.ReadUInt8(i, 'u8_6')
-		return i
-
-	def Read_AA7B1426(self, node): # AmTranslationJointEntry
-		i = self.ReadHeaderFolderItem(node)
 		return i
 
 	def Read_AB12B392(self, node): # AssmMateInterfaceResultEntry
@@ -468,10 +442,6 @@ class BrowserReader(SegmentReader):
 		i = self.ReadHeaderFolderItem(node)
 		i = node.ReadUInt32A(i, 5, 'a4')
 		i = self.skipBlockSize(i, 2)
-		return i
-
-	def Read_CA52E762(self, node): # AmBallJointEntry
-		i = self.ReadHeaderFolderItem(node)
 		return i
 
 	def Read_CA0059C5(self, node): # AmWeldingSymbol
@@ -533,14 +503,42 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_F9EDBED1(self, node): # AmRevoluteJointEntry
-		i = self.ReadHeaderFolderItem(node)
-		return i
-
 	def Read_FEFA39AB(self, node): # AmDeselTable
 		i = self.ReadHeaderFolderItem(node)
 		i = node.ReadUInt16A(i, 3, 'a4')
 		i = node.ReadLen32Text16(i, 'txt_2')
+		return i
+
+	####################
+	# Joint items
+	def ReadHeaderJoint(self, node, typeName = None):
+		i = self.ReadHeaderFolderItem(node, typeName)
+		i = node.ReadFloat64(i, 'f64_0')
+		i = node.ReadUInt32A(i, 3, 'a2')
+		return i
+
+	def Read_3D5CABE0(self, node): # AmCylindricalJointEntry
+		i = self.ReadHeaderJoint(node, 'JointCylindrical')
+		return i
+
+	def Read_28BC24F0(self, node): # AmPlanarJointEntry
+		i = self.ReadHeaderJoint(node, 'JointPlanar')
+		return i
+
+	def Read_474E0249(self, node): # AmWeldJointEntry
+		i = self.ReadHeaderJoint(node, 'JointRigid')
+		return i
+
+	def Read_AA7B1426(self, node): # AmTranslationJointEntry
+		i = self.ReadHeaderJoint(node, 'JointSlider')
+		return i
+
+	def Read_CA52E762(self, node): # AmBallJointEntry
+		i = self.ReadHeaderJoint(node, 'JointBall')
+		return i
+
+	def Read_F9EDBED1(self, node): # AmRevoluteJointEntry
+		i = self.ReadHeaderJoint(node, 'JointRotation')
 		return i
 
 	####################
@@ -946,29 +944,39 @@ class BrowserReader(SegmentReader):
 		return i
 
 	####################
-	# Constraint sections
+	# Assembly Constraint sections
 	def ReadHeaderEntryConstraint(self, node, typeName = None):
 		i = self.ReadHeaderFolderItem(node, typeName)
-		i = node.ReadFloat64(i, 'f0')
-		i = node.ReadUInt32A(i, 3, 'a4')
+		i = node.ReadFloat64(i, 'offset')
+		i = node.ReadUInt32A(i, 2, 'a4')
+		i = node.ReadLen32Text16(i, 'participants') # the name of the objects
 		i = self.skipBlockSize(i)
 		return i
 
 	# Constraint items
 	def Read_48344B91(self, node): # Relate Rotation Constraint
-		i = self.ReadHeaderEntryConstraint(node)
+		i = self.ReadHeaderEntryConstraint(node, 'Rotation')
+		return i
+
+	def Read_98D79BB0(self, node): # AmMateEntry
+		i = self.ReadHeaderEntryConstraint(node, 'Mate')
+		i = node.ReadUInt32(i, 'u32_1')
+		return  i
+
+	def Read_98D79BB1(self, node): # AmFlushEntry
+		i = self.ReadHeaderEntryConstraint(node, 'Flush')
 		return i
 
 	def Read_98D79BB2(self, node): # Tangent Constraint
-		i = self.ReadHeaderEntryConstraint(node)
+		i = self.ReadHeaderEntryConstraint(node, 'Tangent')
 		return  i
 
 	def Read_B60617B3(self, node): # Insert Constraint
-		i = self.ReadHeaderEntryConstraint(node)
+		i = self.ReadHeaderEntryConstraint(node, 'Insert')
 		return i
 
 	def Read_D37599BD(self, node): # Angle Constraint
-		i = self.ReadHeaderEntryConstraint(node)
+		i = self.ReadHeaderEntryConstraint(node, 'Angle')
 		return  i
 
 	####################

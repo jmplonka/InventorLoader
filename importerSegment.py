@@ -649,7 +649,7 @@ class SegmentReader(object):
 			if (i == len(node.data)): return i
 		else:
 			if (i + 4 == len(node.data)): return i + 4
-		txt, ignore = getText8(node.data, i, 15) # 'ACIS BinaryFile' or from 20214 on 'ASM BinaryFile4'
+		txt, ignore = getText8(node.data, i, 15) # 'ACIS BinaryFile' or from 2014 on 'ASM BinaryFile4'
 		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
 		e = len(node.data) - 17
@@ -660,13 +660,12 @@ class SegmentReader(object):
 		reader = AcisReader(stream)
 		reader.name = "%04X" %(node.index)
 		if (reader.readBinary()):
-			i = e
 			node.set('SAT', reader)
 			resolveEntityReferences(node)
 			node.set('nameMatches', getNameMatchAttributes())
 			node.set('dcAttributes', getDcAttributes())
 			self.segment.AcisList.append(node)
-			i = self.skipBlockSize(i)
+			i = self.skipBlockSize(e)
 			i = node.ReadUInt32(i, 'selectedKey')
 			i += 1 # skip 00
 			i = node.ReadSInt32(i, 'delta_state') # active delta-state

@@ -306,19 +306,24 @@ class GraphicsReader(EeSceneReader):
 		i = self.ReadHeaderObject(node, 'WrkPlane')
 		i = node.ReadFloat64A(i, 6, 'a1')
 		i = self.ReadTransformation3D(node, i)
-		i = node.ReadUInt8A(i, 3, 'a3')
+		i = node.ReadBoolean(i, 'b0')
+		i = node.ReadBoolean(i, 'b1')
+		i = node.ReadBoolean(i, 'b2')
 		return i
 
 	def Read_2C7020F6(self, node): # WrkAxis
 		i = self.ReadHeaderObject(node, 'WkrAxis')
 		i = self.ReadTransformation3D(node, i)
-		i = node.ReadUInt8A(i, 3, 'a3')
+		i = node.ReadBoolean(i, 'b0')
+		i = node.ReadBoolean(i, 'b1')
+		i = node.ReadBoolean(i, 'b2')
 		return i
 
 	def Read_2C7020F8(self, node): # WrkPoint
 		i = self.ReadHeaderObject(node, 'WrkPoint')
 		i = self.ReadTransformation3D(node, i)
-		i = node.ReadUInt8A(i, 2, 'a3')
+		i = node.ReadBoolean(i, 'b0')
+		i = node.ReadBoolean(i, 'b2')
 		return i
 
 	def Read_698CF98E(self, node): # Wrk???

@@ -189,7 +189,7 @@ class BRepReader(NameTableReader):
 
 	def Read_09DABAE0(self, node):
 		i = self.ReadHeaderBRepComponent(node)
-		i = node.ReadList2(i, _TYP_TRANSFORMATIONS_, 'lst1')
+		i = node.ReadList2(i, _TYP_TRANSFORMATIONS_, 'transformations')
 		return i
 
 	def Read_3DE78F81(self, node):
@@ -314,7 +314,8 @@ class BRepReader(NameTableReader):
 	def ReadHeaderDeltaStateItem(self, node):
 		i = self.skipBlockSize(0)
 		i = node.ReadCrossRef(i, 'root')
-		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadParentRef(i)
+		i = node.ReadUInt32(i,'u32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'nameTable')
 		return i
