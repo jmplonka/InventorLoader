@@ -1715,17 +1715,16 @@ class Face(Topology):
 				if (self.shape is not None):
 					if (len(edges) > 0):
 						component, elements = self.shape.generalFuse(edges)
-						face = eliminateOuterFaces(elements[0], edges)
-						if (face is None):
-							if (len(elements[0]) == 0):
-								logWarning("    can't create face (no elements) for %s" %(self._surface))
-							else:
+						faces = elements[0]
+						if (len(faces) == 0):
+							logWarning("    can't create face (no elements) for %s" %(self._surface))
+						else:
+							face = eliminateOuterFaces(faces, edges)
+							if (face is None):
 								# edges can be empty because not all edges can be created right now :(
 								logWarning("    can't create face for %s" %(self._surface))
-								for f in elements[0]:
-									Part.show(f)
-						else:
-							self.shape = face
+							else:
+								self.shape = face
 		return self.shape
 	def isCone(self):   return isinstance(self.getSurface(), SurfaceCone)
 	def isMesh(self):   return isinstance(self.getSurface(), SurfaceMesh)
@@ -2700,7 +2699,7 @@ class SurfaceCone(Surface):
 	def build(self, face = None):
 		if (self.shape is None):
 			if (isEqual1D(self.sine, 0.)): # 90 Deg
-				if (self.ratio != 1):
+				if (isEqual1D(self.ratio, 1.)):
 					circle = createCircle(self.center, self.axis, self.major)
 					self.shape = Part.Cylinder(circle).toShape()
 				else:
