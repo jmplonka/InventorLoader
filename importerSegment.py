@@ -180,7 +180,7 @@ def resolveReferences(nodes):
 				if (ref.type == REF_PARENT):
 					node.parent = ref._data
 			elif (ref.index > -1):
-				logError(u"ERROR> %s.py - index out of range for %s.%s = %X!", node.__module__, node.typeName, ref.attrName, ref.index)
+				logError(u"ERROR> %s.py - index out of range for %08X.%s = %X!", node.__module__, node.uid.time_low, ref.attrName, ref.index)
 			if (isRadius2D and (ref.typeName in ['Circle2D', 'Ellipse2D', 'Arc2D'])):
 				radius = SecNodeRef(ref.index or 0x80000000, REF_CROSS, 'radius')
 				radius._data = node
@@ -581,7 +581,7 @@ class SegmentReader(object):
 			i = readType(node)
 		except AttributeError:
 			if (self.__class__.__name__ != 'SegmentReader'):
-				logError(u"ERROR> %s.py missing 'def Read_%s(self, node)'!", self.__module__, node.typeName)
+				logError(u"ERROR> %s.py missing 'def Read_%08X(self, node)'!", self.__module__, node.uid.time_low)
 				setattr(self.__class__, 'Read_%s' %(node.typeName), Read_Dummy)
 		except:
 			logError(traceback.format_exc())
