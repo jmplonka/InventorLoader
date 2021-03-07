@@ -384,6 +384,7 @@ class AppReader(SegmentReader):
 				i = node.ReadUInt32(i, 'u32_4')
 			else:
 				node.content += ' u8_4=00'
+				node.set('u8_4', 0)
 			i = node.ReadUInt32A(i, 3, 'a5')
 			i = node.ReadUInt8(i, 'u8_2')
 			i = node.ReadUInt32(i, 'u32_3')
