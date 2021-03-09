@@ -399,7 +399,7 @@ def getEnumByTag(chunks, index, values):
 		idx = 0
 		for key in values:
 			if (chunk.val == key):
-				if (type(values) = dict):
+				if (type(values) == dict):
 					chunk.val = key
 				else:
 					chunk.val = idx
