@@ -97,9 +97,9 @@ DXF files contains sometimes 3D-Solids. These are represented as SAT/SAB content
 The solids can be imported either using native of STEP conversion.
 
 ## History
-**1.3**    (2021-03-09): Added support for Fusion360 files.
-**1.2**    (2021-02-28): Added support for Inventor 2021 files.
-**1.1**    (2020-05-04): Added importing of 3D-Solids from DXF files.
+**1.3**    (2021-03-09): Added support for Fusion360 files.  
+**1.2**    (2021-02-28): Added support for Inventor 2021 files.  
+**1.1**    (2020-05-04): Added importing of 3D-Solids from DXF files.  
 **1.0.1**  (2020-04-10): Fixed finding of SAB import.  
 **1.0.0**  (2019-08-26): Reorganized section readers (1.0).  
 **0.18.0** (2019-08-07): Added coloring of single faces and changed to default Inventor campera position (RC2).  
