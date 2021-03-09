@@ -169,9 +169,12 @@ __strategy__ = __prmPrefIL__.GetInt("strategy", STRATEGY_SAT)
 
 IS_CELL_REF = re.compile('^[a-z](\d+)?$', re.IGNORECASE)
 IS_BETA     = re.compile('^.* Beta(\d+) .*$', re.IGNORECASE)
-_author = ''
-_description = None
-_colorDefault = None
+_author         = ''
+_company        = ''
+_comment        = ''
+_lastModifiedBy = ''
+_description    = ''
+_colorDefault   = ''
 
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colors.json")) as colorPalette:
 	_colorNames = json.load(colorPalette)
@@ -224,15 +227,57 @@ def isStrategyNative():
 
 def setAuthor(author):
 	global _author
-	_author = author
+	if (author):
+		_author = author
+	else:
+		_author = ''
 	return
 
 def getAuthor():
 	return _author
 
+def setCompany(company):
+	global _company
+	if (company):
+		_company = company
+	else:
+		_company = ''
+	return
+
+def getCompany():
+	global _company
+	return _company
+
+def setComment(comment):
+	global _comment
+	if (comment):
+		_comment = comment
+	else:
+		_comment = ''
+	return
+
+def getComment():
+	global _comment
+	return _comment
+
+def setLastModifiedBy(lastModifiedBy):
+	global _lastModifiedBy
+	if (lastModifiedBy):
+		_lastModifiedBy = lastModifiedBy
+	else:
+		_lastModifiedBy = ''
+	return
+
+def getLastModifiedBy():
+	global _lastModifiedBy
+	return _lastModifiedBy
+
 def setDescription(description):
 	global _description
-	_description = description
+	if (description):
+		_description = description
+	else:
+		_description = ''
 	return
 
 def getDescription():
@@ -241,8 +286,13 @@ def getDescription():
 def chooseImportStrategyAcis():
 	btnCnvrt = QPushButton('&Convert to STEP')
 	btnNativ = btnDefault = QPushButton('&nativ')
+	thmnl    = getThumbnail()
 	msgBox   = QMessageBox()
 	msgBox.setIcon(QMessageBox.Question)
+	if (thmnl):
+		icon = thmnl.getIcon()
+		if (icon):
+			msgBox.setIconPixmap(icon)
 	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
 	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
 	msgBox.addButton(btnCnvrt, QMessageBox.ActionRole)
@@ -251,7 +301,9 @@ def chooseImportStrategyAcis():
 	btnDefault = btnCnvrt if (getStrategy() == STRATEGY_STEP) else btnNativ
 	msgBox.setDefaultButton(btnDefault)
 
+	QApplication.setOverrideCursor(Qt.ArrowCursor)
 	result = msgBox.exec_()
+	QApplication.restoreOverrideCursor()
 
 	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT}
 	strategy = resultMapping[result]
@@ -262,8 +314,8 @@ def chooseImportStrategy():
 	btnCnvrt = QPushButton('&Convert to STEP')
 	btnSat   = QPushButton('&SAT')
 	btnNativ = QPushButton('&nativ')
+	thmnl    = getThumbnail()
 	msgBox   = QMessageBox()
-	thmnl    = getThumbnailImage()
 	msgBox.setIcon(QMessageBox.Question)
 	if (thmnl is not None):
 		icon = thmnl.getIcon()
@@ -306,10 +358,23 @@ def useSheetMetal():
 	return _use_sheet_metal
 
 class Thumbnail(object):
-	def __init__(self, data):
-		self.setData(data)
+	def __init__(self):
+		self._data = None
+		self.width = 0
+		self.height = 0
+		self.icon = None
 	def getData(self):
 		return self._data
+	def setIconData(self, data):
+		self._data = data
+		self.icon = QPixmap()
+		self.icon.loadFromData(QByteArray(data))
+		self.width  = self.icon.width()
+		self.height = self.icon.height()
+	def readData(self, filename):
+		with open(filename, 'rb') as f:
+			setIconData(f.read())
+			self.type = filename[-3:].upper()
 	def setData(self, data):
 		# skip thumbnail class header (-1, -1, 3, 0, bpp, width, height, 0)
 		buffer = data[0x10:]
@@ -331,39 +396,42 @@ class Thumbnail(object):
 			size, dummy = getUInt32(data, offset + 20)
 			buffer = b'BM' + pack('LLL', size + 0x36, 0, 0x36)
 			buffer += data[offset:]
-		self._data = buffer
-	def length(self):
-		return len(self.data)
-	def __str__(self):
-		return '%s: %d x %d' % (self.type, self.width, self.height)
-	def __repr__(self):
-		return self.__str__()
-	def getIcon(self):
-		icon = QPixmap()
-		icon.loadFromData(QByteArray(self.getData()))
-		return icon
+		self.setIconData(buffer)
+	def length(self):   return len(self._data)
+	def __str__(self):  return '%s: %d x %d' % (self.type, self.width, self.height)
+	def __repr__(self): return self.__str__()
+	def getIcon(self):  return self.icon
 
 _thumbnail = None
 def writeThumbnail(data):
 	global _thumbnail
-	_thumbnail = Thumbnail(data)
-
-	dumpFolder = getDumpFolder()
-	if ((not (dumpFolder is None)) and ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
-		with open(u"%s/_.%s" %(dumpFolder, _thumbnail.type.lower()), 'wb') as thumbnail:
-			thumbnail.write(_thumbnail.getData())
-
+	if (data):
+		thumbnail = Thumbnail()
+		thumbnail.setData(data)
+		dumpFolder = getDumpFolder()
+		if ((not (dumpFolder is None)) and ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
+			with open(u"%s/_.%s" %(dumpFolder, _thumbnail.type.lower()), 'wb') as thumbnail:
+				thumbnail.write(_thumbnail.getData())
+		setThumbnail(thumbnail)
+	else:
+		_thumbnail = None
 	return _thumbnail
 
-def getThumbnailImage():
+def getThumbnail():
 	global _thumbnail
 	return _thumbnail
+
+def setThumbnail(thumbnail):
+	global _thumbnail
+	_thumbnail = thumbnail
+	return
 
 UINT8      = Struct('<B').unpack_from
 SINT8      = Struct('<b').unpack_from
 UINT16     = Struct('<H').unpack_from
 SINT16     = Struct('<h').unpack_from
 UINT32     = Struct('<L').unpack_from
+UINT64     = Struct('<Q').unpack_from
 SINT32     = Struct('<l').unpack_from
 SINT64     = Struct('<q').unpack_from
 FLOAT32    = Struct('<f').unpack_from
@@ -519,6 +587,21 @@ def getUInt32(data, offset):
 	'''
 	val, = UINT32(data, offset)
 	return val, offset + 4
+
+def getUInt64(data, offset):
+	'''
+	Returns a single unsingned 64-Bit value.
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the unsigned 64-Bit value.
+	Returns:
+		The unsigned 64-Bit value at offset.
+		The new position in the 'stream'.
+	'''
+	val, = UINT64(data, offset)
+	return val, offset + 8
 
 def getUInt32A(data, offset, size):
 	'''
@@ -1031,20 +1114,6 @@ def calcAliasname(name):
 		return 'd' + result
 	return result
 
-def _addEmpty(node, indexes, list):
-	for i in indexes:
-		name = 'lst%d' %(i)
-		node.content += ' %s=[]' %(name)
-		node.set(name, list)
-
-def addEmptyLists(node, indexes):
-	_addEmpty(node, indexes, [])
-
-def addEmptyMaps(node, indexes):
-	_addEmpty(node, indexes, {})
-
 def reshape(nums, size):
-#	from numpy import reshape as np_reshape
-#	return np_reshape(values, (-1, size))
 	if size == 1: return nums
 	return [[nums[size * i + j] for j in range(size)] for i in range(len(nums) // size)]

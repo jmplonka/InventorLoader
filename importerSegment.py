@@ -400,7 +400,6 @@ class SegmentReader(object):
 			lst.append(edge)
 		node.content += ' edges=[%s]' %(','.join(['(%s)' %(e) for e in lst]))
 		node.set('edges', lst)
-		node.delete('tmp')
 		return i
 
 	def ReadTransformation2D(self, node, offset):
@@ -409,8 +408,8 @@ class SegmentReader(object):
 		'''
 		val = Transformation2D()
 		i = val.read(node.data, offset)
-		node.set('transformation', val)
 		node.content += u" transformation=%r" %(val)
+		node.set('transformation', val)
 		return i
 
 	def ReadTransformation3D(self, node, offset, name='transformation'):
@@ -419,8 +418,8 @@ class SegmentReader(object):
 		'''
 		val = Transformation3D()
 		i = val.read(node.data, offset)
-		node.set(name, val)
 		node.content += u" %s=%r" %(name, val)
+		node.set(name, val)
 		return i
 
 	def Read_5F9D0021(self, node): # SystemOfUnitsCollection

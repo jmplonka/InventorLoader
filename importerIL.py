@@ -5,9 +5,9 @@ importer.py:
 Collection of 3D Mesh importers
 '''
 
-import os, sys, FreeCAD, FreeCADGui, importerSAT, importerDXF, Import_IPT
-import importerUtils, Acis, importerClasses
-from importerUtils   import canImport, logInfo, logWarning, logError, logAlways
+import os, sys, FreeCAD, FreeCADGui, importerSAT, importerDXF, Import_IPT, importerF3D
+import Acis, importerClasses
+from importerUtils   import canImport, logInfo, logWarning, logError, logAlways, getAuthor, getComment, getLastModifiedBy, setThumbnail
 from olefile         import isOleFile
 from importerFreeCAD import createGroup
 from pivy            import coin
@@ -33,27 +33,42 @@ def insertGroup(doc, filename):
 
 	return root
 
-def read(doc, filename):
+def read(filename):
+	setThumbnail(None)
 	name, ext = os.path.splitext(filename)
 	ext = ext.lower()
 	if (ext == '.ipt'):
-		if (Import_IPT.read(doc, filename)):
-			return Import_IPT
+		ole = Import_IPT.checkVersion(filename)
+		if (ole):
+			if (Import_IPT.read(ole)):
+				return Import_IPT
 	elif (ext == '.sat'):
 		if (importerSAT.readText(filename)):
 			return importerSAT
-	elif (ext == '.sab'):
+	elif (ext in ['.sab', '.smb', '.smbh']):
 		if (importerSAT.readBinary(filename)):
 			return importerSAT
 	elif (ext == '.dxf'):
 		if (importerDXF.read(filename)):
 			return importerDXF
 	elif (ext == '.iam'):
-		logError(u"Sorry, AUTODESK's Inventor assemblies not yet supported!")
+		ole = Import_IPT.checkVersion(filename)
+		if (ole):
+			if (Import_IPT.read(ole)):
+				return Import_IPT
 	elif (ext == '.ipn'):
-		logError(u"Sorry, AUTODESK's Inventor presentations not yet supported!")
+		ole = Import_IPT.checkVersion(filename)
+		if (ole):
+			if (Import_IPT.read(ole)):
+				return Import_IPT
 	elif (ext == '.idw'):
-		logError(u"Sorry, AUTODESK's Inventor drawings not yet supported!")
+		ole = Import_IPT.checkVersion(filename)
+		if (ole):
+			if (Import_IPT.read(ole)):
+				return Import_IPT
+	elif (ext == '.f3d'):
+		if (importerF3D.read(filename)):
+			return importerF3D
 	return None
 
 def isFileValid(filename):
@@ -70,7 +85,7 @@ def isFileValid(filename):
 	return canImport()
 
 def releaseMemory():
-	importerUtils._thumbnail = None
+	setThumbnail(None)
 	Acis.releaseMemory()
 	importerClasses.releaseModel()
 
@@ -93,19 +108,34 @@ def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	if (isFileValid(filename)):
 		try:
-			doc = FreeCAD.getDocument(docname)
 			logAlways(u"Importing: %s", filename)
-			reader = read(doc, filename, False)
+			reader = read(filename, False)
 			if (reader is not None):
+				doc = FreeCAD.getDocument(docname)
 				name = os.path.splitext(os.path.basename(filename))[0]
 				name = decode(name)
 				group = insertGroup(doc, name)
 				reader.create3dModel(group, doc)
 			releaseMemory()
 			FreeCADGui.SendMsgToActiveView("ViewFit")
-			logInfo(u"DONE!")
 		except:
-			open(filename, skip, only, root)
+			_open(filename, skip, only, root)
+		logInfo(u"DONE!")
+	return
+
+def _open(filename, skip = [], only = [], root = None):
+	reader = read(filename)
+	if (reader is not None):
+		name = os.path.splitext(os.path.basename(filename))[0]
+		doc = FreeCAD.newDocument(decode(name))
+		doc.Label = name
+		doc.CreatedBy = getAuthor()
+		doc.LastModifiedBy = getLastModifiedBy()
+		doc.Comment = getComment()
+		# Create 3D-Model in root (None) of document
+		reader.create3dModel(None , doc)
+		adjustView(doc)
+	releaseMemory()
 	return
 
 def open(filename, skip = [], only = [], root = None):
@@ -115,14 +145,6 @@ def open(filename, skip = [], only = [], root = None):
 	'''
 	if (isFileValid(filename)):
 		logAlways(u"Reading: %s", os.path.abspath(filename))
-		name = os.path.splitext(os.path.basename(filename))[0]
-		doc = FreeCAD.newDocument(decode(name))
-		doc.Label = name
-		reader = read(doc, filename)
-		if (reader is not None):
-			# Create 3D-Model in root (None) of document
-			reader.create3dModel(None , doc)
-			adjustView(doc)
-		releaseMemory()
+		_open(filename, skip, only, root)
 		logInfo(u"DONE!")
 	return

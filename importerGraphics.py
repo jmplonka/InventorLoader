@@ -180,7 +180,10 @@ class GraphicsReader(EeSceneReader):
 
 		if (self.version < 2012):
 			i = node.ReadUInt16A(i, 5, 'a2')
+			node.set('txt0', '')
+			node.set('txt1', '')
 		else:
+			node.set('a2', (0,0,0,0,0))
 			i = node.ReadLen32Text16(i, 'txt0')
 			i = node.ReadLen32Text16(i, 'txt1')
 
@@ -223,6 +226,7 @@ class GraphicsReader(EeSceneReader):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		else:
 			node.content += u" lst0={}"
+			node.set('lst0', [])
 		return i
 
 	def Read_C3608DE7(self, node):
@@ -273,6 +277,7 @@ class GraphicsReader(EeSceneReader):
 			i = node.ReadList2(i, importerSegNode._TYP_SINT32_, 'lst1')
 		else:
 			node.content += u" lst1=[]"
+			node.set('lst1', [])
 		return i
 
 	def Read_F9C49549(self, node):
@@ -996,6 +1001,7 @@ class GraphicsReader(EeSceneReader):
 			i = node.ReadFloat64A(i, 6, 'a2')
 		else:
 			node.content += ' a2=()'
+			node.set('a2', (0.,0.,0.,0.,0.,0.))
 		cnt, i = getUInt32(node.data, i)
 		i = self.ReadFloat64A(node, i, cnt, 'a3', 3)
 		i = node.ReadFloat64A(i, 6, 'box')

@@ -17,6 +17,7 @@ from importerClasses   import Inventor
 from importerFreeCAD   import FreeCADImporter
 from importerSAT       import importModel, convertModel
 from Acis              import setReader
+from PySide.QtGui      import QMessageBox
 
 def ReadIgnorable(fname):
 	logInfo(u"    IGNORED: '%s'" %(fname[-1]))
@@ -24,7 +25,7 @@ def ReadIgnorable(fname):
 def skip():
 	return
 
-def ReadElement(ole, fname, doc, counter):
+def ReadElement(ole, fname, counter):
 	name        = fname[-1]
 	path        = PrintableName(fname)
 
@@ -36,9 +37,9 @@ def ReadElement(ole, fname, doc, counter):
 	elif (fname[0]=='RSeStorage'):
 		if (isEmbeddings(fname)):
 			if (name == 'Workbook'):
-				ReadWorkbook(doc, ole.openstream(fname).read(), fname[-2], name)
+				ReadWorkbook(ole.openstream(fname).read(), fname[-2], name)
 			elif (name.endswith('Ole10Native')):
-				ReadOle10Native(doc, ole.openstream(fname).read(), fname)
+				ReadOle10Native(ole.openstream(fname).read(), fname)
 			else:
 				skip()
 		elif (name.startswith('M')):
@@ -126,15 +127,38 @@ def dumpRevisionInfo(revisions):
 				file.write(u"%s\n" %(rev))
 	return
 
-def read(doc, filename):
+def checkVersion(file):
+	global _inventor_file
+
+	vrs = None
+	filename = os.path.abspath(file)
+	ole = OleFileIO(filename)
+	elements = ole.listdir(streams=True, storages=False)
+	for e in elements:
+		if (e[-1] == 'RSeDb'):
+			data = ole.openstream(e).read()
+			version, i  = getVersionInfo(data, 20)
+			if (version.major >= 14):
+				return ole
+			break
+
+	if (version):
+		vrsName = version.major
+		if (version.major >= 11): vrsName += 1996
+		QMessageBox.critical(FreeCAD.ActiveDocument, 'FreeCAD: Inventor workbench...', 'Can\'t load file created with Inventor v%d' %(vrsName))
+		logError('Can\'t load file created with Inventor v%d' %(vrsName))
+	else:
+		QMessageBox.critical(FreeCAD.ActiveDocument, 'FreeCAD: Inventor workbench...', 'Can\'t determine Inventor version file was created with')
+		logError('Can\'t determine Inventor version file was created with!')
+	return None
+
+def read(ole):
 	ufrxDoc        = None
 	rSeDb          = None
 	rSeSegInfo     = None
 	rSeDbRevisions = None
 
 	createNewModel()
-
-	ole = setInventorFile(filename)
 
 	elements = ole.listdir(streams=True, storages=False)
 	counter  = 1
@@ -151,9 +175,9 @@ def read(doc, filename):
 			props = ole.getproperties(fname, convert_time=True)
 			if (name == '\x05Aaalpg0m0wzvuhc41dwauxbwJc'):
 				ReadOtherProperties(props, fname, Inventor_Document_Summary_Information)
-				doc.Company = getProperty(props, KEY_DOC_SUM_INFO_COMPANY)
+				setCompany(getProperty(props, KEY_DOC_SUM_INFO_COMPANY))
 			elif (name == '\x05Zrxrt4arFafyu34gYa3l3ohgHg'):
-				ReadInventorSummaryInformation(doc, props, fname)
+				ReadInventorSummaryInformation(props, fname)
 			elif (name == '\x05Qz4dgm1gRjudbpksAayal4qdGf'):
 				ReadOtherProperties(props, fname, Design_Tracking_Control)
 			elif (name == '\x05PypkizqiUjudbposAayal4qdGf'):
@@ -205,14 +229,16 @@ def read(doc, filename):
 	dumpiProperties(getModel().iProperties)
 
 	for fname in list:
-		ReadElement(ole, fname, doc, counter)
+		ReadElement(ole, fname, counter)
 		counter += 1
 	ole.close()
 
 	now = datetime.datetime.now()
-	if (len(doc.Comment) > 0):
-		doc.Comment += '\n'
-	doc.Comment = '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), filename)
+	comment = getComment()
+	if (len(comment) > 0):
+		comment += '\n'
+	comment += '# %s: read from %s' %(now.strftime('%Y-%m-%d %H:%M:%S'), getInventorFile())
+	setComment(comment)
 
 	dumpFolder = getDumpFolder()
 	if (not (dumpFolder is None)):

@@ -36,7 +36,7 @@ DIR_Z  = VEC(0, 0, 1)
 # Primitives for Binary File Format (.sab)
 TAG_CHAR          =  2 # character (unsigned 8 bit)
 TAG_SHORT         =  3 # 16Bit signed value
-TAG_LONG          =  4 # 32Bit signed value
+TAG_LONG          =  4 # 32/64Bit signed value
 TAG_FLOAT         =  5 # 32Bit IEEE Float value
 TAG_DOUBLE        =  6 # 64Bit IEEE Float value
 TAG_UTF8_U8       =  7 #  8Bit length + UTF8-Char
@@ -58,27 +58,27 @@ TAG_VECTOR_2D     = 22 # U-V-Vector
 TAG_INT64         = 23 # used by AutoCAD ASM int64 attributes
 
 # TAG_FALSE, TAG_TRUE value mappings
-RANGE           = {TAG_FALSE: 'I',              TAG_TRUE: 'F'}
-REFLECTION      = {TAG_FALSE: 'no_reflect',     TAG_TRUE: 'reflect'}
-SURF_RIGID      = {TAG_FALSE: 'non_rigid',      TAG_TRUE: 'rigid'}
-SURF_AXIS_SWEEP = {TAG_FALSE: 'non_axis_sweep', TAG_TRUE: 'axis_sweep'}
-ROTATION        = {TAG_FALSE: 'no_rotate',      TAG_TRUE: 'rotate'}
-SHEAR           = {TAG_FALSE: 'no_shear',       TAG_TRUE: 'shear'}
-SENSE           = {TAG_FALSE: 'forward',        TAG_TRUE: 'reversed'}
-SENSEV          = {TAG_FALSE: 'forward_v',      TAG_TRUE: 'reverse_v', 0: 'forward_v'}
-SIDES           = {TAG_FALSE: 'single',         TAG_TRUE: 'double'}
-SIDE            = {TAG_FALSE: 'out',            TAG_TRUE: 'in'}
-SURF_BOOL       = {TAG_FALSE: 'FALSE',          TAG_TRUE: 'TRUE'}
-SURF_NORM       = {TAG_FALSE: 'ISO',            TAG_TRUE: 'UNKNOWN'}
-SURF_DIR        = {TAG_FALSE: 'SKIN',           TAG_TRUE: 'PERPENDICULAR'}
-SURF_SWEEP      = {TAG_FALSE: 'angled',         TAG_TRUE: 'normal'}
-CIRC_TYP        = {TAG_FALSE: 'non_cross',      TAG_TRUE: 'cross'}
-CIRC_SMTH       = {TAG_FALSE: 'non_smooth',     TAG_TRUE: 'smooth'} # normal == non_smooth
-CALIBRATED      = {TAG_FALSE: 'uncalibrated',   TAG_TRUE: 'calibrated'}
-CHAMFER_TYPE    = {TAG_FALSE: 'const',          TAG_TRUE: 'radius'}
-CONVEXITY       = {TAG_FALSE: 'concave',        TAG_TRUE: 'convex'}
-RENDER_BLEND    = {TAG_FALSE: 'rb_snapshot',    TAG_TRUE: 'rb_envelope'}
-BOOLEAN         = {TAG_FALSE: 'F',              TAG_TRUE:  'T', }
+RANGE           = {TAG_FALSE: 'I',              TAG_TRUE: 'F',             'F': 'F',              'T': 'I'}
+REFLECTION      = {TAG_FALSE: 'no_reflect',     TAG_TRUE: 'reflect',       'F': 'no_reflect',     'T': 'reflect'}
+SURF_RIGID      = {TAG_FALSE: 'non_rigid',      TAG_TRUE: 'rigid',         'F': 'non_rigid',      'T': 'rigid'}
+SURF_AXIS_SWEEP = {TAG_FALSE: 'non_axis_sweep', TAG_TRUE: 'axis_sweep',    'F': 'non_axis_sweep', 'T': 'axis_sweep'}
+ROTATION        = {TAG_FALSE: 'no_rotate',      TAG_TRUE: 'rotate',        'F': 'no_rotate',      'T': 'rotate'}
+SHEAR           = {TAG_FALSE: 'no_shear',       TAG_TRUE: 'shear',         'F': 'no_shear',       'T': 'shear'}
+SENSE           = {TAG_FALSE: 'forward',        TAG_TRUE: 'reversed',      'F': 'forward',        'T': 'reversed' }
+SENSEV          = {TAG_FALSE: 'forward_v',      TAG_TRUE: 'reverse_v',     'T': 'forward_v',      'T': 'reverse_v', 0: 'forward_v'}
+SIDES           = {TAG_FALSE: 'single',         TAG_TRUE: 'double',        'F': 'single',         'T': 'double'}
+SIDE            = {TAG_FALSE: 'out',            TAG_TRUE: 'in',            'F': 'out',            'T': 'in'}
+SURF_BOOL       = {TAG_FALSE: 'FALSE',          TAG_TRUE: 'TRUE',          'F': 'FALSE',          'T': 'TRUE'}
+SURF_NORM       = {TAG_FALSE: 'ISO',            TAG_TRUE: 'UNKNOWN',       'F': 'ISO',            'T': 'UNKNOWN'}
+SURF_DIR        = {TAG_FALSE: 'SKIN',           TAG_TRUE: 'PERPENDICULAR', 'F': 'SKIN',           'T': 'PERPENDICULAR'}
+SURF_SWEEP      = {TAG_FALSE: 'angled',         TAG_TRUE: 'normal',        'F': 'angled',         'T': 'normal'}
+CIRC_TYP        = {TAG_FALSE: 'non_cross',      TAG_TRUE: 'cross',         'F': 'non_cross',      'T': 'cross'}
+CIRC_SMTH       = {TAG_FALSE: 'non_smooth',     TAG_TRUE: 'smooth',        'F': 'non_smooth',     'T': 'smooth'} # normal == non_smooth
+CALIBRATED      = {TAG_FALSE: 'uncalibrated',   TAG_TRUE: 'calibrated',    'F': 'uncalibrated',   'T': 'calibrated'}
+CHAMFER_TYPE    = {TAG_FALSE: 'const',          TAG_TRUE: 'radius',        'F': 'const',          'T': 'radius'}
+CONVEXITY       = {TAG_FALSE: 'concave',        TAG_TRUE: 'convex',        'F': 'concave',        'T': 'convex'}
+RENDER_BLEND    = {TAG_FALSE: 'rb_snapshot',    TAG_TRUE: 'rb_envelope',   'F': 'rb_snapshot',    'T': 'rb_envelope'}
+BOOLEAN         = {TAG_FALSE: 'F',              TAG_TRUE:  'T',            'F': 'F',              'T':  'T'}
 RAD_FORM_ENTS   = ['unknown', 'two_ends', 'functional', 'fixed_width']
 
 # TAG_ENUM value mappings
@@ -92,7 +92,7 @@ scale = 1.0
 
 _nameMtchAttr    = {}
 _dcIdxAttributes = {} # dict of an attribute list
-
+_subtypes        = []
 LENGTH_TEXT = re.compile('[ \t]*(\d+) +(.*)')
 
 TOKEN_TRANSLATIONS = {
@@ -123,6 +123,8 @@ TOKEN_TRANSLATIONS = {
 }
 
 _reader = None
+_getSLong = getSInt32
+_getULong = getUInt32
 
 def getReader():
 	global _reader
@@ -225,15 +227,22 @@ class Law(object):
 		return None
 
 def init():
-	global _dcIdxAttributes
+	global _dcIdxAttributes, _subtypes
 
 	clearEntities()
-	_dcIdxAttributes = {}
+	_dcIdxAttributes.clear()
+	_subtypes.clear()
 
 def addSubtypeNode(node):
-	getReader().addSubtype(node)
+	global _subtypes
+	_subtypes.append(node)
 
 def getSubtypeNode(ref):
+	global _subtypes
+	try:
+		return _subtypes[ref]
+	except:
+		return None
 	return getReader().getSubtyp(ref)
 
 def clearEntities():
@@ -387,20 +396,21 @@ def getEnumByTag(chunks, index, values):
 	chunk = chunks[index]
 	if (type(chunk) == AcisChunkUtf8U8):
 		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, chunk.val)
-		if (sys.version_info.major < 3):
-			chunk.val = values.keys()[values.values().index(chunk.val)]
-		else:
-			chunk.val = list(values.keys())[list(values.values()).index(chunk.val)]
+		idx = 0
+		for key in values:
+			if (chunk.val == key):
+				if (type(values) = dict):
+					chunk.val = key
+				else:
+					chunk.val = idx
+				break;
+			idx += 1
 		chunks[index] = chunk
 	elif (type(chunk) == AcisChunkDouble):
 		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, 11 - int(chunk.val))
 		chunks[index] = chunk
-#	assert isinstance(chunk, AcisChunkEnumValue)
-	try:
-		chunk.values = values
-		return values[chunk.val], index + 1
-	except:
-		return chunk.val, index + 1
+	chunk.values = values
+	return values[chunk.val], index + 1
 
 def getEnumByValue(chunks, index, values):
 	chunk = chunks[index]
@@ -441,6 +451,8 @@ def getRange(chunks, index, default, scale):
 	type, i = getEnumByTag(chunks, index, RANGE)
 	val = default
 	if (type == 'F'):
+		val, i = getFloat(chunks, i)
+	elif (type == TAG_TRUE):
 		val, i = getFloat(chunks, i)
 	elif (type == 'T'):
 		arr, i = getFloats(chunks, i, 7)
@@ -1451,7 +1463,7 @@ class Entity(object):
 	@property
 	def attrib(self):   return None if (self._attrib is None) else self._attrib.node
 	def __str__(self):  return "%s" % (self.entity)
-	def __repr__(self): return self.__str__()
+	def __repr__(self): return "%r" % (self.entity)
 	def getSatText(self):
 		e = self.entity
 		sat = e.name
@@ -1714,7 +1726,8 @@ class Face(Topology):
 				self.shape = self._surface.build()
 				if (self.shape is not None):
 					if (len(edges) > 0):
-						component, elements = self.shape.generalFuse(edges)
+						tolerance = 0.1
+						component, elements = self.shape.generalFuse(edges, tolerance)
 						faces = elements[0]
 						if (len(faces) == 0):
 							logWarning("    can't create face (no elements) for %s" %(self._surface))
@@ -1722,7 +1735,7 @@ class Face(Topology):
 							face = eliminateOuterFaces(faces, edges)
 							if (face is None):
 								# edges can be empty because not all edges can be created right now :(
-								logWarning("    can't create face for %s" %(self._surface))
+								logWarning("    can't create face for %s!" %(self._surface))
 							else:
 								self.shape = face
 		return self.shape
@@ -2035,13 +2048,15 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 					ellipse = Part.ArcOfEllipse(ellipse, (a + pi/2) % (2*pi), (b + pi/2) % (2*pi))
 		return ellipse.toShape()
 class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
-	def __init__(self, name = ''):
+	def __init__(self, name = '', subtype = 'cur_int'):
 		super(CurveInt, self).__init__(name + 'intcurve')
-		self.sense    = 'forward' # The IntCurve's reversal flag
-		self.range    = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
-		self.subclass = 'cur_int'
-		self.curve    = None
-		self.ignore   = False
+		self.sense   = 'forward' # The IntCurve's reversal flag
+		self.range   = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.subtype = subtype
+		self.curve   = None
+		self.ignore  = False
+	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
+	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
 	def getSurface(self): return getattr(self, 'surface', None)
 	def setProjectionSurface(self, surface, curve):
 		if (surface is not None):
@@ -2075,8 +2090,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		else:
 			raise Exception("Unknown Surface-singularity '%s'" %(self.singularity))
 		return i
-	def setSurfaceCurve(self, chunks, index, inventor, subclass='int_cur'):
-		self.subclass = subclass
+	def setSurfaceCurve(self, chunks, index, inventor, subtype='int_cur'):
+		self.subtype = subtype
 		vrs = getVersion()
 		i = self.setCurve(chunks, index)
 		self.surface1, i = readSurface(chunks, i)
@@ -2094,7 +2109,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			self.setProjectionSurface(self.surface2, self.pcurve2)
 		return i
 	def setBlendSpring(self, chunks, index, inventor):
-		self.subclass = 'spring_int_cur'
+		self.subtype = 'spring_int_cur'
 		i = self.setCurve(chunks, index)
 		self.surface1, i = readSurface(chunks, i)
 		if (self.surface1 is None):
@@ -2363,15 +2378,15 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		t, i  = getText(chunks, i)    # something like 'surf1' or 'surf2'
 		return i
 	def setSSS(self, chunks, index, inventor):
-		self.subclass = 'sss_int_cur'
+		self.subtype = 'sss_int_cur'
 		i = self.setSurfaceCurve(chunks, index, inventor)
 		n, i = getInteger(chunks, i)
 		s, i = readSurface(chunks, i)
 		p, i = readBS2Curve(chunks, i)
 		self.setProjectionSurface(s, p)
 		return i
-	def setSilhouette(self, chunks, index, inventor, subclass='silh_int_cur'):
-		i = self.setSurfaceCurve(chunks, index, inventor, subclass)
+	def setSilhouette(self, chunks, index, inventor, subtype='silh_int_cur'):
+		i = self.setSurfaceCurve(chunks, index, inventor, subtype)
 		if (inventor):
 			v, i = getInteger(chunks, i)
 		self.direction, i = getVector(chunks, i)
@@ -2440,11 +2455,12 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				t, i  = getText(chunks, i)    # something like 'surf1 or surf2'
 		return i
 	def setRef(self, chunks, index):
-		self.subclass = 'ref'
-		self.ref, i  = getInteger(chunks, index)
-		self.curve   = getSubtypeNode(self.ref)
-#		if (not isinstance(self.curve, Curve)):
-#			self.curve  = self.curve.getCurve()
+		self.subtype = 'ref'
+		self.ref, i = getInteger(chunks, index)
+		self.curve  = getSubtypeNode(self.ref)
+		if (not isinstance(self.curve, Curve)):
+			logError("Expeced CURVE ref %d but found %s", self.ref, self.curve.__name__)
+			self.curve = None
 		return i
 	def setBulk(self, chunks, index):
 		self.subtype, i = getValue(chunks, index)
@@ -2468,10 +2484,13 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def build(self, start=None, end=None):
 		if (self.shape is None) and not self.ignore:
 			self.ignore = True # Don't try to create me more than once
-			if (self.subclass == 'ref'):
-				if (self.curve):
-					self.shape = self.curve.build(start, end)
-			elif (self.subclass == 'law_int_cur'):
+			if (self.subtype == 'ref'):
+				cur = self.curve
+				if (not isinstance(cur, Curve)):
+					cur = cur.getCurve()
+				if (cur):
+					self.shape = cur.build(start, end)
+			elif (self.subtype == 'law_int_cur'):
 				r = self.range1
 				l = Law(self.laws[0][0])
 				x = r.lower.getLimit()
@@ -2534,7 +2553,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 			return self.surface
 		return self.pcurve.getSurface()
 	def setExpPar(self, chunks, index):
-		self.subclass = 'exp_par_cur'
+		self.subtype = 'exp_par_cur'
 		vrs = getVersion()
 		self.pcurve, i = readBS2Curve(chunks, index)
 		tolerance, i = getFloat(chunks, i)
@@ -2542,7 +2561,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.surface, i = readSurface(chunks, i)
 		return i
 	def setImpPar(self, chunks, index):
-		self.subclass = 'imp_par_cur'
+		self.subtype = 'imp_par_cur'
 		self.sense, i = getEnumByTag(chunks, index, SENSE)
 		self.curve = CurveInt()
 		i = self.curve.setBulk(chunks, i + 1)
@@ -2550,9 +2569,12 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.surface = self.curve.getSurface()
 		return i
 	def setRef(self, chunks, index):
-		self.subclass = 'ref'
+		self.subtype = 'ref'
 		self.ref, i = getInteger(chunks, index)
 		self.pcurve = getSubtypeNode(self.ref)
+		if (not isinstance(self.pcurve, CurveP)):
+			logError("Expeced CURVE ref %d but found %s", self.ref, self.pcurve.__name__)
+			self.pcurve = None
 		return i
 	def setBulk(self, chunks, index):
 		self.subtype, i = getValue(chunks, index)
@@ -2583,15 +2605,15 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 			self.pcurve, i = getRefNode(entity, i, 'curve')
 			self.u, i = getFloat(entity.chunks, i)
 			self.v, i = getFloat(entity.chunks, i)
-			self.subclass = 'ref'
+			self.subtype = 'ref'
 		return i
 	def build(self, start, end):
 		if (self.shape is None):
-			if (self.subclass == 'ref'):
+			if (self.subtype == 'ref'):
 				self.shape = self.pcurve.build(start, end)
-			elif (self.subclass == 'exp_par_cur'):
+			elif (self.subtype == 'exp_par_cur'):
 				self.shape = createBSplinesPCurve(self.pcurve, self.surface, self.sense)
-			elif (self.subclass == 'imp_par_cur'):
+			elif (self.subtype == 'imp_par_cur'):
 				self.shape = self.curve.build(start, end)
 		return self.shape
 class CurveStraight(Curve):# straight curve "straight-curve"
@@ -2621,10 +2643,9 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 class Surface(Geometry):
 	def __init__(self, name):
 		super(Surface, self).__init__(name)
-		self.type     = name
-		self.subtype  = None
-		self.subclass = None
-		self.shape    = None
+		self.type    = name
+		self.subtype = None
+		self.shape   = None
 	def getSurface(self):
 		return self
 	def setSubtype(self, chunks, index):
@@ -2783,6 +2804,8 @@ class SurfaceSpline(Surface):
 	def __init__(self):
 		super(SurfaceSpline, self).__init__('spline')
 		self.surface = None
+	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
+	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
 	def _readLoftData(self, chunks, index):
 		ld = LoftData()
 		ld.surface, i = readSurface(chunks, index)
@@ -2963,7 +2986,7 @@ class SurfaceSpline(Surface):
 	def getSurface(self):
 		sNext = self
 		ref = None
-		while (getattr(sNext, 'subclass', None) == 'ref'):
+		while (getattr(sNext, 'subtype', None) == 'ref'):
 			if (ref is None):
 				ref = sNext.ref
 			elif (ref >= sNext.ref):
@@ -2975,8 +2998,8 @@ class SurfaceSpline(Surface):
 			if (sNext == None):
 				break
 		return sNext
-	def setSurfaceShape(self, chunks, index, inventor, subclass = 'spl_sur'):
-		self.subclass = subclass
+	def setSurfaceShape(self, chunks, index, inventor, subtype = 'spl_sur'):
+		self.subtype = subtype
 		spline, self.tolerance, i = readSplineSurface(chunks, index, True)
 		self.shape = createBSplinesSurface(spline)
 		if (getVersion() >= 2.0):
@@ -3210,22 +3233,20 @@ class SurfaceSpline(Surface):
 			di3, i = getFloatArray(chunks, i)
 		return i
 	def setHelixCircle(self, chunks, index, inventor):
-		self.subclass = 'helix_spl_circ'
+		self.subtype = 'helix_spl_circ'
 		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
 		dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
 		length, i = getLength(chunks, i) # pi / 2
-		curve = CurveInt()
-		curve.subclass = "helix_int_cur"
+		curve = CurveInt(subtype="helix_int_cur")
 		i = curve.setHelix(chunks, i, inventor)
 		radius, i  = getLength(chunks, i) # radius of the circle
 		self.shape = curve.helix.buildSurfaceCircle(radius, angle.getLowerLimit(), angle.getUpperLimit())
 		return i
 	def setHelixLine(self, chunks, index, inventor):
-		self.subclass = 'helix_spl_line'
+		self.subtype = 'helix_spl_line'
 		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
 		dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, 1.0)
-		curve = CurveInt()
-		curve.subclass = "helix_int_cur"
+		curve = CurveInt(subtype="helix_int_cur")
 		i = curve.setHelix(chunks, i, inventor)
 		posCenter, i = getLocation(chunks, i)
 		return i
@@ -3394,7 +3415,7 @@ class SurfaceSpline(Surface):
 		i = self.setSurfaceShape(chunks, i, inventor, 'sweep_spl_sur')
 		return i
 	def setScaleClft(self, chunks, index, inventor):
-		self.subclass = 'scaled_cloft_spl_sur'
+		self.subtype = 'scaled_cloft_spl_sur'
 		singularity, i = getSingularity(chunks, index)
 		if (singularity == 'full'):
 			spline, i = readBS3Surface(chunks, i)
@@ -3478,10 +3499,10 @@ class SurfaceSpline(Surface):
 			self.boundaries.append(vbl)
 		grid,      i = getInteger(chunks, i)  # Grid-Size
 		tolerance, i = getFloat(chunks, i)    # fit tolerance
-		self.subclass = 'VBL_SURF'
+		self.subtype = 'VBL_SURF'
 		return i
-	def setRbBlend(self, chunks, index, inventor, subclass = 'rb_blend_spl_sur'):
-		self.subclass = subclass
+	def setRbBlend(self, chunks, index, inventor, subtype = 'rb_blend_spl_sur'):
+		self.subtype = subtype
 		vrs = getVersion()
 		self.blend1, i = self._readRbBlendSurface1(chunks, index, inventor)
 		self.blend2, i = self._readRbBlendSurface1(chunks, i, inventor)
@@ -3506,7 +3527,7 @@ class SurfaceSpline(Surface):
 		if ((vrs > 22.0) and (isASM() == False)): i += 1 # T
 		i += 1 # 1 skip long
 		if (vrs > 3.0):
-			i = self.setSurfaceShape(chunks, i, inventor, subclass)
+			i = self.setSurfaceShape(chunks, i, inventor, subtype)
 		if (inventor):
 			# Discontinuity-Info
 			di1, i = getFloatArray(chunks, i)
@@ -3517,8 +3538,8 @@ class SurfaceSpline(Surface):
 		i = self.setRbBlend(chunks, index, inventor, 'sss_blend_spl_sur')
 		rb3, i = self._readRbBlendCurve(chunks, i, inventor)
 		return i
-	def setVarBlend(self, chunks, index, inventor, subclass = 'var_blend_spl_sur'):
-		self.subclass = subclass
+	def setVarBlend(self, chunks, index, inventor, subtype = 'var_blend_spl_sur'):
+		self.subtype = subtype
 		vrs = getVersion()
 		bs1, i  = self._readRbBlendSurface2(chunks, index, inventor)
 		bs2, i  = self._readRbBlendSurface2(chunks, i, inventor)
@@ -3544,7 +3565,7 @@ class SurfaceSpline(Surface):
 				ct  = False
 				bv3 = None
 		elif (r1 == 'single_radius'):
-			if (chunks[i].val == 7): # ???
+			if (chunks[i].val in [1, 7]): # ???
 				ut1, i = getValue(chunks, i)
 				uv1, i = getFloats(chunks, i, 2)
 		rU, i    = getInterval(chunks, i, 0, 1, 1.0)
@@ -3562,7 +3583,7 @@ class SurfaceSpline(Surface):
 				b, i = getBoolean(chunks, i)
 
 			k, i    = getInteger(chunks, i)      # 1
-			i = self.setSurfaceShape(chunks, i, inventor, subclass)
+			i = self.setSurfaceShape(chunks, i, inventor, subtype)
 			if (inventor): a, i = getIntegers(chunks, i, 3) # 0 0 0
 		else:
 			r1, i = getInterval(chunks, i, 0, 1, 1.0)
@@ -3582,19 +3603,19 @@ class SurfaceSpline(Surface):
 	def setSrfSrvVBlend(self, chunks, index, inventor):
 		i = self.setVarBlend(chunks, index, inventor, 'srf_srf_v_bl_spl_sur')
 		return i
-	def setTaper(self, chunks, index, inventor, subclass = 'taper_spl_sur'):
+	def setTaper(self, chunks, index, inventor, subtype = 'taper_spl_sur'):
 		self.surface, i = readSurface(chunks, index)
 		self.curve, i   = readCurve(chunks, i)
 		self.pcurve, i  = readBS2Curve(chunks, i)
 		f1, i = getFloat(chunks, i)
-		i = self.setSurfaceShape(chunks, i, inventor, subclass)
+		i = self.setSurfaceShape(chunks, i, inventor, subtype)
 		return i
 	def setOrtho(self, chunks, index, inventor):
 		i = self.setTaper(chunks, index, inventor, 'ortho_spl_sur')
 		self.sense, i = getBoolean(chunks, i)
 		return i
-	def setEdgeTaper(self, chunks, index, inventor, subclass = 'edge_tpr_spl_sur'):
-		i = self.setTaper(chunks, index, inventor, subclass)
+	def setEdgeTaper(self, chunks, index, inventor, subtype = 'edge_tpr_spl_sur'):
+		i = self.setTaper(chunks, index, inventor, subtype)
 		self.draft, i = getVector(chunks, i)
 		return i
 	def setShadowTaper(self, chunks, index, inventor):
@@ -3614,9 +3635,12 @@ class SurfaceSpline(Surface):
 		self.cosine, i = getFloat(chunks, i)
 		return i
 	def setRef(self, chunks, index):
-		self.subclass = 'ref'
+		self.subtype = 'ref'
 		self.ref, i  = getInteger(chunks, index)
 		self.surface = getSubtypeNode(self.ref)
+		if (not isinstance(self.surface, Surface)):
+			logError("Expeced SURFACE for ref %d but found %s", self.ref, self.surface.__name__)
+			self.surface = None
 		return i
 	def setBulk(self, chunks, index):
 		self.subtype, i = getValue(chunks, index)
@@ -3645,11 +3669,11 @@ class SurfaceSpline(Surface):
 		if (self.shape is None):
 			if (getattr(self, 'failed', False)):
 				return None
-			if (self.subclass == 'ref'):
+			if (self.subtype == 'ref'):
 				surface = self.getSurface()
 				if (surface):
 					self.shape = surface.build()
-			elif (self.subclass == 'cyl_spl_sur'):
+			elif (self.subtype == 'cyl_spl_sur'):
 				if (self.surface is None):
 					# create a cylinder surface from the profile
 					self.surface = Part.Cylinder()
@@ -3664,7 +3688,7 @@ class SurfaceSpline(Surface):
 						self.shape = self.surface.toShape()
 					else:
 						logError("    Can't create cylinder from profile (%r)" %(self.profile))
-			elif (self.subclass == 'VBL_SURF'):
+			elif (self.subtype == 'VBL_SURF'):
 				if (self.surface is None):
 					edges = []
 					for vbl in self.boundaries:
@@ -3676,7 +3700,7 @@ class SurfaceSpline(Surface):
 					except:
 						for edge in edges:
 							Part.show(edge)
-			elif (self.subclass == 'off_spl_sur'):
+			elif (self.subtype == 'off_spl_sur'):
 				if (self.surface is not None):
 					source = self.surface.build()
 					if (source is not None):
@@ -3702,7 +3726,7 @@ class SurfaceSpline(Surface):
 							self.shape = source.makeOffsetShape(distance, tolerance, False, False, mode, join, fill)
 						except:
 							pass
-			elif (self.subclass == 'rot_spl_sur'):
+			elif (self.subtype == 'rot_spl_sur'):
 				if (self.surface is None):
 					# create a rotation shape from the profile
 					curve = self.profile.build(None, None)
@@ -3710,7 +3734,7 @@ class SurfaceSpline(Surface):
 						self.shape = Part.SurfaceOfRevolution(curve.Curve, self.loc, self.dir).toShape()
 					else:
 						logError("    Can't create curve for revolution of (%r)" %(self.profile))
-			elif (self.subclass == 'sum_spl_sur'):
+			elif (self.subtype == 'sum_spl_sur'):
 				rngU = self.tolerance[2]
 				curve1 = self.curve1.build(rngU.getLowerLimit(), rngU.getUpperLimit())
 				if (curve1 is not None):
@@ -3723,7 +3747,7 @@ class SurfaceSpline(Surface):
 						logError("    Can't create ruled surface of 2nd curve - (%r)" %(self.curve2))
 				else:
 					logError("    Can't create ruled surface of 1st curve - (%r)" %(self.curve1))
-			elif (self.subclass == 'sweep_spl_sur'):
+			elif (self.subtype == 'sweep_spl_sur'):
 				profile = self.profile.build(None, None)
 				if (profile):
 					path = self.path.build(None, None)
@@ -4468,11 +4492,12 @@ class AcisChunkHuge(_AcisChunkNumber_):
 		self.val, i = getSInt64(data, offset)
 		return i
 class AcisChunkLong(_AcisChunkNumber_):
-	'''32Bit signed value'''
+	'''32/64 Bit signed value depending on the Header!'''
 	def __init__(self, value = None):
 		super(AcisChunkLong, self).__init__(TAG_LONG, value)
 	def read(self, data, offset):
-		self.val, i = getSInt32(data, offset)
+		global _getSLong
+		self.val, i = _getSLong(data, offset)
 		return i
 class AcisChunkFloat(_AcisChunkNumber_):
 	'''32Bit IEEE float value'''
@@ -4541,7 +4566,8 @@ class AcisChunkEnumValue(_AcisChunk_):
 				pass
 		return u"%s " %(val)
 	def read(self, data, offset):
-		self.val, i = getUInt32(data, offset)
+		global _getULong
+		self.val, i = _getULong(data, offset)
 		return i
 	def getValue(self):
 		if (values):
@@ -4699,6 +4725,7 @@ def version2int(version):
 ACIS_REF_NONE = AcisChunkEntityRef(-1)
 
 class AcisReader(object):
+	_getLong = getSInt32 # by default 4Bytes
 	def __init__(self, stream):
 		super(AcisReader, self).__init__()
 		self._stream    = stream
@@ -4711,7 +4738,6 @@ class AcisReader(object):
 		self.history    = None
 		self.resolved   = False
 		self.bodies     = []
-		self._subtypes  = []
 
 	def _hasNext(self):
 		return self._pos < self._length
@@ -4783,11 +4809,12 @@ class AcisReader(object):
 		return token
 
 	def _readChunkBinary(self):
+		global _getSLong
 		tag, self._pos = getUInt8(self._data, self._pos)
 		chunk = ACIS_CONST_CHUNKS.get(tag, None)
 		if (chunk is None):
-			if (tag == 	TAG_ENTITY_REF):
-				refIdx, self._pos = getSInt32(self._data, self._pos)
+			if (tag == TAG_ENTITY_REF):
+				refIdx, self._pos = _getSLong(self._data, self._pos)
 				try:
 					chunk = self._refChunks[refIdx]
 				except:
@@ -4832,21 +4859,30 @@ class AcisReader(object):
 
 	def _readHeaderBinary(self):
 #		setVersion(7.0)
+		global _getSLong, _getULong
 		self._pos = 0
-		if (self._data[0:15] in [b'ACIS BinaryFile', b'ASM BinaryFile4']):
-			self.header.version, self._pos = getUInt32(self._data, 15)
-			self.header.records, self._pos = getUInt32(self._data, self._pos)
-			self.header.bodies, self._pos  = getUInt32(self._data, self._pos)
-			self.header.flags, self._pos   = getUInt32(self._data, self._pos)
+		self.header.format = self._data[0:15].decode()
+		if (self.header.format in ['ACIS BinaryFile', 'ASM BinaryFile4', 'ASM BinaryFile8']):
+			if (self.header.format[-1:] == '8'):
+				_getSLong = getSInt64
+				_getULong = getUInt64
+			else:
+				_getSLong = getSInt32
+				_getULong = getUInt32
+			self.header.version, self._pos = _getULong(self._data, 15)
+			self.header.records, self._pos = _getULong(self._data, self._pos)
+			self.header.bodies, self._pos  = _getULong(self._data, self._pos)
+			self.header.flags, self._pos   = _getULong(self._data, self._pos)
 			self.header.version = int2version(self.header.version)
-		self.header.prodId  = self._readChunkBinary().val
-		self.header.prodVer = self._readChunkBinary().val
-		self.header.date    = self._readChunkBinary().val
-		self.header.scale   = self._readChunkBinary().val
-		self.header.resabs  = self._readChunkBinary().val
-		self.header.resnor  = self._readChunkBinary().val
+			self.header.prodId  = self._readChunkBinary().val
+			self.header.prodVer = self._readChunkBinary().val
+			self.header.date    = self._readChunkBinary().val
+			self.header.scale   = self._readChunkBinary().val
+			self.header.resabs  = self._readChunkBinary().val
+			self.header.resnor  = self._readChunkBinary().val
+			return True
 #		setVersion(self.version)
-		return
+		return False
 
 	def _readRecordText(self, index):
 		id = index
@@ -4906,15 +4942,6 @@ class AcisReader(object):
 				pass
 		self._refChunks[-1].entity = None
 		return
-
-	def addSubtype(self, node):
-		self._subtypes.append(node)
-
-	def getSubtyp(self, ref):
-		try:
-			return self._subtypes[ref]
-		except:
-			return None
 
 	def getEntity(self, index):
 		return self._entities[index]

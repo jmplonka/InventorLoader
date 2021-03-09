@@ -35,9 +35,12 @@ class ResultReader(SegmentReader):
 				i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_MAP_APP_1_, 'lst5')
 			else:
 				node.content += ' lst5={}'
+				node.set('lst5', {})
 				i += 1
 		else:
 			node.content += ' lst4={} lst5={}'
+			node.set('lst4', [])
+			node.set('lst5', {})
 			i += 1
 		i = node.ReadList4(i, importerSegNode._TYP_RESULT_5_, 'lst6')
 		i = node.ReadList4(i, importerSegNode._TYP_RESULT_4_, 'lst7')

@@ -277,6 +277,11 @@ class AppReader(SegmentReader):
 			i = node.ReadUUID(i, 'uid_0')
 		else:
 			node.content += u" txt_1='' txt_2='' txt_3='' txt_4='' a2=[0000,0000] uid_0=None "
+			node.set('txt_1', '')
+			node.set('txt_2', '')
+			node.set('txt_3', '')
+			node.set('a2', (0,0))
+			node.set('uid_0', None)
 		i = node.ReadFloat64A(i, 8, 'a3')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadCrossRef(i, 'ref_0')
@@ -316,6 +321,14 @@ class AppReader(SegmentReader):
 			i = node.ReadUUID(i, 'uid_0')
 		else:
 			node.content += u" u16_2=0000 txt_1='' txt_2='' txt_3='' txt_4='' a2=[0000,0000] uid_0=None"
+			node.set('u16_2', 0)
+			node.set('txt_1', '')
+			node.set('txt_2', '')
+			node.set('txt_3', '')
+			node.set('txt_4', '')
+			node.set('a2', (0, 0))
+			node.set('uid_0', None)
+
 		i = node.ReadMaterial(i, 2)
 		i = node.ReadLen32Text16(i, 'FileMapTexture')
 		i = node.ReadUInt8(i, 'u8_1')
@@ -389,18 +402,34 @@ class AppReader(SegmentReader):
 			i = node.ReadUInt8(i, 'u8_2')
 			i = node.ReadUInt32(i, 'u32_3')
 			if (self.version > 2012):
-				i = node.ReadUInt8(i, 'u8_3')
+				i = node.ReadUInt8(i, 'u8_5')
 				if (self.version > 2015):
-					i = node.ReadUInt8(i, 'u8_4')
+					i = node.ReadUInt8(i, 'u8_6')
 					i = node.ReadUInt32(i, 'u32_5')
 					i = node.ReadColorRGBA(i, 'c_1')
 					i = node.ReadUInt32(i, 'u32_6')
 					i = node.ReadFloat32A(i, 5, 'f_4')
-					i = node.ReadUInt8(i, 'u8_5')
+					i = node.ReadUInt8(i, 'u8_7')
 					i = node.ReadLen32Text16(i)
 					i = len(node.data)
+				else:
+					node.set('u8_6', 0)
+					node.set('u32_5', 1)
+					node.set('c_1', Color(0x50, 0xA5, 0xD2, 0xFF))
+					node.set('u32_6', 0x11)
+					node.set('f_4', (0., 0., 0., 1., 1.))
+					node.set('u8_7', 1)
+					node.set('txt_1', node.name)
 			else:
 				node.content += u" u8_3=01 u8_4=00 u32_5=0001 c_1=#50A5D2FF u32_6=0011 f_4=(0,0,0,1,1) u8_5=01 txt_1='%s'" %(node.name)
+				node.set('u8_5', 1)
+				node.set('u8_6', 0)
+				node.set('u32_5', 1)
+				node.set('c_1', Color(0x50, 0xA5, 0xD2, 0xFF))
+				node.set('u32_6', 0x11)
+				node.set('f_4', (0., 0., 0., 1., 1.))
+				node.set('u8_7', 1)
+				node.set('txt_1', node.name)
 		else:
 			i = node.ReadUInt32(i, 'u32_3')
 		return i
@@ -639,7 +668,9 @@ class AppReader(SegmentReader):
 			i = node.ReadFloat64_2D(i, 'a2')
 		else:
 			node.content += ' u32_0=0013 u32_1=000E a2=(0.25, 0.1)'
+			node.set('u32_0', 0x13)
 			node.set('u32_1', 0x0E)
+			node.set('a2', (0.25, 0.1))
 		i = node.ReadFloat64_2D(i, 'a3')
 		return i
 

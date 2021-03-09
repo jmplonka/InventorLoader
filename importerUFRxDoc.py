@@ -137,6 +137,7 @@ class UFRxInvFile(UFRxObject):
 		self.lib_name   = ''
 		self.i_1        = 0
 		self.t_1        = ''
+		self.l          = []
 		self.buf        = ()
 		self.name       = None
 		self.db         = None
@@ -144,7 +145,7 @@ class UFRxInvFile(UFRxObject):
 		self.occurences = 0
 		self.version    = 0
 		self.flags      = 0
-	def __str__(self): return "'%s', %d, '%s', %d, '%s', [%s], {%s}, {%s}, %d, %d, %04X, %04X\n" %(self.path, self.lib_id, self.lib_name, self.i_1, self.t_1, IntArr2Str(self.buf, 2), self.name, self.db, self.id, self.occurences, self.version, self.flags)
+	def __str__(self): return "'%s', %d, '%s', %d, '%s', %s, [%s], {%s}, {%s}, %d, %d, %04X, %04X\n" %(self.path, self.lib_id, self.lib_name, self.i_1, self.t_1, self.l, IntArr2Str(self.buf, 2), self.name, self.db, self.id, self.occurences, self.version, self.flags)
 
 class UFRxOleFile(UFRxObject):
 	def __init__(self):
@@ -458,11 +459,19 @@ def readLODs(data, offset, log):
 def readInvFile(data, offset, log):
 	inv = UFRxInvFile()
 	inv.path,       i = getLen32Text16(data, offset)
-	inv.lib_id,     i = getUInt32(data,      i)
+	inv.lib_id,     i = getSInt32(data,      i)
 	inv.lib_name,   i = getLen32Text16(data, i)
 	inv.i_1,        i = getUInt16(data,      i)
+	dummy, j = getUInt32(data, i)
+	if ((dummy & 0xFFFF0000) > 0):
+		dummy, i = getUInt16(data,      i)
+		assert (dummy == 0)
 	inv.t_1,        i = getLen32Text16(data, i)
-	inv.buf,        i = getUInt16A(data,     i, 4)
+	cnt, i = getUInt32(data, i)
+	for j in range(cnt):
+		dummy, i = getUInt16A(data,     i, 3)
+		inv.l.append(dummy)
+	inv.buf,        i = getUInt16A(data,     i, 2)
 	inv.name,       i = getUUID(data,        i)
 	inv.db,         i = getUUID(data,        i)
 	inv.id,         i = getUInt32(data,      i)
@@ -703,7 +712,7 @@ def readUnknown2(data, offset, log):
 		n1 = 0
 		n2 = 0
 		l.append(('',))
-	log.write('\tPadding: %d\n' %(n2))
+	log.write('\tPadding: %d\n\n' %(n2))
 	return (n1, l, n2), i
 
 def readBomRecord(data, offset, log):

@@ -125,7 +125,7 @@ def buildBody(root, node):
 			buildWire(root, wire, transform)
 	return
 
-def _resolveNodes(acis):
+def resolveNodes(acis):
 	init()
 	bodies = []
 	doAdd  = True
@@ -143,7 +143,7 @@ def importModel(root):
 	wires = 0
 	lumps = 0
 	acis = getReader()
-	bodies = _resolveNodes(acis)
+	bodies = resolveNodes(acis)
 	for body in bodies:
 		buildBody(root, body)
 	return
@@ -151,7 +151,7 @@ def importModel(root):
 def convertModel(group, docName):
 	global _fileName
 	acis = getReader()
-	bodies = _resolveNodes(acis)
+	bodies = resolveNodes(acis)
 	stepfile = export(acis.name, acis.header, bodies)
 	ImportGui.insert(stepfile, docName)
 

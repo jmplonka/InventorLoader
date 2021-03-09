@@ -19,9 +19,9 @@ from importerEeScene     import EeSceneReader
 from importerFBAttribute import FBAttributeReader
 from importerGraphics    import GraphicsReader
 from importerNotebook    import NotebookReader
-#from importerSheetDC     import SheetDcReader
-#from importerSheetDL     import SheetDlReader
-#from importerSheetSM     import SheetSmReader
+from importerSheetDC     import SheetDcReader
+from importerSheetDL     import SheetDlReader
+from importerSheetSM     import SheetSmReader
 from importerResults     import ResultReader
 from importerUtils       import *
 from xlutils.copy        import copy
@@ -77,9 +77,9 @@ SEG_TYPE_READERS = {
 	SEG_NOTEBOOK       : NotebookReader,
 	SEG_RESULT_AM      : ResultReader,
 	SEG_RESULT_PM      : ResultReader,
-#	SEG_SHEET_DC_DL    : SheetDcReader,
-#	SEG_SHEET_DL_DL    : SheetDlReader,
-#	SEG_SHEET_SM_DL    : SheetSmReader,
+	SEG_SHEET_DC_DL    : SheetDcReader,
+	SEG_SHEET_DL_DL    : SheetDlReader,
+	SEG_SHEET_SM_DL    : SheetSmReader,
 }
 
 # F29F85E0-4FF9-1068-AB91-08002B27B3D9
@@ -212,14 +212,12 @@ def getPropertySetName(properties, path):
 
 	return name, keys
 
-def ReadInventorSummaryInformation(doc, properties, path):
+def ReadInventorSummaryInformation(properties, path):
 	name, keys = getPropertySetName(properties, path)
 
-	if (doc):
-		setAuthor(getProperty(properties, KEY_SUM_INFO_AUTHOR))
-		doc.CreatedBy = getAuthor()
-		doc.Comment = getProperty(properties, KEY_SUM_INFO_COMMENT)
-		doc.LastModifiedBy = getProperty(properties, KEY_SUM_INFO_MODIFYER)
+	setAuthor(getProperty(properties, KEY_SUM_INFO_AUTHOR))
+	setComment(getProperty(properties, KEY_SUM_INFO_COMMENT))
+	setLastModifiedBy(getProperty(properties, KEY_SUM_INFO_MODIFYER))
 
 	for key in keys:
 		if ((key != KEY_CODEPAGE) and (key != KEY_SET_NAME) and (key != KEY_LANGUAGE_CODE)):
@@ -253,7 +251,7 @@ def ReadProtein(data):
 
 	return size + 4
 
-def ReadWorkbook(doc, data, name, stream):
+def ReadWorkbook(data, name, stream):
 	dumpFolder = getDumpFolder()
 	if (not (dumpFolder is None)):
 		##create a new Spreadsheet in new document
@@ -278,7 +276,7 @@ def ReadWorkbook(doc, data, name, stream):
 		xls.save(u"%s/%s.xls" %(dumpFolder, name))
 	return len(data)
 
-def ReadOle10Native(doc, stream, fnames):
+def ReadOle10Native(stream, fnames):
 	dumpFolder = getDumpFolder()
 	if (not (dumpFolder is None)):
 		ole = importerOle10Nateive.olenative()

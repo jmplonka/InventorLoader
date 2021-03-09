@@ -572,7 +572,8 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst0')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst1')
 		else:
-			addEmptyLists(node, [0, 1])
+			node.set('lst0', {})
+			node.set('lst1', {})
 		i = node.ReadCrossRef(i, 'parameter')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadCrossRef(i, 'ref_4')
@@ -637,7 +638,8 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_X_REF_, 'lst2')
 		else:
 			i = self.skipBlockSize(i)
-			addEmptyLists(node, [1, 2])
+			node.set('lst1', {})
+			node.set('lst2', {})
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'points')
 		i = node.ReadUInt8(i, 'u8_1')
@@ -736,7 +738,8 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_FLOAT64_, 'lst0')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst1')
 		else:
-			addEmptyLists(node, [0, 1])
+			node.set('lst0', {})
+			node.set('lst1', {})
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst2')
 		return i
 
@@ -971,7 +974,8 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst2')
 		else:
 			i = self.skipBlockSize(i, 2)
-			addEmptyLists(node, [1])
+			node.set('lst1', {})
+			node.set('lst2', {})
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadCrossRef(i, 'spline')
 		i = node.ReadCrossRef(i, 'line')
@@ -1160,7 +1164,8 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst1')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst2')
 		else:
-			addEmptyLists(node, [1, 2])
+			node.set('lst1', {})
+			node.set('lst2', {})
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadUInt32(i, 'u32_1')
 		if (self.version < 2019):
@@ -1331,6 +1336,7 @@ class DCReader(EeDataReader):
 		else:
 			i = node.ReadChildRef(i, 'wrapper')
 			node.content += " u32_1=0000"
+			node.set('u32_1', 0)
 		return i
 
 	def Read_EC7B8A2B(self, node):
@@ -1378,7 +1384,8 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_FLOAT64_, 'lst1')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst2')
 		else:
-			addEmptyLists(node, [1, 2])
+			node.set('lst1', {})
+			node.set('lst2', {})
 		return i
 
 	def Read_8C1A567D(self, node):
@@ -1569,6 +1576,7 @@ class DCReader(EeDataReader):
 			sep = u","
 			lst.append(txt)
 		node.content += u"]"
+		node.set('lst0', lst)
 		return i
 
 	def Read_D70E9DDA(self, node):
@@ -1825,9 +1833,9 @@ class DCReader(EeDataReader):
 			i = node.ReadUInt32(i, 'u32_0')
 			i = node.ReadUInt32(i, 'u32_1')
 		else:
+			node.content += " u32_0=0000 u32_1=0000"
 			node.set('u32_0', 0)
 			node.set('u32_1', 0)
-			node.content += " u32_0=0000 u32_1=0000"
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
 		return i
@@ -2188,7 +2196,8 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst1')
 		else:
 			i = self.skipBlockSize(i, 2)
-			addEmptyLists(node, [0])
+			node.set('lst0', {}, None)
+			node.set('lst1', {}, None)
 		i = node.ReadCrossRef(i, 'parameter')
 		return i
 
@@ -2827,8 +2836,9 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst1')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_X_REF_REF_, 'lst2')
 		else:
-			addEmptyLists(node, [1, 2])
 			i = self.skipBlockSize(i)
+			node.set('lst1', {}, None)
+			node.set('lst2', {}, None)
 		i = node.ReadLen32Text16(i)
 		return i
 
@@ -2979,6 +2989,7 @@ class DCReader(EeDataReader):
 				u32, i = getUInt32(node.data, i)
 				lst5.append([id1, id2, u32])
 			node.content += ' lst5=[%s]' %(','.join(['(%s,%s,%04X)' %(r[0], r[1], r[2]) for r in lst5]))
+			node.set('lst5', lst5)
 			i = node.ReadCrossRef(i, 'ref_5')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_U32_U32_, 'lst6')
 			i = node.ReadUInt8(i, 'u8_1')
@@ -2992,8 +3003,7 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_U32_U32_, 'lst11')
 		else:
 			i = node.ReadChildRef(i, 'ref_5')
-			if (self.version > 2016):
-				i += 4
+			if (self.version > 2016): i += 4
 		return i
 
 	def Read_4AC78A71(self, node):
@@ -3932,7 +3942,7 @@ class DCReader(EeDataReader):
 		if (self.version > 2016):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst1')
 		else:
-			addEmptyLists(node, [1])
+			node.set('lst1', {})
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_U32_U32_, 'lst2')
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
@@ -4098,7 +4108,8 @@ class DCReader(EeDataReader):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_U32_U32_, 'lst0')
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_U32_U32_, 'lst1')
 		else:
-			addEmptyMaps(node, [0, 1])
+			node.set('lst0', {})
+			node.set('lst1', {})
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'entities')
 		return i
 
@@ -4990,8 +5001,8 @@ class DCReader(EeDataReader):
 	def Read_8B253EF4(self, node):
 		i = self.ReadCntHdr2S(node)
 		e, i = self.ReadEdge(node, i)
-		node.set('e', e)
 		node.content += u" e=(%s)" %(e)
+		node.set('e', e)
 		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadBoolean(i, 'b')
 		return i
@@ -5263,8 +5274,8 @@ class DCReader(EeDataReader):
 		if (cnt == 1):
 			i = node.ReadUInt32(i, 'u32_4')
 		elif (cnt == 0):
-			node.set('u32_4', 0)
 			node.content += ' u32_4=0000'
+			node.set('u32_4', 0)
 		i = node.ReadFloat64_3D(i, 'pos') # start z
 		i = node.ReadFloat64_3D(i, 'dir') # direction
 		i = node.ReadFloat64_3D(i, 'point') # start point
@@ -5457,8 +5468,8 @@ class DCReader(EeDataReader):
 			if (cnt == 1):
 				i = node.ReadUInt32(i, 'u32_4')
 			elif (cnt == 0):
-				node.set('u32_4', 0)
 				node.content += ' u32_4=0000'
+				node.set('u32_4', 0)
 			i = node.ReadFloat64A(i, (len(node.data) - i) / 8, 'a1')
 		return i
 
@@ -7401,7 +7412,7 @@ class DCReader(EeDataReader):
 							boolData.content = ' value=%s' %(boolVal)
 							boolData.segment = self.segment
 							boolData.typeName = 'Boolean'
-							boolData.set('value', boolVal != 0)
+							boolData.set('value', boolVal)
 							boolRef = importerSegNode.SecNodeRef(0xFFFFFFFF, importerSegNode.REF_CROSS)
 							boolRef.data = boolData
 							boolRef.number = 0x18
@@ -8584,7 +8595,6 @@ class DCReader(EeDataReader):
 
 	def Read_E273976D(self, node):
 		i = self.Read_216B3A55(node)
-		# L L d d d d d d d d 
 		i = node.ReadUInt32A(i, 2, 'a1')
 		i = node.ReadFloat64A(i, 6, 'a2')
 		i = node.ReadUUID(i, 'uid3')
@@ -8888,6 +8898,7 @@ class DCReader(EeDataReader):
 			i = node.ReadLen32Text16(i, 'txt')
 		else:
 			node.content += u" txt='Tweak:%d'" %(node.get('u32_0'))
+			node.set('txt', '')
 		return i
 
 	def Read_98A24D9A(self, node):
@@ -8974,6 +8985,7 @@ class DCReader(EeDataReader):
 			i += 8 # skip 01 00 00 00 00 00 00 00
 		else:
 			node.content += u" txt='Tweak:%d'" %(node.get('a2')[0])
+			node.set('txt', '')
 		return i
 
 	def Read_25096F44(self, node):

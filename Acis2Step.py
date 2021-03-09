@@ -94,11 +94,11 @@ def getColor(entity):
 	r = g = b = None
 
 	color = entity.getColor()
-	if (color is not None):
+	if (color):
 		r, g, b = color.red, color.green, color.blue
 	else:
 		color = getColorDefault()
-		if (color is not None):
+		if (color):
 			r, g, b = color
 		else:
 			return None
@@ -702,7 +702,7 @@ class ExportEntity(AnonymEntity):
 			return ''
 		step = u""
 		if (hasattr(self, '__acis__')):
-			if (self.__acis__.subclass == 'ref'):
+			if (self.__acis__.subtype == 'ref'):
 				step += u"/*\n * ref = %d\n */\n" %(self.__acis__.ref)
 			else:
 				step += u"/*\n * $%d\n */\n" %(self.__acis__.index)
@@ -901,7 +901,7 @@ class ListEntity(ReferencedEntity):
 			return ''
 		step = u""
 		if (hasattr(self, '__acis__')):
-			if (self.__acis__.subclass == 'ref'):
+			if (self.__acis__.subtype == 'ref'):
 				step += u"/*\n * ref = %d\n */\n" %(self.__acis__.ref)
 			else:
 				step += u"/*\n * $%d\n */\n" %(self.__acis__.index)

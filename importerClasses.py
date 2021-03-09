@@ -1558,7 +1558,6 @@ class Header0(object):
 	def __init__(self, m, x):
 		self.m = m
 		self.x = x
-
 	def __str__(self):  return 'm=%X x=%03X' %(self.m, self.x)
 	def __repr__(self): return '(%04X,%03X)' %(self.m, self.x)
 

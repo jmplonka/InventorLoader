@@ -961,7 +961,7 @@ class BrowserReader(SegmentReader):
 	def Read_98D79BB0(self, node): # AmMateEntry
 		i = self.ReadHeaderEntryConstraint(node, 'Mate')
 		i = node.ReadUInt32(i, 'u32_1')
-		return  i
+		return i
 
 	def Read_98D79BB1(self, node): # AmFlushEntry
 		i = self.ReadHeaderEntryConstraint(node, 'Flush')
@@ -969,7 +969,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_98D79BB2(self, node): # Tangent Constraint
 		i = self.ReadHeaderEntryConstraint(node, 'Tangent')
-		return  i
+		return i
 
 	def Read_B60617B3(self, node): # Insert Constraint
 		i = self.ReadHeaderEntryConstraint(node, 'Insert')
@@ -977,7 +977,7 @@ class BrowserReader(SegmentReader):
 
 	def Read_D37599BD(self, node): # Angle Constraint
 		i = self.ReadHeaderEntryConstraint(node, 'Angle')
-		return  i
+		return i
 
 	####################
 	# Part Interface sections
