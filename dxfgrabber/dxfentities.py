@@ -233,7 +233,7 @@ class Text(DXFEntity):
 
     def plain_text(self):
         chars = []
-        raw_chars = list(reversed(self.text))  # text splitted into chars, in reversed order for efficient pop()
+        raw_chars = list(reversed(self.text))  # text split into chars, in reversed order for efficient pop()
         while len(raw_chars):
             char = raw_chars.pop()
             if char == '%':  # formatting codes and special characters
@@ -835,7 +835,7 @@ class MText(DXFEntity):
 
     def plain_text(self, split=False):
         chars = []
-        raw_chars = list(reversed(self.raw_text))  # text splitted into chars, in reversed order for efficient pop()
+        raw_chars = list(reversed(self.raw_text))  # text split into chars, in reversed order for efficient pop()
         while len(raw_chars):
             char = raw_chars.pop()
             if char == '\\':  # is a formatting command
