@@ -128,8 +128,6 @@ def dumpRevisionInfo(revisions):
 	return
 
 def checkVersion(file):
-	global _inventor_file
-
 	vrs = None
 	filename = os.path.abspath(file)
 	ole = OleFileIO(filename)
@@ -139,6 +137,7 @@ def checkVersion(file):
 			data = ole.openstream(e).read()
 			version, i  = getVersionInfo(data, 20)
 			if (version.major >= 14):
+				setDumpFolder(file)
 				return ole
 			break
 

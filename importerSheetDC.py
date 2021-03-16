@@ -289,7 +289,7 @@ class SheetDcReader(SegmentReader):
 		if (self.version > 2010):
 			i = node.ReadUInt32A(i, 2, 'u32')
 		else:
-			# node.content += u"  u32=[0000,0000]"
+			node.content += u"  u32=[0000,0000]"
 			node.set('u32', (0,0))
 		i = node.ReadUInt8(i, 'b0')
 		return i
@@ -367,7 +367,7 @@ class SheetDcReader(SegmentReader):
 		if (self.version > 2010):
 			i = node.ReadUInt32(i, 'u32_1')
 		else:
-			# node.content += u" u32_1=0000"
+			node.content += u" u32_1=0000"
 			node.set('u32_1', 0)
 		return i
 

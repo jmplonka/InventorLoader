@@ -141,8 +141,8 @@ class ResultReader(SegmentReader):
 
 	def Read_E5DDE747(self, node):
 		i = node.Read_Header0()
-		i = node.ReadFloat64A(i, 16, 'a0')
-		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadFloat64A(i, 14, 'a0')
+		i = node.ReadUInt8A(i, 17, 'u8_0')
 		i = node.ReadFloat64A(i, 2, 'a1')
 		i = node.ReadUInt8A(i, 2, 'a2')
 		i = node.ReadFloat64A(i, 6, 'a3')

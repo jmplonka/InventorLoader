@@ -476,13 +476,18 @@ class SecNode(AbstractData):
 			lst = reshape([n for i, n in enumerate(val) if (i % (arraysize + 1)) != arraysize], arraysize)
 			i   = offset + (w * arraysize + 4) * cnt # w + 4Bytes for blocklen
 
-		if (arraysize > 1):
+		if (arraysize == 1):
+			if (len(lst) > 100):
+				self.content += u" %s=[%s,...]" %(name, u",".join([fmt %(n) for n in lst[:100]]))
+			else:
+				self.content += u" %s=[%s]" %(name, u",".join([fmt %(n) for n in lst]))
+		elif (arraysize > 1):
 			if (len(lst) > 100):
 				self.content += u" %s=[%s,...]" %(name, u",".join([u",".join([u"[%s]" %(u",".join([fmt %(n) for n in a]))]) for a in lst[:100]]))
 			else:
 				self.content += u" %s=[%s]" %(name, u",".join([u",".join([u"[%s]" %(u",".join([fmt %(n) for n in a]))]) for a in lst] ) )
 		else:
-			if (len(lst) > 100):
+			if (len(lst[0]) > 100):
 				self.content += u" %s=[%s,...]" %(name, u",".join([fmt %(n) for n in lst[0][:100]]))
 			else:
 				self.content += u" %s=[%s]" %(name, u",".join([fmt %(n) for n in lst[0]]))
@@ -497,10 +502,12 @@ class SecNode(AbstractData):
 			i = self.ReadList2(i, typ, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
 		self.delete('lst_tmp')
+
 		if (arraysize == 1):
-			self.content = c + u" %s={%s}" %(name, u",".join([u"(%s)" %(u",".join([fmt %(x) for x in l])) for l in lst[0]]))
+			self.content = c + u" %s=[%s]" %(name, u",".join([u"(%s)" %(u",".join([fmt %(x) for x in l])) for l in lst]))
 		else:
-			self.content = c + u" %s={%s}" %(name, u",".join([u"(%s)" %(u",".join([u"[%s]" %(FloatArr2Str(x)) for x in l])) for l in lst]))
+			self.content = c + u" %s=[%s]" %(name, u",".join([u"(%s)" %(u",".join([u"[%s]" %(FloatArr2Str(x)) for x in l])) for l in lst]))
+		
 		self.set(name, lst)
 		return i
 
@@ -671,12 +678,11 @@ class SecNode(AbstractData):
 		else:
 			APP_1 = Struct('<ddLBBBB').unpack_from
 		for j in range(cnt):
+			val = APP_1(self.data, i)
 			if (skip):
-				a = APP_1(self.data, i)
-				val = a[0:3] + a[4:8]
+				val = val[0:3] + val[4:8]
 				i += 32
 			else:
-				val = APP_1(self.data, i)
 				i += 24
 			lst.append(val)
 		self.content += u" %s={%s}" %(name, u",".join([u"(%g,%g,%06X,%02X,%02X,%02X,%02X)" %(a[0], a[1], a[2], a[3], a[4], a[5], a[6]) for a in lst]))

@@ -55,7 +55,6 @@ class BRepReader(NameTableReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUUID(i, 'uid')
 		i = node.ReadUInt32A(i, 2, 'a0')
-		i = self.skipBlockSize(i, 2)
 		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		i = node.ReadUInt32(i, 'u32_2')
 		i = self.skipBlockSize(i)
@@ -356,30 +355,31 @@ class BRepReader(NameTableReader):
 		return i
 
 	def Read_BA0B8C23(self, node): # delta state item ???
-		i = self.ReadHeaderDeltaStateItem(node)
-		i = node.ReadCrossRef(i, 'ref_1')
+		i = self.skipBlockSize(0)
+		i = node.ReadCrossRef(i, 'root')
+		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = self.ReadRefU32List(node, i, 'a2', REF_CROSS)
-		ref, i = self.ReadNodeRef(node, i, None, REF_CROSS, 'a3')
-		number, i = getUInt32(node.data, i)
-		if (ref): ref.number = number
-		i = self.ReadRefU32List(node, i, 'a3', REF_CROSS)
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'ref_1')
+		i = self.ReadNtEntry(node, i, 'entry1')
+		i = self.Read2NtEntryList(node, i, 'lst1')
+		i = self.ReadNtEntryList(node, i, 'lst2')
+		if (len(node.get('lst1')) == 0) and (len(node.get('lst2')) == 0):
+			i += 8 # skip 00 00 00 00 00 00 00 00
 
-		i = node.ReadUInt32A(i, 3, 'a4')
-		ref, i = self.ReadNodeRef(node, i, None, REF_CROSS, 'a5')
-		number, i = getUInt32(node.data, i)
-		if (ref): ref.number = number
-		i = self.ReadRefU32List(node, i, 'a6', REF_CROSS)
+		i = node.ReadUInt32A(i, 3, 'a0')
+
+		i = self.ReadNtEntry(node, i, 'entry2')
+		i = self.ReadNtEntryList(node, i, 'lst3')
 		return i
 
 	def Read_C620657B(self, node): # delta state item ???
-		i = self.ReadHeaderDeltaStateItem(node)
+		i = self.skipBlockSize(0)
+		i = node.ReadCrossRef(i, 'root')
+		i = node.ReadParentRef(i)
 		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
+		i = self.skipBlockSize(i)
+		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
-		i = self.ReadRefU32List(node, i, 'a2', REF_CROSS)
-		i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst2', 2)
-		i = node.ReadUInt32(i, 'u32_3')
-		i = self.ReadRefU32List(node, i, 'nameTables', REF_CROSS)
+#		i = # [L -1 L 1NEL] 00 00 00 00 L2 L [L -1 L 1NEL]
 		return i

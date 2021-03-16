@@ -339,7 +339,7 @@ class SheetSmReader(SegmentReader):
 			u, i = getUInt16(node.data, i)
 		else:
 			u, i = getUInt32(node.data, i)
-		# node.content += u" u16_0=%03X" %(u)
+		node.content += u" u16_0=%03X" %(u)
 		node.set('u16_0', u)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		if (self.version < 2019):

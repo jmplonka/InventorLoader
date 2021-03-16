@@ -498,9 +498,11 @@ class AppReader(SegmentReader):
 	def Read_7313FAC3(self, node):
 		i = node.Read_Header0()
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		i = node.ReadUInt16A(i, 17, 'a0')
+		i = node.ReadUInt16A(i, 9, 'a0')
+		i = node.ReadList4(i, importerSegNode._TYP_STRING8_, 'lst1')
+		i = node.ReadUInt16A(i, 4, 'a1')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt16A(i, 20, 'a1')
+		i = node.ReadList2(i, importerSegNode._TYP_LIST_UINT32_A_, 'lst2')
 		i = self.skipBlockSize(i)
 		return i
 

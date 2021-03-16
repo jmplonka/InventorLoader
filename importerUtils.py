@@ -205,14 +205,10 @@ def setColor(name, r, g, b):
 
 def getStrategy():
 	global __strategy__
-	v = getFileVersion()
-	if (v is None):
-		return __strategy__
-
-	return STRATEGY_SAT if (v < 2010) else __strategy__
+	return __strategy__
 
 def setStrategy(newStrategy):
-	global __strategy__
+	global __strategy__, __prmPrefIL__
 	__strategy__ = newStrategy
 	__prmPrefIL__.SetInt("strategy", newStrategy)
 
@@ -410,8 +406,8 @@ def writeThumbnail(data):
 		thumbnail.setData(data)
 		dumpFolder = getDumpFolder()
 		if ((not (dumpFolder is None)) and ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
-			with open(u"%s/_.%s" %(dumpFolder, _thumbnail.type.lower()), 'wb') as thumbnail:
-				thumbnail.write(_thumbnail.getData())
+			with open(u"%s/_.%s" %(dumpFolder, thumbnail.type.lower()), 'wb') as file:
+				file.write(thumbnail.getData())
 		setThumbnail(thumbnail)
 	else:
 		_thumbnail = None
@@ -1030,7 +1026,6 @@ def setDumpFolder(anyInputFile):
 
 def setInventorFile(file):
 	global _inventor_file
-	global _dump_folder
 
 	_inventor_file = os.path.abspath(file)
 	setDumpFolder(_inventor_file)

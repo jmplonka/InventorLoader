@@ -110,7 +110,8 @@ class EeSceneReader(StyleReader):
 		i = node.ReadFloat64A(i, 6, 'box') # bounding box
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'key')
-		i = node.ReadUInt32A(i, 2, 'a4')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		self.faces.append(node)
 		return i
 
@@ -289,7 +290,7 @@ class EeSceneReader(StyleReader):
 		i = node.ReadFloat64_3D(i , 'vec')
 		i = node.ReadFloat64_3D(i , 'a0')
 		i = node.ReadUInt16A(i, 3, 'a1')
-		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadBoolean(i, 'b_0')
 		return i
 
 	def Read_E1EB685C(self, node): # MeshFacets 3D-Object

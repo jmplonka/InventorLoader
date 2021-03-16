@@ -97,7 +97,12 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_X_REF_, 'lst2')
 		i = node.ReadUInt8(i, 'u8_2')
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst3')
-		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadSInt32(i, 'S32_0')
+		if (self.version > 2018):
+			i = node.ReadSInt32(i, 's32_1')
+		else:
+			node.content += ' s32_1=-1'
+			node.set('s32_1', -1)
 		return i
 
 	def Read_61530B1E(self, node): # Assembly

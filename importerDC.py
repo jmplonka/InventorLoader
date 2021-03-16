@@ -1873,9 +1873,10 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i,  4, 'a7')
 		i = node.ReadChildRef(i, 'ref_3')
 		i = node.ReadCrossRef(i, 'ref_4')
-		i = node.ReadFloat64A(i, 21, 'a8')
+		i = node.ReadFloat64A(i, 6, 'a8')
+		i = node.ReadFloat64A(i, 15, 'a9')
 		i = node.ReadUInt16(i, 'u16_0')
-		i = node.ReadFloat64A(i, 45, 'a9')
+		i = node.ReadFloat64A(i, 45, 'a10')
 		node.isAttr = True
 		return i
 
@@ -5358,7 +5359,8 @@ class DCReader(EeDataReader):
 		i = node.ReadFloat64A(i, 24, 'a3')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadFloat64(i, 'f64_0')
-		i = node.ReadUInt16A(i, 4, 'a4')
+		i = node.ReadUInt16A(i, 3, 'a4')
+		i = node.ReadUInt8A(i, 2, 'b')
 		i = node.ReadFloat64A(i, 6, 'a5')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadChildRef(i, 'ref_2')
@@ -5789,7 +5791,7 @@ class DCReader(EeDataReader):
 		i = node.ReadList2(i,       importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt32A(i, 3,  'a0')
 		i = self.skipBlockSize(i)
-		i = node.ReadCrossRef(i,    'component')
+		i = node.ReadChildRef(i,    'component')
 		i = node.ReadChildRef(i,    'nameTable')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i,    'ref_1')
@@ -7345,9 +7347,10 @@ class DCReader(EeDataReader):
 		i = node.Read_Header0()
 		i = node.ReadUInt8(i, 'n_0') # 3=length, 4=angle, 5=factor
 		if (self.version > 2010):
-			i = node.ReadUInt8(i, 'idx')
+			i = node.ReadUInt8(i, 'n_1')
 		else:
-			node.content += u" idx=00"
+			node.content += u" n_1=00"
+			node.set('n_1', 0)
 		i = node.ReadCrossRef(i, 'parameter')
 		i = node.ReadUInt32(i, 'n_1')
 		return i

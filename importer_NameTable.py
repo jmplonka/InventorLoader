@@ -22,21 +22,27 @@ class NameTableReader(SegmentReader): # for BRep and DC
 	def __init__(self, segment):
 		super(NameTableReader, self).__init__(segment)
 
-	def ReadNtEntry(self, node, offset, name):
-		nt, i  = getUInt32(node.data, offset)
+	def getNtEntry(self, node, offset):
+		i = offset
+		entry = None
+		nt, i  = getUInt32(node.data, i)
 		idx, i = getUInt32(node.data, i)
-		entry  = NtEntry(nt, idx)
+		if (nt>0):
+			entry  = NtEntry(nt, idx)
+		return entry, i
+
+	def ReadNtEntry(self, node, offset, name):
+		entry, i = self.getNtEntry(node, offset) 
 		node.set(name, entry)
 		node.content += u" %s=[%r]" %(name, entry)
 		return i
 
 	def ReadNtEntryList(self, node, offset, name):
-		cnt, i = getUInt32(node.data, offset)
 		lst = []
+		cnt, i = getSInt32(node.data, offset)
 		for j in range(cnt):
-			nt, i  = getUInt32(node.data, i)
-			idx, i = getUInt32(node.data, i)
-			lst.append(NtEntry(nt, idx))
+			entry, i = self.getNtEntry(node, i)
+			lst.append(entry)
 		node.content += ' %s=[%s]' %(name, ','.join(['[%r]' %(e) for e in lst]))
 		node.set(name, lst)
 		return i
@@ -45,10 +51,9 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		cnt, i = getUInt32(node.data, offset)
 		lst = []
 		for j in range(cnt):
-			nt, i   = getUInt32(node.data, i)
-			idx, i  = getUInt32(node.data, i)
+			entry, i = self.getNtEntry(node, i)
 			val, i  = getUInt8(node.data, i)
-			lst.append([NtEntry(nt, idx), val])
+			lst.append([entry, val])
 		node.content += ' %s={%s}' %(name, ','.join(['(%r:%02X)' %(e[0], e[1]) for e in lst]))
 		node.set(name, lst)
 		return i
@@ -57,20 +62,17 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		cnt, i = getUInt32(node.data, offset)
 		lst = []
 		for j in range(cnt):
-			nt, i  = getUInt32(node.data, i)
-			idx, i = getUInt32(node.data, i)
+			entry, i = self.getNtEntry(node, i)
 			val, i = getFloat64(node.data, i)
-			lst.append([NtEntry(nt, idx), val])
+			lst.append([entry, val])
 		node.content += ' %s=[%s]' %(name, ','.join(['(%r,%g)' %(r[0], r[1]) for r in lst]))
 		node.set(name, lst)
 		return i
 
 	def ReadList2U32(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt32(i, 'u32_0')
-		i = self.skipBlockSize(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
-		i = node.ReadSInt32A(i, 7, 'a0')
+		i = self.ReadHeaderNameTableChild1Node(node)
+		i = node.ReadSInt32A(i, 6, 'a0')
+		i = node.ReadSInt32(i, 's32_1')
 		i = self.skipBlockSize(i)
 		return i
 
@@ -363,7 +365,8 @@ class NameTableReader(SegmentReader): # for BRep and DC
 	# 2x Child name table entries
 	def ReadHeaderNameTableChild2Node(self, node, typeName = None):
 		i = self.ReadHeaderNameTableChild1Node(node, typeName)
-		i = node.ReadSInt32A(i, 7, 'a0')
+		i = node.ReadSInt32A(i, 6, 'a0')
+		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i, 2)
 		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		return i
