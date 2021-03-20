@@ -20,7 +20,7 @@ class SheetDcReader(SegmentReader):
 	H: unsigned int 16 bit (UInt16)
 	B: boolean
 	U: UID
-	@: UTF-16LE encoded Text with UInt32 bit length information at the beginnning
+	@: UTF-16LE encoded Text with UInt32 bit length information at the beginning
 	x: UInt32 block size info (only v2010)
 
 	'''

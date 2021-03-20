@@ -1453,7 +1453,7 @@ class Entity(object):
 			if (getVersion() > 6.0):
 				self.history, i = getInteger(entity.chunks, i)
 			else:
-				self.histroy = -1
+				self.history = -1
 		except Exception as e:
 			logError(traceback.format_exc())
 		return i
@@ -2459,7 +2459,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.ref, i = getInteger(chunks, index)
 		self.curve  = getSubtypeNode(self.ref)
 		if (not isinstance(self.curve, Curve)):
-			logError("Expeced CURVE ref %d but found %s", self.ref, self.curve.__name__)
+			logError("Expected CURVE ref %d but found %s", self.ref, self.curve.__name__)
 			self.curve = None
 		return i
 	def setBulk(self, chunks, index):
@@ -2573,7 +2573,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.ref, i = getInteger(chunks, index)
 		self.pcurve = getSubtypeNode(self.ref)
 		if (not isinstance(self.pcurve, CurveP)):
-			logError("Expeced CURVE ref %d but found %s", self.ref, self.pcurve.__name__)
+			logError("Expected CURVE ref %d but found %s", self.ref, self.pcurve.__name__)
 			self.pcurve = None
 		return i
 	def setBulk(self, chunks, index):
@@ -2726,7 +2726,7 @@ class SurfaceCone(Surface):
 				else:
 					# Workaround: create ellipse and extrude in both directions
 					ellipse = createEllipse(self.center, self.axis, self.major, self.ratio)
-					# make a gigantic extrusion as it will be beautyfied later
+					# make a gigantic extrusion as it will be beautified later
 					if (ellipse):
 						cone = ellipse.toShape().extrude((2e6) * self.axis)
 						cone.translate((-1e6) * self.axis)
@@ -3639,7 +3639,7 @@ class SurfaceSpline(Surface):
 		self.ref, i  = getInteger(chunks, index)
 		self.surface = getSubtypeNode(self.ref)
 		if (not isinstance(self.surface, Surface)):
-			logError("Expeced SURFACE for ref %d but found %s", self.ref, self.surface.__name__)
+			logError("Expected SURFACE for ref %d but found %s", self.ref, self.surface.__name__)
 			self.surface = None
 		return i
 	def setBulk(self, chunks, index):
