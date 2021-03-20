@@ -47,6 +47,17 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		node.set(name, lst)
 		return i
 
+	def Read2NtEntryList(self, node, offset, name):
+		lst = []
+		cnt, i = getSInt32(node.data, offset)
+		for j in range(cnt):
+			e1, i = self.getNtEntry(node, i)
+			e2, i = self.getNtEntry(node, i)
+			lst.append((e1, e2))
+		node.content += ' %s=[%s]' %(name, ','.join(['[%r,%r]' %(e[0], e[1]) for e in lst]))
+		node.set(name, lst)
+		return i
+
 	def ReadNtEntryU8List(self, node, offset, name):
 		cnt, i = getUInt32(node.data, offset)
 		lst = []
