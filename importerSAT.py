@@ -126,7 +126,6 @@ def buildBody(root, node):
 	return
 
 def resolveNodes(acis):
-	init()
 	bodies = []
 	doAdd  = True
 	for entity in acis.getEntities():

@@ -4958,6 +4958,7 @@ class AcisReader(object):
 		historySec   = False
 		index        = 0
 		entityIdx    = 0
+		init()
 		record, index = self._readRecordText(index)
 		if (record.name == 'asmheader'):
 			asmheader = AsmHeader()
@@ -4997,6 +4998,7 @@ class AcisReader(object):
 		historySec   = False
 		index        = 0
 		entityIdx    = 0
+		init()
 		self._readHeaderBinary()
 		while (self._hasNext()):
 			record, index = self._readRecordBinary(index)
@@ -5416,7 +5418,6 @@ def _resolveNode(entity):
 	return
 
 def resolveNodes():
-	init()
 	acis = getReader()
 	if (not acis.resolved):
 		acis.resolved = True
