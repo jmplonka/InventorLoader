@@ -92,7 +92,6 @@ scale = 1.0
 
 _nameMtchAttr    = {}
 _dcIdxAttributes = {} # dict of an attribute list
-_subtypes        = []
 LENGTH_TEXT = re.compile('[ \t]*(\d+) +(.*)')
 
 TOKEN_TRANSLATIONS = {
@@ -227,23 +226,10 @@ class Law(object):
 		return None
 
 def init():
-	global _dcIdxAttributes, _subtypes
+	global _dcIdxAttributes
 
 	clearEntities()
 	_dcIdxAttributes.clear()
-	_subtypes.clear()
-
-def addSubtypeNode(node):
-	global _subtypes
-	_subtypes.append(node)
-
-def getSubtypeNode(ref):
-	global _subtypes
-	try:
-		return _subtypes[ref]
-	except:
-		return None
-	return getReader().getSubtyp(ref)
 
 def clearEntities():
 	global _nameMtchAttr
@@ -592,7 +578,8 @@ def readLaw(chunks, index):
 
 def newInstance(CLASSES, key):
 	cls = CLASSES[key]
-	if cls is None: return None
+	if cls is None:
+		return None
 	return cls()
 
 def readCurve(chunks, index):
@@ -1094,8 +1081,10 @@ class BDY_GEOM(object):
 	def __init__(self, svId):
 		self.svId  = svId
 		self.shape = None
+		self.__ready_to_build__ = True  # Don't try to create me more than once
 	def build(self):
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			self.buildCurve()
 		return self.shape
 class BDY_GEOM_CIRCLE(BDY_GEOM):
@@ -1445,6 +1434,7 @@ class Entity(object):
 		self.entity  = None
 		self.history = None
 		self.node    = None
+		self.__ready_to_build__ = True # Don't try to create me more than once
 	def set(self, entity):
 		try:
 			self.entity = entity
@@ -1719,7 +1709,8 @@ class Face(Topology):
 			loop = loop.getNext()
 		return edges
 	def build(self):
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			self._surface = self.getSurface()
 			edges = self.buildCoEdges()
 			if (self._surface is not None):
@@ -1822,6 +1813,7 @@ class CoEdge(Topology):
 		self.sense     = 'forward' # The relative sense
 		self._owner    = None      # The coedge's owner
 		self._curve    = None
+		self.shape     = None
 	def set(self, entity):
 		i = super(CoEdge, self).set(entity)
 		self._next, i     = getRefNode(entity, i, 'coedge')
@@ -1840,13 +1832,15 @@ class CoEdge(Topology):
 	def getOwner(self):    return None if (self._owner is None)    else self._owner.node
 	def getCurve(self):    return None if (self._curve is None)    else self._curve.node
 	def build(self):
-		e = self.getEdge()
-		c = e.getCurve()
-		if (c is not None):
-			p1 = e.getStart() if (e.sense == 'forward') else e.getEnd()
-			p2 = e.getEnd() if (e.sense == 'forward') else e.getStart()
-			return c.build(p1, p2)
-		return None
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
+			e = self.getEdge()
+			c = e.getCurve()
+			if (c is not None):
+				p1 = e.getStart() if (e.sense == 'forward') else e.getEnd()
+				p2 = e.getEnd() if (e.sense == 'forward') else e.getStart()
+				self.shape = c.build(p1, p2)
+		return self.shape
 class CoEdgeTolerance(CoEdge):
 	def __init__(self):
 		super(CoEdgeTolerance, self).__init__()
@@ -1988,7 +1982,8 @@ class Curve(Geometry):
 		return i
 	def build(self, start, end): # by default: return a line-segment!
 		logWarning(u"    ... '%s' not yet supported - forced to straight-curve!", self.__class__.__name__)
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			# force everything else to straight line!
 			if (isinstance(start, VEC)):
 				self.shape = createLine(start, end)
@@ -2025,28 +2020,31 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 		self.range, i  = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		return i
 	def build(self, start, end):
-		if (self.ratio == 1):
-			ellipse = createCircle(self.center, self.axis, self.major)
-		else:
-			ellipse = createEllipse(self.center, self.axis, self.major, self.ratio)
-		if (start != end):
-			if (isinstance(start, VEC)):
-				a = ellipse.parameter(start)
-			else:
-				a = start
-			if (isinstance(end, VEC)):
-				b = ellipse.parameter(end)
-			else:
-				b = end
-			self.range = Interval(Range('F', a), Range('F', b))
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			if (self.ratio == 1):
-				ellipse = Part.ArcOfCircle(ellipse, a, b)
+				ellipse = createCircle(self.center, self.axis, self.major)
 			else:
-				if (self.ratio < 0):
-					ellipse = Part.ArcOfEllipse(ellipse, a, b)
+				ellipse = createEllipse(self.center, self.axis, self.major, self.ratio)
+			if (start != end):
+				if (isinstance(start, VEC)):
+					a = ellipse.parameter(start)
 				else:
-					ellipse = Part.ArcOfEllipse(ellipse, (a + pi/2) % (2*pi), (b + pi/2) % (2*pi))
-		return ellipse.toShape()
+					a = start
+				if (isinstance(end, VEC)):
+					b = ellipse.parameter(end)
+				else:
+					b = end
+				self.range = Interval(Range('F', a), Range('F', b))
+				if (self.ratio == 1):
+					ellipse = Part.ArcOfCircle(ellipse, a, b)
+				else:
+					if (self.ratio < 0):
+						ellipse = Part.ArcOfEllipse(ellipse, a, b)
+					else:
+						ellipse = Part.ArcOfEllipse(ellipse, (a + pi/2) % (2*pi), (b + pi/2) % (2*pi))
+			self.shape = ellipse.toShape()
+		return self.shape
 class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def __init__(self, name = '', subtype = 'cur_int'):
 		super(CurveInt, self).__init__(name + 'intcurve')
@@ -2054,7 +2052,6 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.range   = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.subtype = subtype
 		self.curve   = None
-		self.ignore  = False
 	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
 	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
 	def getSurface(self): return getattr(self, 'surface', None)
@@ -2457,9 +2454,9 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setRef(self, chunks, index):
 		self.subtype = 'ref'
 		self.ref, i = getInteger(chunks, index)
-		self.curve  = getSubtypeNode(self.ref)
+		self.curve  = getReader().getSubtypeNode(self.ref)
 		if (not isinstance(self.curve, Curve)):
-			logError("Expected CURVE ref %d but found %s", self.ref, self.curve.__name__)
+			logError("Expeced CURVE for 'ref %d' but found %s", self.ref, self.curve.__name__)
 			self.curve = None
 		return i
 	def setBulk(self, chunks, index):
@@ -2469,7 +2466,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		try:
 			if ((getVersion() >= 25.0) and (isASM() == False)):
 				id, i = getInteger(chunks, i) # subtype table index
-			addSubtypeNode(self)
+			getReader().addSubtypeNode(self)
 			prm = CURVE_SET_DATA[self.subtype]
 			fkt = getattr(self, prm[0])
 		except KeyError as ke:
@@ -2482,11 +2479,11 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.range, i = getInterval(chunks, i + 1, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, start=None, end=None):
-		if (self.shape is None) and not self.ignore:
-			self.ignore = True # Don't try to create me more than once
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			if (self.subtype == 'ref'):
 				cur = self.curve
-				if (not isinstance(cur, Curve)):
+				if ((cur is not None) and (not isinstance(cur, Curve))):
 					cur = cur.getCurve()
 				if (cur):
 					self.shape = cur.build(start, end)
@@ -2537,7 +2534,7 @@ class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 			return self.setRef(chunks, i)
 		if ((getVersion() >= 25.0) and (isASM() == False)):
 			id, i = getInteger(chunks, i) # subtype table index
-		addSubtypeNode(self)
+		getReader().addSubtypeNode(self)
 		if (self.subtype == 'lawintcur'):        return self.setLaw(chunks, i, False)
 		if (self.subtype == 'law_int_cur'):      return self.setLaw(chunks, i + 1, True)
 		raise Exception("No implementation available for intcurve-intcurve'%s'!" %(self.subtype))
@@ -2571,9 +2568,9 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 	def setRef(self, chunks, index):
 		self.subtype = 'ref'
 		self.ref, i = getInteger(chunks, index)
-		self.pcurve = getSubtypeNode(self.ref)
+		self.pcurve = getReader().getSubtypeNode(self.ref)
 		if (not isinstance(self.pcurve, CurveP)):
-			logError("Expected CURVE ref %d but found %s", self.ref, self.pcurve.__name__)
+			logError("Expeced PCURVE for 'ref %d' but found %s", self.ref, self.pcurve.__name__)
 			self.pcurve = None
 		return i
 	def setBulk(self, chunks, index):
@@ -2583,7 +2580,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		try:
 			if ((getVersion() >= 25.0) and (isASM() == False)):
 				id, i = getInteger(chunks, i) # subtype table index
-			addSubtypeNode(self)
+			getReader().addSubtypeNode(self)
 			prm = PCURVE_SET_DATA[self.subtype]
 			fkt = getattr(self, prm)
 		except KeyError as ke:
@@ -2608,7 +2605,8 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 			self.subtype = 'ref'
 		return i
 	def build(self, start, end):
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			if (self.subtype == 'ref'):
 				self.shape = self.pcurve.build(start, end)
 			elif (self.subtype == 'exp_par_cur'):
@@ -2630,15 +2628,18 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, start, end):
-		if (start is None):
-			start = self.root
-		if (end is None):
-			end = self.dir + self.root
-		if (type(start) == float) and (type(end) == float):
-			line = Part.Line(self.root, self.root + self.dir)
-			start = line.value(start)
-			end = line.value(end)
-		return createLine(start, end)
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
+			if (start is None):
+				start = self.root
+			if (end is None):
+				end = self.dir + self.root
+			if (type(start) == float) and (type(end) == float):
+				line = Part.Line(self.root, self.root + self.dir)
+				start = line.value(start)
+				end = line.value(end)
+			self.shape = createLine(start, end)
+		return self.shape
 
 class Surface(Geometry):
 	def __init__(self, name):
@@ -2718,7 +2719,8 @@ class SurfaceCone(Surface):
 			self.apex = self.center - self.axis * h
 		return i
 	def build(self, face = None):
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			if (isEqual1D(self.sine, 0.)): # 90 Deg
 				if (isEqual1D(self.ratio, 1.)):
 					circle = createCircle(self.center, self.axis, self.major)
@@ -2767,7 +2769,8 @@ class SurfacePlane(Surface):
 		self.vrange, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, face = None):
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			plane = Part.Plane(self.root, self.normal)
 			self.shape = plane.toShape()
 		return self.shape
@@ -2793,7 +2796,8 @@ class SurfaceSphere(Surface):
 		self.vrange, i   = getInterval(chunks, i, MIN_PI2, MAX_PI2, 1.0)
 		return i
 	def build(self, face = None):
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			sphere = Part.Sphere()
 			rotateShape(sphere, self.pole)
 			sphere.Center = self.center
@@ -3637,9 +3641,9 @@ class SurfaceSpline(Surface):
 	def setRef(self, chunks, index):
 		self.subtype = 'ref'
 		self.ref, i  = getInteger(chunks, index)
-		self.surface = getSubtypeNode(self.ref)
+		self.surface = getReader().getSubtypeNode(self.ref)
 		if (not isinstance(self.surface, Surface)):
-			logError("Expected SURFACE for ref %d but found %s", self.ref, self.surface.__name__)
+			logError("Expeced SURFACE for 'ref %d' but found %s", self.ref, self.surface.__name__)
 			self.surface = None
 		return i
 	def setBulk(self, chunks, index):
@@ -3649,7 +3653,7 @@ class SurfaceSpline(Surface):
 		try:
 			if ((getVersion() >= 25.0) and (isASM() == False)):
 				id, i = getInteger(chunks, i) # subtype table index
-			addSubtypeNode(self)
+			getReader().addSubtypeNode(self)
 			prm = SURFACE_TYPES[self.subtype]
 			fkt = getattr(self, prm[0])
 		except KeyError as ke:
@@ -3666,7 +3670,8 @@ class SurfaceSpline(Surface):
 		self.rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, face = None):
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			if (getattr(self, 'failed', False)):
 				return None
 			if (self.subtype == 'ref'):
@@ -3795,7 +3800,8 @@ class SurfaceTorus(Surface):
 		self.vrange, i   = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		return i
 	def build(self, face = None):
-		if (self.shape is None):
+		if (self.shape is None) and (self.__ready_to_build__):
+			self.__ready_to_build__ = False
 			circleAxis   = self.axis.cross(self.uvorigin).normalize()
 			circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
 			circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
@@ -4738,6 +4744,13 @@ class AcisReader(object):
 		self.history    = None
 		self.resolved   = False
 		self.bodies     = []
+		self._subtypes  = []
+
+	def addSubtypeNode(self, node):
+		self._subtypes.append(node)
+
+	def getSubtypeNode(self, ref):
+		return self._subtypes[ref]
 
 	def _hasNext(self):
 		return self._pos < self._length
@@ -4839,6 +4852,7 @@ class AcisReader(object):
 		return self.header.scale
 
 	def _readHeaderText(self):
+		self._pos      = 0
 		data   = self._stream.readline()
 		tokens = data.replace('\r', '').replace('\n', '').split(' ')
 		self.header.version = int2version(int(tokens[0]))
@@ -4858,7 +4872,6 @@ class AcisReader(object):
 		return
 
 	def _readHeaderBinary(self):
-#		setVersion(7.0)
 		global _getSLong, _getULong
 		self._pos = 0
 		self.header.format = self._data[0:15].decode()
@@ -4952,9 +4965,8 @@ class AcisReader(object):
 	def readText(self):
 		setReader(self)
 		self._readHeaderText()
-		self._data   = self._stream.read()
-		self._length = len(self._data)
-		self._pos    = 0
+		self._data     = self._stream.read()
+		self._length   = len(self._data)
 		historySec   = False
 		index        = 0
 		entityIdx    = 0
@@ -4993,8 +5005,10 @@ class AcisReader(object):
 		return True
 
 	def readBinary(self):
-		self._data   = self._stream.read()
-		self._length = len(self._data)
+		setReader(self)
+		self._data     = self._stream.read()
+		self._length   = len(self._data)
+		self._pos      = 0
 		historySec   = False
 		index        = 0
 		entityIdx    = 0
@@ -5408,25 +5422,3 @@ RECORD_2_NODE = {
 	"cface":                                                                                       CFace,
 	"cshell":                                                                                      CShell
 }
-
-def _resolveNode(entity):
-	try:
-		if (len(entity.name) > 0):
-			return createNode(entity)
-	except Exception as e:
-		logError(u"    Can't resolve '%s' - %s", entity, e)
-	return
-
-def resolveNodes():
-	acis = getReader()
-	if (not acis.resolved):
-		acis.resolved = True
-		add = True
-		for entity in acis.getEntities():
-			node = _resolveNode(entity)
-			if ((add) and (entity.name == 'body')):
-				acis.bodies.append(node)
-			if (entity.name in ['Begin-of-ACIS-History-Data', 'End-of-ACIS-data']):
-				add = False
-
-	return acis.bodies

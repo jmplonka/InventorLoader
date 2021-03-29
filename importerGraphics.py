@@ -199,6 +199,7 @@ class GraphicsReader(EeSceneReader):
 		else:
 			node.set('a3', [0, 0, 0])
 			node.set('f64_0', 0.0)
+			node.set('u8_1', 0)
 			node.content += u" a3=[0000,0000,0000] f64_0=0.0"
 #			i = node.ReadLen32Text16(i, 'txt2')
 		return i

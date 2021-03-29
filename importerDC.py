@@ -16,6 +16,11 @@ __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
+def addEmptyLists(node, indexes):
+	for i in indexes:
+		# node.content += ' %s=[]' %(name)
+		node.set('lst%d' %(i), [])
+
 class DCReader(EeDataReader):
 	DOC_ASSEMBLY     = 1
 	DOC_DRAWING      = 2

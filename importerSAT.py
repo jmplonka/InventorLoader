@@ -57,14 +57,14 @@ def createBody(root, name, shape, transform):
 
 def buildFaces(shells, root, name, transform):
 	faces = []
-	i = 1
+#	i = 1
 	for shell in shells:
 		for face in shell.getFaces():
 			surface = face.build()
-			if (surface is not None):
+			if (surface):
 				faces.append(surface)
 #				createBody(root, "%s_%d" %(name, i), surface, transform)
-				i += 1
+#				i += 1
 		for wire in shell.getWires():
 			buildWire(root, wire, transform)
 
@@ -126,8 +126,14 @@ def buildBody(root, node):
 	return
 
 def resolveNodes(acis):
+	global lumps, wires
+
+	init()
+	wires = 0
+	lumps = 0
 	bodies = []
 	doAdd  = True
+	setReader(acis)
 	for entity in acis.getEntities():
 		node = createNode(entity)
 		if (node):

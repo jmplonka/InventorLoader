@@ -23,18 +23,17 @@ class NameTableReader(SegmentReader): # for BRep and DC
 		super(NameTableReader, self).__init__(segment)
 
 	def getNtEntry(self, node, offset):
-		i = offset
 		entry = None
-		nt, i  = getUInt32(node.data, i)
+		nt, i  = getUInt32(node.data, offset)
 		idx, i = getUInt32(node.data, i)
 		if (nt>0):
 			entry  = NtEntry(nt, idx)
 		return entry, i
 
 	def ReadNtEntry(self, node, offset, name):
-		entry, i = self.getNtEntry(node, offset) 
-		node.set(name, entry)
+		entry, i = self.getNtEntry(node, offset)
 		node.content += u" %s=[%r]" %(name, entry)
+		node.set(name, entry)
 		return i
 
 	def ReadNtEntryList(self, node, offset, name):
@@ -49,7 +48,7 @@ class NameTableReader(SegmentReader): # for BRep and DC
 
 	def Read2NtEntryList(self, node, offset, name):
 		lst = []
-		cnt, i = getSInt32(node.data, offset)
+		cnt, i = getUInt32(node.data, offset)
 		for j in range(cnt):
 			e1, i = self.getNtEntry(node, i)
 			e2, i = self.getNtEntry(node, i)

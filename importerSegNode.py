@@ -504,10 +504,10 @@ class SecNode(AbstractData):
 		self.delete('lst_tmp')
 
 		if (arraysize == 1):
-			self.content = c + u" %s=[%s]" %(name, u",".join([u"(%s)" %(u",".join([fmt %(x) for x in l])) for l in lst]))
+			self.content = c + u" %s=[%s]" %(name, u",".join([u"(%s)" %(u",".join([fmt %(x) for x in l])) for l in lst[0]]))
 		else:
 			self.content = c + u" %s=[%s]" %(name, u",".join([u"(%s)" %(u",".join([u"[%s]" %(FloatArr2Str(x)) for x in l])) for l in lst]))
-		
+
 		self.set(name, lst)
 		return i
 

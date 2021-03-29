@@ -1692,10 +1692,12 @@ class NtEntry(object):
 		self.nameTable = nameTable & 0x7FFFFFFF
 		self.key       = key
 		self.entry     = None
+	def __str__(self):
+		if (self.nameTable):
+			return u"%04X[%04X]" %(self.nameTable, self.key)
+		return u""
 	def __repr__(self):
-		if (self.nameTable is None):
-			return u""
-		return u"%04X[%04X]" %(self.nameTable, self.key)
+		return self.__str__()
 
 class TableModel(QAbstractTableModel):
 	def __init__(self, parent, mylist, header, *args):

@@ -63,18 +63,22 @@ def read_manifest(f3d, path):
 			t7,  i = getLen32Text16(data, i) # UID
 			a1,  i = getUInt32A(data, i, 2) # ???
 			cnt, i = getUInt32(data, i)
-			l = []
+			l1 = []
 			for j in range(cnt):
 				t, i = getLen32Text8(data, i)
 				v, i = getUInt32(data, i)
-				l.append((t, v))
-			n1, i = getUInt32(data, i)
-			n2, i = getUInt8(data, i)
+				l1.append((t, v))
+			cnt, i = getUInt32(data, i)
+			l2 = []
+			for j in range(cnt):
+				t, i = getLen32Text16(data, i)
+				l2.append(t)
+			n1, i = getUInt8(data, i)
 			t8,  i = getLen32Text16(data, i) # UID
-			n3, i = getUInt32(data, i)
+			n2, i = getUInt32(data, i)
 			t9,  i = getLen32Text16(data, i) # FusionAssetName
-			n4, i = getUInt32(data, i)
-			n5, i = getUInt8(data, i)
+			n3, i = getUInt32(data, i)
+			n4, i = getUInt8(data, i)
 	return
 
 def read(filename):
