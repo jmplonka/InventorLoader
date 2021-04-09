@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import os, sys, tokenize, FreeCAD, Part, re, traceback, datetime, ImportGui, io
-from importerUtils   import logInfo, logWarning, logError, getUInt8A, getUInt32, chooseImportStrategyAcis, STRATEGY_SAT, setDumpFolder, getDumpFolder
+from importerUtils   import logInfo, logWarning, logError, logAlways, getUInt8A, getUInt32, chooseImportStrategyAcis, STRATEGY_SAT, setDumpFolder, getDumpFolder
 from Acis2Step       import export
 from math            import fabs
 from Acis            import TAG_ENTITY_REF, getReader, setReader, AcisReader, AcisChunkPosition, setVersion, createNode, init
@@ -17,6 +17,9 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 lumps = 0
 wires = 0
+
+def _getSatFileName(name):
+	return  os.path.join(getDumpFolder(), name)
 
 def resolveEntityReferences(entities, lst, history):
 #	progress = FreeCAD.Base.ProgressIndicator()
@@ -57,14 +60,11 @@ def createBody(root, name, shape, transform):
 
 def buildFaces(shells, root, name, transform):
 	faces = []
-#	i = 1
 	for shell in shells:
 		for face in shell.getFaces():
 			surface = face.build()
 			if (surface):
 				faces.append(surface)
-#				createBody(root, "%s_%d" %(name, i), surface, transform)
-#				i += 1
 		for wire in shell.getWires():
 			buildWire(root, wire, transform)
 
@@ -74,8 +74,15 @@ def buildFaces(shells, root, name, transform):
 			try:
 				shell = Part.Shell(faces)
 			except:
-				shell = shell.fuse(faces[1:])
-		createBody(root, name, shell, transform)
+				try:
+					shell = shell.fuse(faces[1:])
+				except:
+					shell = None
+		if (shell):
+			createBody(root, name, shell, transform)
+		else:
+			for face in faces:
+				createBody(root, name, face, transform)
 	return
 
 def buildWires(coedges, root, name, transform):
@@ -141,12 +148,18 @@ def resolveNodes(acis):
 				bodies.append(node)
 			if (entity.name in ['Begin-of-ACIS-History-Data', 'End-of-ACIS-data']):
 				doAdd = False
+
+	if (getDumpFolder()[-3:].lower() != 'sat'):
+		name = _getSatFileName(acis.name)
+		dumpSat(name, acis)
+
 	return bodies
 
 def importModel(root):
 	global lumps, wires
 	wires = 0
 	lumps = 0
+
 	acis = getReader()
 	bodies = resolveNodes(acis)
 	for body in bodies:
@@ -154,9 +167,9 @@ def importModel(root):
 	return
 
 def convertModel(group, docName):
-	global _fileName
 	acis = getReader()
 	bodies = resolveNodes(acis)
+
 	stepfile = export(acis.name, acis.header, bodies)
 	ImportGui.insert(stepfile, docName)
 
@@ -170,7 +183,6 @@ def readText(fileName):
 		reader = AcisReader(file)
 		reader.name, trash = os.path.splitext(os.path.basename(fileName))
 		result = reader.readText()
-
 	return result
 
 def readBinary(fileName):
@@ -183,14 +195,10 @@ def readBinary(fileName):
 		reader = AcisReader(file)
 		reader.name, trash = os.path.splitext(os.path.basename(fileName))
 		result = reader.readBinary()
-		if (result):
-			name, trash = os.path.splitext(os.path.basename(fileName))
-			dumpSat(name, reader)
 	return result
 
 def create3dModel(group, doc):
 	strategy = chooseImportStrategyAcis()
-#	setVersion(7.0)
 	if (strategy == STRATEGY_SAT):
 		importModel(group)
 	else:

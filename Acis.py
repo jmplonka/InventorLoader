@@ -1700,12 +1700,7 @@ class Face(Topology):
 		edges = []
 		loop = self.getLoop()
 		while (loop is not None):
-			coedges = loop.getCoEdges()
-			for index in coedges:
-				coEdge = coedges[index]
-				edge = coEdge.build()
-				if (edge is not None):
-					edges.append(edge)
+			edges += loop.buildEdges()
 			loop = loop.getNext()
 		return edges
 	def build(self):
@@ -1774,6 +1769,15 @@ class Loop(Topology):
 		return coedges
 	def getEdges(self):
 		return [coEdge.getEdge() for coEdge in self.getCoEdges().values()]
+	def buildEdges(self):
+		edges = []
+		coedges = self.getCoEdges()
+		for index in coedges:
+			coEdge = coedges[index]
+			edge = coEdge.build()
+			if (edge is not None):
+				edges.append(edge)
+		return edges
 class Wire(Topology):
 	def __init__(self):
 		super(Wire, self).__init__()
@@ -3805,20 +3809,23 @@ class SurfaceTorus(Surface):
 			circleAxis   = self.axis.cross(self.uvorigin).normalize()
 			circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
 			circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
-			torus = circle.revolve(self.center, self.axis, 360)
-			self.profile = CurveEllipse()
-			self.profile.center = circleCenter
-			self.profile.axis   = circleAxis
-			if (isEqual1D(circleAxis.x, 1.0)):
-				self.profile.major = DIR_Y
-			elif (isEqual1D(circleAxis.x, -1.0)):
-				self.profile.major = -DIR_Y
-			else:
-				self.profile.major = DIR_X.cross(circleAxis) # any perpendicular vector to normal?!?
+			try:
+				torus = circle.revolve(self.center, self.axis, 360)
+				self.profile = CurveEllipse()
+				self.profile.center = circleCenter
+				self.profile.axis   = circleAxis
+				if (isEqual1D(circleAxis.x, 1.0)):
+					self.profile.major = DIR_Y
+				elif (isEqual1D(circleAxis.x, -1.0)):
+					self.profile.major = -DIR_Y
+				else:
+					self.profile.major = DIR_X.cross(circleAxis) # any perpendicular vector to normal?!?
 
-			self.profile.ratio  = 1.0
-			self.profile.range  = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
-			self.shape = torus.Faces[0]
+				self.profile.ratio  = 1.0
+				self.profile.range  = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
+				self.shape = torus.Faces[0]
+			except:
+				print("Can't create torus for center=%s, axis=%s, major=%g, minor=%g, UV=%s"%(self.center, self.axis, self.major, self.minor, self.uvorigin))
 		return self.shape
 
 class Point(Geometry):

@@ -47,8 +47,5 @@ def create3dModel(group, doc):
 			importModel(group)
 		else:
 			convertModel(group, doc.Name)
-		satFile = _getSatFileName(reader.name)
-		if (not os.path.exists(satFile)):
-			dumpSat(satFile, reader, False)
 		setReader(None)
 	return
