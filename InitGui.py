@@ -11,7 +11,7 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 def checkImports():
 	def missingDependency(file):
 		module = os.path.join(os.path.dirname(EmptyFile.__file__), "libs", file)
-		python = os.path.join(os.path.dirname(sys.executable), 'python.exe')
+		python = os.path.join(os.path.dirname(sys.executable), os.path.basename(sys.executable).replace('FreeCAD', 'python'))
 		subprocess.call(u"\"%s\" -m pip install \"%s\"" %(python, module))
 
 	import os, subprocess, traceback, FreeCAD, FreeCADGui, EmptyFile
