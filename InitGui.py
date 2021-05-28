@@ -11,7 +11,8 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 def checkImports():
 	def missingDependency(file):
 		module = os.path.join(os.path.dirname(EmptyFile.__file__), "libs", file)
-		subprocess.call(u"\"%s\" -m pip install \"%s\"" %(sys.executable, module))
+		python = os.path.join(os.path.dirname(sys.executable), 'python.exe')
+		subprocess.call(u"\"%s\" -m pip install \"%s\"" %(python, module))
 
 	import os, subprocess, traceback, FreeCAD, FreeCADGui, EmptyFile
 	try:
@@ -26,22 +27,22 @@ def checkImports():
 	try:
 		import olefile
 	except:
-		missingDependency("olefile")
+		missingDependency("olefile-0.46.zip")
 
 	try:
 		import xlrd
 	except:
-		missingDependency("xlrd")
+		missingDependency("xlrd-1.2.0.tar.gz")
 
 	try:
 		import xlwt
 	except:
-		missingDependency("xlwt")
+		missingDependency("xlwt-1.3.0.tar.gz")
 
 	try:
 		import xlutils
 	except:
-		missingDependency("xlutils")
+		missingDependency("xlutils-2.0.0.tar.gz")
 
 	import importerUtils
 	try:
@@ -53,4 +54,5 @@ def checkImports():
 	from InventorWorkbench import InventorWorkbench
 	Gui.addWorkbench(InventorWorkbench)
 
+print("Checking imports!")
 checkImports()
