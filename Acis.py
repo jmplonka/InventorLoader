@@ -578,9 +578,8 @@ def readLaw(chunks, index):
 
 def newInstance(CLASSES, key):
 	cls = CLASSES[key]
-	if cls is None:
-		return None
-	return cls()
+	if (cls): return cls()
+	return None
 
 def readCurve(chunks, index):
 	val, i = getValue(chunks, index)
@@ -1083,7 +1082,7 @@ class BDY_GEOM(object):
 		self.shape = None
 		self.__ready_to_build__ = True  # Don't try to create me more than once
 	def build(self):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			self.buildCurve()
 		return self.shape
@@ -1704,7 +1703,7 @@ class Face(Topology):
 			loop = loop.getNext()
 		return edges
 	def build(self):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			self._surface = self.getSurface()
 			edges = self.buildCoEdges()
@@ -1836,7 +1835,7 @@ class CoEdge(Topology):
 	def getOwner(self):    return None if (self._owner is None)    else self._owner.node
 	def getCurve(self):    return None if (self._curve is None)    else self._curve.node
 	def build(self):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			e = self.getEdge()
 			c = e.getCurve()
@@ -1986,7 +1985,7 @@ class Curve(Geometry):
 		return i
 	def build(self, start, end): # by default: return a line-segment!
 		logWarning(u"    ... '%s' not yet supported - forced to straight-curve!", self.__class__.__name__)
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			# force everything else to straight line!
 			if (isinstance(start, VEC)):
@@ -2024,7 +2023,7 @@ class CurveEllipse(Curve): # ellyptical curve "ellipse-curve"
 		self.range, i  = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		return i
 	def build(self, start, end):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			if (self.ratio == 1):
 				ellipse = createCircle(self.center, self.axis, self.major)
@@ -2483,7 +2482,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.range, i = getInterval(chunks, i + 1, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, start=None, end=None):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			if (self.subtype == 'ref'):
 				cur = self.curve
@@ -2609,7 +2608,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 			self.subtype = 'ref'
 		return i
 	def build(self, start, end):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			if (self.subtype == 'ref'):
 				self.shape = self.pcurve.build(start, end)
@@ -2632,7 +2631,7 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, start, end):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			if (start is None):
 				start = self.root
@@ -2723,7 +2722,7 @@ class SurfaceCone(Surface):
 			self.apex = self.center - self.axis * h
 		return i
 	def build(self, face = None):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			if (isEqual1D(self.sine, 0.)): # 90 Deg
 				if (isEqual1D(self.ratio, 1.)):
@@ -2773,7 +2772,7 @@ class SurfacePlane(Surface):
 		self.vrange, i   = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, face = None):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			plane = Part.Plane(self.root, self.normal)
 			self.shape = plane.toShape()
@@ -2800,7 +2799,7 @@ class SurfaceSphere(Surface):
 		self.vrange, i   = getInterval(chunks, i, MIN_PI2, MAX_PI2, 1.0)
 		return i
 	def build(self, face = None):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			sphere = Part.Sphere()
 			rotateShape(sphere, self.pole)
@@ -3674,7 +3673,7 @@ class SurfaceSpline(Surface):
 		self.rangeV, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		return i
 	def build(self, face = None):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			if (getattr(self, 'failed', False)):
 				return None
@@ -3804,7 +3803,7 @@ class SurfaceTorus(Surface):
 		self.vrange, i   = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		return i
 	def build(self, face = None):
-		if (self.shape is None) and (self.__ready_to_build__):
+		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			circleAxis   = self.axis.cross(self.uvorigin).normalize()
 			circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)

@@ -616,6 +616,23 @@ def getUInt32A(data, offset, size):
 	val = unpack_from('<' +'L'*int(size), data, offset)
 	return val, int(offset + 4 * size)
 
+def getUInt64A(data, offset, size):
+	'''
+	Returns an array of unsingned 64-Bit values.
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the array.
+		size
+			The size of the array.
+	Returns:
+		The array of unsigned 64-Bit values at offset.
+		The new position in the 'stream'.
+	'''
+	val = unpack_from('<' +'Q'*int(size), data, offset)
+	return val, int(offset + 8 * size)
+
 def getSInt32(data, offset):
 	'''
 	Returns a single signed 32-Bit value.
@@ -662,6 +679,23 @@ def getSInt32A(data, offset, size):
 	'''
 	val = unpack_from('<' + 'l'*int(size), data, offset)
 	return val, int(offset + 4 * size)
+
+def getSInt64A(data, offset, size):
+	'''
+	Returns an array of signed 64-Bit values.
+	Args:
+		data
+			A binary string.
+		offset
+			The zero based offset of the array.
+		size
+			The size of the array.
+	Returns:
+		The array of signed 64-Bit values at offset.
+		The new position in the 'stream'.
+	'''
+	val = unpack_from('<' + 'q'*int(size), data, offset)
+	return val, int(offset + 8 * size)
 
 def getFloat32(data, offset):
 	'''

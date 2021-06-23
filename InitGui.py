@@ -54,5 +54,4 @@ def checkImports():
 	from InventorWorkbench import InventorWorkbench
 	Gui.addWorkbench(InventorWorkbench)
 
-print("Checking imports!")
 checkImports()

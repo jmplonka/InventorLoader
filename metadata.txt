@@ -7,9 +7,9 @@ name=InventorLoader
 email=jens.m.plonka@gmail.com
 author=jmplonka
 qgisMinimumVersion=2.0
-description=This plugin enables FreeCAD to import Inventor part files (*.IPT), ACIS files (*.SAT, *.SAB) and 3D-Solids from DXF files
+description=This plugin enables FreeCAD to import Inventor part files (*.IPT), ACIS files (*.SAT, *.SAB), 3D-Solids from DXF files and Fusion360 (*.f3d) files.
 about=
-version=version 1.1
+version=version 1.3
 tracker=https://github.com/jmplonka/InventorLoader/issues
 repository=https://github.com/jmplonka/InventorLoader
 ; end of mandatory metadata
@@ -17,6 +17,7 @@ repository=https://github.com/jmplonka/InventorLoader
 ; start of optional metadata
 category=
 changelog=The changelog lists the plugin versions and their changes:
+    1.3  - Added support for Fusion360 file format (only SAT)
     1.2  - Added support for Inventor 2021 file format
     1.1  - Added DXF 3D-solids import.
     1.0  - Reorganized section readers.
@@ -43,7 +44,7 @@ changelog=The changelog lists the plugin versions and their changes:
 ; tag name.
 ; Tags should be in English language. Please also check for existing tags and
 ; synonyms before creating a new one.
-tags=Autodesk,Inventor,IPT,ACIS,SAT,DXF,3D-Solids
+tags=Autodesk,Inventor,IPT,ACIS,SAT,DXF,F3D,3D-Solids,Fusion360
 
 ; these metadata can be empty, they will eventually become mandatory.
 homepage=https://github.com/jmplonka/InventorLoader
@@ -60,5 +61,5 @@ qgisMaximumVersion=
 
 [dependencies]
 workbenches=Part,Draft,Sketcher
-pylibs=xlutils,xlrd,xlwt,olefile
-FCaddon=sheetmetal@4db5840
+pylibs=olefile,xlrd,xlwt,xlutils
+FCaddon=sheetmetal

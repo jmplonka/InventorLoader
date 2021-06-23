@@ -164,6 +164,19 @@ class BrowserReader(SegmentReader):
 		i = self.skipBlockSize(i, 3)
 		return i
 
+	def Read_D9F96B81(self, node):
+		i = node.Read_Header0()
+		i = node.ReadList2(i,  importerSegNode._TYP_SINT32_, 'lst0')
+		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadBoolean(i, 'b1')
+		i = node.ReadUInt32A(i, 3, 'a2')
+		i = node.ReadBoolean(i, 'b2')
+		i = node.ReadUInt32A(i, 2, 'a3')
+		i = node.ReadBoolean(i, 'b3')
+		i = node.ReadLen32Text16(i, 'txt1')
+		i = node.ReadLen32Text16(i, 'txt2')
+		return i
+
 	def Read_DDC7ED24(self, node):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)

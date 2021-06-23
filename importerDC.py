@@ -664,7 +664,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_4E86F047(self, node): # Assembly: Placement-Constaint
-		i = self.ReadHeaderContent(node)
+		i = self.ReadHeaderContent(node, 'Constraint')
 		i = self.skipBlockSize(i)
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
@@ -1009,7 +1009,7 @@ class DCReader(EeDataReader):
 		return i
 
 	def Read_90874D61(self, node):
-		i = self.ReadCntHdr2S(node)
+		i = self.ReadCntHdr2S(node) # 'ref' contains IPT document!
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadCrossRef(i, 'value')
 		return i
@@ -5966,8 +5966,9 @@ class DCReader(EeDataReader):
 
 	def Read_1488B839(self, node):
 		i = self.ReadHeaderLinkedElement(node)
-		cnt, i = getUInt32(node.data, i)
-		i = node.ReadFloat64A(i, cnt, 'a1')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadFloat64_3D(i, 'a1')
+		i = node.ReadFloat64_3D(i, 'a2')
 		return i
 
 	def Read_21004CF2(self, node):
@@ -7668,13 +7669,14 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'flags')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
-		i = node.ReadChildRef(i, 'ref_2')
-		if (node.get('ref_2') is not None):
+		i = node.ReadChildRef(i, 'asm')
+		if (node.get('asm') is not None):
 			i = node.ReadUInt32(i, 'u32_0')
-#			if ((self.version > 2011) and (self.type == DCReader.DOC_PART)): i += 4 # skip 00 00 00 00
-##		i = node.ReadUInt32(i, 'u32_1')
-##		i = node.ReadList6(i, importerSegNode._TYP_MAP_MDL_TXN_MGR_, 'lst_1') # <-> sat delta_states refs
-##		i = node.ReadUInt32(i, 'u32_2')
+			if ((self.version > 2011) and (self.type == DCReader.DOC_PART)): i += 4 # skip 00 00 00 00
+		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_MDL_TXN_MGR_, 'lst_1') # <-> sat delta_states refs
+		if (self.version < 2013): i += 4
+		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_481DFC84(self, node):
@@ -8683,7 +8685,7 @@ class DCReader(EeDataReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_AE1C96C9(self, node):
+	def Read_AE1C96C9(self, node): # Harness
 		i = self.ReadHeaderCntSLRS(node)
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_0')

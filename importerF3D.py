@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from importerUtils   import *
+from datetime        import datetime
 from importerSAT     import dumpSat, importModel, convertModel, buildBody, resolveNodes
 from Acis2Step       import export
 from zipfile         import is_zipfile, ZipFile
@@ -9,8 +10,59 @@ from Acis            import AcisReader
 from importerFreeCAD import createGroup
 from ImportGui       import insert
 
-smb_files = []
+import traceback
 
+smb_files = []
+bulk_data = (None, None)
+meta_data = None
+
+REF_CROSS  = 1
+REF_CHILD  = 2
+REF_PARENT = 3
+
+VAL_GUESS    = 0
+VAL_UINT8    = 1
+VAL_UINT16   = 2
+VAL_UINT32   = 3
+VAL_UINT64   = 4
+VAL_FLOAT    = 5
+VAL_REF      = 6
+VAL_STR8     = 8
+VAL_STR16    = 9
+VAL_DATETIME = 10
+VAL_FORMAT = {
+	VAL_UINT8 : '%02X',
+	VAL_UINT16: '%03X',
+	VAL_UINT32: '%04X',
+	VAL_UINT64: '%05X',
+	VAL_FLOAT : '%g',
+	VAL_DATETIME: '\'%s\'',
+	VAL_STR8  : '\'%s\'',
+	VAL_STR16 : '"%s"',
+	}
+
+CONSTRAINT_TXPE = {
+	0x00000000001: 'Coincident',
+	0x00000000002: 'Colinear',
+	0x00000000004: 'Concntric',
+	0x00000000010: 'Parallel',
+	0x00000000020: 'Perpendicular',
+	0x00000000040: 'Horizontal',
+	0x00000000080: 'Vertical',
+	0x00000000100: 'Tangential',
+	0x00000000200: 'Curvature',
+	0x00000000400: 'Symmetry',
+	0x00000000800: 'Equal',
+	0x00000001000: 'Midpoint',
+	0x00000002000: 'Polygon',
+	0x00010000000: 'Pattern_Circular',
+	0x00020000000: 'Pattern_Rect',
+	0x10000000000: 'Text_Frame',
+	0x20000000000: 'Text_Path'
+}
+refs = []
+sketches = []
+MISSING_METHODS = {}
 def _set_thumbnail(f3d, path):
 	result = False
 	name = path.split('/')[-1]
@@ -45,7 +97,7 @@ def _dump_SMB(f3d, path):
 			result = reader.readBinary()
 			if (result):
 				dumpSat(name[0:name.rfind('.')], reader)
-				if (name[-4:].lower() != 'smbh'):
+				if (name[-3:].lower() != 'smb'):
 					smb_files.append(reader)
 	return result
 
@@ -55,13 +107,13 @@ def read_manifest(f3d, path):
 		with f3d.open(path) as manifest:
 			data = manifest.read()
 			t1,  i = getLen32Text8(data, 0)
-			t2,  i = getLen32Text8(data, i) # fusion doc type
+			t2,  i = getLen32Text8(data, i)  # fusion doc type
 			t3,  i = getLen32Text16(data, i) # .f3d
 			t4,  i = getLen32Text16(data, i) # Fusion Document
 			t5,  i = getLen32Text16(data, i) # A Fusion Document
 			t6,  i = getLen32Text16(data, i) # UID
 			t7,  i = getLen32Text16(data, i) # UID
-			a1,  i = getUInt32A(data, i, 2) # ???
+			a1,  i = getUInt32A(data, i, 2)  # ???
 			cnt, i = getUInt32(data, i)
 			l1 = []
 			for j in range(cnt):
@@ -74,28 +126,58 @@ def read_manifest(f3d, path):
 				t, i = getLen32Text16(data, i)
 				l2.append(t)
 			n1, i = getUInt8(data, i)
-			t8,  i = getLen32Text16(data, i) # UID
+			t8, i = getLen32Text16(data, i)  # UID
 			n2, i = getUInt32(data, i)
-			t9,  i = getLen32Text16(data, i) # FusionAssetName
+			folder, i = getLen32Text16(data, i) # -> folder name
 			n3, i = getUInt32(data, i)
 			n4, i = getUInt8(data, i)
+	# dump
+	dumpFolder = getDumpFolder()
+	with open(u"%s/Manifest.log" %(dumpFolder), 'w') as log:
+		log.write("t1 = '%s'\n"%(t1))
+		log.write("t2 = '%s'\n"%(t2))
+		log.write("t3 = '%s'\n"%(t3))
+		log.write("t4 = '%s'\n"%(t4))
+		log.write("t5 = '%s'\n"%(t5))
+		log.write("t6 = '%s'\n"%(t6))
+		log.write("t7 = '%s'\n"%(t7))
+		log.write("a1 = (%s)\n"%(",".join(["('%s', %04X)"%(t, v) for t, v in l1])))
+		log.write("a1 = (%s)\n"%(",".join(["('%s')"%(t) for t in l2])))
+		log.write("n1 = %02X\n"%(n1))
+		log.write("t8 = '%s'\n"%(t8))
+		log.write("n2 = %04X\n"%(n2))
+		log.write("folder = '%s'\n"%(folder))
+		log.write("n3 = %04X\n"%(n3))
+		log.write("n4 = %02X\n"%(n4))
+		log.write(" ".join(["%02X"%(c) for c in data[i:]]))
+
+	return folder
 	return
 
 def read(filename):
-	global smb_files
+	global smb_files, bulk_data, sketches, refs
 	smb_files.clear()
+	sketches.clear()
+	refs = []
 	result = is_zipfile(filename)
+	data = None
+	meta = None
 	if (result):
 		setDumpFolder(filename)
 		f3d = ZipFile(filename)
+		folder = read_manifest(f3d, 'Manifest.dat')
+		folderPreview = folder + '[Active]/Previews/'
+		folderBreps   = folder + '[Active]/Breps.BlobParts/'
+		fileBulk      = folder + '[Active]/Design1/BulkStream.dat'
+		fileMeta      = folder + '[Active]/Design1/MetaStream.dat'
 		for name in f3d.namelist():
-			if (name.startswith('FusionAssetName[Active]/Previews/')):
+			if (name.startswith(folderPreview)):
 				_set_thumbnail(f3d, name)
-			elif (name.startswith('FusionAssetName[Active]/Breps.BlobParts/')):
+			elif (name.startswith(folderBreps)):
 				if (_dump_SMB(f3d, name)):
 					result = True
-			elif (name == 'Manifest.dat'):
-				read_manifest(f3d, name)
+
+		bulk_data = (data, meta)
 		f3d.close()
 	return result
 

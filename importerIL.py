@@ -25,10 +25,10 @@ def decode(name):
 		logWarning("    Couldn't determine character encoding for filename - using unencoded!\n")
 	return decodedName
 
-def insertGroup(doc, filename):
+def insertGroup(filename):
 	grpName = os.path.splitext(os.path.basename(filename))[0]
 	#There's a problem with adding groups starting with numbers!
-	root = createGroup(doc, '_%s' %(grpName))
+	root = createGroup('_%s' %(grpName))
 	root.Label = grpName
 
 	return root
@@ -106,21 +106,21 @@ def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
 	'''
-	if (isFileValid(filename)):
-		try:
+	doc = FreeCAD.listDocuments().get(docname)
+	if (doc):
+		if (isFileValid(filename)):
 			logAlways(u"Importing: %s", filename)
-			reader = read(filename, False)
+			reader = read(filename)
 			if (reader is not None):
-				doc = FreeCAD.getDocument(docname)
 				name = os.path.splitext(os.path.basename(filename))[0]
 				name = decode(name)
-				group = insertGroup(doc, name)
+				group = insertGroup(name)
 				reader.create3dModel(group, doc)
 			releaseMemory()
 			FreeCADGui.SendMsgToActiveView("ViewFit")
-		except:
-			_open(filename, skip, only, root)
-		logInfo(u"DONE!")
+	else:
+		_open(filename, skip, only, root)
+	logInfo(u"DONE!")
 	return
 
 def _open(filename, skip = [], only = [], root = None):

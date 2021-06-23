@@ -1953,7 +1953,7 @@ class FreeCADImporter(object):
 			key = 'Diameter_%s' %(index)
 			if (not key in self.mapConstraints):
 				dimension = getDimension(dimensionNode, 'parameter')
-				constraint = Sketcher.Constraint('Diameter', index, dimension.getValue())
+				constraint = Sketcher.Constraint('Diameter', index, dimension.getNominalValue())
 				index = self.addDimensionConstraint(sketchObj, dimension, constraint, key, False)
 				dimensionNode.setGeometry(constraint, index)
 				logInfo(u"        ... added diameter '%s' = %s", constraint.Name, dimension.getValue())

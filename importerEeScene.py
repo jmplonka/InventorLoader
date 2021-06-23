@@ -110,8 +110,8 @@ class EeSceneReader(StyleReader):
 		i = node.ReadFloat64A(i, 6, 'box') # bounding box
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'key')
-		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt32(i, 'u32_1')
+		i = node.ReadUInt32(i, 'u32_2')
 		self.faces.append(node)
 		return i
 

@@ -358,7 +358,7 @@ class BRepReader(NameTableReader):
 	def Read_BA0B8C23(self, node): # delta state item ???
 		i = self.ReadHeaderDeltaStateItem(node)
 		i = node.ReadCrossRef(i, 'ref_1')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_1')
 		i = self.ReadRefU32List(node, i, 'a2', REF_CROSS)
 		ref, i = self.ReadNodeRef(node, i, None, REF_CROSS, 'a3')
 		number, i = getUInt32(node.data, i)
@@ -374,12 +374,12 @@ class BRepReader(NameTableReader):
 
 	def Read_C620657B(self, node): # delta state item ???
 		i = self.ReadHeaderDeltaStateItem(node)
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		i = node.ReadUInt32(i, 'u32_1')
-		i = self.ReadRefU32List(node, i, 'a2', REF_CROSS)
+		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst1', 2)
 		i = node.ReadUInt32(i, 'u32_2')
-		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst2', 2)
+		i = self.ReadRefU32List(node, i, 'a2', REF_CROSS)
 		i = node.ReadUInt32(i, 'u32_3')
+		i = node.ReadList2(i, _TYP_UINT32_A_, 'lst2', 2)
+		i = node.ReadUInt32(i, 'u32_4')
 		i = self.ReadRefU32List(node, i, 'nameTables', REF_CROSS)
 		return i
