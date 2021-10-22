@@ -46,14 +46,14 @@ TAG_VECTOR_2D     = 22 # U-V-Vector
 TAG_INT64         = 23 # used by AutoCAD ASM int64 attributes
 
 # TAG_FALSE, TAG_TRUE value mappings
-RANGE           = {TAG_FALSE: 'I',              TAG_TRUE: 'F',             'F': 'F',              'T': 'I'}
+RANGE           = {TAG_FALSE: 'I',              TAG_TRUE: 'F',             'F': 'I',              'T': 'F'}
 REFLECTION      = {TAG_FALSE: 'no_reflect',     TAG_TRUE: 'reflect',       'F': 'no_reflect',     'T': 'reflect'}
 SURF_RIGID      = {TAG_FALSE: 'non_rigid',      TAG_TRUE: 'rigid',         'F': 'non_rigid',      'T': 'rigid'}
 SURF_AXIS_SWEEP = {TAG_FALSE: 'non_axis_sweep', TAG_TRUE: 'axis_sweep',    'F': 'non_axis_sweep', 'T': 'axis_sweep'}
 ROTATION        = {TAG_FALSE: 'no_rotate',      TAG_TRUE: 'rotate',        'F': 'no_rotate',      'T': 'rotate'}
 SHEAR           = {TAG_FALSE: 'no_shear',       TAG_TRUE: 'shear',         'F': 'no_shear',       'T': 'shear'}
 SENSE           = {TAG_FALSE: 'forward',        TAG_TRUE: 'reversed',      'F': 'forward',        'T': 'reversed' }
-SENSEV          = {TAG_FALSE: 'forward_v',      TAG_TRUE: 'reverse_v',     'T': 'forward_v',      'T': 'reverse_v', 0: 'forward_v'}
+SENSEV          = {TAG_FALSE: 'forward_v',      TAG_TRUE: 'reverse_v',     'F': 'forward_v',      'T': 'reverse_v', 0: 'forward_v'}
 SIDES           = {TAG_FALSE: 'single',         TAG_TRUE: 'double',        'F': 'single',         'T': 'double'}
 SIDE            = {TAG_FALSE: 'out',            TAG_TRUE: 'in',            'F': 'out',            'T': 'in'}
 SURF_BOOL       = {TAG_FALSE: 'FALSE',          TAG_TRUE: 'TRUE',          'F': 'FALSE',          'T': 'TRUE'}
@@ -424,9 +424,7 @@ def getUnknownFT(chunks, index):
 def getRange(chunks, index, default, scale):
 	type, i = getEnumByTag(chunks, index, RANGE)
 	val = default
-	if (type == 'F'):
-		val, i = getFloat(chunks, i)
-	elif (type == TAG_TRUE):
+	if (type in ('F', TAG_FALSE)):
 		val, i = getFloat(chunks, i)
 	elif (type == 'T'):
 		arr, i = getFloats(chunks, i, 7)
