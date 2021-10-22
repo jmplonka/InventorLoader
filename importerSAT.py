@@ -6,7 +6,7 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import os, sys, tokenize, FreeCAD, Part, re, traceback, datetime, ImportGui, io
-from importerUtils   import logInfo, logWarning, logError, logAlways, getUInt8A, getUInt32, chooseImportStrategyAcis, STRATEGY_SAT, setDumpFolder, getDumpFolder
+from importerUtils   import logInfo, logWarning, logError, logAlways, getUInt8A, getUInt32, chooseImportStrategyAcis, STRATEGY_SAT, STRATEGY_NATIVE, STRATEGY_STEP, setDumpFolder, getDumpFolder
 from Acis2Step       import export
 from math            import fabs
 from Acis            import TAG_ENTITY_REF, getReader, setReader, AcisReader, AcisChunkPosition, setVersion, createNode, init
@@ -199,9 +199,9 @@ def readBinary(fileName):
 
 def create3dModel(group, doc):
 	strategy = chooseImportStrategyAcis()
-	if (strategy == STRATEGY_SAT):
+	if (strategy in (STRATEGY_SAT, STRATEGY_NATIVE)):
 		importModel(group)
-	else:
+	elif (strategy == STRATEGY_STEP):
 		convertModel(group, doc.Name)
 	setReader(None)
 	return

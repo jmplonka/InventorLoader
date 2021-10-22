@@ -6,8 +6,9 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerSegment import SegmentReader
-from importerUtils   import *
+from importerSegment   import SegmentReader
+from importerUtils     import *
+from importerConstants import VAL_UINT8, VAL_UINT16, VAL_UINT32
 import importerSegNode
 
 __author__     = "Jens M. Plonka"
@@ -276,11 +277,10 @@ class AppReader(SegmentReader):
 			i = node.ReadUInt16A(i, 2, 'a2')
 			i = node.ReadUUID(i, 'uid_0')
 		else:
-			node.content += u" txt_1='' txt_2='' txt_3='' txt_4='' a2=[0000,0000] uid_0=None "
 			node.set('txt_1', '')
 			node.set('txt_2', '')
 			node.set('txt_3', '')
-			node.set('a2', (0,0))
+			node.set('a2', (0,0), VAL_UINT16)
 			node.set('uid_0', None)
 		i = node.ReadFloat64A(i, 8, 'a3')
 		i = node.ReadUInt8(i, 'u8_1')
@@ -306,9 +306,8 @@ class AppReader(SegmentReader):
 			i = node.ReadLen32Text16(i, 'comment')
 			i = node.ReadUInt16(i, 'u16_1')
 		else:
-			node.content += u" comment='' u16_1=0000"
 			node.set('comment', '')
-			node.set('u16_1', 0)
+			node.set('u16_1', 0, VAL_UINT16)
 		i = node.ReadLen32Text16(i, 'longName')
 		i = self.skipBlockSize(i)
 		if (self.version > 2012):
@@ -320,13 +319,12 @@ class AppReader(SegmentReader):
 			i = node.ReadUInt16A(i, 2, 'a2')
 			i = node.ReadUUID(i, 'uid_0')
 		else:
-			node.content += u" u16_2=0000 txt_1='' txt_2='' txt_3='' txt_4='' a2=[0000,0000] uid_0=None"
-			node.set('u16_2', 0)
+			node.set('u16_2', 0, VAL_UINT16)
 			node.set('txt_1', '')
 			node.set('txt_2', '')
 			node.set('txt_3', '')
 			node.set('txt_4', '')
-			node.set('a2', (0, 0))
+			node.set('a2', (0, 0), VAL_UINT16)
 			node.set('uid_0', None)
 
 		i = node.ReadMaterial(i, 2)
@@ -396,8 +394,7 @@ class AppReader(SegmentReader):
 			if (self.version > 2011):
 				i = node.ReadUInt32(i, 'u32_4')
 			else:
-				node.content += ' u8_4=00'
-				node.set('u8_4', 0)
+				node.set('u8_4', 0, VAL_UINT8)
 			i = node.ReadUInt32A(i, 3, 'a5')
 			i = node.ReadUInt8(i, 'u8_2')
 			i = node.ReadUInt32(i, 'u32_3')
@@ -413,22 +410,21 @@ class AppReader(SegmentReader):
 					i = node.ReadLen32Text16(i)
 					i = len(node.data)
 				else:
-					node.set('u8_6', 0)
-					node.set('u32_5', 1)
+					node.set('u8_6', 0, VAL_UINT8)
+					node.set('u32_5', 1, VAL_UINT32)
 					node.set('c_1', Color(0x50, 0xA5, 0xD2, 0xFF))
-					node.set('u32_6', 0x11)
+					node.set('u32_6', 0x11, VAL_UINT32)
 					node.set('f_4', (0., 0., 0., 1., 1.))
-					node.set('u8_7', 1)
+					node.set('u8_7', 1, VAL_UINT8)
 					node.set('txt_1', node.name)
 			else:
-				node.content += u" u8_3=01 u8_4=00 u32_5=0001 c_1=#50A5D2FF u32_6=0011 f_4=(0,0,0,1,1) u8_5=01 txt_1='%s'" %(node.name)
-				node.set('u8_5', 1)
-				node.set('u8_6', 0)
-				node.set('u32_5', 1)
+				node.set('u8_5', 1, VAL_UINT8)
+				node.set('u8_6', 0, VAL_UINT8)
+				node.set('u32_5', 1, VAL_UINT32)
 				node.set('c_1', Color(0x50, 0xA5, 0xD2, 0xFF))
-				node.set('u32_6', 0x11)
+				node.set('u32_6', 0x11, VAL_UINT32)
 				node.set('f_4', (0., 0., 0., 1., 1.))
-				node.set('u8_7', 1)
+				node.set('u8_7', 1, VAL_UINT8)
 				node.set('txt_1', node.name)
 		else:
 			i = node.ReadUInt32(i, 'u32_3')
@@ -545,8 +541,7 @@ class AppReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_)
 		if (self.version < 2012):
-			node.content += u" u32_0=000005"
-			node.set('u32_0', 5)
+			node.set('u32_0', 5, VAL_UINT32)
 		else:
 			i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -562,8 +557,7 @@ class AppReader(SegmentReader):
 		i = node.ReadParentRef(i)
 		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_)
 		if (self.version < 2012):
-			node.content += u" u32_0=000005"
-			node.set('u32_0', 5)
+			node.set('u32_0', 5, VAL_UINT32)
 		else:
 			i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -665,13 +659,11 @@ class AppReader(SegmentReader):
 			if (self.version > 2011):
 				i = node.ReadUInt32(i, 'u32_1')
 			else:
-				node.content += u" u32_1=000E"
-				node.set('u32_1', 0x0E)
+				node.set('u32_1', 0x0E, VAL_UINT32)
 			i = node.ReadFloat64_2D(i, 'a2')
 		else:
-			node.content += ' u32_0=0013 u32_1=000E a2=(0.25, 0.1)'
-			node.set('u32_0', 0x13)
-			node.set('u32_1', 0x0E)
+			node.set('u32_0', 0x13, VAL_UINT32)
+			node.set('u32_1', 0x0E, VAL_UINT32)
 			node.set('a2', (0.25, 0.1))
 		i = node.ReadFloat64_2D(i, 'a3')
 		return i
@@ -819,7 +811,6 @@ class AppReader(SegmentReader):
 			uid, i = getUUID(node.data, i)
 			txt, i = getLen32Text16(node.data, i)
 			lst.append((uid, txt))
-		node.content += u" a0=[%s]" %(",".join([u"(%s,'%s')" %(uid, txt) for uid, txt in lst]))
 		i = node.ReadUUID(i, 'uid')
 		return i
 

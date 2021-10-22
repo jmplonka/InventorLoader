@@ -5,11 +5,12 @@ importerFreeCAD.py
 '''
 import sys, FreeCAD, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, Acis, re
 
-from importerClasses import *
-from importerUtils   import *
-from importerSegNode import SecNode, SecNodeRef, setParameter
-from math            import sqrt, tan, degrees, pi
-from FreeCAD         import Vector as VEC, Rotation as ROT, Placement as PLC, Version, ParamGet
+from importerClasses   import *
+from importerUtils     import *
+from importerSegNode   import SecNode, SecNodeRef, setParameter
+from math              import sqrt, tan, degrees, pi
+from FreeCAD           import Vector as VEC, Rotation as ROT, Placement as PLC, Version, ParamGet
+from importerConstants import CENTER, DIR_X, DIR_Y, DIR_Z
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -38,11 +39,6 @@ BIT_DIM_RADIUS              = 1 << 19
 BIT_DIM_DIAMETER            = 1 << 20 # Workaround required: radius constraint
 BIT_DIM_DISTANCE            = 1 << 21
 BIT_DIM_OFFSET_SPLINE       = 1 << 22 # not supported
-
-CENTER = VEC(0.0, 0.0, 0.0)
-DIR_X  = VEC(1.0, 0.0, 0.0)
-DIR_Y  = VEC(0.0, 1.0, 0.0)
-DIR_Z  = VEC(0.0, 0.0, 1.0)
 
 # x 10                      2   2   1   1   0   0   0
 # x  1                      4   0   6   2   8   4   0
@@ -1274,13 +1270,13 @@ class FreeCADImporter(object):
 				idxCreator = creator.get('idxCreator')
 				creator    = item.segment.indexNodes[idxCreator]
 				geometry   = self.getGeometry(creator) # ensure that the creator is already available!
-				if (geometry is not None):
-					faceAttrs = acis[idxRef]
-					acisFaces = faceAttrs.getFaces()
-					idxFace   = findFcFaceIndex(geometry.Shape, acisFaces)
-					if (idxFace is None):
-						return None, None
-					return idxCreator, idxFace
+				if (geometry):
+					faceAttrs = acis.get(idxRef)
+					if (faceAttrs):
+						acisFaces = faceAttrs.getFaces()
+						idxFace   = findFcFaceIndex(geometry.Shape, acisFaces)
+						if (idxFace):
+							return idxCreator, idxFace
 		return None, None
 
 	def getFacesFromSet(self, faceSet):
@@ -1344,14 +1340,14 @@ class FreeCADImporter(object):
 		return []
 
 	def getLength(self, body, dir):
-		lx, ly, lz = 0, 0, 0
 		node = self.getBodyNode(body)
 		if (node):
 			box = node.geometry.Shape.BoundBox
-			if (not isEqual1D(dir.x, 0)): lx = box.XLength * box.XLength
-			if (not isEqual1D(dir.y, 0)): ly = box.YLength * box.YLength
-			if (not isEqual1D(dir.z, 0)): lz = box.ZLength * box.ZLength
-		return sqrt(lx + ly + lz)
+			lx = box.XLength * box.XLength if (not isEqual1D(dir.x, 0)) else 0.0
+			ly = box.YLength * box.YLength if (not isEqual1D(dir.y, 0)) else 0.0
+			lz = box.ZLength * box.ZLength if (not isEqual1D(dir.z, 0)) else 0.0
+			return sqrt(lx + ly + lz)
+		return 0.0
 
 	def resolveParticiants(self, fxNode):
 		geos = []
@@ -4120,7 +4116,7 @@ class FreeCADImporter(object):
 				aliasName = calcAliasname(key)
 				try:
 					table.setAlias(u"B%d" %(r), aliasName)
-					valueNode.set('alias', 'Parameters.%s' %(aliasName))
+					valueNode.set('alias', 'Parameters.%s' %(aliasName), None)
 				except Exception as e:
 					logError(u"    Can't set alias name for B%d - invalid name '%s' - %s!", r, aliasName, e)
 

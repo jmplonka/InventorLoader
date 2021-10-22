@@ -132,8 +132,7 @@ def _open(filename, skip = [], only = [], root = None):
 		doc.CreatedBy = getAuthor()
 		doc.LastModifiedBy = getLastModifiedBy()
 		doc.Comment = getComment()
-		# Create 3D-Model in root (None) of document
-		reader.create3dModel(None , doc)
+		reader.create3dModel(root , doc)
 		adjustView(doc)
 	releaseMemory()
 	return

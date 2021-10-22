@@ -6,7 +6,8 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerClasses        import AbstractData, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry, ParameterNode, AbstractValue
+from importerClasses        import AbstractData, AbstractValue, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry, ParameterNode
+from importerConstants      import REF_CHILD, REF_CROSS, REF_PARENT, VAL_UINT8, VAL_UINT16, VAL_UINT32, VAL_REF, VAL_STR8, VAL_STR16, VAL_ENUM
 from importerUtils          import *
 from math                   import log10, pi
 from importerTransformation import Transformation3D
@@ -15,20 +16,16 @@ __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-def isList(data, code):
-	return ((data[-1] == 0x3000) and (data[-2] == code))
-
-F_2010  = Struct('<fL').unpack_from
-APP_4_A = Struct('<LHLff').unpack_from
+F_2010   = Struct('<fL').unpack_from
+APP_4_A  = Struct('<LHLff').unpack_from
 APP_4_B1 = Struct('<ffHB').unpack_from
 APP_4_B2 = Struct('<ffHH').unpack_from
-APP_5_A = Struct('<ddL').unpack_from
-APP_5_B = Struct('<BBH').unpack_from
-MTM_LST = Struct('<LBL').unpack_from
+APP_5_A  = Struct('<ddL').unpack_from
+APP_5_B  = Struct('<BBH').unpack_from
+MTM_LST  = Struct('<LBL').unpack_from
 
-REF_PARENT = 1
-REF_CHILD  = 2
-REF_CROSS  = 3
+def isList(data, code):
+	return ((data[-1] == 0x3000) and (data[-2] == code))
 
 def CheckList(data, offset, type):
 	lst, i = getUInt16A(data, offset, 2)
@@ -231,129 +228,108 @@ class SecNode(AbstractData):
 
 	def ReadUInt8(self, offset, name):
 		x, i = getUInt8(self.data, offset)
-		self.set(name, x)
-		self.content += ' %s=%02X' %(name, x)
+		self.set(name, x, VAL_UINT8)
 		return i
 
 	def ReadUInt8A(self, offset, n, name):
 		x, i = getUInt8A(self.data, offset, n)
-		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, ",".join(["%02X" % h for h in x]))
+		self.set(name, x, VAL_UINT8)
 		return i
 
 	def ReadUInt16(self, offset, name):
 		x, i = getUInt16(self.data, offset)
-		self.set(name, x)
-		self.content += ' %s=%03X' %(name, x)
+		self.set(name, x, VAL_UINT16)
 		return i
 
 	def ReadUInt16A(self, offset, n, name):
 		x, i = getUInt16A(self.data, offset, n)
-		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, ",".join(["%03X" % h for h in x]))
+		self.set(name, x, VAL_UINT16)
 		return i
 
 	def ReadSInt16(self, offset, name):
 		x, i = getSInt16(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%d' %(name, x)
 		return i
 
 	def ReadSInt16A(self, offset, n, name):
 		x, i = getSInt16A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, ",".join(["%d" % d for d in x]))
 		return i
 
 	def ReadUInt32(self, offset, name):
 		x, i = getUInt32(self.data, offset)
-		self.set(name, x)
-		self.content += ' %s=%04X' %(name, x)
+		self.set(name, x, VAL_UINT32)
 		return i
 
 	def ReadUInt32A(self, offset, n, name):
 		x, i = getUInt32A(self.data, offset, n)
-		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, ",".join(["%04X" % h for h in x]))
+		self.set(name, x, VAL_UINT32)
 		return i
 
 	def ReadSInt32(self, offset, name):
 		x, i = getSInt32(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%d' %(name, x)
 		return i
 
 	def ReadSInt32A(self, offset, n, name):
 		x, i = getSInt32A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=[%s]' %(name, ",".join(["%d" % d for d in x]))
 		return i
 
 	def ReadFloat32(self, offset, name):
 		x, i = getFloat32(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%g' %(name, x)
 		return i
 
 	def ReadFloat32A(self, offset, n, name):
 		x, i = getFloat32A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=(%s)' %(name, ",".join(["%g" % g for g in x]))
 		return i
 
 	def ReadFloat32_2D(self, offset, name):
 		x, i = getFloat32_2D(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=(%g,%g)' %(name, x[0], x[1])
 		return i
 
 	def ReadFloat32_3D(self, offset, name):
 		x, i = getFloat32_3D(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=(%g,%g,%g)' %(name, x[0], x[1], x[1])
 		return i
 
 	def ReadFloat64(self, offset, name):
 		x, i = getFloat64(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%g' %(name, x)
 		return i
 
 	def ReadFloat64A(self, offset, n, name):
 		x, i = getFloat64A(self.data, offset, n)
 		self.set(name, x)
-		self.content += ' %s=(%s)' %(name, ",".join(["%g" % g for g in x]))
 		return i
 
 	def ReadFloat64_2D(self, offset, name):
 		v, i = getFloat64_2D(self.data, offset)
 		self.set(name, v)
-		self.content += ' %s=(%g,%g)' %(name, v.x, v.y)
 		return i
 
 	def ReadFloat64_3D(self, offset, name):
 		v, i = getFloat64_3D(self.data, offset)
 		self.set(name, v)
-		self.content += ' %s=(%g,%g,%g)' %(name, v.x, v.y, v.z)
 		return i
 
 	def ReadVec3D(self, offset, name, scale = 1.0):
 		v, i = getFloat64_3D(self.data, offset)
 		v *= scale
 		self.set(name, v)
-		self.content += ' %s=(%g,%g,%g)' %(name, v.x, v.y, v.z)
 		return i
 
 	def ReadUUID(self, offset, name):
 		x, i = getUUID(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s={%s}' %(name, x)
 		return i
 
 	def ReadColorRGBA(self, offset, name):
 		x, i = getColorRGBA(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%s' %(name, x)
 		i += getBlockSize()
 		return i
 
@@ -369,31 +345,32 @@ class SecNode(AbstractData):
 	def ReadBoolean(self, offset, name):
 		x, i = getBoolean(self.data, offset)
 		self.set(name, x)
-		self.content += ' %s=%s' %(name, x)
 		return i
 
-	def ReadEnum16(self, offset, name, enum):
+	def ReadEnum16(self, offset, name, enumName, enumValues):
 		index, i = getUInt16(self.data, offset)
-		e = enum[index]
-		if (name == 'name'):
-			self.name = e
-		else:
-			self.set(name, e)
-			self.content += ' %s=%s' %(name, e)
+		self.set('Enum', enumName, None)
+		self.set('Values', enumValues, None)
+		self.set(name, index, VAL_ENUM)
+		return i
+
+	def ReadEnum32(self, offset, name, enumName, enumValues):
+		index, i = getUInt32(self.data, offset)
+		self.set('Enum', enumName, None)
+		self.set('Values', enumValues, None)
+		self.set(name, index, VAL_ENUM)
 		return i
 
 	def ReadAngle(self, offset, name):
 		x, i = getFloat64(self.data, offset)
 		x = Angle(x, pi/180.0, u'\xb0')
 		self.set(name, x)
-		self.content += ' %s=%s' %(name, x)
 		return i
 
 	def ReadLen32Text8(self, offset, name = None):
 		x, i = getLen32Text8(self.data, offset)
 		if (name):
-			self.set(name, x)
-			self.content += u" %s='%s'" %(name, x)
+			self.set(name, x, VAL_STR8)
 		else:
 			self.name = x
 		return i
@@ -401,8 +378,7 @@ class SecNode(AbstractData):
 	def ReadText8(self, offset, l, name = None):
 		x, i = getText8(self.data, offset, l)
 		if (name):
-			self.set(name, x)
-			self.content += u" %s='%s'" %(name, x)
+			self.set(name, x, VAL_STR8)
 		else:
 			self.name = x
 		return i
@@ -410,8 +386,7 @@ class SecNode(AbstractData):
 	def ReadLen32Text16(self, offset, name = None):
 		x, i = getLen32Text16(self.data, offset)
 		if (name):
-			self.set(name, x)
-			self.content += u" %s='%s'" %(name, x)
+			self.set(name, x, VAL_STR16)
 		else:
 			self.name = x
 		return i
@@ -428,7 +403,7 @@ class SecNode(AbstractData):
 				self.references.append(ref)
 		else:
 			ref = None
-		self.set(name, ref)
+		self.set(name, ref, VAL_REF)
 		return i
 
 	def ReadChildRef(self, offset, name = 'ref', number = None):
@@ -440,14 +415,13 @@ class SecNode(AbstractData):
 	def ReadParentRef(self, offset):
 		return self.ReadNodeRef(offset, 'parent', None, REF_CROSS)
 
-	def __getListStrings(self, name, offset, cnt, mtd):
+	def __getListStrings(self, name, offset, cnt, mtd, cls):
 		lst = []
 		i   = offset
 		for j in range(cnt):
 			t, i = mtd(self.data, i)
 			lst.append(t)
-		self.content += u" %s=[%s]" %(name, ",".join([u"'%s'" %(t) for t in lst ]))
-		self.set(name, lst)
+		self.set(name, lst, cls)
 		return i
 
 	def __getList2Nums(self, name, offset, cnt, s, w, fmt, skipLen = True):
@@ -458,10 +432,6 @@ class SecNode(AbstractData):
 			val = Struct('<' + (s+'L')*cnt).unpack_from(self.data, offset)
 			i   = offset + (w+4)*cnt # 4Bytes float 4Byte blocklen
 			lst = val[0::2]
-		if (len(lst) > 100):
-			self.content += u" %s=[%s,...]" %(name, u",".join([fmt %(n) for n in lst]))
-		else:
-			self.content += u" %s=[%s]" %(name, u",".join([fmt %(n) for n in lst]))
 
 		self.set(name, lst)
 		return i
@@ -476,37 +446,16 @@ class SecNode(AbstractData):
 			lst = reshape([n for i, n in enumerate(val) if (i % (arraysize + 1)) != arraysize], arraysize)
 			i   = offset + (w * arraysize + 4) * cnt # w + 4Bytes for blocklen
 
-		if (arraysize == 1):
-			if (len(lst) > 100):
-				self.content += u" %s=[%s,...]" %(name, u",".join([fmt %(n) for n in lst[:100]]))
-			else:
-				self.content += u" %s=[%s]" %(name, u",".join([fmt %(n) for n in lst]))
-		elif (arraysize > 1):
-			if (len(lst) > 100):
-				self.content += u" %s=[%s,...]" %(name, u",".join([u",".join([u"[%s]" %(u",".join([fmt %(n) for n in a]))]) for a in lst[:100]]))
-			else:
-				self.content += u" %s=[%s]" %(name, u",".join([u",".join([u"[%s]" %(u",".join([fmt %(n) for n in a]))]) for a in lst] ) )
-		else:
-			if (len(lst[0]) > 100):
-				self.content += u" %s=[%s,...]" %(name, u",".join([fmt %(n) for n in lst[0][:100]]))
-			else:
-				self.content += u" %s=[%s]" %(name, u",".join([fmt %(n) for n in lst[0]]))
 		self.set(name, lst)
 		return i
 
 	def __getListListIntsA(self, name, typ, offset, cnt, arraysize, fmt):
 		lst = []
 		i   = offset
-		c   = self.content
 		for j in range(cnt):
 			i = self.ReadList2(i, typ, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
 		self.delete('lst_tmp')
-
-		if (arraysize == 1):
-			self.content = c + u" %s=[%s]" %(name, u",".join([u"(%s)" %(u",".join([fmt %(x) for x in l])) for l in lst[0]]))
-		else:
-			self.content = c + u" %s=[%s]" %(name, u",".join([u"(%s)" %(u",".join([u"[%s]" %(FloatArr2Str(x)) for x in l])) for l in lst]))
 
 		self.set(name, lst)
 		return i
@@ -514,15 +463,11 @@ class SecNode(AbstractData):
 	def __getListListFloatsA(self, name, typ, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		c   = self.content
 		for j in range(cnt):
 			i = self.ReadList2(i, typ, 'lst_tmp', arraysize)
 			lst.append(self.get('lst_tmp'))
 		self.delete('lst_tmp')
-		if (arraysize == 1):
-			self.content = c + u" %s={%s}" %(name, u",".join([u"(%s)" %(u",".join([u"%g" %(x) for x in l])) for l in lst]))
-		else:
-			self.content = c + u" %s={%s}" %(name, u",".join([u"(%s)" %(u",".join([u"[%s]" %(FloatArr2Str(x)) for x in l])) for l in lst]))
+
 		self.set(name, lst)
 		return i
 
@@ -530,12 +475,10 @@ class SecNode(AbstractData):
 		try:
 			t, i = getText8(self.data, offset, cnt)
 			self.set(name, t)
-			self.content += u" %s='%s'" %(name, t)
 			return i
 		except:
 			t, i = getUInt8A(self.data, offset, cnt)
-			self.set(name, t)
-			self.content += u" %s=%s" %(name, IntArr2Str(t, 2))
+			self.set(name, t, VAL_UINT8)
 			return offset+cnt
 
 	def getList2Childs(self, name, offset, cnt, arraysize):
@@ -544,7 +487,7 @@ class SecNode(AbstractData):
 		for j in range(cnt):
 			i = self.ReadChildRef(i, name, j)
 			lst.append(self.get(name))
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def getListXRefs(self, name, offset, cnt, arraysize):
@@ -553,14 +496,14 @@ class SecNode(AbstractData):
 		for j in range(cnt):
 			i = self.ReadCrossRef(i, name, j)
 			lst.append(self.get(name))
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def getListString8s(self, name, offset, cnt, arraysize):
-		return  self.__getListStrings(name, offset, cnt, getLen32Text8)
+		return  self.__getListStrings(name, offset, cnt, getLen32Text8, VAL_STR8)
 
 	def getListString16s(self, name, offset, cnt, arraysize):
-		return  self.__getListStrings(name, offset, cnt, getLen32Text16)
+		return  self.__getListStrings(name, offset, cnt, getLen32Text16, VAL_STR16)
 
 	def getListUInt8s(self, name, offset, cnt, arraysize):
 		return self.__getList2Nums(name, offset, cnt, 'B', 1, u"%02X")
@@ -632,7 +575,6 @@ class SecNode(AbstractData):
 			i += 11
 			lst.append(val)
 			i += skip
-		self.content += u" %s={%s}" %(name, u",".join([u"(%s)" %(l) for l in lst]))
 		self.set(name, lst)
 		return i
 
@@ -665,7 +607,6 @@ class SecNode(AbstractData):
 				val.a1 = vals[16:22]
 				val.a2 = vals[22:-1]
 				lst.append(val)
-		self.content += u" %s={%s}" %(name, u",".join([u"(%s)" %(l) for l in lst]))
 		self.set(name, lst)
 		return i
 
@@ -685,7 +626,6 @@ class SecNode(AbstractData):
 			else:
 				i += 24
 			lst.append(val)
-		self.content += u" %s={%s}" %(name, u",".join([u"(%g,%g,%06X,%02X,%02X,%02X,%02X)" %(a[0], a[1], a[2], a[3], a[4], a[5], a[6]) for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -714,7 +654,6 @@ class SecNode(AbstractData):
 			n3, i = getUInt32(self.data, i)
 			n4, i = getUInt8(self.data, i)
 			i += (skip + skip)
-			self.content += u"\n\t%d,'%s','%s',[%s],[%s],[%s],%04X,%s,%d,%X" %(n1, t1, t2, IntArr2Str(l1, 4), IntArr2Str(a1, 2), FloatArr2Str(l2), n2, c1, n3, n4)
 			lst.append((n1, t1, t2, l1, a1, l2, l3, n2, c1, n3, n4))
 		self.set(name, lst)
 		return i
@@ -722,20 +661,17 @@ class SecNode(AbstractData):
 	def getListApp3(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		c    = self.content
 		skip = getBlockSize()
 		for j in range(cnt):
 			n1, i = getUInt32(self.data, i)
 			t1, i = getLen32Text16(self.data, i)
 			t2, i = getLen32Text16(self.data, i)
-			c = self.content
-			i = self.ReadList2(i, _TYP_FLOAT64_, 'tmp')
-			l1 = self.get('tmp')
+			i = self.ReadList2(i, _TYP_FLOAT64_, '_tmp')
+			l1 = self.get('_tmp')
 			self.delete('_tmp')
 			n3, i = getUInt8(self.data, i)
 			i += skip
 			lst.append((n1, t1, t2, l1, n3))
-		self.content = c + u" %s={%s}" %(name, u",".join([u"(%d,'%s','%s',%s,%02X)" %(a[0], a[1], a[2], FloatArr2Str(a[3]), a[4]) for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -758,7 +694,6 @@ class SecNode(AbstractData):
 			i += block_size
 			lst.append((n1, n2,  n3,  f1, f2,  t1,  f3, f4, n4, n5))
 
-		self.content += u" %s={%s}" %(name, u",".join([u"(%d, %d, %04X, %g, %g, '%s', %g, %g, %03X, %02X)" %(a[0], a[1], a[2], a[3], a[4], a[5],  a[6], a[7], a[8], a[9]) for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -774,7 +709,6 @@ class SecNode(AbstractData):
 			i += 4
 			i += skip
 			lst.append((f1, f2, n1, n2,  n3,  n4))
-		self.content += u" %s={%s}" %(name, u",".join([u"(%g, %g, %04X, %02X, %02X, %03X)" %(a[0], a[1], a[2], a[3], a[4], a[5])for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -785,7 +719,6 @@ class SecNode(AbstractData):
 			nt, i  = getUInt32(self.data, i)
 			idx, i = getUInt32(self.data, i)
 			lst.append(NtEntry(nt, idx))
-		self.content += u" %s={%s}" %(name, u",".join([u"%r" %(e) for e in lst]))
 		self.set(name, lst)
 		return i
 
@@ -813,7 +746,7 @@ class SecNode(AbstractData):
 			b = self.get(name)
 			self.delete(name)
 			lst.append((a, b))
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def getListUInt16Colors(self, name, offset, cnt, arraysize):
@@ -837,7 +770,6 @@ class SecNode(AbstractData):
 			a += a2
 			a.append(c4)
 			lst.append(a)
-		self.content += u" %s={%s}" %(name, u",".join([u"(%02X,%r,%r,%r,%g,%g,%g,%g,%g,%g,%g,%g,%g,%r)" %tuple(t) for t in lst]))
 		self.set(name, lst)
 		return i
 
@@ -848,7 +780,6 @@ class SecNode(AbstractData):
 			t = Transformation3D()
 			i = t.read(self.data, i)
 			lst.append(t)
-		self.content += u" %s={%s}" %(name, u",".join([u"%r" %(t) for t in lst]))
 		self.set(name, lst)
 		return i
 
@@ -858,14 +789,12 @@ class SecNode(AbstractData):
 		for j in range(cnt):
 			u, i  = getUInt32A(self.data, i, 2)
 			lst.append(u)
-		self.content += u" %s={%s}" %(name, u",".join([u"(%d,%d)" %(u[0], u[1]) for u in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def getListResult1(self, name, offset, cnt, arraysize):
 		lst  = []
 		i    = offset
-		c    = self.content
 		skip = getBlockSize()
 		for j in range(cnt):
 			u1, i = getUInt32(self.data, i)
@@ -881,7 +810,6 @@ class SecNode(AbstractData):
 			a2, i = getFloat64_3D(self.data, i)
 			i += skip
 			lst.append((u1, l1, u2, u3, l2, a1, a2))
-		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s],%04X,%04X,[%s],(%g,%g,%g)-(%g,%g,%g))" %(a[0], IntArr2Str(a[1], 4), a[2], a[3], IntArr2Str(a[4], 4), a[5].x, a[5].y, a[5].z, a[6].x, a[6].y, a[6].z) for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -893,8 +821,7 @@ class SecNode(AbstractData):
 			d, i = getUInt32A(self.data, i, 2)
 			i += skip
 			lst.append(d)
-		self.content += u" %s={%s}" %(name, u",".join([u"[%04X,%04X]" %(a[0], a[1]) for a in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def getListResult3(self, name, offset, cnt, arraysize):
@@ -906,7 +833,6 @@ class SecNode(AbstractData):
 			d = RESULT_3(self.data, i)
 			i += 56 + skip
 			lst.append(d)
-		self.content += u" %s={%s}" %(name, u",".join([u"(%04X,%03X,%02X,%02X,(%g,%g,%g)-(%g,%g,%g))" %(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9]) for a in lst]))
 		self.set(name, lst)
 		return i
 
@@ -914,7 +840,6 @@ class SecNode(AbstractData):
 		lst  = []
 		i    = offset
 		skip = getBlockSize()
-		c    = self.content
 		for j in range(cnt):
 			u, i = getUInt32(self.data, i)
 			i = self.ReadList4(i, _TYP_UINT32_, name)
@@ -922,8 +847,7 @@ class SecNode(AbstractData):
 			l = self.get(name)
 			self.delete(name)
 			lst.append((u, l))
-		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,[%s])" %(a[0], IntArr2Str(a[1], 3)) for a in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def getListResult5(self, name, offset, cnt, arraysize):
@@ -931,7 +855,6 @@ class SecNode(AbstractData):
 		i     = offset
 		skip1 = getBlockSize()
 		skip2 = 1 if (getFileVersion() > 2017) else 0
-		c    = self.content
 		for j in range(cnt):
 			u1, i = getUInt32(self.data, i)
 			i += skip2 # skip 00
@@ -942,8 +865,7 @@ class SecNode(AbstractData):
 			l = self.get(name)
 			self.delete(name)
 			lst.append((u1, u2, u3, l))
-		self.content = u"%s %s={%s}" %(c, name, u",".join([u"(%04X,%03X,%04X,%s)" %(a[0], a[1], a[2], a[3]) for a in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def getListListUInt16sA(self, name, offset, cnt, arraysize):
@@ -967,13 +889,11 @@ class SecNode(AbstractData):
 	def getListListFonts(self, name, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		c   = self.content
 		for j in range(cnt):
 			tmp = u"%s[%02X][0]" %(name, j)
 			i = self.ReadList2(i, _TYP_FONT_, tmp, arraysize)
 			lst.append(self.get(tmp))
 			self.delete(tmp)
-		self.content = c + u" %s=(%s)" %(name, u",".join([u"(%s)" %(l) for l in lst]))
 		self.set(name, lst)
 		return i
 
@@ -997,13 +917,11 @@ class SecNode(AbstractData):
 	def getListListChars(self, name, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		s   = self.content
 		for j in range(cnt):
 			i = self.ReadList2(i, _TYP_CHAR_, 'tmp')
 			lst.append(self.get('tmp'))
 			self.delete('tmp')
 		self.set(name, lst)
-		self.content = s
 		return i
 
 	def getListResults(self, name, offset, cnt, arraysize):
@@ -1016,8 +934,7 @@ class SecNode(AbstractData):
 			r.a2, i = getFloat64_3D(self.data, i)
 			i += skip
 			lst.append(r)
-		self.set(name, list)
-		self.content += u" %s={%s}" %(name, u",".join([u"(%s)" %(r) for r in lst]))
+		self.set(name, list, VAL_UINT16)
 		return i
 
 	def __getArrayNodes(self, name, offset, cnt, typ):
@@ -1026,13 +943,12 @@ class SecNode(AbstractData):
 		for j in range(cnt):
 			i = self.ReadNodeRef(i, name, j, typ)
 			lst.append(self.get(name))
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def getArrayU32(self, name, offset, cnt):
 		lst, i = getUInt32A(self.data, offset, cnt)
-		self.content += u" %s=[%s]" %(name, u",".join([u"%04X" %(n) for n in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def getArrayRef(self, name, offset, cnt):
@@ -1080,8 +996,7 @@ class SecNode(AbstractData):
 			key, i = getUInt16(self.data, i)
 			val, i = getUInt16(self.data, i)
 			lst[key] = val
-		self.content += u" %s=[%s]" % (name, u",".join([u"[%03X:%03X]" %(key, lst[key]) for key in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT16)
 		return i
 
 	def	getMapU16XRef(self, name, offset, cnt):
@@ -1091,7 +1006,7 @@ class SecNode(AbstractData):
 			key, i = getUInt16(self.data, i)
 			i = self.ReadCrossRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapU32U8(self, name, offset, cnt):
@@ -1101,8 +1016,7 @@ class SecNode(AbstractData):
 			key, i = getUInt32(self.data, i)
 			val, i = getUInt8(self.data, i)
 			lst[key] = val
-		self.content += u" %s=[%s]" % (name, u",".join([u"[%04X:%02X]" %(key, lst[key]) for key in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT8)
 		return i
 
 	def	getMapU32U32(self, name, offset, cnt):
@@ -1112,8 +1026,7 @@ class SecNode(AbstractData):
 			key, i = getUInt32(self.data, i)
 			val, i = getUInt32(self.data, i)
 			lst[key] = val
-		self.content += u" %s=[%s]" % (name, u",".join([u"[%04X:%04X]" %(key, lst[key]) for key in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def	getMapU32F64(self, name, offset, cnt):
@@ -1123,7 +1036,6 @@ class SecNode(AbstractData):
 			key, i = getUInt32(self.data, i)
 			val, i = getFloat64(self.data, i)
 			lst[key] = val
-		self.content += u" %s=[%s]" % (name, u",".join([u"[%04X:%g]" %(key, lst[key]) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -1134,7 +1046,7 @@ class SecNode(AbstractData):
 			key, i = getUInt32(self.data, i)
 			i = self.ReadChildRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapU32XRef(self, name, offset, cnt):
@@ -1144,7 +1056,7 @@ class SecNode(AbstractData):
 			key, i = getUInt32(self.data, i)
 			i = self.ReadCrossRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapRefRef(self, name, offset, cnt):
@@ -1155,7 +1067,7 @@ class SecNode(AbstractData):
 			key = self.get(name)
 			i = self.ReadChildRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapXRefRef(self, name, offset, cnt):
@@ -1166,7 +1078,7 @@ class SecNode(AbstractData):
 			key = self.get(name)
 			i = self.ReadChildRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapXRefXRef(self, name, offset, cnt):
@@ -1177,7 +1089,7 @@ class SecNode(AbstractData):
 			key = self.get(name)
 			i = self.ReadCrossRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapXRefU2D(self, name, offset, cnt):
@@ -1188,8 +1100,7 @@ class SecNode(AbstractData):
 			key = self.get(name)
 			val, i = getUInt32A(self.data, i, 2)
 			lst[key] = val
-		self.content += u" %s=[%s]" % (name, u",".join([u"[%s:(%s)]" %(key, IntArr2Str(lst[key], 4)) for key in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def	getMapXRefF64(self, name, offset, cnt):
@@ -1200,30 +1111,24 @@ class SecNode(AbstractData):
 			key = self.get(name)
 			val, i = getFloat64(self.data, i)
 			lst[key] = val
-		self.content += u" %s=[%s]" % (name, u",".join([u"[%s: %g]" %(key, lst[key]) for key in lst]))
 		self.set(name, lst)
 		return i
 
 	def	getMapU32XRefL(self, name, offset, cnt):
 		lst = {}
 		i   = offset
-		c = self.content
-		self.content = u""
 		for j in range(cnt):
 			key, i = getUInt32(self.data, i)
 			tmp = u"%s[%04X]" %(name, key)
 			i = self.ReadList2(i, _TYP_NODE_X_REF_, tmp)
 			lst[key] = self.get(tmp)
 			self.delete(tmp)
-		self.content = c + u" %s=[%s]" % (name, u",".join([u"[%s: (%s)]" %(key, u"),(".join([u"%s" %(getIndex(h)) for h in lst[key]])) for key in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapXRefXRefL(self, name, offset, cnt):
 		lst = {}
 		i   = offset
-		c = self.content
-		self.content = u""
 		for j in range(cnt):
 			i = self.ReadCrossRef(i, name, j)
 			key = self.get(name)
@@ -1232,8 +1137,7 @@ class SecNode(AbstractData):
 			i = self.ReadList2(i, _TYP_NODE_X_REF_, tmp)
 			lst[key] = self.get(tmp)
 			self.delete(tmp)
-		self.content = c + u" %s=[%s]" % (name, u",".join([u"[%s: (%s)]" %(getIndex(key), u"),(".join([u"%s" %(getIndex(h)) for h in lst[key]])) for key in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapUidU32(self, name, offset, cnt):
@@ -1243,8 +1147,7 @@ class SecNode(AbstractData):
 			key, i = getUUID(self.data, i)
 			val, i = getUInt32(self.data, i)
 			lst[key] = val
-		self.content += u" %s={%s}" %(name, u",".join([u"[{%s}:%04X]" %(key, lst[key]) for key in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def	getMapUidCRef(self, name, offset, cnt):
@@ -1254,7 +1157,7 @@ class SecNode(AbstractData):
 			key, i = getUUID(self.data, i)
 			i = self.ReadChildRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapUidXRef(self, name, offset, cnt):
@@ -1264,7 +1167,7 @@ class SecNode(AbstractData):
 			key, i = getUUID(self.data, i)
 			i = self.ReadCrossRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapT8Ref(self, name, offset, cnt):
@@ -1274,7 +1177,7 @@ class SecNode(AbstractData):
 			key, i = getLen32Text8(self.data, i)
 			i = self.ReadChildRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapT8XRef(self, name, offset, cnt):
@@ -1284,7 +1187,7 @@ class SecNode(AbstractData):
 			key, i = getLen32Text8(self.data, i)
 			i = self.ReadCrossRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapT83dF64(self, name, offset, cnt):
@@ -1294,7 +1197,6 @@ class SecNode(AbstractData):
 			key, i = getLen32Text8(self.data, i)
 			val, i = getFloat32_3D(self.data, i)
 			lst[key] = val
-		self.content += u" %s={%s}" %(name, u",".join([u"'%s':%g,%g,%g]" %(key, lst[key][0], lst[key][1], lst[key][2]) for key in lst]))
 		self.set(name, lst)
 		return i
 
@@ -1305,7 +1207,7 @@ class SecNode(AbstractData):
 			key, i = getLen32Text16(self.data, i)
 			i = self.ReadChildRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapT16XRef(self, name, offset, cnt):
@@ -1315,7 +1217,7 @@ class SecNode(AbstractData):
 			key, i = getLen32Text16(self.data, i)
 			i = self.ReadCrossRef(i, name, key)
 			lst[key] = self.get(name)
-		self.set(name, lst)
+		self.set(name, lst, VAL_REF)
 		return i
 
 	def	getMapT16U32(self, name, offset, cnt):
@@ -1325,15 +1227,12 @@ class SecNode(AbstractData):
 			key, i = getLen32Text16(self.data, i)
 			val, i = getUInt32(self.data, i)
 			lst[key] = val
-		self.content += u" %s={%s}" %(name, u",".join([u"'%s':%04X" %(key, lst[key]) for key in lst]))
-		self.set(name, lst)
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def	getMapMdlTxnMgr(self, name, offset, cnt):
 		lst = []
 		i   = offset
-		c = self.content
-		self.content = u""
 		skip = getBlockSize()
 		for j in range(cnt):
 			val = ModelerTxnMgr()
@@ -1344,7 +1243,6 @@ class SecNode(AbstractData):
 			val.lst = self.get('tmp')
 			self.delete('tmp')
 			lst.append(val)
-		self.content = c + u" %s=[%s]" % (name, u",".join([u"[(%s)]" %(val) for val in lst]))
 		self.set(name, lst)
 		return i
 
@@ -1371,18 +1269,16 @@ class SecNode(AbstractData):
 			i = self.ReadList6(i, _TYP_MAP_KEY_APP_1_, name)
 			m = self.get(name)
 			lst[key] = (u, m)
-		self.content += u" %s={%s}" %(name, ",".join([u"(%04X:%r" %(key, val) for key, val in lst.items()]))
 		return i
 
 	def getMapTxt16UInt32_7(self, name, offset, cnt):
 		lst = {}
 		i   = offset
-		self.set(name, lst)
 		for j in range(cnt):
 			key, i = getLen32Text16(self.data, i)
 			a, i = getUInt32A(self.data, i, 7)
 			lst[key] = a
-		self.content += u" %s={%s}" %(name, ",".join([u"('%s':[%03X,%03X,%03X,%03X,%03X,%03X,%03X])" %(key, a[0], a[1], a[2], a[3], a[4], a[5], a[6]) for key, a in lst.items()]))
+		self.set(name, lst, VAL_UINT32)
 		return i
 
 	def ReadList2(self, offset, typ, name, arraySize = 1):
@@ -1415,7 +1311,7 @@ class SecNode(AbstractData):
 		i += getBlockSize()
 
 		hdr = Header0(u32_0, u16_0)
-		self.set('hdr', hdr)
+		self.set('hdr', hdr, None)
 		if (typeName is not None): self.typeName = typeName
 
 		return i
@@ -1595,7 +1491,7 @@ class SecNodeRef(object):
 		return None
 
 	def set(self, name, value):
-		if (self._data): self._data.set(name, value)
+		if (self._data): self._data.set(name, value, None)
 
 	@property
 	def geometry(self):

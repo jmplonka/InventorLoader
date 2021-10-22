@@ -9,6 +9,7 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 from importerSegment    import checkReadAll
 from importer_NameTable import NameTableReader
 from importerUtils      import *
+from importerConstants  import VAL_UINT32
 import importerSegNode
 
 __author__     = 'Jens M. Plonka'
@@ -25,8 +26,7 @@ class EeDataReader(NameTableReader):
 		for j in range(cnt):
 			a, i = getUInt32A(node.data, i, 3) # list-index, ASM-ref, number
 			lst.append(a)
-		node.content += u" lst0=[%s]" %(u",".join([u"(%02X,%03X,%04X)" % (a[0], a[1], a[2]) for an in lst]))
-		node.set('lst0', lst)
+		node.set('lst0', lst, VAL_UINT32)
 		return i
 
 	def Read_4E75F025(self, node):

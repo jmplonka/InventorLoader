@@ -11,7 +11,8 @@ from importerSegment        import checkReadAll
 from importerEeScene        import EeSceneReader
 from importerTransformation import Transformation3D
 from importerUtils          import *
-from math import fabs
+from importerConstants      import VAL_UINT8, VAL_UINT16, VAL_UINT32, VAL_REF
+from math                   import fabs
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -101,7 +102,6 @@ class GraphicsReader(EeSceneReader):
 		if (self.version > 2018):
 			i = node.ReadSInt32(i, 's32_1')
 		else:
-			node.content += ' s32_1=-1'
 			node.set('s32_1', -1)
 		return i
 
@@ -188,7 +188,7 @@ class GraphicsReader(EeSceneReader):
 			node.set('txt0', '')
 			node.set('txt1', '')
 		else:
-			node.set('a2', (0,0,0,0,0))
+			node.set('a2', (0,0,0,0,0), VAL_UINT16)
 			i = node.ReadLen32Text16(i, 'txt0')
 			i = node.ReadLen32Text16(i, 'txt1')
 
@@ -197,10 +197,9 @@ class GraphicsReader(EeSceneReader):
 			i = node.ReadFloat64(i, 'f64_0')
 			i = node.ReadUInt8(i, 'u8_1')
 		else:
-			node.set('a3', [0, 0, 0])
+			node.set('a3', (0,0,0), VAL_UINT32)
 			node.set('f64_0', 0.0)
-			node.set('u8_1', 0)
-			node.content += u" a3=[0000,0000,0000] f64_0=0.0 u8_1=0"
+			node.set('u8_1', 0, VAL_UINT8)
 #			i = node.ReadLen32Text16(i, 'txt2')
 		return i
 
@@ -231,7 +230,6 @@ class GraphicsReader(EeSceneReader):
 		if (self.version > 2017):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		else:
-			node.content += u" lst0={}"
 			node.set('lst0', [])
 		return i
 
@@ -282,7 +280,6 @@ class GraphicsReader(EeSceneReader):
 		if (self.version > 2017):
 			i = node.ReadList2(i, importerSegNode._TYP_SINT32_, 'lst1')
 		else:
-			node.content += u" lst1=[]"
 			node.set('lst1', [])
 		return i
 
@@ -354,8 +351,7 @@ class GraphicsReader(EeSceneReader):
 			lst = []
 			u32, i = getUInt32(node.data, i)
 			lst.append(u32)
-			node.set('lst0', lst)
-			node.content += u" lst0=[%04X]" %(u32)
+			node.set('lst0', lst, VAL_UINT32)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 2, 'a2')
 		i = node.ReadColorRGBA(i,  'Color.c0')
@@ -574,7 +570,6 @@ class GraphicsReader(EeSceneReader):
 		i = self.ReadHeaderAttribute(node)
 		a = Struct('<ffffhfhhfffBLLL').unpack_from(node.data, i)
 		i += 47
-		node.content += u" a0=(%g,%g,%g,%g,%03X,%g,%03X,%03X,%g,%g,%g,%02X,%04X,%04X,%04X)" %a
 		node.set('a0', a)
 		return i
 
@@ -620,8 +615,7 @@ class GraphicsReader(EeSceneReader):
 		else:
 			cnt, i = getUInt32(node.data, i)
 			lst3, i = getUInt8A(node.data, i, cnt)
-			node.content += " lst3=[%s]" %(','.join('%04X' %(n) for n in lst3))
-			node.set('lst3', lst3)
+			node.set('lst3', lst3, VAL_UINT8)
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadFloat64(i, 'f0')
 		return i
@@ -659,7 +653,6 @@ class GraphicsReader(EeSceneReader):
 		i = self.Read_ColorAttr(i, node)
 		i = self.skipBlockSize(i)
 		a1 = Struct('<HfHh').unpack_from(node.data, i)
-		node.content += " a1=[%03X,%g,%03X,%d]" %(a1[0], a1[1], a1[2], a1[3])
 		i += 10
 		node.set('a1', a1)
 		i = node.ReadUInt8(i, 'u8_1')
@@ -677,7 +670,6 @@ class GraphicsReader(EeSceneReader):
 		i = self.Read_ColorAttr(i, node)
 		i = self.skipBlockSize(i)
 		a1 = Struct('<HfHh').unpack_from(node.data, i)
-		node.content += " a1=[%03X,%g,%03X,%d]" %(a1[0], a1[1], a1[2], a1[3])
 		i += 10
 		node.set('a1', a1)
 		i = node.ReadUInt8(i, 'u8_1')
@@ -693,8 +685,7 @@ class GraphicsReader(EeSceneReader):
 		if (self.version < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
 		a = Struct('<LHLLLLL').unpack_from(node.data, i)
 		i += 26
-		node.content += u" a1=[%04X,%03X,%04X,%04X,%04X,%04X,%04X]" %a
-		node.set('a1', a)
+		node.set('a1', a, VAL_UINT32)
 		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
 		i = node.ReadFloat64_2D(i, 'a2')
 		i = self.ReadTransformation3D(node, i)
@@ -718,7 +709,7 @@ class GraphicsReader(EeSceneReader):
 		if (self.version > 2013):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
 		else:
-			node.set('lst1', [])
+			node.set('lst1', [], VAL_REF)
 		return i
 
 	def Read_B9D0D007(self, node): # Assembly
@@ -809,7 +800,7 @@ class GraphicsReader(EeSceneReader):
 		if (self.version > 2013):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
 		else:
-			node.set('lst1', [])
+			node.set('lst1', [], VAL_REF)
 		return i
 
 	def Read_9A676A50(self, node): # Body
@@ -911,7 +902,7 @@ class GraphicsReader(EeSceneReader):
 		if (self.version > 2013):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
 		else:
-			node.set('lst1', [])
+			node.set('lst1', [], VAL_REF)
 		return i
 
 	def Read_DEF9AD03(self, node): # MeshTriangleIndices
@@ -921,7 +912,7 @@ class GraphicsReader(EeSceneReader):
 		if (self.version > 2013):
 			i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'lst1')
 		else:
-			node.set('lst1', [])
+			node.set('lst1', [], VAL_REF)
 		return i
 
 	def Read_EF1E3BE5(self, node):
@@ -971,8 +962,7 @@ class GraphicsReader(EeSceneReader):
 		i = node.ReadFloat64A(i, 6, 'box') # bounding box
 		a = Struct('<dHHH').unpack_from(node.data, i)
 		i += 8+6
-		node.content += u" a0=(%g,%03X,%03X,%03X)" %a
-		node.set('a1', a)
+		node.set('a0', a, VAL_UINT16)
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'outlines')
 		i = node.ReadList2(i, importerSegNode._TYP_TRANSFORMATIONS_, 'transformations')
 		return i
@@ -1006,7 +996,6 @@ class GraphicsReader(EeSceneReader):
 		if (node.get('u32_1') == 1):
 			i = node.ReadFloat64A(i, 6, 'a2')
 		else:
-			node.content += ' a2=()'
 			node.set('a2', (0.,0.,0.,0.,0.,0.))
 		cnt, i = getUInt32(node.data, i)
 		i = self.ReadFloat64A(node, i, cnt, 'a3', 3)

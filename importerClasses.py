@@ -6,11 +6,12 @@ Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) fil
 '''
 
 import sys, os, Part
-from importerUtils import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, isEqual, isEqual1D
-from math          import degrees, radians, pi
-from FreeCAD       import Vector as VEC
-from PySide.QtCore import *
-from PySide.QtGui  import *
+from importerUtils     import IntArr2Str, FloatArr2Str, logWarning, logError, getInventorFile, getUInt16, getUInt16A, isEqual, isEqual1D, UID, Color
+from math              import degrees, radians, pi
+from FreeCAD           import Vector as VEC
+from PySide.QtCore     import *
+from PySide.QtGui      import *
+from importerConstants import VAL_GUESS, VAL_UINT8, VAL_UINT16, VAL_UINT32, VAL_STR8, VAL_STR16, VAL_REF, VAL_ENUM
 
 __author__     = "Jens M. Plonka"
 __copyright__  = 'Copyright 2018, Germany'
@@ -669,8 +670,8 @@ class DataNode(object):
 		if (self.data): return self.data.get(name)
 		return None
 
-	def set(self, name, value):
-		if (self.data): self.data.set(name, value)
+	def set(self, name, value, cls = VAL_GUESS):
+		if (self.data): self.data.set(name, value, cls)
 
 	def getSegment(self):
 		if (self.data): return self.data.segment
@@ -1577,7 +1578,6 @@ class AbstractData(object):
 		self.uid          = None
 		self.name         = None
 		self.index        = -1
-		self.content      = ''
 		self.references   = []
 		self.properties   = {}
 		self.size         = 0
@@ -1591,14 +1591,52 @@ class AbstractData(object):
 		self.handled      = False
 		self.node         = None
 
-	def set(self, name, value):
+	def __content__(self, name, value, cls):
+		if cls is None: return ''
+		result = ''
+		if (cls == VAL_REF): return result  # will be handled later!
+		if (name): result = '%s=' %(name)
+
+		if (type(value) == float):             return '%s%g'     %(result, value)
+		if (type(value) == bool):              return '%s%s'     %(result, value)
+		if (isinstance(value, Color)):         return '%s%s'     %(result, value)
+		if (isinstance(value, UID)):           return '%s{%s}'   %(result, value)
+		if (isinstance(value, AbstractValue)): return '%s%s'     %(result, value.toStandard())
+		if (type(value) == tuple):             return '%s(%s)'   %(result, ",".join([self.__content__(None, v, cls) for v in value]))
+		if (type(value) == list):              return '%s[%s]'   %(result, ",".join([self.__content__(None, v, cls) for v in value]))
+		if (type(value) == dict):              return '%s{%s}'   %(result, ",".join(["%s:%s" %(self.__content__(None, n, cls), self.__content__(None, v, cls)) for n, v in value.items()]))
+		if (cls == VAL_ENUM):
+			values = self.get('Values')
+			try:
+				return '%s%s'     %(result, values[value])
+			except:
+				return '%s%s'     %(result, value)
+		if (type(value) == str):
+			if (cls == VAL_STR8):   return '%s\'%s\'' %(result, value)
+			return '%s"%s"' %(result, value)
+		if (type(value) == int):
+			if (cls == VAL_ENUM):   return '%s%d'     %(result, value)
+			if (cls == VAL_UINT8):  return '%s%02X'   %(result, value)
+			if (cls == VAL_UINT16): return '%s%03X'   %(result, value)
+			if (cls == VAL_UINT32): return '%s%04X'   %(result, value)
+			return '%s%d'     %(result, value)
+		return '%s%s' %(result, value)
+
+	@property
+	def content(self):
+		result = " ".join([self.__content__(n, p[0], p[1]) for n, p in self.properties.items()])
+		if (len(self.data) > 0):
+			result += " aX=(%s)" %(" ".join(["%02X"%(c) for c in self.data]))
+		return result
+
+	def set(self, name, value, cls = VAL_GUESS):
 		'''
 		Sets the value for the property name.
 		name:  The name of the property.
 		value: The value of the property.
 		'''
 		if (name):
-			self.properties[name] = value
+			self.properties[name] = (value, cls)
 
 	def get(self, name):
 		'''
@@ -1606,7 +1644,7 @@ class AbstractData(object):
 		name: The name of the property.
 		Returns None if the property is not yet set.
 		'''
-		return self.properties.get(name)
+		return self.properties.get(name, (None, None))[0]
 
 	def delete(self, name):
 		'''

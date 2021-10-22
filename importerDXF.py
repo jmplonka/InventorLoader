@@ -2,7 +2,7 @@
 
 import io, os, Acis, importerSAT
 
-from importerUtils import setDumpFolder, getDumpFolder, chooseImportStrategyAcis, STRATEGY_SAT
+from importerUtils import setDumpFolder, getDumpFolder, chooseImportStrategyAcis, STRATEGY_SAT, STRATEGY_STEP, STRATEGY_NATIVE
 from dxfgrabber    import readfile
 from importerSAT   import dumpSat, importModel, convertModel
 from Acis          import setReader, setVersion, AcisReader
@@ -43,9 +43,9 @@ def create3dModel(group, doc):
 	strategy = chooseImportStrategyAcis()
 	for reader in _3dSolids:
 		setReader(reader)
-		if (strategy == STRATEGY_SAT):
+		if (strategy in (STRATEGY_SAT, STRATEGY_NATIVE)):
 			importModel(group)
-		else:
+		elif (strategy == STRATEGY_STEP):
 			convertModel(group, doc.Name)
 		satFile = _getSatFileName(reader.name)
 		if (not os.path.exists(satFile)):

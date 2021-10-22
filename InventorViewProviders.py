@@ -12,11 +12,14 @@ from importerClasses import ParameterTableModel, VariantTableModel
 from math            import degrees, radians, pi, sqrt, cos, sin, atan
 from PySide.QtCore   import *
 from PySide.QtGui    import *
+from importerConstants import DIR_X, DIR_Y, DIR_Z
 
 INVALID_NAME   = re.compile('^[0-9].*')
+
 SKIPPABLE_OBJECTS = [
 	'Spreadsheet::Sheet'
 ]
+
 XPR_PROPERTIES = {
 	'App::PropertyInteger' : u'',
 	'App::PropertyFloat'   : u'',
@@ -26,17 +29,15 @@ XPR_PROPERTIES = {
 	'App::PropertyLength'  : u'mm',
 	'App::PropertyPercent' : u'%',
 }
+
 DIM_CONSTRAINTS = {
 	'Angle'    : u'°',
 	'Distance' : u'mm',
 	'DistanceX': u'mm',
 	'DistanceY': u'mm',
 	'Radius'   : u'mm',
+	'Diameter' : u'mm',
 }
-
-DIR_X = VEC(1.0, 0.0, 0.0)
-DIR_Y = VEC(0.0, 1.0, 0.0)
-DIR_Z = VEC(0.0, 0.0, 1.0)
 
 def createPartFeature(doctype, name):
 	fp = FreeCAD.ActiveDocument.addObject(doctype, getObjectName(name))

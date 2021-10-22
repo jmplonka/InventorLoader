@@ -1,45 +1,21 @@
 # -*- coding: utf-8 -*-
 
-from importerUtils   import *
-from datetime        import datetime
-from importerSAT     import dumpSat, importModel, convertModel, buildBody, resolveNodes
-from Acis2Step       import export
-from zipfile         import is_zipfile, ZipFile
-from FreeCAD         import ParamGet
-from Acis            import AcisReader
-from importerFreeCAD import createGroup
-from ImportGui       import insert
-
+from importerUtils     import *
+from datetime          import datetime
+from importerSAT       import dumpSat, importModel, convertModel, buildBody, resolveNodes
+from Acis2Step         import export
+from zipfile           import is_zipfile, ZipFile
+from FreeCAD           import ParamGet
+from Acis              import AcisReader
+from importerFreeCAD   import createGroup
+from ImportGui         import insert
+from importerConstants import REF_CHILD, REF_CROSS, REF_PARENT
+from importerConstants import VAL_DATETIME, VAL_ENUM, VAL_GUESS, VAL_REF, VAL_STR8, VAL_STR16, VAL_UINT8, VAL_UINT16, VAL_UINT32, VAL_UINT64, VAL_FORMAT
 import traceback
 
 smb_files = []
-bulk_data = (None, None)
+bulk_data = None
 meta_data = None
-
-REF_CROSS  = 1
-REF_CHILD  = 2
-REF_PARENT = 3
-
-VAL_GUESS    = 0
-VAL_UINT8    = 1
-VAL_UINT16   = 2
-VAL_UINT32   = 3
-VAL_UINT64   = 4
-VAL_FLOAT    = 5
-VAL_REF      = 6
-VAL_STR8     = 8
-VAL_STR16    = 9
-VAL_DATETIME = 10
-VAL_FORMAT = {
-	VAL_UINT8 : '%02X',
-	VAL_UINT16: '%03X',
-	VAL_UINT32: '%04X',
-	VAL_UINT64: '%05X',
-	VAL_FLOAT : '%g',
-	VAL_DATETIME: '\'%s\'',
-	VAL_STR8  : '\'%s\'',
-	VAL_STR16 : '"%s"',
-	}
 
 CONSTRAINT_TXPE = {
 	0x00000000001: 'Coincident',
@@ -203,8 +179,8 @@ def convertModel(docName):
 
 def create3dModel(root, doc):
 	strategy = chooseImportStrategyAcis()
-	if (strategy == STRATEGY_SAT):
+	if (strategy in (STRATEGY_SAT, STRATEGY_NATIVE)):
 		importModel(root)
-	else:
+	elif (strategy == STRATEGY_STEP):
 		convertModel(doc.Name)
 	return

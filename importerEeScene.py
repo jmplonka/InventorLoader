@@ -6,8 +6,9 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importer_Style import StyleReader
-from importerUtils  import *
+from importer_Style    import StyleReader
+from importerUtils     import *
+from importerConstants import VAL_REF
 import importerSegNode
 
 __author__     = 'Jens M. Plonka'
@@ -385,7 +386,7 @@ class EeSceneReader(StyleReader):
 			r = node.get('ref')
 			node.delete('ref')
 			lst.append((u,r))
-		node.set('lst1', lst)
+		node.set('lst1', lst, VAL_REF)
 		return i
 
 	####################

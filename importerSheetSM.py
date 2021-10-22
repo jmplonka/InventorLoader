@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 
-from importerSegment import SegmentReader
-from importerUtils import *
+from importerSegment   import SegmentReader
+from importerUtils     import *
+from importerConstants import VAL_UINT16, VAL_UINT32
 
 import importerSegNode
 
@@ -339,8 +339,7 @@ class SheetSmReader(SegmentReader):
 			u, i = getUInt16(node.data, i)
 		else:
 			u, i = getUInt32(node.data, i)
-		node.content += u" u16_0=%03X" %(u)
-		node.set('u16_0', u)
+		node.set('u16_0', u, VAL_UINT16)
 		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0')
 		if (self.version < 2019):
 			i += 2 # skip U16
@@ -705,7 +704,7 @@ class SheetSmReader(SegmentReader):
 			b, i = getUInt32A(node.data, i, c) # RGBA color information
 			a.append(b)
 			r -= 1
-		node.set('a1', a)
+		node.set('a1', a, VAL_UINT32)
 		i = node.ReadUInt16A(i, 3, 'a2')
 		return i
 

@@ -4,6 +4,7 @@ import importerSegNode
 
 from importerSegment import SegmentReader
 from importerUtils   import *
+from importerClasses import AbstractData
 
 '''
 importer_Style.py:
@@ -188,7 +189,6 @@ class StyleReader(SegmentReader):
 			u, i = getUInt32(node.data, i)
 			f, i = getFloat32(node.data, i)
 			a1.append((u, f))
-		node.content += u" a1=[%s]" %(u",".join(["(%04X,%g)" %(x[0], x[1]) for x in a1]))
 		node.set('a1', a1)
 		i = node.ReadFloat32_3D(i, 'a2')
 		i = self.skipBlockSize(i)

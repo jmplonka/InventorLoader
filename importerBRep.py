@@ -10,6 +10,7 @@ from importerSegNode    import _TYP_UINT32_, _TYP_UINT32_A_, _TYP_NODE_REF_, _TY
 from importerSegment    import checkReadAll
 from importer_NameTable import NameTableReader
 from importerUtils      import *
+from importerConstants  import VAL_UINT16
 import importerSegNode
 
 __author__     = "Jens M. Plonka"
@@ -43,7 +44,6 @@ class BRepReader(NameTableReader):
 			a = s(node.data, i)
 			i += 38
 			lst.append(a)
-		node.content += u" a1=[%s]" %(",".join("(%03X,%03X,%1X,%02X,%g,%02X,%02X,%02X%1X,%g,%02X,%02X)" %a for a in lst))
 		node.set('a1', lst)
 		return i
 
@@ -209,7 +209,6 @@ class BRepReader(NameTableReader):
 			a = s(node.data, i)
 			i += 16
 			lst.append(a)
-		node.content += " a2=[%s]" %(",".join(["(%04X,%04X,%g)" %(a[0], a[1], a[2]) for a in lst]))
 		node.set('a2', lst)
 		cnt, i = getUInt32(node.data, i)
 		lst = []
@@ -218,7 +217,6 @@ class BRepReader(NameTableReader):
 			t, i = getLen32Text8(node.data, i)
 			a, i = getFloat64A(node.data, i, 6)
 			lst.append((j, t, a))
-		node.content += " a3=[%s]" %(",".join(["(%04X,'%s',(%g,%g,%g),(%g,%g,%g))" %(a[0], a[1], a[2][0], a[2][1], a[2][2], a[2][3], a[2][4], a[2][5]) for a in lst]))
 		node.set('a3', lst)
 		return i
 
@@ -257,8 +255,7 @@ class BRepReader(NameTableReader):
 		for k in range(cnt):
 			a, i = getUInt16(node.data, i)
 			lst.append(a)
-		node.content += u" a0=[%s]" %(','.join(["%03X"%(a) for a in lst]))
-		node.set('a0', lst)
+		node.set('a0', lst, VAL_UINT16)
 		i = node.ReadUInt32(i, 'u32_2')
 		i = node.ReadUInt16(i, 'u16_2')
 		i = node.ReadBoolean(i, 'b0')

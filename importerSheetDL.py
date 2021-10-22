@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from importerSegment import SegmentReader
-from importerUtils   import *
+from importerSegment   import SegmentReader
+from importerUtils     import *
+from importerConstants import VAL_UINT32
 import importerSegNode
 
 __author__      = 'Jens M. Plonka'
@@ -141,15 +142,11 @@ class SheetDlReader(SegmentReader):
 			if (b):
 				e, i = self.ReadEdge(node, i)
 				node.set('e', e)
-		if (e):
-			node.content += u" s32_0=%s s32_1=%s u32_1=%04X u32_2=%04X u32_3=%04X a0=(%g,%g) e=%s" %(s0, s1, u1, u2, u3, a0[0], a0[1], e)
-		else:
-			node.content += u" s32_0=%s s32_1=%s u32_1=%04X u32_2=%04X u32_3=%04X a0=(%g,%g)" %(s0, s1, u1, u2, u3, a0[0], a0[1])
 		node.set('s32_0', s0)
 		node.set('s32_1', s1)
-		node.set('u32_1', u1)
-		node.set('u32_2', u2)
-		node.set('u32_3', u3)
+		node.set('u32_1', u1, VAL_UINT32)
+		node.set('u32_2', u2, VAL_UINT32)
+		node.set('u32_3', u3, VAL_UINT32)
 		node.set('a0', a0)
 		return i
 
@@ -255,11 +252,10 @@ class SheetDlReader(SegmentReader):
 		node.set('b0', b0)
 		node.set('b1', b1)
 		node.set('b2', b2)
-		node.set('u32_0', u0)
+		node.set('u32_0', u0, VAL_UINT32)
 		node.set('a0', a0)
 		node.set('a1', a1)
 		node.set('a2', a2)
-		node.content += u" b0=%s b1=%s b2=%s u32_0=%04X a0=(%g,%g,%g) a1=(%g,%g,%g) a2=(%g,%g,%g)" %(b0, b1, b2, u0, a0[0], a0[1], a0[2], a1[0], a1[1], a1[2], a2[0], a2[1], a2[2])
 		i = node.ReadList2(i, importerSegNode._TYP_SINT32_A_, 'lst0', 2)
 		return i
 

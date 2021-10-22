@@ -7,7 +7,7 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 '''
 
 from importerSegment import SegmentReader, checkReadAll
-from importerClasses import ResultItem4
+from importerClasses import ResultItem4, AbstractData
 from importerUtils   import *
 import importerSegNode
 
@@ -34,11 +34,9 @@ class ResultReader(SegmentReader):
 			if (self.version > 2016):
 				i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_MAP_APP_1_, 'lst5')
 			else:
-				node.content += ' lst5={}'
 				node.set('lst5', {})
 				i += 1
 		else:
-			node.content += ' lst4={} lst5={}'
 			node.set('lst4', [])
 			node.set('lst5', {})
 			i += 1
@@ -259,7 +257,6 @@ class ResultReader(SegmentReader):
 			lst.append(d)
 			n -= 1
 		node.set('a1', lst)
-		node.content += u" lst0=(%s)" %(",".join(["(%03X,%g,%g,%g)" %(d[0], d[1], d[2], d[3]) for d in lst]))
 		return i
 
 	def Read_FDCD32FE(self, node):

@@ -141,7 +141,7 @@ def __dumpBranch(file, ref, branch, level, prefix):
 			else:
 				file.write(u" = ")
 
-		file.write(branch)
+		file.write(branch.__str__())
 		file.write(u"\n")
 	return
 
@@ -149,7 +149,7 @@ def buildBranch(parent, file, data, level, ref):
 	parent.append(data.node)
 
 	if (data.analysed == False):
-		__dumpBranch(file, ref, data.node.__str__(), level, '')
+		__dumpBranch(file, ref, data.node, level, '')
 		data.analysed = True
 		for childRef in data.references:
 			if (not childRef.analysed):
@@ -184,7 +184,7 @@ def resolveReferences(nodes):
 			if (isRadius2D and (ref.typeName in ['Circle2D', 'Ellipse2D', 'Arc2D'])):
 				radius = SecNodeRef(ref.index or 0x80000000, REF_CROSS, 'radius')
 				radius._data = node
-				ref._data.set(radius.name, radius)
+				ref._data.set(radius.name, radius, None)
 
 		if (node.typeName in ['FaceBound', '603428AE', '79D4DD11', 'FaceBoundOuter']):
 			refFx = node.get('proxy')
@@ -278,7 +278,7 @@ class SegmentReader(object):
 			ref, i = self.ReadNodeRef(node, i, j, type, name)
 			if (not ref is None):
 				lst.append(ref)
-		node.set(name, lst)
+		node.set(name, lst, VAL_REF)
 		return i
 
 	def ReadU32RefList(self, node, offset, name):
@@ -288,7 +288,7 @@ class SegmentReader(object):
 			val, i = getUInt32(node.data, i)
 			ref, i = self.ReadNodeRef(node, i, val, REF_CROSS, name)
 			lst.append([val, ref])
-		node.set(name, lst)
+		node.set(name, lst, VAL_REF)
 		return i
 
 	def ReadHeaderSU32S(self, node, typeName=None):
@@ -313,15 +313,10 @@ class SegmentReader(object):
 		i = node.ReadUInt32A(i, 2, 'Float32Arr_' + name)
 
 		lst = []
-		l2  = []
 		for j in range(cnt0):
 			a1, i = getFloat32_2D(node.data, i)
 			lst.append(a1)
-			vec = FloatArr2Str(a1)
-			l2.append('(%s)' %(vec))
 
-		if (len(l2) > 0):
-			node.content += ' {%s}' %(','.join(l2))
 		node.set(name, lst)
 		return i
 
@@ -330,7 +325,6 @@ class SegmentReader(object):
 		for j in range(cnt):
 			a, i = getFloat64A(node.data, i, size)
 			lst.append(a)
-		node.content += ' %s=[%s]' %(name, ','.join(['(%s)' %(FloatArr2Str(a)) for a in lst]))
 		node.set(name, lst)
 		return i
 
@@ -339,15 +333,10 @@ class SegmentReader(object):
 		i = node.ReadUInt32A(i, 2, 'Float64Arr_' + name)
 
 		lst = []
-		l2 = []
 		for j in range(cnt0):
 			a1, i = getFloat64A(node.data, i, size)
 			lst.append(a1)
-			vec = FloatArr2Str(a1)
-			l2.append('(%s)' %(vec))
 
-		if (len(l2) > 0):
-			node.content += ' {%s}' %(','.join(l2))
 		node.set(name, lst)
 		return i
 
@@ -398,7 +387,6 @@ class SegmentReader(object):
 		for j in range(cnt):
 			edge, i = self.ReadEdge(node, i)
 			lst.append(edge)
-		node.content += ' edges=[%s]' %(','.join(['(%s)' %(e) for e in lst]))
 		node.set('edges', lst)
 		return i
 
@@ -408,7 +396,6 @@ class SegmentReader(object):
 		'''
 		val = Transformation2D()
 		i = val.read(node.data, offset)
-		node.content += u" transformation=%r" %(val)
 		node.set('transformation', val)
 		return i
 
@@ -418,7 +405,6 @@ class SegmentReader(object):
 		'''
 		val = Transformation3D()
 		i = val.read(node.data, offset)
-		node.content += u" %s=%r" %(name, val)
 		node.set(name, val)
 		return i
 
@@ -585,16 +571,7 @@ class SegmentReader(object):
 		except:
 			logError(traceback.format_exc())
 
-		try:
-			node.data = node.data[i:]
-			if (len(node.data) > 0):
-				if (sys.version_info.major < 3):
-					s = " ".join(["%02X" % ord(c) for c in node.data])
-				else:
-					s = " ".join(["%02X" % c for c in node.data])
-				node.content += u"\taX=[%s]" %(s)
-		except:
-			logError(u"ERROR in %s.Read_%s: %s", self.__module____name__, node.typeName, traceback.format_exc())
+		node.data = node.data[i:]
 
 		return
 
@@ -625,7 +602,7 @@ class SegmentReader(object):
 			ref, i = self.ReadNodeRef(node, i, j, type, name)
 			ref.number, i = getUInt32A(node.data, i, size)
 			lst.append(ref)
-		node.set(name, lst)
+		node.set(name, lst, VAL_REF)
 		return i
 
 	def ReadRefU32List(self, node, offset, name, lType=REF_CHILD):
@@ -635,7 +612,7 @@ class SegmentReader(object):
 			ref, i = self.ReadNodeRef(node, i, None, lType, name)
 			ref.number, i = getUInt32(node.data, i)
 			lst.append(ref)
-		node.set(name, lst)
+		node.set(name, lst, VAL_REF)
 		return i
 
 	def Read_F645595C(self, node):
@@ -649,7 +626,6 @@ class SegmentReader(object):
 		else:
 			if (i + 4 == len(node.data)): return i + 4
 		txt, ignore = getText8(node.data, i, 15) # 'ACIS BinaryFile' or from 2014 on 'ASM BinaryFile4'
-		node.content += " fmt='%s'" %(txt)
 		node.set('fmt', txt)
 		e = len(node.data) - 17
 		if (self.version > 2018): e -=1
@@ -687,8 +663,7 @@ class SegmentReader(object):
 		if (self.version > 2017):
 			i = node.ReadUInt16A(i, 3, 'a3')
 		else:
-			node.content += u" a3=[000,000,000]"
-			node.set('a3', [0,0,0])
+			node.set('a3', (0,0,0), VAL_UINT16)
 		return i
 
 	def Read_F8A779FD(self, node): # Unit

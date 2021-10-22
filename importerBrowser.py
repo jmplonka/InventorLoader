@@ -6,8 +6,9 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerSegment import SegmentReader, checkReadAll
-from importerUtils   import *
+from importerSegment   import SegmentReader, checkReadAll
+from importerUtils     import *
+from importerConstants import VAL_UINT16, VAL_UINT32, VAL_ENUM
 import importerSegNode
 
 __author__     = "Jens M. Plonka"
@@ -48,8 +49,7 @@ class BrowserReader(SegmentReader):
 			self.__Str53_u16_0 = node.get('u16_0')
 		else:
 			self.__Str53_u16_0 += 1
-			node.set('u16_0', self.__Str53_u16_0)
-			node.content += u' u16_0=%03X' % self.__Str53_u16_0
+			node.set('u16_0', self.__Str53_u16_0, VAL_UINT16)
 		i = node.ReadUInt16A(i, 3, 'a0')
 		i = self.skipBlockSize(i)
 		return i
@@ -207,7 +207,7 @@ class BrowserReader(SegmentReader):
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt8A(i, 5, 'a0')
 		if (node.get('a0')[4] == 0):
-			node.set('u16_0', 0)
+			node.set('u16_0', 0, VAL_UINT16)
 		else:
 			i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadUInt16A(i, 3, 'a4')
@@ -861,8 +861,7 @@ class BrowserReader(SegmentReader):
 		for k in range(cnt):
 			a, i = getUInt32A(node.data, i, 3)
 			lst.append(a)
-		node.content += u" lst4=[%s]" %(",".join(["(%04X,%04X,%04X)"%(a[0], a[1], a[2]) for a in lst]))
-		node.set('lst4', lst)
+		node.set('lst4', lst, VAL_UINT32)
 		return i
 
 	def Read_B4278FFF(self, node): # ???
@@ -939,8 +938,7 @@ class BrowserReader(SegmentReader):
 			i = node.ReadLen32Text16(i, 'txt_0')
 			i = node.ReadSInt32(i, 's32_0')
 		else:
-			node.content += u" txt_0='' s32_0=-1"
-			node.set('txt_0', '')
+			node.set('txt_0', '', VAL_ENUM)
 			node.set('s32_0', -1)
 		return i
 

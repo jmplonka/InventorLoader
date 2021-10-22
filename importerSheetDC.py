@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from importerSegment import SegmentReader
-from importerUtils import *
+from importerSegment   import SegmentReader
+from importerUtils     import *
+from importerConstants import VAL_UINT32
 
 import importerSegNode
 
@@ -289,8 +290,7 @@ class SheetDcReader(SegmentReader):
 		if (self.version > 2010):
 			i = node.ReadUInt32A(i, 2, 'u32')
 		else:
-			node.content += u"  u32=[0000,0000]"
-			node.set('u32', (0,0))
+			node.set('u32', (0, 0), VAL_UINT32)
 		i = node.ReadUInt8(i, 'b0')
 		return i
 
@@ -367,8 +367,7 @@ class SheetDcReader(SegmentReader):
 		if (self.version > 2010):
 			i = node.ReadUInt32(i, 'u32_1')
 		else:
-			node.content += u" u32_1=0000"
-			node.set('u32_1', 0)
+			node.set('u32_1', 0, VAL_UINT32)
 		return i
 
 	def Read_E3CF2678(self, node):

@@ -4,10 +4,12 @@
 Acis2Step.py:
 '''
 
-from datetime      import datetime
-from importerUtils import isEqual, getDumpFolder
-from FreeCAD       import Vector as VEC, Placement as PLC
-from importerUtils import logInfo, logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, ENCODING_FS, getColorDefault
+from datetime          import datetime
+from importerUtils     import isEqual, getDumpFolder
+from FreeCAD           import Vector as VEC, Placement as PLC
+from importerUtils     import logInfo, logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, getColorDefault
+from importerConstants import CENTER, DIR_X, DIR_Y, DIR_Z, ENCODING_FS
+
 import traceback, inspect, os, sys, Acis, math, re, Part, io
 
 #############################################################
@@ -359,9 +361,9 @@ def _createBoundaries(acisLoops):
 	return boundaries
 
 def _calculateRef(axis):
-	if (isEqual1D(axis.x, 1.0)):  return Acis.DIR_Y
-	if (isEqual1D(axis.x, -1.0)): return -Acis.DIR_Y
-	return Acis.DIR_X.cross(axis) # any perpendicular vector to normal?!?
+	if (isEqual1D(axis.x, 1.0)):  return DIR_Y
+	if (isEqual1D(axis.x, -1.0)): return -DIR_Y
+	return DIR_X.cross(axis) # any perpendicular vector to normal?!?
 
 def _createSurfaceBSpline(bss, acisSurface, sense):
 	points = []

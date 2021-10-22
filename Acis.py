@@ -6,32 +6,20 @@ Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) f
 '''
 
 from __future__                 import unicode_literals
+
 import traceback, Part, Draft, os, FreeCAD, re
+
 from importerUtils              import *
 from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
 from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
+from importerConstants          import MIN_0, MIN_PI, MIN_PI2, MIN_INF, MAX_2PI, MAX_PI, MAX_PI2, MAX_INF, MAX_LEN
+from importerConstants          import CENTER, DIR_X, DIR_Y, DIR_Z, ENCODING_FS
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 V2D = Base.Vector2d
-
-MIN_0   = 0.0
-MIN_PI  = -pi
-MIN_PI2 = -pi / 2
-MIN_INF = float('-inf')
-
-MAX_2PI = 2 * pi
-MAX_PI  = pi
-MAX_PI2 = pi / 2
-MAX_INF = float('inf')
-MAX_LEN = 2e+100
-
-CENTER = VEC(0, 0, 0)
-DIR_X  = VEC(1, 0, 0)
-DIR_Y  = VEC(0, 1, 0)
-DIR_Z  = VEC(0, 0, 1)
 
 # Primitives for Binary File Format (.sab)
 TAG_CHAR          =  2 # character (unsigned 8 bit)
@@ -2491,23 +2479,24 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 				if (cur):
 					self.shape = cur.build(start, end)
 			elif (self.subtype == 'law_int_cur'):
-				r = self.range1
-				l = Law(self.laws[0][0])
-				x = r.lower.getLimit()
-				d = (r.upper - r.lower)
-				d = d / 25 # interpolation limit for BSplineCurve!
-				b = r.upper.getLimit()
-				p = []
-				while b >= x:
-					p.append(VEC(l.evaluate(x)))
-					x += d
-				closed = False
-				if (p[0] == p[-1]):
-					p.pop()
-					closed = True
-				spline = Part.BSplineCurve()
-				spline.interpolate(p)
-				self.shape = spline.toShape()
+				if (hasattr(self, "range1")):
+					r = self.range1
+					x = r.lower.getLimit()
+					d = (r.upper - r.lower)
+					d = d / 25 # interpolation limit for BSplineCurve!
+					b = r.upper.getLimit()
+					l = Law(self.laws[0][0])
+					p = []
+					while b >= x:
+						p.append(VEC(l.evaluate(x)))
+						x += d
+					closed = False
+					if (p[0] == p[-1]):
+						p.pop()
+						closed = True
+					spline = Part.BSplineCurve()
+					spline.interpolate(p)
+					self.shape = spline.toShape()
 			elif (hasattr(self, 'curves')):
 				curve = self.curves[0].build(start, end)
 				others = []

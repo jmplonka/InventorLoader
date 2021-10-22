@@ -6,11 +6,12 @@ Collection of functions necessary to read and analyse Autodesk (R) Invetor (R) f
 '''
 
 import os, sys, datetime, FreeCADGui, json, shutil, re
-from PySide.QtCore import *
-from PySide.QtGui  import *
-from struct        import Struct, unpack_from, pack
-from FreeCAD       import Vector as VEC, Console, ParamGet
-from olefile       import OleFileIO
+from PySide.QtCore     import *
+from PySide.QtGui      import *
+from struct            import Struct, unpack_from, pack
+from FreeCAD           import Vector as VEC, Console, ParamGet
+from olefile           import OleFileIO
+from importerConstants import ENCODING_FS
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -147,8 +148,6 @@ UUID_NAMES = {
 	'd31891c248bf14c3aa42ea872a846b2a': 'UFRxRef',
 }
 
-ENCODING_FS      = 'utf8'
-
 _fileVersion = 0
 _fileBeta        = -1
 _can_import      = True
@@ -165,6 +164,8 @@ _dump_folder   = None
 STRATEGY_SAT    = 0
 STRATEGY_NATIVE = 1
 STRATEGY_STEP   = 2
+STRATEGY_CANCEL = -1
+
 __strategy__ = __prmPrefIL__.GetInt("strategy", STRATEGY_SAT)
 
 IS_CELL_REF = re.compile('^[a-z](\d+)?$', re.IGNORECASE)
@@ -209,8 +210,9 @@ def getStrategy():
 
 def setStrategy(newStrategy):
 	global __strategy__, __prmPrefIL__
-	__strategy__ = newStrategy
-	__prmPrefIL__.SetInt("strategy", newStrategy)
+	if (newStrategy != STRATEGY_CANCEL):
+		__strategy__ = newStrategy
+		__prmPrefIL__.SetInt("strategy", newStrategy)
 
 def isStrategySat():
 	return getStrategy() == STRATEGY_SAT
@@ -280,48 +282,52 @@ def getDescription():
 	return _description
 
 def chooseImportStrategyAcis():
-	btnCnvrt = QPushButton('&Convert to STEP')
-	btnNativ = btnDefault = QPushButton('&nativ')
-	thmnl    = getThumbnail()
-	msgBox   = QMessageBox()
+	btnCnvrt  = QPushButton('&convert to STEP')
+	btnNativ  = QPushButton('&nativ')
+	btnCancel = QPushButton('Cancel')
+	thmnl     = getThumbnail()
+	msgBox    = QMessageBox()
 	msgBox.setIcon(QMessageBox.Question)
 	if (thmnl):
 		icon = thmnl.getIcon()
 		if (icon):
 			msgBox.setIconPixmap(icon)
-	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
-	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
-	msgBox.addButton(btnCnvrt, QMessageBox.ActionRole)
-	msgBox.addButton(btnNativ, QMessageBox.NoRole)
+	msgBox.setWindowTitle('FreeCAD - import file. choose strategy')
+	msgBox.setText('Import file based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?\n\nNOTE: Preview image is bundled\nthumbnail from file.')
+	msgBox.addButton(btnCnvrt,  QMessageBox.ActionRole)
+	msgBox.addButton(btnNativ,  QMessageBox.ActionRole)
+	msgBox.addButton(btnCancel, QMessageBox.RejectRole)
 
-	btnDefault = btnCnvrt if (getStrategy() == STRATEGY_STEP) else btnNativ
-	msgBox.setDefaultButton(btnDefault)
+	btnMapping = {STRATEGY_SAT: btnNativ, STRATEGY_NATIVE: btnNativ, STRATEGY_STEP: btnCnvrt}
+	msgBox.setDefaultButton(btnMapping[getStrategy()])
 
 	QApplication.setOverrideCursor(Qt.ArrowCursor)
 	result = msgBox.exec_()
 	QApplication.restoreOverrideCursor()
 
-	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT}
+	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_CANCEL}
 	strategy = resultMapping[result]
 	setStrategy(strategy)
 	return strategy
 
 def chooseImportStrategy():
-	btnCnvrt = QPushButton('&Convert to STEP')
-	btnSat   = QPushButton('&SAT')
-	btnNativ = QPushButton('&nativ')
-	thmnl    = getThumbnail()
-	msgBox   = QMessageBox()
+	btnCnvrt  = QPushButton('&convert to STEP')
+	btnSat    = QPushButton('&SAT')
+	btnNativ  = QPushButton('&nativ')
+	btnCancel = QPushButton('Cancel')
+	thmnl     = getThumbnail()
+	msgBox    = QMessageBox()
 	msgBox.setIcon(QMessageBox.Question)
 	if (thmnl is not None):
 		icon = thmnl.getIcon()
 		if (icon):
 			msgBox.setIconPixmap(icon)
-	msgBox.setWindowTitle('FreeCAD - import Autodesk-File. choose strategy')
-	msgBox.setText('Import Autodesk-File based:\n* on ACIS data (SAT), or base \n* on feature model (nativ)?')
-	msgBox.addButton(btnCnvrt, QMessageBox.ActionRole)
-	msgBox.addButton(btnSat, QMessageBox.YesRole)
-	msgBox.addButton(btnNativ, QMessageBox.NoRole)
+	msgBox.setWindowTitle('FreeCAD - import file. choose strategy')
+	msgBox.setText('Import file based:\n* on ACIS data (SAT), base \n* on feature model (nativ)\n or convert it to STEP?\n\nNOTE: Preview image is bundled\nthumbnail from file.')
+	msgBox.addButton(btnCnvrt,  QMessageBox.ActionRole)
+	msgBox.addButton(btnSat,    QMessageBox.ActionRole)
+	msgBox.addButton(btnNativ,  QMessageBox.ActionRole)
+	msgBox.addButton(btnCancel, QMessageBox.RejectRole)
 
 	btnMapping = {STRATEGY_SAT: btnSat, STRATEGY_NATIVE: btnNativ, STRATEGY_STEP: btnCnvrt}
 	msgBox.setDefaultButton(btnMapping[getStrategy()])
@@ -330,7 +336,7 @@ def chooseImportStrategy():
 	result = msgBox.exec_()
 	QApplication.restoreOverrideCursor()
 
-	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE}
+	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE, 3:STRATEGY_CANCEL}
 	strategy = resultMapping[result]
 	setStrategy(strategy)
 	return strategy
