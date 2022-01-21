@@ -177,7 +177,7 @@ _lastModifiedBy = ''
 _description    = ''
 _colorDefault   = ''
 
-with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colors.json")) as colorPalette:
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"colors.json"), encoding='utf-8') as colorPalette:
 	_colorNames = json.load(colorPalette)
 	for n in _colorNames:
 		if (not n.startswith('_')):
