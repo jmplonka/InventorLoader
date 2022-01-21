@@ -2253,7 +2253,7 @@ class FreeCADImporter(object):
 				len1 = self.getLength(solid, dir)
 			else:
 				len1 = self.getLength(surface, dir)
-		if (len1 > 0):
+		if (len1 != 0) or (len2 != 0):
 			baseName = sectionNode.name
 			pad = newObject('Part::Extrusion', name)
 

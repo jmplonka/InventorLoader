@@ -46,7 +46,7 @@ TAG_VECTOR_2D     = 22 # U-V-Vector
 TAG_INT64         = 23 # used by AutoCAD ASM int64 attributes
 
 # TAG_FALSE, TAG_TRUE value mappings
-RANGE           = {TAG_FALSE: 'I',              TAG_TRUE: 'F',             'F': 'I',              'T': 'F'}
+RANGE           = {TAG_FALSE: 'I',              TAG_TRUE: 'F',             'F': 'F',              'I': 'I'}
 REFLECTION      = {TAG_FALSE: 'no_reflect',     TAG_TRUE: 'reflect',       'F': 'no_reflect',     'T': 'reflect'}
 SURF_RIGID      = {TAG_FALSE: 'non_rigid',      TAG_TRUE: 'rigid',         'F': 'non_rigid',      'T': 'rigid'}
 SURF_AXIS_SWEEP = {TAG_FALSE: 'non_axis_sweep', TAG_TRUE: 'axis_sweep',    'F': 'non_axis_sweep', 'T': 'axis_sweep'}
@@ -87,23 +87,6 @@ TOKEN_TRANSLATIONS = {
 	'0x0A':       TAG_TRUE,
 	'0x0b':       TAG_FALSE,
 	'0x0B':       TAG_FALSE,
-	'reversed':   TAG_TRUE,
-	'forward':    TAG_FALSE,
-	'reverse_v':  TAG_TRUE,
-	'forward_v':  TAG_FALSE,
-	'in':         TAG_TRUE,
-	'out':        TAG_FALSE,
-	'double':     TAG_TRUE,
-	'single':     TAG_FALSE,
-	'rotate':     TAG_TRUE,
-	'no_rotate':  TAG_FALSE,
-	'reflect':    TAG_TRUE,
-	'no_reflect': TAG_FALSE,
-	'shear':      TAG_TRUE,
-	'no_shear':   TAG_FALSE,
-#	'F':          TAG_TRUE, # could be either F(ix) for Range or False for Boolean!!!!
-#	'T':          TAG_TRUE,
-	'I':          TAG_FALSE,
 	'{':          TAG_SUBTYPE_OPEN,
 	'}':          TAG_SUBTYPE_CLOSE,
 	'#':          TAG_TERMINATOR
@@ -369,30 +352,34 @@ def getText(chunks, index):
 def getEnumByTag(chunks, index, values):
 	chunk = chunks[index]
 	if (type(chunk) == AcisChunkUtf8U8):
-		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, chunk.val)
+		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, chunk.val, values)
 		idx = 0
 		for key in values:
-			if (chunk.val == key):
-				if (type(values) == dict):
+			if (type(values) == dict):
+				if (chunk.val == values[key]):
 					chunk.val = key
-				else:
+					break;
+			else:
+				if (chunk.val == idx):
 					chunk.val = idx
-				break;
+					break;
 			idx += 1
 		chunks[index] = chunk
 	elif (type(chunk) == AcisChunkDouble):
-		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, 11 - int(chunk.val))
+		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, 11 - int(chunk.val), values)
 		chunks[index] = chunk
-	chunk.values = values
+	else:
+		chunk.values = values
 	return values[chunk.val], index + 1
 
 def getEnumByValue(chunks, index, values):
 	chunk = chunks[index]
 	try:
-		chunk.values = values
 		if (chunk.tag != TAG_ENUM_VALUE):
 			chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, chunk.val, values)
 			chunks[index] = chunk
+		else:
+			chunk.values = values
 		return values[chunk.val], index + 1
 	except:
 		return chunk.val, index + 1
@@ -2084,7 +2071,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.surface2, i = readSurface(chunks, i)
 		self.pcurve1, i  = readBS2Curve(chunks, i)
 		self.pcurve2, i  = readBS2Curve(chunks, i)
-		if ((vrs > 15.0) and (isASM() == False)): i += 2 # '0xb 0xb'
+		if ((vrs > 11.0) and (isASM() == False)): i += 2 # '0xb 0xb' # ?!? correct ?!?
 		self.range2, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		if (vrs > 2.1):
 			# Discontinuity-Info
@@ -2263,9 +2250,10 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		if (vrs >= 2.0):
 			if (inventor):
 				x, i = getFloat(chunks, i)
-			if ((vrs > 15.0) and (isASM() == False)):
+			if ((vrs > 11.0) and (isASM() == False)): # ?!? correct ?!?
 				s, i = getSingularity(chunks, i)
-				b, i = getBoolean(chunks, i)
+				if ((vrs > 12.0) and (isASM() == False)): # ?!? correct ?!?
+					b, i = getBoolean(chunks, i)
 			unknown, i = getUnknownFT(chunks, i)
 			range2, i  = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 		if (inventor):
@@ -2544,7 +2532,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		vrs = getVersion()
 		self.pcurve, i = readBS2Curve(chunks, index)
 		tolerance, i = getFloat(chunks, i)
-		if ((vrs > 15.0) and (isASM() == False)): i += 1
+		if ((vrs > 11.0) and (isASM() == False)): i += 1 # ?!? correct ?!?
 		self.surface, i = readSurface(chunks, i)
 		return i
 	def setImpPar(self, chunks, index):
@@ -3321,7 +3309,7 @@ class SurfaceSpline(Surface):
 	def setSweep(self, chunks, index, inventor):
 		i = index
 		vrs = getVersion()
-		if ((vrs > 16.0) and (isASM() == False)): # ??? correct ???
+		if ((vrs > 11.0) and (isASM() == False)): # ?!? correct ?!?
 			r11, i = getText(chunks, i)
 		self.s1, i      = getEnumByTag(chunks, i, SURF_SWEEP)
 		if (chunks[i].tag == TAG_LONG):
@@ -4557,13 +4545,10 @@ class AcisChunkEnumValue(_AcisChunk_):
 		super(AcisChunkEnumValue, self).__init__(tag, value)
 		self.values = values
 	def __repr__(self):
-		val = self.val
-		if (self.values):
-			try:
-				val = self.values[val]
-			except:
-				pass
-		return u"%s " %(val)
+		try:
+			return u"%s " %(values[self.val])
+		except:
+			return u"%s " %(self.val)
 	def read(self, data, offset):
 		global _getULong
 		self.val, i = _getULong(data, offset)
@@ -4598,15 +4583,15 @@ class AcisChunkSubident(_AcisChunk_):
 		return i
 class AcisChunkSubtypeOpen(_AcisChunk_):
 	'''Opening block tag'''
-	def __init__(self):
+	def __init__(self, value = None):
 		super(AcisChunkSubtypeOpen, self).__init__(TAG_SUBTYPE_OPEN, u"{")
 class AcisChunkSubtypeClose(_AcisChunk_):
 	'''Closing block tag'''
-	def __init__(self):
+	def __init__(self, value = None):
 		super(AcisChunkSubtypeClose, self).__init__(TAG_SUBTYPE_CLOSE, u"}")
 class AcisChunkTerminator(_AcisChunk_):
 	'''terminator char ('#') for the entity'''
-	def __init__(self):
+	def __init__(self, value = None):
 		super(AcisChunkTerminator, self).__init__(TAG_TERMINATOR, u"#")
 	def __repr__(self): return u"#"
 class _AcisChunkArray_(_AcisChunk_):
@@ -4630,12 +4615,6 @@ class AcisChunkVector3D(_AcisChunkArray_):
 	def __init__(self, value = None):
 		super(AcisChunkVector3D, self).__init__(TAG_VECTOR_3D, 3, value)
 
-ACIS_CONST_CHUNKS = {
-	TAG_SUBTYPE_OPEN:  AcisChunkSubtypeOpen(),
-	TAG_SUBTYPE_CLOSE: AcisChunkSubtypeClose(),
-	TAG_TERMINATOR:    AcisChunkTerminator(),
-}
-
 ACIS_VALUE_CHUNKS = {
 	TAG_CHAR         : AcisChunkChar,
 	TAG_SHORT        : AcisChunkShort,
@@ -4646,7 +4625,10 @@ ACIS_VALUE_CHUNKS = {
 	TAG_UTF8_U16     : AcisChunkUtf8U16,
 	TAG_UTF8_U32_A   : AcisChunkUtf8U32A,
 	TAG_UTF8_U32_B   : AcisChunkUtf8U32B,
-#	TAG_ENTITY_REF   : AcisChunkEntityRef, ### has to be handled speparately!!!
+	TAG_SUBTYPE_OPEN : AcisChunkSubtypeOpen,
+	TAG_SUBTYPE_CLOSE: AcisChunkSubtypeClose,
+	TAG_TERMINATOR   : AcisChunkTerminator,
+#	TAG_ENTITY_REF   : AcisChunkEntityRef, ### has to be handled separately!!!
 	TAG_IDENT        : AcisChunkIdent,
 	TAG_SUBIDENT     : AcisChunkSubident,
 	TAG_ENUM_VALUE   : AcisChunkEnumValue,
@@ -4817,23 +4799,21 @@ class AcisReader(object):
 	def _readChunkBinary(self):
 		global _getSLong
 		tag, self._pos = getUInt8(self._data, self._pos)
-		chunk = ACIS_CONST_CHUNKS.get(tag, None)
-		if (chunk is None):
-			if (tag == TAG_ENTITY_REF):
-				refIdx, self._pos = _getSLong(self._data, self._pos)
-				try:
-					chunk = self._refChunks[refIdx]
-				except:
-					chunk = AcisChunkEntityRef(refIdx)
-					self._refChunks[refIdx] = chunk
-			elif (tag in [TAG_TRUE, TAG_FALSE]):
-				chunk = AcisChunkEnumValue(tag, tag, BOOLEAN)
-			else:
-				try:
-					chunk = ACIS_VALUE_CHUNKS[tag]()
-					self._pos = chunk.read(self._data, self._pos)
-				except KeyError as ke:
-					raise Exception("Don't know to read TAG %X" %(tag))
+		if (tag == TAG_ENTITY_REF):
+			refIdx, self._pos = _getSLong(self._data, self._pos)
+			try:
+				chunk = self._refChunks[refIdx]
+			except:
+				chunk = AcisChunkEntityRef(refIdx)
+				self._refChunks[refIdx] = chunk
+		elif (tag in [TAG_TRUE, TAG_FALSE]):
+			chunk = AcisChunkEnumValue(tag, tag, BOOLEAN)
+		else:
+			try:
+				chunk = ACIS_VALUE_CHUNKS[tag]()
+				self._pos = chunk.read(self._data, self._pos)
+			except KeyError as ke:
+				raise Exception("Don't know to read TAG %X" %(tag))
 		return chunk
 
 	@property
@@ -4910,9 +4890,9 @@ class AcisReader(object):
 					chunk = AcisChunkEnumValue(tag, tag, BOOLEAN)
 				else:
 					try:
-						chunk = ACIS_CONST_CHUNKS[tag]
-					except:
 						chunk = ACIS_VALUE_CHUNKS[tag](val)
+					except KeyError as ke:
+						raise Exception("Don't know to read TAG %X" %(tag))
 				record.chunks.append(chunk)
 				if (chunk.tag == TAG_TERMINATOR):
 					break
