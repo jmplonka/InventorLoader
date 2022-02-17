@@ -7,7 +7,7 @@
 <description>This plugin enables FreeCAD to import Inventor part files (*.IPT), ACIS files (*.SAT, *.SAB), 3D-Solids from DXF files and Fusion360 (*.f3d) files.</description>
 <icon>icon.png</icon>
 <url type="bugtracker">tracker=https://github.com/jmplonka/InventorLoader/issues</url>
-<url type="repository" branch="main">https://github.com/jmplonka/InventorLoader</url>
+<url type="repository" branch="master">https://github.com/jmplonka/InventorLoader</url>
 <type>behavior</type>
 <content>
 	<workbench>
