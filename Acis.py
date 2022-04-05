@@ -46,40 +46,49 @@ TAG_VECTOR_2D     = 22 # U-V-Vector
 TAG_INT64         = 23 # used by AutoCAD ASM int64 attributes
 
 # TAG_FALSE, TAG_TRUE value mappings
-RANGE           = {TAG_FALSE: 'I',              TAG_TRUE: 'F',             'F': 'F',              'I': 'I'}
-REFLECTION      = {TAG_FALSE: 'no_reflect',     TAG_TRUE: 'reflect',       'F': 'no_reflect',     'T': 'reflect'}
-SURF_RIGID      = {TAG_FALSE: 'non_rigid',      TAG_TRUE: 'rigid',         'F': 'non_rigid',      'T': 'rigid'}
-SURF_AXIS_SWEEP = {TAG_FALSE: 'non_axis_sweep', TAG_TRUE: 'axis_sweep',    'F': 'non_axis_sweep', 'T': 'axis_sweep'}
-ROTATION        = {TAG_FALSE: 'no_rotate',      TAG_TRUE: 'rotate',        'F': 'no_rotate',      'T': 'rotate'}
-SHEAR           = {TAG_FALSE: 'no_shear',       TAG_TRUE: 'shear',         'F': 'no_shear',       'T': 'shear'}
-SENSE           = {TAG_FALSE: 'forward',        TAG_TRUE: 'reversed',      'F': 'forward',        'T': 'reversed' }
-SENSEV          = {TAG_FALSE: 'forward_v',      TAG_TRUE: 'reverse_v',     'F': 'forward_v',      'T': 'reverse_v', 0: 'forward_v'}
-SIDES           = {TAG_FALSE: 'single',         TAG_TRUE: 'double',        'F': 'single',         'T': 'double'}
-SIDE            = {TAG_FALSE: 'out',            TAG_TRUE: 'in',            'F': 'out',            'T': 'in'}
-SURF_BOOL       = {TAG_FALSE: 'FALSE',          TAG_TRUE: 'TRUE',          'F': 'FALSE',          'T': 'TRUE'}
-SURF_NORM       = {TAG_FALSE: 'ISO',            TAG_TRUE: 'UNKNOWN',       'F': 'ISO',            'T': 'UNKNOWN'}
-SURF_DIR        = {TAG_FALSE: 'SKIN',           TAG_TRUE: 'PERPENDICULAR', 'F': 'SKIN',           'T': 'PERPENDICULAR'}
-SURF_SWEEP      = {TAG_FALSE: 'angled',         TAG_TRUE: 'normal',        'F': 'angled',         'T': 'normal'}
-CIRC_TYP        = {TAG_FALSE: 'non_cross',      TAG_TRUE: 'cross',         'F': 'non_cross',      'T': 'cross'}
-CIRC_SMTH       = {TAG_FALSE: 'non_smooth',     TAG_TRUE: 'smooth',        'F': 'non_smooth',     'T': 'smooth'} # normal == non_smooth
-CALIBRATED      = {TAG_FALSE: 'uncalibrated',   TAG_TRUE: 'calibrated',    'F': 'uncalibrated',   'T': 'calibrated'}
-CHAMFER_TYPE    = {TAG_FALSE: 'const',          TAG_TRUE: 'radius',        'F': 'const',          'T': 'radius'}
-CONVEXITY       = {TAG_FALSE: 'concave',        TAG_TRUE: 'convex',        'F': 'concave',        'T': 'convex'}
-RENDER_BLEND    = {TAG_FALSE: 'rb_snapshot',    TAG_TRUE: 'rb_envelope',   'F': 'rb_snapshot',    'T': 'rb_envelope'}
-BOOLEAN         = {TAG_FALSE: 'F',              TAG_TRUE:  'T',            'F': 'F',              'T':  'T'}
-RAD_FORM_ENTS   = ['unknown', 'two_ends', 'functional', 'fixed_width']
+def _build_bool_enum_(false_value, true_value, true_key = 'T'):
+	return {
+		TAG_TRUE:  true_value,  true_key: true_value,  1: true_value,
+		TAG_FALSE: false_value, 'F':      false_value, 0: false_value,
+	}
+
+RANGE           = _build_bool_enum_('I',              'F', 'I')
+REFLECTION      = _build_bool_enum_('no_reflect',     'reflect')
+SURF_RIGID      = _build_bool_enum_('non_rigid',      'rigid')
+SURF_AXIS_SWEEP = _build_bool_enum_('non_axis_sweep', 'axis_sweep')
+ROTATION        = _build_bool_enum_('no_rotate',      'rotate')
+SHEAR           = _build_bool_enum_('no_shear',       'shear')
+SENSE           = _build_bool_enum_('forward',        'reversed')
+SENSEV          = _build_bool_enum_('forward_v',      'reverse_v')
+SIDES           = _build_bool_enum_('single',         'double')
+SIDE            = _build_bool_enum_('out',            'in')
+SURF_BOOL       = _build_bool_enum_('FALSE',          'TRUE')
+SURF_NORM       = _build_bool_enum_('ISO',            'UNKNOWN')
+SURF_DIR        = _build_bool_enum_('SKIN',           'PERPENDICULAR')
+SURF_SWEEP      = _build_bool_enum_('angled',         'normal')
+CIRC_TYP        = _build_bool_enum_('non_cross',      'cross')
+CIRC_SMTH       = _build_bool_enum_('non_smooth',     'smooth')
+CALIBRATED      = _build_bool_enum_('uncalibrated',   'calibrated')
+CHAMFER_TYPE    = _build_bool_enum_('const',          'radius')
+CONVEXITY       = _build_bool_enum_('concave',        'convex')
+RENDER_BLEND    = _build_bool_enum_('rb_snapshot',    'rb_envelope')
+BOOLEAN         = _build_bool_enum_('F',              'T')
 
 # TAG_ENUM value mappings
+RAD_FORM_ENTS   = ['unknown', 'two_ends', 'functional', 'fixed_width']
+
 VAR_RADIUS  = {0: 'single_radius',  1: 'two_radii'}
 VAR_CHAMFER = {3: 'rounded_chamfer'}
-CLOSURE     = {0: 'open',   1: 'closed',  2: 'periodic', 0x0B: 'open', 0x0A: 'periodic'}
-SINGULARITY = {0: 'full',   1: 'v',       2: 'none',     0x0B: 'none', 0x0A: 'full'}
+CLOSURE     = {0: 'open',   1: 'closed',  2: 'periodic', TAG_FALSE: 'open', TAG_TRUE: 'periodic'}
+SINGULARITY = {0: 'full',   1: 'v',       2: 'none',     TAG_FALSE: 'none', TAG_TRUE: 'full'}
 VBL_CIRLE   = {0: 'circle', 1: 'ellipse', 3: 'unknown', 'cylinder': 'circle'}
 CURV_DIR    = {0: 'left',   2: 'right'}
+
 scale = 1.0
 
 _nameMtchAttr    = {}
 _dcIdxAttributes = {} # dict of an attribute list
+
 LENGTH_TEXT = re.compile('[ \t]*(\d+) +(.*)')
 
 TOKEN_TRANSLATIONS = {
@@ -655,29 +664,30 @@ def isOnBSplineCurve(sEdge, fEdge):
 			return False
 	return True
 
-def isSeam(edge, face):
-	c = edge.Curve
-	for fEdge in face.Edges:
-		try:
-			if (isinstance(c, fEdge.Curve.__class__)):
-				if (isinstance(c, Part.Line)):
-					if isOnLine(edge, fEdge): return True
-				elif (isinstance(c, Part.LineSegment)):
-					if isOnLine(edge, fEdge): return True
-				elif (isinstance(c, Part.Circle)):
-					if isOnCircle(edge, fEdge): return True
-				elif (isinstance(c, Part.Ellipse)):
-					if isOnEllipse(edge, fEdge): return True
-				elif (isinstance(c, Part.BSplineCurve)):
-					if isOnBSplineCurve(edge, fEdge): return True
-				elif (isinstance(c, Part.ArcOfCircle)):
-					if isOnCircle(c.Circle, fEdge.Curve.Circle): return True
-				elif (isinstance(c, Part.ArcOfEllipse)):
-					if isOnEllipse(c.Ellipse, fEdge.Curve.Ellipse): return True
-				else:
-					logError(u"    Unknown edge type '%s'!", c.__class__.__name)
-		except Exception as e:
-			pass
+def isSeam(wire, face):
+	for edge in wire.Edges:
+		c = edge.Curve
+		for fEdge in face.Edges:
+			try:
+				if (isinstance(c, fEdge.Curve.__class__)):
+					if (isinstance(c, Part.Line)):
+						if isOnLine(edge, fEdge): return True
+					elif (isinstance(c, Part.LineSegment)):
+						if isOnLine(edge, fEdge): return True
+					elif (isinstance(c, Part.Circle)):
+						if isOnCircle(edge, fEdge): return True
+					elif (isinstance(c, Part.Ellipse)):
+						if isOnEllipse(edge, fEdge): return True
+					elif (isinstance(c, Part.BSplineCurve)):
+						if isOnBSplineCurve(edge, fEdge): return True
+					elif (isinstance(c, Part.ArcOfCircle)):
+						if isOnCircle(c.Circle, fEdge.Curve.Circle): return True
+					elif (isinstance(c, Part.ArcOfEllipse)):
+						if isOnEllipse(c.Ellipse, fEdge.Curve.Ellipse): return True
+					else:
+						logError(u"    Unknown edge type '%s'!", c.__class__.__name)
+			except Exception as e:
+				pass
 	return False
 
 def findMostMatches(faces):
@@ -687,7 +697,7 @@ def findMostMatches(faces):
 		return faces[matches[-1]]
 	return []
 
-def eliminateOuterFaces(faces, edges):
+def eliminateOuterFaces(faces, wires):
 	_faces = [f for f in faces if f.isValid()]
 
 	if (len(_faces) == 0):
@@ -698,8 +708,8 @@ def eliminateOuterFaces(faces, edges):
 
 	for face in _faces:
 		matching = True
-		for e in edges:
-			if (not isSeam(e, face)):
+		for wire in wires:
+			if (not isSeam(wire, face)):
 				matching = False
 		if (matching):
 			return face
@@ -732,13 +742,9 @@ def createLine(start, end):
 	return line
 
 def createPolygon(points):
-	l = len(points)
-	if (l < 2):
+	if (len(points) < 2):
 		return None
-	if (l == 2):
-		return createLine(points[0], points[1])
-	lines = [createLine(points[i], points[i+1]) for i in range(l-1)]
-	return Part.Wire(lines)
+	return Part.makePolygon(points)
 
 def createBSplinesPCurve(pcurve, surface, sense):
 	if (pcurve is None):
@@ -1669,33 +1675,33 @@ class Face(Topology):
 	def getParent(self):  return None if (self._parent is None)  else self._parent.node
 	def getSurface(self): return None if (self._surface is None) else self._surface.node
 	def buildCoEdges(self):
-		edges = []
+		wires = []
 		loop = self.getLoop()
 		while (loop is not None):
-			edges += loop.buildEdges()
+			wires.append(loop.buildEdges())
 			loop = loop.getNext()
-		return edges
+		return wires
 	def build(self):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			self._surface = self.getSurface()
-			edges = self.buildCoEdges()
-			if (self._surface is not None):
+			wires = self.buildCoEdges()
+			if (self._surface):
 				self.shape = self._surface.build()
-				if (self.shape is not None):
-					if (len(edges) > 0):
+				if (self.shape):
+					if (self.sense == 'reversed'):
+						self.shape.reverse()
+					if (len(wires) > 0):
 						tolerance = 0.1
-						component, elements = self.shape.generalFuse(edges, tolerance)
+						component, elements = self.shape.generalFuse(wires, tolerance)
 						faces = elements[0]
 						if (len(faces) == 0):
 							logWarning("    can't create face (no elements) for %s" %(self._surface))
 						else:
-							face = eliminateOuterFaces(faces, edges)
-							if (face is None):
+							self.shape = eliminateOuterFaces(faces, wires)
+							if (self.shape is None):
 								# edges can be empty because not all edges can be created right now :(
 								logWarning("    can't create face for %s!" %(self._surface))
-							else:
-								self.shape = face
 		return self.shape
 	def isCone(self):   return isinstance(self.getSurface(), SurfaceCone)
 	def isMesh(self):   return isinstance(self.getSurface(), SurfaceMesh)
@@ -1749,7 +1755,8 @@ class Loop(Topology):
 			edge = coEdge.build()
 			if (edge is not None):
 				edges.append(edge)
-		return edges
+		wire = Part.Wire(edges)
+		return wire
 class Wire(Topology):
 	def __init__(self):
 		super(Wire, self).__init__()
@@ -1811,11 +1818,10 @@ class CoEdge(Topology):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			e = self.getEdge()
-			c = e.getCurve()
-			if (c is not None):
-				p1 = e.getStart() if (e.sense == 'forward') else e.getEnd()
-				p2 = e.getEnd() if (e.sense == 'forward') else e.getStart()
-				self.shape = c.build(p1, p2)
+			self.shape = e.build()
+			if (self.shape):
+				if (self.sense == 'reversed'):
+					self.shape = self.shape.reversed()
 		return self.shape
 class CoEdgeTolerance(CoEdge):
 	def __init__(self):
@@ -1883,6 +1889,18 @@ class Edge(Topology):
 		ptEnd = None if (self._end   is None) else self._end.node
 		if ((ptEnd is not None) and (ptEnd.index != ptStart.index)): points.append(ptEnd.getPosition())
 		return points
+	def build(self):
+		if (self.__ready_to_build__):
+			self.__ready_to_build__ = False
+			c = self.getCurve()
+			if (c is not None):
+				p1 = self.getStart()
+				p2 = self.getEnd()
+				self.shape = c.build(p1, p2)
+				if (self.shape):
+					if (self.sense == 'reversed'):
+						self.shape.reverse()
+		return self.shape
 class EdgeTolerance(Edge):
 	def __init__(self):
 		super(EdgeTolerance, self).__init__()
@@ -2608,13 +2626,14 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 	def build(self, start, end):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
+			line = Part.Line(self.root, self.root + self.dir)
 			if (start is None):
 				start = self.root
+			elif (type(start) == float):
+				start = line.value(start)
 			if (end is None):
 				end = self.dir + self.root
-			if (type(start) == float) and (type(end) == float):
-				line = Part.Line(self.root, self.root + self.dir)
-				start = line.value(start)
+			elif (type(end) == float):
 				end = line.value(end)
 			self.shape = createLine(start, end)
 		return self.shape
@@ -2701,7 +2720,7 @@ class SurfaceCone(Surface):
 			self.__ready_to_build__ = False
 			if (isEqual1D(self.sine, 0.)): # 90 Deg
 				if (isEqual1D(self.ratio, 1.)):
-					circle = createCircle(self.center, self.axis, self.major)
+					circle = Part.Circle(self.center, self.axis, self.major.Length)
 					self.shape = Part.Cylinder(circle).toShape()
 				else:
 					# Workaround: create ellipse and extrude in both directions
@@ -2712,9 +2731,9 @@ class SurfaceCone(Surface):
 						cone.translate((-1e6) * self.axis)
 						self.shape = cone.Faces[0]
 			else:
-				# Workaround: can't generate Part.Cone!
-				l = Part.LineSegment(self.apex, self.center + self.major).toShape()
-				if (self.ratio != 1):
+				# Workaround: can't generate Cone!
+				l = Part.Line(self.apex, self.center + self.major).toShape()
+				if (not isEqual1D(self.ratio, 1.)):
 					# TODO: apply scaling for ratios != 1.0!
 					logWarning(u"    ... Can't create cone surface with elliptical base - skipped!")
 				else:
@@ -2782,6 +2801,7 @@ class SurfaceSphere(Surface):
 			sphere.Radius = fabs(self.radius)
 			self.shape = sphere.toShape()
 		return self.shape
+
 class SurfaceSpline(Surface):
 	def __init__(self):
 		super(SurfaceSpline, self).__init__('spline')
@@ -3750,6 +3770,7 @@ class SurfaceSpline(Surface):
 					logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", self.index, self.type )
 			self.failed = (self.shape is None)
 		return self.shape
+
 class SurfaceTorus(Surface):
 	'''
 	The torus surface is defined by the center point, normal vector, the major
@@ -3780,24 +3801,12 @@ class SurfaceTorus(Surface):
 	def build(self, face = None):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
-			circleAxis   = self.axis.cross(self.uvorigin).normalize()
-			circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
-			circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
 			try:
-				torus = circle.revolve(self.center, self.axis, 360)
-				self.profile = CurveEllipse()
-				self.profile.center = circleCenter
-				self.profile.axis   = circleAxis
-				if (isEqual1D(circleAxis.x, 1.0)):
-					self.profile.major = DIR_Y
-				elif (isEqual1D(circleAxis.x, -1.0)):
-					self.profile.major = -DIR_Y
-				else:
-					self.profile.major = DIR_X.cross(circleAxis) # any perpendicular vector to normal?!?
-
-				self.profile.ratio  = 1.0
-				self.profile.range  = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
-				self.shape = torus.Faces[0]
+				circleAxis   = self.axis.cross(self.uvorigin).normalize()
+				circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
+				circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
+				torus = Part.SurfaceOfRevolution(circle, self.center, self.axis)
+				self.shape = torus.toShape()
 			except:
 				print("Can't create torus for center=%s, axis=%s, major=%g, minor=%g, UV=%s"%(self.center, self.axis, self.major, self.minor, self.uvorigin))
 		return self.shape

@@ -15,9 +15,6 @@ __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
 __url__        = "https://www.github.com/jmplonka/InventorLoader"
 
-lumps = 0
-wires = 0
-
 def _getSatFileName(name):
 	return  os.path.join(getDumpFolder(), name)
 
@@ -60,6 +57,7 @@ def createBody(root, name, shape, transform):
 
 def buildFaces(shells, root, name, transform):
 	faces = []
+
 	for shell in shells:
 		for face in shell.getFaces():
 			surface = face.build()
@@ -69,18 +67,10 @@ def buildFaces(shells, root, name, transform):
 			buildWire(root, wire, transform)
 
 	if (len(faces) > 0):
-		shell = faces[0]
-		if (len(faces) > 1):
-			try:
-				shell = Part.Shell(faces)
-			except:
-				try:
-					shell = shell.fuse(faces[1:])
-				except:
-					shell = None
-		if (shell):
-			createBody(root, name, shell, transform)
-		else:
+		try:
+			createBody(root, name, Part.Shell(faces), transform)
+		except Exception as e:
+			logAlways(e)
 			for face in faces:
 				createBody(root, name, face, transform)
 	return
@@ -100,9 +90,7 @@ def buildWires(coedges, root, name, transform):
 	return
 
 def buildLump(root, lump, transform):
-	global lumps
-	lumps += 1
-	name = "Lump%02d" %lumps
+	name = "Lump-%d" %(lump.index)
 	logInfo(u"    building lump '%s'...", name)
 
 	setCurrentColor(lump)
@@ -112,9 +100,7 @@ def buildLump(root, lump, transform):
 	return True
 
 def buildWire(root, wire, transform):
-	global wires
-	wires += 1
-	name = "Wire%02d" %wires
+	name = "Wire-%d" %(wire.index)
 	logInfo(u"    building wire '%s'...", name)
 
 	buildWires(wire.getCoEdges(), root, name, transform)
@@ -133,11 +119,7 @@ def buildBody(root, node):
 	return
 
 def resolveNodes(acis):
-	global lumps, wires
-
 	init()
-	wires = 0
-	lumps = 0
 	bodies = []
 	doAdd  = True
 	setReader(acis)
@@ -156,10 +138,6 @@ def resolveNodes(acis):
 	return bodies
 
 def importModel(root):
-	global lumps, wires
-	wires = 0
-	lumps = 0
-
 	acis = getReader()
 	bodies = resolveNodes(acis)
 	for body in bodies:
