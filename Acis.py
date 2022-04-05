@@ -664,30 +664,29 @@ def isOnBSplineCurve(sEdge, fEdge):
 			return False
 	return True
 
-def isSeam(wire, face):
-	for edge in wire.Edges:
-		c = edge.Curve
-		for fEdge in face.Edges:
-			try:
-				if (isinstance(c, fEdge.Curve.__class__)):
-					if (isinstance(c, Part.Line)):
-						if isOnLine(edge, fEdge): return True
-					elif (isinstance(c, Part.LineSegment)):
-						if isOnLine(edge, fEdge): return True
-					elif (isinstance(c, Part.Circle)):
-						if isOnCircle(edge, fEdge): return True
-					elif (isinstance(c, Part.Ellipse)):
-						if isOnEllipse(edge, fEdge): return True
-					elif (isinstance(c, Part.BSplineCurve)):
-						if isOnBSplineCurve(edge, fEdge): return True
-					elif (isinstance(c, Part.ArcOfCircle)):
-						if isOnCircle(c.Circle, fEdge.Curve.Circle): return True
-					elif (isinstance(c, Part.ArcOfEllipse)):
-						if isOnEllipse(c.Ellipse, fEdge.Curve.Ellipse): return True
-					else:
-						logError(u"    Unknown edge type '%s'!", c.__class__.__name)
-			except Exception as e:
-				pass
+def isSeam(edge, face):
+	c = edge.Curve
+	for fEdge in face.Edges:
+		try:
+			if (isinstance(c, fEdge.Curve.__class__)):
+				if (isinstance(c, Part.Line)):
+					if isOnLine(edge, fEdge): return True
+				elif (isinstance(c, Part.LineSegment)):
+					if isOnLine(edge, fEdge): return True
+				elif (isinstance(c, Part.Circle)):
+					if isOnCircle(edge, fEdge): return True
+				elif (isinstance(c, Part.Ellipse)):
+					if isOnEllipse(edge, fEdge): return True
+				elif (isinstance(c, Part.BSplineCurve)):
+					if isOnBSplineCurve(edge, fEdge): return True
+				elif (isinstance(c, Part.ArcOfCircle)):
+					if isOnCircle(c.Circle, fEdge.Curve.Circle): return True
+				elif (isinstance(c, Part.ArcOfEllipse)):
+					if isOnEllipse(c.Ellipse, fEdge.Curve.Ellipse): return True
+				else:
+					logError(u"    Unknown edge type '%s'!", c.__class__.__name)
+		except Exception as e:
+			pass
 	return False
 
 def findMostMatches(faces):
@@ -697,7 +696,7 @@ def findMostMatches(faces):
 		return faces[matches[-1]]
 	return []
 
-def eliminateOuterFaces(faces, wires):
+def eliminateOuterFaces(faces, edges):
 	_faces = [f for f in faces if f.isValid()]
 
 	if (len(_faces) == 0):
@@ -708,8 +707,8 @@ def eliminateOuterFaces(faces, wires):
 
 	for face in _faces:
 		matching = True
-		for wire in wires:
-			if (not isSeam(wire, face)):
+		for edge in edges:
+			if (not isSeam(edge, face)):
 				matching = False
 		if (matching):
 			return face
@@ -1412,6 +1411,7 @@ class Entity(object):
 		self.entity  = None
 		self.history = None
 		self.node    = None
+		self.shape   = None      # FreeCAD shape of the face
 		self.__ready_to_build__ = True # Don't try to create me more than once
 	def set(self, entity):
 		try:
@@ -1650,7 +1650,6 @@ class Face(Topology):
 		self.sides       = 'single'  # Flag defining face is single or double sided
 		self.side        = None      # Flag defining face is single or double sided
 		self.containment = False     # Flag defining face is containment of double-sided faces
-		self.shape       = None      # FreeCAD shape of the face
 	def set(self, entity):
 		i = super(Face, self).set(entity)
 		self._next, i                   = getRefNode(entity, i, 'face')
@@ -1675,33 +1674,37 @@ class Face(Topology):
 	def getParent(self):  return None if (self._parent is None)  else self._parent.node
 	def getSurface(self): return None if (self._surface is None) else self._surface.node
 	def buildCoEdges(self):
-		wires = []
+		edges = []
 		loop = self.getLoop()
 		while (loop is not None):
-			wires.append(loop.buildEdges())
+			edges += loop.buildEdges()
 			loop = loop.getNext()
-		return wires
+		return edges
 	def build(self):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
 			self._surface = self.getSurface()
-			wires = self.buildCoEdges()
+			edges = self.buildCoEdges()
 			if (self._surface):
-				self.shape = self._surface.build()
-				if (self.shape):
+				surface = self._surface.build()
+				if (surface):
 					if (self.sense == 'reversed'):
-						self.shape.reverse()
-					if (len(wires) > 0):
+						surface.reverse()
+					if (len(edges) > 0):
 						tolerance = 0.1
-						component, elements = self.shape.generalFuse(wires, tolerance)
+						component, elements = surface.generalFuse(edges, tolerance)
 						faces = elements[0]
 						if (len(faces) == 0):
-							logWarning("    can't create face (no elements) for %s" %(self._surface))
+							logWarning("Can't apply wires for face (no elements) for %s" %(self._surface))
 						else:
-							self.shape = eliminateOuterFaces(faces, wires)
+							self.shape = eliminateOuterFaces(faces, edges)
 							if (self.shape is None):
 								# edges can be empty because not all edges can be created right now :(
-								logWarning("    can't create face for %s!" %(self._surface))
+								logWarning("Can't apply wires for face %s!" %(surface.Surface))
+								for f in faces:
+									Part.show(f, "Face-%d" %(self.entity.index))
+					else:
+						self.shape = surface
 		return self.shape
 	def isCone(self):   return isinstance(self.getSurface(), SurfaceCone)
 	def isMesh(self):   return isinstance(self.getSurface(), SurfaceMesh)
@@ -1738,11 +1741,13 @@ class Loop(Topology):
 	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.node
 	def getFace(self):   return None if (self._owner is None)  else self._owner.node
 	def getCoEdges(self):
-		coedges = {}
+		coedges = []
+		indexes = []
 		ce = self.getCoEdge()
 		while (ce is not None):
-			if (ce.index in coedges): break
-			coedges[ce.index] = ce
+			if (ce.index in indexes): break
+			indexes.append(ce.index)
+			coedges.append(ce)
 			ce = ce.getNext()
 		return coedges
 	def getEdges(self):
@@ -1750,13 +1755,11 @@ class Loop(Topology):
 	def buildEdges(self):
 		edges = []
 		coedges = self.getCoEdges()
-		for index in coedges:
-			coEdge = coedges[index]
+		for coEdge in coedges:
 			edge = coEdge.build()
 			if (edge is not None):
 				edges.append(edge)
-		wire = Part.Wire(edges)
-		return wire
+		return edges
 class Wire(Topology):
 	def __init__(self):
 		super(Wire, self).__init__()
@@ -3804,11 +3807,11 @@ class SurfaceTorus(Surface):
 			try:
 				circleAxis   = self.axis.cross(self.uvorigin).normalize()
 				circleCenter = self.center + self.uvorigin.normalize() * fabs(self.major)
-				circle       = Part.makeCircle(fabs(self.minor), circleCenter, circleAxis)
+				circle       = Part.Circle(circleCenter, circleAxis, fabs(self.minor))
 				torus = Part.SurfaceOfRevolution(circle, self.center, self.axis)
 				self.shape = torus.toShape()
-			except:
-				print("Can't create torus for center=%s, axis=%s, major=%g, minor=%g, UV=%s"%(self.center, self.axis, self.major, self.minor, self.uvorigin))
+			except Exception as e:
+				logWarning("Can't create torus for center=%s, axis=%s, major=%g, minor=%g, UV=%s: %s"%(self.center, self.axis, self.major, self.minor, self.uvorigin, e))
 		return self.shape
 
 class Point(Geometry):
