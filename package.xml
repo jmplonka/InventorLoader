@@ -27,7 +27,7 @@
 <depend>Part</depend>
 <depend>Draft</depend>
 <depend>Sketcher</depend>
-<depend>sheetmetal</depend>
+<depend>SheetMetal Workbench</depend>
 <depend>olefile</depend>
 <depend>xlrd</depend>
 <depend>xlwt</depend>
