@@ -22,28 +22,28 @@ __url__        = "https://www.github.com/jmplonka/InventorLoader"
 V2D = Base.Vector2d
 
 # Primitives for Binary File Format (.sab)
-TAG_CHAR          =  2 # character (unsigned 8 bit)
-TAG_SHORT         =  3 # 16Bit signed value
-TAG_LONG          =  4 # 32/64Bit signed value
-TAG_FLOAT         =  5 # 32Bit IEEE Float value
-TAG_DOUBLE        =  6 # 64Bit IEEE Float value
-TAG_UTF8_U8       =  7 #  8Bit length + UTF8-Char
-TAG_UTF8_U16      =  8 # 16Bit length + UTF8-Char
-TAG_UTF8_U32_A    =  9 # 32Bit length + UTF8-Char
-TAG_TRUE          = 10 # Logical true value
-TAG_FALSE         = 11 # Logical false value
-TAG_ENTITY_REF    = 12 # Entity reference
-TAG_IDENT         = 13 # Sub-Class-Name
-TAG_SUBIDENT      = 14 # Base-Class-Namme
-TAG_SUBTYPE_OPEN  = 15 # Opening block tag
-TAG_SUBTYPE_CLOSE = 16 # Closing block tag
-TAG_TERMINATOR    = 17 # '#' sign
-TAG_UTF8_U32_B    = 18 # 32Bit length + UTF8-Char
-TAG_POSITION      = 19 # 3D-Vector scaled (scaling will be done later because of text file handling!)
-TAG_VECTOR_3D     = 20 # 3D-Vector normalized
-TAG_ENUM_VALUE    = 21 # value of an enumeration
-TAG_VECTOR_2D     = 22 # U-V-Vector
-TAG_INT64         = 23 # used by AutoCAD ASM int64 attributes
+TAG_CHAR          =  2 # 0x02 -> character (unsigned 8 bit)
+TAG_SHORT         =  3 # 0x03 -> 16Bit signed value
+TAG_LONG          =  4 # 0x04 -> 32/64Bit signed value
+TAG_FLOAT         =  5 # 0x05 -> 32Bit IEEE Float value
+TAG_DOUBLE        =  6 # 0x06 -> 64Bit IEEE Float value
+TAG_UTF8_U8       =  7 # 0x07 ->  8Bit length + UTF8-Char
+TAG_UTF8_U16      =  8 # 0x08 -> 16Bit length + UTF8-Char
+TAG_UTF8_U32_A    =  9 # 0x09 -> 32Bit length + UTF8-Char
+TAG_TRUE          = 10 # 0x0A -> Logical true value
+TAG_FALSE         = 11 # 0x0B -> Logical false value
+TAG_ENTITY_REF    = 12 # 0x0C -> Entity reference
+TAG_IDENT         = 13 # 0x0D -> Sub-Class-Name
+TAG_SUBIDENT      = 14 # 0x0E -> Base-Class-Namme
+TAG_SUBTYPE_OPEN  = 15 # 0x0F -> Opening block tag
+TAG_SUBTYPE_CLOSE = 16 # 0x10 -> Closing block tag
+TAG_TERMINATOR    = 17 # 0x11 -> '#' sign
+TAG_UTF8_U32_B    = 18 # 0x12 -> 32Bit length + UTF8-Char
+TAG_POSITION      = 19 # 0x13 -> 3D-Vector scaled (scaling will be done later because of text file handling!)
+TAG_VECTOR_3D     = 20 # 0x14 -> 3D-Vector normalized
+TAG_ENUM_VALUE    = 21 # 0x15 -> value of an enumeration
+TAG_VECTOR_2D     = 22 # 0x16 -> U-V-Vector
+TAG_INT64         = 23 # 0x17 -> used by AutoCAD ASM int64 attributes
 
 # TAG_FALSE, TAG_TRUE value mappings
 def _build_bool_enum_(false_value, true_value, true_key = 'T'):
@@ -118,11 +118,74 @@ def getDcAttributes():
 	global _dcIdxAttributes
 	return _dcIdxAttributes
 
-def _getStr_(data, offset, end):
+def _getStr_DEFAULT(data, offset, end):
 	txt = data[offset: end].decode('cp1252')
 	if (sys.version_info.major < 3):
 		txt = txt.encode(ENCODING_FS).decode("utf8")
 	return txt, end
+
+SPACE_CLAIM={}
+SPACE_CLAIM_A={}
+
+def _getStr_SpaceClaim(data, offset, end):
+	blob = data[offset: end]
+	i = blob.find(b'%')
+	if (i>=0):
+		txt = blob[0:i].decode('cp1252')
+		if (sys.version_info.major < 3):
+			txt = txt.encode(ENCODING_FS).decode("utf8")
+		if (len(blob) ==  i + 2):
+			idx, _ = getUInt8(blob, i + 1)
+			if (i == 0):
+				txt = SPACE_CLAIM_A[idx]
+			else:
+				SPACE_CLAIM_A[idx] = txt
+		elif (len(blob) == i + 5):
+			idx, _ = _getULong(blob, i + 1)
+			if (i == 0):
+				txt = SPACE_CLAIM[idx]
+			else:
+				SPACE_CLAIM[idx] = txt
+	else:
+		txt = blob.decode('cp1252')
+		if (sys.version_info.major < 3):
+			txt = txt.encode(ENCODING_FS).decode("utf8")
+
+	return txt, end
+
+_getStr_ = _getStr_DEFAULT
+
+def _set_attribute_DEFAULT(self, entity, pos):
+	i = pos
+	self._next, i     = getRefNode(entity, i, 'attrib')
+	self._previous, i = getRefNode(entity, i, 'attrib')
+	self._owner, i    = getRefNode(entity, i, None)
+	if ((getVersion() > 15.0) and (isASM() == False)): i += 18 # skip ???
+	return i
+
+def _set_attribute_SpaceClaim(self, entity, pos):
+	i = pos
+	self._next, i     = getRefNode(entity, i, 'attrib')
+	self._previous, i = getRefNode(entity, i, 'attrib')
+	self._owner, i    = getRefNode(entity, i, None)
+	i += 1 # skip ???
+	return i
+
+_set_attribute_ = _set_attribute_DEFAULT
+
+def _handle_topology_DEFAULT(obj, pos):
+	i = pos
+	vrs = getVersion()
+	if ((vrs > 10.0) and (isASM() == False)): i += 1 # skip ???
+	if (vrs > 6.0): i += 1 # skip ???
+	return i
+
+def _handle_topology_SpaceClaim(obj, pos):
+	i = pos
+	i += 2 # UINT32, REF, UINT32
+	return i
+
+_handle_topology_ = _handle_topology_DEFAULT
 
 def COS(x):        return (cos(x))
 def COSH(x):       return (cosh(x))
@@ -1517,9 +1580,7 @@ class Topology(Entity):
 	def __init__(self): super(Topology, self).__init__()
 	def set(self, entity):
 		i = super(Topology, self).set(entity)
-		vrs = getVersion()
-		if ((vrs > 10.0) and (isASM() == False)): i += 1 # skip ???
-		if (vrs > 6.0): i += 1 # skip ???
+		i = _handle_topology_(self, i)
 		return i
 class Body(Topology):
 	def __init__(self):
@@ -1529,6 +1590,8 @@ class Body(Topology):
 		self._transform = None # Pointer to Transform object
 	def set(self, entity):
 		i = super(Body, self).set(entity)
+		vrs = getVersion()
+		if (vrs > 27) and (isASM() == False): i += 1 # skip ??? (SpaceClaim)
 		self._lump, i      = getRefNode(entity, i, 'lump')
 		self._wire, i      = getRefNode(entity, i, 'wire')
 		self._transform, i = getRefNode(entity, i, 'transform')
@@ -2432,7 +2495,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			i += 1  #skip Number
 			i += 1  #skip Boolean
 			if (chunks[i].tag != TAG_SUBTYPE_CLOSE):
-			   b2, i = getBoolean(chunks, i) # should be F
+				b2, i = getBoolean(chunks, i) # should be F
 		return i
 	def setSurface(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor, 'surf_int_cur')
@@ -2734,14 +2797,18 @@ class SurfaceCone(Surface):
 						cone.translate((-1e6) * self.axis)
 						self.shape = cone.Faces[0]
 			else:
-				# Workaround: can't generate Cone!
-				l = Part.Line(self.apex, self.center + self.major).toShape()
+				# Workaround: can't generate Cone directly!
+				#l = Part.Line(self.apex, self.center + self.major).toShape()
+				l = Part.LineSegment(self.apex, self.center + self.major).toShape()
 				if (not isEqual1D(self.ratio, 1.)):
 					# TODO: apply scaling for ratios != 1.0!
 					logWarning(u"    ... Can't create cone surface with elliptical base - skipped!")
 				else:
-					cone = l.revolve(self.center, self.axis, 360.0)
-					self.shape = cone.Faces[0]
+					try:
+						cone = l.revolve(self.center, self.axis, 360.0)
+						self.shape = cone.Faces[0]
+					except:
+						logError(u"    ... Can't create cone surface for Apex=%s, Center=%s, Major=%s, Axis=%s - skipped!" % (self.apex, self.center, self.major, self.axis))
 		return self.shape
 class SurfaceMesh(Surface):
 	def __init__(self):
@@ -3868,10 +3935,7 @@ class Attributes(Entity):
 		self._owner    = None
 	def set(self, entity):
 		i = super(Attributes, self).set(entity)
-		self._next, i     = getRefNode(entity, i, 'attrib')
-		self._previous, i = getRefNode(entity, i, 'attrib')
-		self._owner, i    = getRefNode(entity, i, None)
-		if ((getVersion() > 15.0) and (isASM() == False)): i += 18 # skip ???
+		i = _set_attribute_(self, entity, i)
 		return i
 	def getNext(self):     return None if (self._next is None)     else self._next.node
 	def getPrevious(self): return None if (self._previous is None) else self._previous.node
@@ -4878,6 +4942,13 @@ class AcisReader(object):
 			self.header.scale   = self._readChunkBinary().val
 			self.header.resabs  = self._readChunkBinary().val
 			self.header.resnor  = self._readChunkBinary().val
+			if (self.header.prodId == 'SpaceClaim'):
+				global _getStr_, _handle_topology_, _set_attribute_
+				_getStr_ = _getStr_SpaceClaim
+				_handle_topology_ = _handle_topology_SpaceClaim
+				_set_attribute_ = _set_attribute_SpaceClaim
+				dummy = self._readChunkBinary() # True | False
+				dummy = self._readChunkBinary() # e.g. SPT5X6MJB_CC42A7Z4XQU39P3RUX3QNS8TMFV67BA_VJ86VA83VFP7V2DKCQ8NX2CNKF87AKCQ3R
 			return True
 #		setVersion(self.version)
 		return False
@@ -4999,6 +5070,8 @@ class AcisReader(object):
 		entityIdx    = 0
 		init()
 		self._readHeaderBinary()
+		SPACE_CLAIM.clear()
+		SPACE_CLAIM_A.clear()
 		while (self._hasNext()):
 			record, index = self._readRecordBinary(index)
 			if (record.name == "Begin-of-ACIS-History-Data"):

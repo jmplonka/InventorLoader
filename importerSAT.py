@@ -123,6 +123,10 @@ def resolveNodes(acis):
 	bodies = []
 	doAdd  = True
 	setReader(acis)
+
+	if (getDumpFolder()[-3:].lower() != 'sat'):
+		name = _getSatFileName(acis.name)
+		dumpSat(name, acis)
 	for entity in acis.getEntities():
 		node = createNode(entity)
 		if (node):
@@ -130,10 +134,6 @@ def resolveNodes(acis):
 				bodies.append(node)
 			if (entity.name in ['Begin-of-ACIS-History-Data', 'End-of-ACIS-data']):
 				doAdd = False
-
-	if (getDumpFolder()[-3:].lower() != 'sat'):
-		name = _getSatFileName(acis.name)
-		dumpSat(name, acis)
 
 	return bodies
 
