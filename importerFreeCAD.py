@@ -153,10 +153,16 @@ def unsupportedNode(node):
 	node.setGeometry(None)
 	return None
 
-def newObject(className, name):
+def newObject(className, name, body = None):
 	obj = FreeCAD.ActiveDocument.addObject(className, InventorViewProviders.getObjectName(name))
-	if (obj is not None):
+	if (obj):
 		obj.Label = name
+		if (body):
+			try:
+				body.addObject(obj)
+			except:
+				obj.adjustRelativeLinks(body)
+				body.ViewObject.dropObject(obj, None, '', [])
 	return obj
 
 def createGroup(name):
@@ -2641,8 +2647,21 @@ class FreeCADImporter(object):
 			if (base is None):
 				logWarning(u"    Can't find base info for (%04X): %s - not yet created!", holeNode.index, name)
 			else:
+				## required for Version > 0.19:
+				bodies = FreeCAD.ActiveDocument.findObjects('PartDesign::Body')
+				if (len(bodies)):
+					body = bodies[0]
+				else:
+					body = newObject('PartDesign::Body', 'Body_%d' % (len(bodies)))
+					FreeCADGui.ActiveDocument.ActiveView.setActiveObject('pdbody', body)
+				try:
+					body.addObject(base)
+				except:
+					base.adjustRelativeLinks(body)
+					body.ViewObject.dropObject(base, None, base.Label, [])
+
 				# create a "blue-print" for the holes
-				sketch = newObject('Sketcher::SketchObject', name + '_bp')
+				sketch = newObject('Sketcher::SketchObject', name + '_bp', body)
 				sketch.Placement = getPlacement(transformation)
 				diameter = getMM(diameter)
 				if (centerPoints):
@@ -2652,16 +2671,17 @@ class FreeCADImporter(object):
 				else:
 					circle = createCircle(CENTER, DIR_Z, diameter / 2.0) # Radius doesn't matter
 					sketch.addGeometry(circle, False)
+				hide(sketch)
 
 				angleDrillPoint  = getGRAD(pointAngle)
 
-				hole = newObject('PartDesign::Hole', name)
+				hole = body.newObject('PartDesign::Hole', name)
+				hole.Label       = name
 				hole.Profile     = sketch
-				hole.BaseFeature = base
+#				hole.BaseFeature = base
 #				hole.DepthType   = u'Dimension'
 				hole.Diameter    = diameter
 				hole.HoleCutType = FreeCADImporter.FX_HOLE_TYPE[holeType.get('value')]
-				hole.Depth       = getMM(depth)
 
 				if (holeType.get('value') != 0):
 					hole.HoleCutDiameter         = getMM(headCutDiameter)
@@ -2669,7 +2689,9 @@ class FreeCADImporter(object):
 					hole.HoleCutCountersinkAngle = getGRAD(headCutAngle)
 
 				if (holeType.get('value') == 3): # SpotFace
-					hole.Depth           = hole.Depth.Value + getMM(headCutDepth)
+					hole.Depth       = getMM(depth) + getMM(headCutDepth)
+				else:
+					hole.Depth       = getMM(depth)
 
 				if (isEqual1D(angleDrillPoint, 0)):
 					hole.DrillPoint      = u'Flat'
@@ -2684,8 +2706,7 @@ class FreeCADImporter(object):
 #				hole.ThreadSize              = []
 
 				self.addSolidBody(holeNode, hole, getProperty(properties, 0x18))
-
-				hide(sketch)
+				adjustViewObject(hole, base)
 				hide(base)
 		return
 
