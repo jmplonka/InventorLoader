@@ -402,9 +402,16 @@ def getFloat(chunks, index):
 def getFloats(chunks, index, count):
 	i = index
 	arr = []
-	for n in range(0, count):
-		f, i = getFloat(chunks, i)
-		arr.append(f)
+	n = 0
+	while n < count:
+		chunk = chunks[i]
+		i += 1
+		if (chunk.tag in [TAG_POSITION, TAG_VECTOR_3D]):
+			arr += chunk.val
+			n += len(chunk.val)
+		else:
+			arr.append(float(chunk.val))
+			n += 1
 	return arr, i
 
 def getFloatsScaled(chunks, index, count):
