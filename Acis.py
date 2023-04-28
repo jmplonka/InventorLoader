@@ -1,25 +1,27 @@
 # -*- coding: utf-8 -*-
 
+from __future__                 import unicode_literals
+
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2023, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
+
 '''
 Acis.py:
 Collection of classes necessary to read and analyse Standard ACIS Text (*.sat) files.
 '''
 
-from __future__                 import unicode_literals
+import traceback, Part, FreeCAD, re
 
-import traceback, Part, Draft, os, FreeCAD, re
-
-from importerUtils              import *
-from FreeCAD                    import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT, Base
-from math                       import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
-from importerConstants          import MIN_0, MIN_PI, MIN_PI2, MIN_INF, MAX_2PI, MAX_PI, MAX_PI2, MAX_INF, MAX_LEN
-from importerConstants          import CENTER, DIR_X, DIR_Y, DIR_Z, ENCODING_FS
-
-__author__     = 'Jens M. Plonka'
-__copyright__  = 'Copyright 2018, Germany'
-__url__        = "https://www.github.com/jmplonka/InventorLoader"
+from importerUtils     import *
+from FreeCAD           import Vector as VEC, Placement as PLC, Matrix as MAT, Base
+from math              import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
+from importerConstants import MIN_0, MIN_PI, MIN_PI2, MIN_INF, MAX_2PI, MAX_PI, MAX_PI2, MAX_INF, MAX_LEN, CENTER, DIR_X, DIR_Y, DIR_Z, ENCODING_FS
 
 V2D = Base.Vector2d
+
+if (sys.version_info.major > 2):
+	long = int
 
 # Primitives for Binary File Format (.sab)
 TAG_CHAR          =  2 # 0x02 -> character (unsigned 8 bit)
@@ -46,36 +48,36 @@ TAG_VECTOR_2D     = 22 # 0x16 -> U-V-Vector
 TAG_INT64         = 23 # 0x17 -> used by AutoCAD ASM int64 attributes
 
 # TAG_FALSE, TAG_TRUE value mappings
-def _build_bool_enum_(false_value, true_value, true_key = 'T'):
+def __build_bool_enum__(false_value, true_value, true_key = 'T'):
 	return {
 		TAG_TRUE:  true_value,  true_key: true_value,  1: true_value,
 		TAG_FALSE: false_value, 'F':      false_value, 0: false_value,
 	}
 
-RANGE           = _build_bool_enum_('I',              'F', 'I')
-REFLECTION      = _build_bool_enum_('no_reflect',     'reflect')
-SURF_RIGID      = _build_bool_enum_('non_rigid',      'rigid')
-SURF_AXIS_SWEEP = _build_bool_enum_('non_axis_sweep', 'axis_sweep')
-ROTATION        = _build_bool_enum_('no_rotate',      'rotate')
-SHEAR           = _build_bool_enum_('no_shear',       'shear')
-SENSE           = _build_bool_enum_('forward',        'reversed')
-SENSEV          = _build_bool_enum_('forward_v',      'reverse_v')
-SIDES           = _build_bool_enum_('single',         'double')
-SIDE            = _build_bool_enum_('out',            'in')
-SURF_BOOL       = _build_bool_enum_('FALSE',          'TRUE')
-SURF_NORM       = _build_bool_enum_('ISO',            'UNKNOWN')
-SURF_DIR        = _build_bool_enum_('SKIN',           'PERPENDICULAR')
-SURF_SWEEP      = _build_bool_enum_('angled',         'normal')
-CIRC_TYP        = _build_bool_enum_('non_cross',      'cross')
-CIRC_SMTH       = _build_bool_enum_('non_smooth',     'smooth')
-CALIBRATED      = _build_bool_enum_('uncalibrated',   'calibrated')
-CHAMFER_TYPE    = _build_bool_enum_('const',          'radius')
-CONVEXITY       = _build_bool_enum_('concave',        'convex')
-RENDER_BLEND    = _build_bool_enum_('rb_snapshot',    'rb_envelope')
-BOOLEAN         = _build_bool_enum_('F',              'T')
+RANGE           = __build_bool_enum__('I',              'F', 'I')
+REFLECTION      = __build_bool_enum__('no_reflect',     'reflect')
+SURF_RIGID      = __build_bool_enum__('non_rigid',      'rigid')
+SURF_AXIS_SWEEP = __build_bool_enum__('non_axis_sweep', 'axis_sweep')
+ROTATION        = __build_bool_enum__('no_rotate',      'rotate')
+SHEAR           = __build_bool_enum__('no_shear',       'shear')
+SENSE           = __build_bool_enum__('forward',        'reversed')
+SENSEV          = __build_bool_enum__('forward_v',      'reverse_v')
+SIDES           = __build_bool_enum__('single',         'double')
+SIDE            = __build_bool_enum__('out',            'in')
+SURF_BOOL       = __build_bool_enum__('FALSE',          'TRUE')
+SURF_NORM       = __build_bool_enum__('ISO',            'UNKNOWN')
+SURF_DIR        = __build_bool_enum__('SKIN',           'PERPENDICULAR')
+SURF_SWEEP      = __build_bool_enum__('angled',         'normal')
+CIRC_TYP        = __build_bool_enum__('non_cross',      'cross')
+CIRC_SMTH       = __build_bool_enum__('non_smooth',     'smooth')
+CALIBRATED      = __build_bool_enum__('uncalibrated',   'calibrated')
+CHAMFER_TYPE    = __build_bool_enum__('const',          'radius')
+CONVEXITY       = __build_bool_enum__('concave',        'convex')
+RENDER_BLEND    = __build_bool_enum__('rb_snapshot',    'rb_envelope')
+BOOLEAN         = __build_bool_enum__('F',              'T')
 
 # TAG_ENUM value mappings
-RAD_FORM_ENTS   = ['unknown', 'two_ends', 'functional', 'fixed_width']
+RAD_FORM_ENTS   = ('unknown', 'two_ends', 'functional', 'fixed_width')
 
 VAR_RADIUS  = {0: 'single_radius',  1: 'two_radii'}
 VAR_CHAMFER = {3: 'rounded_chamfer'}
@@ -106,10 +108,19 @@ _getSLong = getSInt32
 _getULong = getUInt32
 
 def getReader():
+	'''
+	Returns the current reader for the ACIS document.
+	'''
 	global _reader
 	return _reader
 
 def setReader(reader):
+	'''
+	Sets the reader for the current ACIS document.
+	Parameters:
+	reader: AcisReader
+		The current ACIS document's reader
+	'''
 	global _reader
 	clearEntities()
 	_reader = reader
@@ -155,19 +166,19 @@ def _getStr_SpaceClaim(data, offset, end):
 
 _getStr_ = _getStr_DEFAULT
 
-def _set_attribute_DEFAULT(self, entity, pos):
+def _set_attribute_DEFAULT(self, record, pos):
 	i = pos
-	self._next, i     = getRefNode(entity, i, 'attrib')
-	self._previous, i = getRefNode(entity, i, 'attrib')
-	self._owner, i    = getRefNode(entity, i, None)
+	self._next, i     = getRefNode(record, i, 'attrib')
+	self._previous, i = getRefNode(record, i, 'attrib')
+	self._owner, i    = getRefNode(record, i, None)
 	if ((getVersion() > 15.0) and (isASM() == False)): i += 18 # skip ???
 	return i
 
-def _set_attribute_SpaceClaim(self, entity, pos):
+def _set_attribute_SpaceClaim(self, record, pos):
 	i = pos
-	self._next, i     = getRefNode(entity, i, 'attrib')
-	self._previous, i = getRefNode(entity, i, 'attrib')
-	self._owner, i    = getRefNode(entity, i, None)
+	self._next, i     = getRefNode(record, i, 'attrib')
+	self._previous, i = getRefNode(record, i, 'attrib')
+	self._owner, i    = getRefNode(record, i, None)
 	i += 1 # skip ???
 	return i
 
@@ -258,9 +269,8 @@ class Law(object):
 	#		pi= 3.141
 	def __init__(self, eq):
 		#FIXME: how to handle cross operator???
-		self.eq = eq
 		# convert ^ into **
-		self.eq = self.eq.replace('^', ' ** ')
+		self.eq = eq.replace('^', ' ** ')
 	def evaluate(self, X):
 		try:
 			return eval(self.eq)
@@ -275,6 +285,9 @@ def init():
 	_dcIdxAttributes.clear()
 
 def clearEntities():
+	'''
+	Clears all cached enties.
+	'''
 	global _nameMtchAttr
 	_nameMtchAttr.clear()
 
@@ -286,8 +299,7 @@ def setVersion(vers):
 	version = vers
 
 def getVersion():
-	global _reader
-	return _reader.version
+	return getReader().version
 
 def isASM():
 	header = getReader().header
@@ -301,41 +313,41 @@ def getAsmMajor():
 		return header.asm[0]
 	return 0
 
-def createNode(entity):
-	if (entity is None): return None
-	if (entity.index < 0): return None
-	if (entity.node): return entity.node
+def createEntity(record):
+	if (record is None): return None
+	if (record.index < 0): return None
+	if (record.entity): return record.entity
 	try:
-		node = RECORD_2_NODE[entity.name]()
+		entity = RECORD_2_ENTITY[record.name]()
 	except:
 		#Found unknown class: try to find the base class
-		types = entity.name.split('-')
+		types = record.name.split('-')
 		i = 1
-		node = Entity()
+		entity = Entity()
 		t = 'Entity'
 		while (i<len(types)):
 			try:
 				t = "-".join(types[i:])
-				node = RECORD_2_NODE[t]()
+				entity = RECORD_2_ENTITY[t]()
 				break
 			except:
 				i += 1
-		logError(u"    Missing class implementation for '%s' - using base class '%s'!", entity.name, t)
+		logError(u"    Missing class implementation for '%s' - using base class '%s'!", record.name, t)
 
-	if (hasattr(node, 'set')):
-		node.set(entity)
-	return node
+	if (hasattr(entity, 'set')):
+		entity.set(record)
+	return entity
 
 def getValue(chunks, index):
 	val = chunks[index].val
 	return val, index + 1
 
-def getRefNode(entity, index, name):
-	chunk = entity.chunks[index]
+def getRefNode(record, index, name):
+	chunk = record.chunks[index]
 	if (chunk.tag == TAG_ENTITY_REF):
-		ref = chunk.entity
+		ref = chunk.record
 		if (name is not None) and (ref is not None) and (ref.name.endswith(name) == False):
-			raise Exception("Expected %s but found %s (-%s)" %(name, ref.name, entity.index))
+			raise Exception("Expected %s but found %s (-%s)" %(name, ref.name, record.index))
 		return ref, index + 1
 	raise Exception("Chunk at index=%d, is not a reference" %(index))
 
@@ -381,8 +393,6 @@ def getDcIndexMappings(chunks, index, attr):
 
 def getLong(chunks, index):
 	val, i = getValue(chunks, index)
-	if (sys.version_info.major > 2):
-		return int(val), i
 	return long(val), i
 
 def getFloat(chunks, index):
@@ -423,7 +433,7 @@ def getText(chunks, index):
 
 def getEnumByTag(chunks, index, values):
 	chunk = chunks[index]
-	if (type(chunk) == AcisChunkUtf8U8):
+	if (chunk.tag == TAG_UTF8_U8):
 		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, chunk.val, values)
 		idx = 0
 		for key in values:
@@ -437,7 +447,7 @@ def getEnumByTag(chunks, index, values):
 					break;
 			idx += 1
 		chunks[index] = chunk
-	elif (type(chunk) == AcisChunkDouble):
+	elif (chunk.tag == TAG_DOUBLE):
 		chunk = AcisChunkEnumValue(TAG_ENUM_VALUE, 11 - int(chunk.val), values)
 		chunks[index] = chunk
 	else:
@@ -571,27 +581,61 @@ def readKnotsMults(count, chunks, index):
 		mults.append(mult)
 	return knots, mults, i
 
-def adjustMultsKnots(knots, mults, periodic, degree):
+def adjustMultsKnots(knots, mults, degree):
 	mults[0] = degree + 1
 	mults[-1] = degree + 1
-#	return knots, mults, False # Force periodic to False!!!
-	return knots, mults, periodic
+	return knots, mults
 
-def readPoints2DList(nubs, count, chunks, index):
-	nubs.uKnots, nubs.uMults, i = readKnotsMults(count, chunks, index)
-	us = sum(nubs.uMults) - (nubs.uDegree - 1)
-	nubs.poles   = [None for r in range(0, us)]
-	nubs.weights = [1 for r in range(0, us)] if (nubs.rational) else None
+def readPoints2DList(spline, count, chunks, index):
+	spline.uKnots, spline.uMults, i = readKnotsMults(count, chunks, index)
+	us = sum(spline.uMults) - (spline.uDegree - 1)
+	spline.poles   = [None for r in range(0, us)]
+	spline.weights = [1 for r in range(0, us)] if (spline.rational) else None
 
 	for k in range(0, us):
 		u, i  = getLength(chunks, i)
 		v, i  = getLength(chunks, i)
-		nubs.poles[k] = V2D(u, v)
-		if (nubs.rational): nubs.weights[k], i = getFloat(chunks, i)
+		spline.poles[k] = V2D(u, v)
+		if (spline.rational): spline.weights[k], i = getFloat(chunks, i)
 
-	nubs.uKnots, nubs.uMults, nubs.uPeriodic = adjustMultsKnots(nubs.uKnots, nubs.uMults, nubs.uPeriodic, nubs.uDegree)
+	spline.uKnots, spline.uMults = adjustMultsKnots(spline.uKnots, spline.uMults, spline.uDegree)
 
-	return i
+	return spline, i
+
+def readPoints3DList(spline, count, chunks, index):
+	spline.uKnots, spline.uMults, i = readKnotsMults(count, chunks, index)
+	us = sum(spline.uMults) - (spline.uDegree - 1)
+	spline.poles   = [None for r in range(0, us)]
+	spline.weights = [1 for r in range(0, us)] if (spline.rational) else None
+
+	for u in range(0, us):
+		spline.poles[u], i = getLocation(chunks, i)
+		if (spline.rational): spline.weights[u], i = getFloat(chunks, i)
+
+	spline.uKnots, spline.uMults = adjustMultsKnots(spline.uKnots, spline.uMults, spline.uDegree)
+
+	return spline, i
+
+def readPoints3DSurface(spline, countU, countV, chunks, index):
+	# row definitions
+	spline.uKnots, spline.uMults, i = readKnotsMults(countU, chunks, index)
+	# column definitions
+	spline.vKnots, spline.vMults, i = readKnotsMults(countV, chunks, i)
+
+	us = sum(spline.uMults) - (spline.uDegree - 1)
+	vs = sum(spline.vMults) - (spline.vDegree - 1)
+
+	spline.poles   = [[None for c in range(0, vs)] for r in range(0, us)]
+	spline.weights = [[1 for c in range(0, vs)] for r in range(0, us)] if (spline.rational) else None
+	for v in range(0, vs):
+		for u in range(0, us):
+			spline.poles[u][v], i  = getLocation(chunks, i)
+			if (spline.rational): spline.weights[u][v], i = getFloat(chunks, i)
+
+	spline.uKnots, spline.uMults = adjustMultsKnots(spline.uKnots, spline.uMults, spline.uDegree)
+	spline.vKnots, spline.vMults = adjustMultsKnots(spline.vKnots, spline.vMults, spline.vDegree)
+
+	return spline, i
 
 def readBlend(chunks, index):
 	nubs, i = readBS2Curve(chunks, index)
@@ -816,7 +860,6 @@ def createBSplinesPCurve(pcurve, surface, sense):
 	surf = surface.build()
 	if (surf is None):
 		return None
-	number_of_poles = len(pcurve.poles)
 	bsc = Part.Geom2d.BSplineCurve2d()
 	if (pcurve.rational):
 		bsc.buildFromPolesMultsKnots(      \
@@ -918,9 +961,8 @@ def readBS2Curve(chunks, index):
 		return None, i
 	if (nbs in ('nubs', 'nurbs')):
 		closure, knots, i = getClosureCurve(chunks, i)
-		nubs = BS3_Curve(nbs == 'nurbs', closure == 'periodic', dgr)
-		i = readPoints2DList(nubs, knots, chunks, i)
-		return nubs, i
+		spline = BS_Curve(nbs == 'nurbs', closure == 'periodic', dgr)
+		return readPoints2DList(spline, knots, chunks, i)
 	return None, index
 
 def readBS3Curve(chunks, index):
@@ -929,9 +971,8 @@ def readBS3Curve(chunks, index):
 		return None, i
 	if (nbs in ('nubs', 'nurbs')):
 		closure, knots, i = getClosureCurve(chunks, i)
-		spline = BS3_Curve(nbs == 'nurbs', closure == 'periodic', dgr)
-		i = spline.readPoints3DList(knots, chunks, i)
-		return spline, i
+		spline = BS_Curve(nbs == 'nurbs', closure == 'periodic', dgr)
+		return readPoints3DList(spline, knots, chunks, i)
 	return None, index
 
 def readBS3Surface(chunks, index):
@@ -940,9 +981,8 @@ def readBS3Surface(chunks, index):
 		return None, i
 	if (nbs in ('nubs', 'nurbs')):
 		closureU, closureV, singularityU, singularityV, countU, countV, i = getClosureSurface(chunks, i)
-		spline = BS3_Surface(nbs == 'nurbs', closureU == 'periodic', closureV == 'periodic', degreeU, degreeV)
-		i = spline.readPoints3DMap(countU, countV, chunks, i)
-		return spline, i
+		spline = BS_Surface(nbs == 'nurbs', closureU == 'periodic', closureV == 'periodic', degreeU, degreeV)
+		return readPoints3DSurface(spline, countU, countV, chunks, i)
 	if (nbs == 'summary'):
 		x, i            = getFloat(chunks, i)
 		arr, i          = getFloatArray(chunks, i)
@@ -962,7 +1002,7 @@ def readSplineSurface(chunks, index, tolerance):
 			tol, i = getLength(chunks, i)
 			return spline, tol, i
 		return spline, None, i
-	if ((singularity == 'none') or (singularity == 4)):
+	if (singularity in ('none', 4)):
 		rngU, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		rngV, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 		clsU, i = getEnumByValue(chunks, i, CLOSURE)
@@ -970,7 +1010,7 @@ def readSplineSurface(chunks, index, tolerance):
 		sngU, i = getSingularity(chunks, i)
 		sngV, i = getSingularity(chunks, i)
 		return None, (None, None, rngU, rngV, None, clsU, clsV, sngU, sngV), i
-	if ((singularity == 'v') or (singularity == 'summary')):
+	if (singularity in ('v', 'summary')):
 		uKnots, i = getFloatArray(chunks, i)
 		vKnots, i = getFloatArray(chunks, i)
 		tol, i    = getLength(chunks, i)
@@ -978,14 +1018,16 @@ def readSplineSurface(chunks, index, tolerance):
 		clsV, i   = getEnumByValue(chunks, i, CLOSURE)
 		sngU, i   = getSingularity(chunks, i)
 		sngV, i   = getSingularity(chunks, i)
-		spline = BS3_Surface(False, (clsU == 'periodic'), (clsV == 'periodic'), 3, 3)
+		spline = BS_Surface(False, (clsU == 'periodic'), (clsV == 'periodic'), 3, 3)
 		spline.uKnots = uKnots
 		spline.uMults = [3] * len(uKnots)
 		spline.vKnots = vKnots
 		spline.vMults = [3] * len(vKnots)
 		spline.tolerance = tol
+		spline.uSingularity = sngU
+		spline.vSingularity = sngV
 		# FIXME: create a surface from these values! -> ../tutorials/2012/Tube and Pipe/Example_iparts/45Elbow.ipt
-		return None, (uKnots, vKnots, None, None, tol, clsU, clsV, sngU, sngV), i
+		return spline, None, i
 	raise Exception("Unknown spline singularity '%s'" %(singularity))
 
 def readLofSubdata(chunks, i):
@@ -1187,8 +1229,30 @@ class Skin(object):
 		self.n    = 0
 		self.law  = 'null_law'
 		self.pcur = None
-class BS3_Curve(object):
+
+class BS_Curve(object):
+	'''
+	B-Spline curve
+	Attributes:
+	poles : list
+		a sequence of points
+	uMults : list
+		a list of m
+	uKnots : list
+		The knot vector defines where and how the control points affect the NURBS curve.
+	uPeriodic: bool
+		True for closed curves, False for open curves
+	uDegree: int
+		The number of control points that influence any given point of the curve.
+	weights:
+		Each control point can define an individual weight.
+	rational: bool
+		False for nubs, True for nurbs
+	'''
 	def __init__(self, rational, periodic, degree):
+		'''Constructor for the B-Spline-Curve
+		Constructs a new 3D B-Spline curve base on the given parameters
+		'''
 		self.poles     = []       # sequence of VEC
 		self.uMults    = ()       # tuple of int, e.g.  (3, 1,  3)
 		self.uKnots    = ()       # tuple of float, eg. (0, 0.5, 1)
@@ -1196,47 +1260,16 @@ class BS3_Curve(object):
 		self.uDegree   = degree   # int
 		self.weights   = []       # sequence of float, e.g. (1, 0.8, 0.2), must have the same length as poles
 		self.rational  = rational # boolean: False for nubs, True for nurbs
-	def readPoints3DList(self, count, chunks, index):
-		self.uKnots, self.uMults, i = readKnotsMults(count, chunks, index)
-		us = sum(self.uMults) - (self.uDegree - 1)
-		self.poles   = [None for r in range(0, us)]
-		self.weights = [1 for r in range(0, us)] if (self.rational) else None
 
-		for u in range(0, us):
-			self.poles[u], i = getLocation(chunks, i)
-			if (self.rational): self.weights[u], i = getFloat(chunks, i)
-
-		self.uKnots, self.uMults, self.uPeriodic = adjustMultsKnots(self.uKnots, self.uMults, self.uPeriodic, self.uDegree)
-		return i
-class BS3_Surface(BS3_Curve):
+class BS_Surface(BS_Curve):
 	def __init__(self, rational, uPeriodic, vPeriodic, uDegree, vDegree):
-		super(BS3_Surface, self).__init__(rational, uPeriodic, uDegree)
+		super(BS_Surface, self).__init__(rational, uPeriodic, uDegree)
 		self.poles     = [[]]      # sequence of sequence ofVEC
 		self.weights   = [[]]      # sequence of sequence float
 		self.vMults    = ()        # tuple of int, ref. umults
 		self.vKnots    = ()        # tuple of float
 		self.vPeriodic = vPeriodic # boolean
 		self.vDegree   = vDegree          # int
-	def readPoints3DMap(self, countU, countV, chunks, index):
-		# row definitions
-		self.uKnots, self.uMults, i = readKnotsMults(countU, chunks, index)
-		# column definitions
-		self.vKnots, self.vMults, i = readKnotsMults(countV, chunks, i)
-
-		us = sum(self.uMults) - (self.uDegree - 1)
-		vs = sum(self.vMults) - (self.vDegree - 1)
-
-		self.poles   = [[None for c in range(0, vs)] for r in range(0, us)]
-		self.weights = [[1 for c in range(0, vs)] for r in range(0, us)] if (self.rational) else None
-		for v in range(0, vs):
-			for u in range(0, us):
-				self.poles[u][v], i  = getLocation(chunks, i)
-				if (self.rational): self.weights[u][v], i = getFloat(chunks, i)
-
-		self.uKnots, self.uMults, self.uPeriodic = adjustMultsKnots(self.uKnots, self.uMults, self.uPeriodic, self.uDegree)
-		self.vKnots, self.vMults, self.vPeriodic = adjustMultsKnots(self.vKnots, self.vMults, self.vPeriodic, self.vDegree)
-
-		return i
 class Helix(object):
 	def __init__(self):
 		self.radAngles = Interval(Range('I', 1.0), Range('I', 1.0))
@@ -1363,8 +1396,16 @@ class Range(object):
 	def __add__(self, other):
 		if (isinstance(other, Range)): return self.getLimit() * other.getLimit()
 		return self.getLimit() + other
+
 class Interval(object):
 	def __init__(self, upper, lower):
+		'''
+		Constructor of an interval
+		lower: Range
+			The interval's lower range
+		upper: Range
+			The interval's upper range
+		'''
 		self.lower = upper
 		self.upper = lower
 	def __str__(self): return "%s %s" %(self.lower, self.upper)
@@ -1374,6 +1415,7 @@ class Interval(object):
 	def getUpperType(self):  return self.upper.type
 	def getUpperLimit(self): return self.upper.getLimit()
 	def getLimit(self):      return self.getUpperLimit() - self.getLowerLimit()
+
 class IndexMappings(object):
 	def __init__(self):
 		self.attributes = []
@@ -1391,6 +1433,7 @@ class IndexMappings(object):
 		return self.__getTypedOwners__('edge')
 	def getFaces(self):
 		return self.__getTypedOwners__('face')
+
 class BeginOfAcisHistoryData(object): pass
 
 class Bulletin(object):
@@ -1399,10 +1442,10 @@ class Bulletin(object):
 		self.new = new
 	def __str__(self):
 		if (self.old.val == -1):
-			return u"$-1   $%-4d // inserted:   %s" %(self.new.val, self.new.entity)
+			return u"$-1   $%-4d // inserted:   %s" %(self.new.val, self.new.record)
 		if (self.new.val == -1):
-			return u"$%-4d $-1   // deleted:    %s" %(self.old.val, self.old.entity)
-		return u"$%-4d $%-4d // updated id: %s" %(self.old.val, self.new.val, self.new.entity)
+			return u"$%-4d $-1   // deleted:    %s" %(self.old.val, self.old.record)
+		return u"$%-4d $%-4d // updated id: %s" %(self.old.val, self.new.val, self.new.record)
 	def __repr__(self):
 		return str(self)
 
@@ -1450,10 +1493,10 @@ class DeltaState(object):
 				next, i = getInteger(chunks, i + 2)
 			next, i = getInteger(chunks, i)
 	def getRecord(self):   return self._record
-	def getPrevious(self): return self.previous.entity
-	def getNext(self):     return self.next.entity
-	def getPartner(self):  return self.partner.entity
-	def getMerged(self):   return self.merged.entity
+	def getPrevious(self): return self.previous.record
+	def getNext(self):     return self.next.record
+	def getPartner(self):  return self.partner.record
+	def getMerged(self):   return self.merged.record
 	def resolveLinks(self):
 		self.previous = resolveHistoryLink(self.history, self.previous)
 		self.next     = resolveHistoryLink(self.history, self.next)
@@ -1467,45 +1510,45 @@ class DeltaState(object):
 class EndOfAcisHistorySection(object): pass
 class EndOfAcisData(object): pass
 
-# abstract super class
+# abstract super class for all entities
 class Entity(object):
 	def __init__(self):
 		self._attrib = None
-		self.entity  = None
+		self.record  = None
 		self.history = None
-		self.node    = None
+		self.record  = None
 		self.shape   = None      # FreeCAD shape of the face
 		self.__ready_to_build__ = True # Don't try to create me more than once
-	def set(self, entity):
+	def set(self, record):
 		try:
-			self.entity = entity
-			entity.node = self
-			self._attrib, i = getRefNode(entity, 0, None)
+			self.record = record
+			record.entity = self
+			self._attrib, i = getRefNode(record, 0, None)
 			if (getVersion() > 6.0):
-				self.history, i = getInteger(entity.chunks, i)
+				self.history, i = getInteger(record.chunks, i)
 			else:
 				self.history = -1
 		except Exception as e:
 			logError(traceback.format_exc())
 		return i
 	@property
-	def index(self):    return -1   if (self.entity is None)  else self.entity.index
-	def getType(self):  return -1   if (self.entity is None)  else self.entity.name
+	def index(self):    return -1   if (self.record is None)  else self.record.index
+	def getType(self):  return -1   if (self.record is None)  else self.record.name
 	@property
-	def attrib(self):   return None if (self._attrib is None) else self._attrib.node
-	def __str__(self):  return "%s" % (self.entity)
-	def __repr__(self): return "%r" % (self.entity)
+	def attrib(self):   return None if (self._attrib is None) else self._attrib.entity
+	def __str__(self):  return "%s" % (self.record)
+	def __repr__(self): return "%r" % (self.record)
 	def getSatText(self):
-		e = self.entity
-		sat = e.name
-		sat += " %r" %(e.chunks[0])
+		record = self.record
+		sat = record.name
+		sat += " %r" %(record.chunks[0])
 		if (getVersion() > 6.0):
 			sat += u"%d " %(self.history)
 			sat += self.getSatTextSub(2)
 		else:
 			sat += self.getSatTextSub(1)
 		return sat
-	def getSatTextSub(self, index): return ''.join("%s" %(c) for c in self.entity.chunks[index:])
+	def getSatTextSub(self, index): return ''.join("%s" %(c) for c in self.record.chunks[index:])
 	def __lt__(self, other):
 		return self.index < other.index
 	def getAttribute(self, clsNames):
@@ -1540,46 +1583,40 @@ class T(Entity):
 	def __init__(self):
 		super(T, self).__init__()
 		self.text = ''
-	def set(self, entity):
-		self.text, i = getText(entity.chunks, 0)
+	def set(self, record):
+		self.text, i = getText(record.chunks, 0)
 		return i
 class Transform(Entity):
 	def __init__(self):
 		super(Transform, self).__init__()
-		self.affine = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]
-		self.transl     = (0, 0, 0)
-		self.scale      = 1.0
 		self.rotation   = False
 		self.reflection = False
 		self.shear      = False
+		self.matrix     = MAT(
+			1.0, 0.0, 0.0, 0.0,
+			0.0, 1.0, 0.0, 0.0,
+			0.0, 0.0, 1.0, 0.0,
+			0.0, 0.0, 0.0, 1.0)
 	def setBulk(self, chunks, index):
-		p, i          = getPoint(chunks, index)
-		a11, a21, a31 = p
-		p, i          = getPoint(chunks, i)
-		a12, a22, a32 = p
-		p, i          = getPoint(chunks, i)
-		a13, a23, a33 = p
-		p, i          = getLocation(chunks, i)
-		a14 = p.x
-		a24 = p.y
-		a34 = p.z
-		a44, i        = getFloat(chunks, i)
+		scale  = getScale()
+		a, i   = getFloats(chunks, index, 13)
+		self.matrix = MAT(a[0], a[3], a[6], a[9]*scale, a[1], a[4], a[6], a[10]*scale, a[2], a[5], a[8], a[11]*scale, 0.0, 0.0, 0.0, a[12])
 		self.rotation, i   = getEnumByTag(chunks, i, ROTATION)
 		self.reflection, i = getEnumByTag(chunks, i, REFLECTION)
 		self.shear, i      = getEnumByTag(chunks, i, SHEAR)
-		self.matrix = MAT(a11, a12, a13, a14, a21, a22, a23, a24, a31, a32, a33, a34, 0.0, 0.0, 0.0, a44)
 		return i
-	def set(self, entity):
-		i = super(Transform, self).set(entity)
-		i = self.setBulk(entity.chunks, i)
+	def set(self, record):
+		i = super(Transform, self).set(record)
+		i = self.setBulk(record.chunks, i)
 		return i
 	def getPlacement(self):
 		return PLC(self.matrix)
+
 class Topology(Entity):
 	'''Abstract super class for all topology entities.'''
 	def __init__(self): super(Topology, self).__init__()
-	def set(self, entity):
-		i = super(Topology, self).set(entity)
+	def set(self, record):
+		i = super(Topology, self).set(record)
 		i = _handle_topology_(self, i)
 		return i
 class Body(Topology):
@@ -1588,14 +1625,14 @@ class Body(Topology):
 		self._lump      = None # Pointer to LUMP object
 		self._wire      = None # Pointer to Wire object
 		self._transform = None # Pointer to Transform object
-	def set(self, entity):
-		i = super(Body, self).set(entity)
+	def set(self, record):
+		i = super(Body, self).set(record)
 		vrs = getVersion()
 		if (vrs > 27) and (isASM() == False): i += 1 # skip ??? (SpaceClaim)
-		self._lump, i      = getRefNode(entity, i, 'lump')
-		self._wire, i      = getRefNode(entity, i, 'wire')
-		self._transform, i = getRefNode(entity, i, 'transform')
-		self.unknown1, i   = getUnknownFT(entity.chunks, i)
+		self._lump, i      = getRefNode(record, i, 'lump')
+		self._wire, i      = getRefNode(record, i, 'wire')
+		self._transform, i = getRefNode(record, i, 'transform')
+		self.unknown1, i   = getUnknownFT(record.chunks, i)
 		return i
 	def getLumps(self):
 		lumps = []
@@ -1611,21 +1648,21 @@ class Body(Topology):
 			wires.append(w)
 			w = w.getNext()
 		return wires
-	def getLump(self):      return None if (self._lump is None)      else self._lump.node
-	def getWire(self):      return None if (self._wire is None)      else self._wire.node
-	def getTransform(self): return None if (self._transform is None) else self._transform.node
+	def getLump(self):      return None if (self._lump is None)      else self._lump.entity
+	def getWire(self):      return None if (self._wire is None)      else self._wire.entity
+	def getTransform(self): return None if (self._transform is None) else self._transform.entity
 class Lump(Topology):
 	def __init__(self):
 		super(Lump, self).__init__()
 		self._next  = None # The next LUMP
 		self._shell = None # The first of shells of the LUMP
 		self._owner = None # The lump's body
-	def set(self, entity):
-		i = super(Lump, self).set(entity)
-		self._next, i   = getRefNode(entity, i, 'lump')
-		self._shell, i  = getRefNode(entity, i, 'shell')
-		self._owner, i  = getRefNode(entity, i, 'body')
-		self.unknown, i = getUnknownFT(entity.chunks, i)
+	def set(self, record):
+		i = super(Lump, self).set(record)
+		self._next, i   = getRefNode(record, i, 'lump')
+		self._shell, i  = getRefNode(record, i, 'shell')
+		self._owner, i  = getRefNode(record, i, 'body')
+		self.unknown, i = getUnknownFT(record.chunks, i)
 		return i
 	def getShells(self):
 		shells = []
@@ -1634,9 +1671,9 @@ class Lump(Topology):
 			shells.append(s)
 			s = s.getNext()
 		return shells
-	def getNext(self):  return None if (self._next is None)  else self._next.node
-	def getShell(self): return None if (self._shell is None) else self._shell.node
-	def getOwner(self): return None if (self._owner is None) else self._owner.node
+	def getNext(self):  return None if (self._next is None)  else self._next.entity
+	def getShell(self): return None if (self._shell is None) else self._shell.entity
+	def getOwner(self): return None if (self._owner is None) else self._owner.entity
 class Shell(Topology):
 	def __init__(self):
 		super(Shell, self).__init__()
@@ -1645,14 +1682,14 @@ class Shell(Topology):
 		self._face  = None # The first of faces of the shell
 		self._wire  = None # The shell's wire
 		self._owner = None # The shell's lump
-	def set(self, entity):
-		i = super(Shell, self).set(entity)
-		self._next, i  = getRefNode(entity, i, 'shell')
-		self._shell, i = getRefNode(entity, i, None)
-		self._face, i  = getRefNode(entity, i, 'face')
+	def set(self, record):
+		i = super(Shell, self).set(record)
+		self._next, i  = getRefNode(record, i, 'shell')
+		self._shell, i = getRefNode(record, i, None)
+		self._face, i  = getRefNode(record, i, 'face')
 		if (getVersion() > 1.7):
-			self._wire, i  = getRefNode(entity, i, 'wire')
-		self._owner, i = getRefNode(entity, i, 'lump')
+			self._wire, i  = getRefNode(record, i, 'wire')
+		self._owner, i = getRefNode(record, i, 'lump')
 		return i
 	def getFaces(self):
 		faces = []
@@ -1675,11 +1712,11 @@ class Shell(Topology):
 			shells.append(s)
 			s = s.next
 		return shells
-	def getNext(self):  return None if (self._next is None)  else self._next.node
-	def getShell(self): return None if (self._shell is None) else self._shell.node
-	def getFace(self):  return None if (self._face is None)  else self._face.node
-	def getWire(self):  return None if (self._wire is None)  else self._wire.node
-	def getLump(self):  return None if (self._owner is None) else self._owner.node
+	def getNext(self):  return None if (self._next is None)  else self._next.entity
+	def getShell(self): return None if (self._shell is None) else self._shell.entity
+	def getFace(self):  return None if (self._face is None)  else self._face.entity
+	def getWire(self):  return None if (self._wire is None)  else self._wire.entity
+	def getLump(self):  return None if (self._owner is None) else self._owner.entity
 class SubShell(Topology):
 	def __init__(self):
 		super(SubShell, self).__init__()
@@ -1688,19 +1725,19 @@ class SubShell(Topology):
 		self._child = None # The child subshell
 		self._face  = None # The first face of the subshell
 		self._wire  = None # The subshell's wire
-	def set(self, entity):
-		i = super(SubShell, self).set(entity)
-		self._owner = getRefNode(entity, i, 'shell')
-		self._next  = getRefNode(entity, i, None)
-		self._child = getRefNode(entity, i, None)
-		self._face  = getRefNode(entity, i, 'face')
-		self._wire  = getRefNode(entity, i, 'wire')
+	def set(self, record):
+		i = super(SubShell, self).set(record)
+		self._owner = getRefNode(record, i, 'shell')
+		self._next  = getRefNode(record, i, None)
+		self._child = getRefNode(record, i, None)
+		self._face  = getRefNode(record, i, 'face')
+		self._wire  = getRefNode(record, i, 'wire')
 		return i
-	def getOwner(self): return None if (self._owner is None) else self._owner.node
-	def getNext(self):  return None if (self._next is None)  else self._next.node
-	def getChild(self): return None if (self._child is None) else self._child.node
-	def getFace(self):  return None if (self._face is None)  else self._face.node
-	def getWire(self):  return None if (self._wire is None)  else self._wire.node
+	def getOwner(self): return None if (self._owner is None) else self._owner.entity
+	def getNext(self):  return None if (self._next is None)  else self._next.entity
+	def getChild(self): return None if (self._child is None) else self._child.entity
+	def getFace(self):  return None if (self._face is None)  else self._face.entity
+	def getWire(self):  return None if (self._wire is None)  else self._wire.entity
 class Face(Topology):
 	def __init__(self):
 		super(Face, self).__init__()
@@ -1713,17 +1750,17 @@ class Face(Topology):
 		self.sides       = 'single'  # Flag defining face is single or double sided
 		self.side        = None      # Flag defining face is single or double sided
 		self.containment = False     # Flag defining face is containment of double-sided faces
-	def set(self, entity):
-		i = super(Face, self).set(entity)
-		self._next, i                   = getRefNode(entity, i, 'face')
-		self._loop, i                   = getRefNode(entity, i, 'loop')
-		self._parent, i                 = getRefNode(entity, i, None)
-		self.unknown, i                 = getRefNode(entity, i, None)
-		self._surface, i                = getRefNode(entity, i, 'surface')
-		self.sense, i                   = getEnumByTag(entity.chunks, i, SENSE)
-		self.sides, self.containment, i = getSides(entity.chunks, i)
+	def set(self, record):
+		i = super(Face, self).set(record)
+		self._next, i                   = getRefNode(record, i, 'face')
+		self._loop, i                   = getRefNode(record, i, 'loop')
+		self._parent, i                 = getRefNode(record, i, None)
+		self.unknown, i                 = getRefNode(record, i, None)
+		self._surface, i                = getRefNode(record, i, 'surface')
+		self.sense, i                   = getEnumByTag(record.chunks, i, SENSE)
+		self.sides, self.containment, i = getSides(record.chunks, i)
 		if ((getVersion() > 9.0) and (isASM() == False)):
-			self.unknown2, i = getUnknownFT(entity.chunks, i)
+			self.unknown2, i = getUnknownFT(record.chunks, i)
 		return i
 	def getLoops(self):
 		loops = []
@@ -1732,10 +1769,10 @@ class Face(Topology):
 			loops.append(l)
 			l = l.getNext()
 		return loops
-	def getNext(self):    return None if (self._next is None)    else self._next.node
-	def getLoop(self):    return None if (self._loop is None)    else self._loop.node
-	def getParent(self):  return None if (self._parent is None)  else self._parent.node
-	def getSurface(self): return None if (self._surface is None) else self._surface.node
+	def getNext(self):    return None if (self._next is None)    else self._next.entity
+	def getLoop(self):    return None if (self._loop is None)    else self._loop.entity
+	def getParent(self):  return None if (self._parent is None)  else self._parent.entity
+	def getSurface(self): return None if (self._surface is None) else self._surface.entity
 	def buildCoEdges(self):
 		edges = []
 		loop = self.getLoop()
@@ -1765,7 +1802,7 @@ class Face(Topology):
 								# edges can be empty because not all edges can be created right now :(
 								logWarning("Can't apply wires for face %s!" %(surface.Surface))
 								for f in faces:
-									Part.show(f, "Face-%d" %(self.entity.index))
+									Part.show(f, "Face-%d" %(self.record.index))
 					else:
 						self.shape = surface
 		return self.shape
@@ -1792,17 +1829,17 @@ class Loop(Topology):
 		self._next   = None # The next loop
 		self._coedge = None # The first coedge in the loop
 		self._owner  = None # The first coedge in the face
-	def set(self, entity):
-		i = super(Loop, self).set(entity)
-		self._next, i   = getRefNode(entity, i, 'loop')
-		self._coedge, i = getRefNode(entity, i, 'coedge')
-		self._owner, i  = getRefNode(entity, i, 'face')
-		self.unknown, i = getUnknownFT(entity.chunks, i)
+	def set(self, record):
+		i = super(Loop, self).set(record)
+		self._next, i   = getRefNode(record, i, 'loop')
+		self._coedge, i = getRefNode(record, i, 'coedge')
+		self._owner, i  = getRefNode(record, i, 'face')
+		self.unknown, i = getUnknownFT(record.chunks, i)
 		if ((getVersion() > 10.0) and (isASM() == False)): i += 1
 		return i
-	def getNext(self):   return None if (self._next is None)   else self._next.node
-	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.node
-	def getFace(self):   return None if (self._owner is None)  else self._owner.node
+	def getNext(self):   return None if (self._next is None)   else self._next.entity
+	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.entity
+	def getFace(self):   return None if (self._owner is None)  else self._owner.entity
 	def getCoEdges(self):
 		coedges = []
 		indexes = []
@@ -1830,18 +1867,18 @@ class Wire(Topology):
 		self._coedge = None
 		self._owner = None
 		self.side = False
-	def set(self, entity):
-		i = super(Wire, self).set(entity)
-		self._next, i   = getRefNode(entity, i, 'wire')
-		self._coedge, i = getRefNode(entity, i, 'coedge')
-		self._owner, i  = getRefNode(entity, i, None)
-		self.unknown, i = getRefNode(entity, i, None)
-		self.side, i    = getEnumByTag(entity.chunks, i, SIDE)
-		self.ft, i      = getUnknownFT(entity.chunks, i)
+	def set(self, record):
+		i = super(Wire, self).set(record)
+		self._next, i   = getRefNode(record, i, 'wire')
+		self._coedge, i = getRefNode(record, i, 'coedge')
+		self._owner, i  = getRefNode(record, i, None)
+		self.unknown, i = getRefNode(record, i, None)
+		self.side, i    = getEnumByTag(record.chunks, i, SIDE)
+		self.ft, i      = getUnknownFT(record.chunks, i)
 		return i
-	def getNext(self):   return None if (self._next is None)   else self._next.node
-	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.node
-	def getOwner(self):  return None if (self._owner is None)  else self._owner.node
+	def getNext(self):   return None if (self._next is None)   else self._next.entity
+	def getCoEdge(self): return None if (self._coedge is None) else self._coedge.entity
+	def getOwner(self):  return None if (self._owner is None)  else self._owner.entity
 	def getCoEdges(self):
 		coedges = {}
 		ce = self.getCoEdge()
@@ -1863,23 +1900,23 @@ class CoEdge(Topology):
 		self._owner    = None      # The coedge's owner
 		self._curve    = None
 		self.shape     = None
-	def set(self, entity):
-		i = super(CoEdge, self).set(entity)
-		self._next, i     = getRefNode(entity, i, 'coedge')
-		self._previous, i = getRefNode(entity, i, 'coedge')
-		self._partner, i  = getRefNode(entity, i, 'coedge')
-		self._edge, i     = getRefNode(entity, i, 'edge')
-		self.sense, i     = getEnumByTag(entity.chunks, i, SENSE)
-		self._owner, i    = getRefNode(entity, i, None) # can be either Loop or Wire
+	def set(self, record):
+		i = super(CoEdge, self).set(record)
+		self._next, i     = getRefNode(record, i, 'coedge')
+		self._previous, i = getRefNode(record, i, 'coedge')
+		self._partner, i  = getRefNode(record, i, 'coedge')
+		self._edge, i     = getRefNode(record, i, 'edge')
+		self.sense, i     = getEnumByTag(record.chunks, i, SENSE)
+		self._owner, i    = getRefNode(record, i, None) # can be either Loop or Wire
 		if (getAsmMajor() > 217): i += 1 # skip int
-		self._curve, i    = getRefNode(entity, i, 'pcurve')
+		self._curve, i    = getRefNode(record, i, 'pcurve')
 		return i
-	def getNext(self):     return None if (self._next is None)     else self._next.node
-	def getPrevious(self): return None if (self._previous is None) else self._previous.node
-	def getPartner(self):  return None if (self._partner is None)  else self._partner.node
-	def getEdge(self):     return None if (self._edge is None)     else self._edge.node
-	def getOwner(self):    return None if (self._owner is None)    else self._owner.node
-	def getCurve(self):    return None if (self._curve is None)    else self._curve.node
+	def getNext(self):     return None if (self._next is None)     else self._next.entity
+	def getPrevious(self): return None if (self._previous is None) else self._previous.entity
+	def getPartner(self):  return None if (self._partner is None)  else self._partner.entity
+	def getEdge(self):     return None if (self._edge is None)     else self._edge.entity
+	def getOwner(self):    return None if (self._owner is None)    else self._owner.entity
+	def getCurve(self):    return None if (self._curve is None)    else self._curve.entity
 	def build(self):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
@@ -1894,27 +1931,27 @@ class CoEdgeTolerance(CoEdge):
 		super(CoEdgeTolerance, self).__init__()
 		self.tStart = 0.0
 		self.tEnd = 0.0
-	def set(self, entity):
-		i = super(CoEdgeTolerance, self).set(entity)
-		self.tStart, i  = getFloat(entity.chunks, i)
-		self.tEnd, i    = getFloat(entity.chunks, i)
-		if (entity.chunks[i].tag != TAG_TERMINATOR):
+	def set(self, record):
+		i = super(CoEdgeTolerance, self).set(record)
+		self.tStart, i  = getFloat(record.chunks, i)
+		self.tEnd, i    = getFloat(record.chunks, i)
+		if (record.chunks[i].tag != TAG_TERMINATOR):
 			if (getReader().header.prodVer.startswith('ASM')):
 				asm = getAsmMajor()
 				if (asm > 214):
 					if (asm > 219):
-						if (entity.chunks[i].tag != TAG_ENTITY_REF):
-							b, i = getBoolean(entity.chunks, i)
-					r, i = getRefNode(entity, i, None) # Never seen anything else than '$-1'
-				while (entity.chunks[i].tag != TAG_TERMINATOR):
-					if (entity.chunks[i].tag in [TAG_LONG, TAG_FLOAT]):
-						n, i = getInteger(entity.chunks, i)
-						if (entity.chunks[i].tag == TAG_TERMINATOR):
+						if (record.chunks[i].tag != TAG_ENTITY_REF):
+							b, i = getBoolean(record.chunks, i)
+					r, i = getRefNode(record, i, None) # Never seen anything else than '$-1'
+				while (record.chunks[i].tag != TAG_TERMINATOR):
+					if (record.chunks[i].tag in [TAG_LONG, TAG_FLOAT]):
+						n, i = getInteger(record.chunks, i)
+						if (record.chunks[i].tag == TAG_TERMINATOR):
 							break
-					c, i = readCurve(entity.chunks, i)
+					c, i = readCurve(record.chunks, i)
 			else:
 				if (getVersion() > 9.0):
-					b, i = getBoolean(entity.chunks, i)
+					b, i = getBoolean(record.chunks, i)
 		return i
 class Edge(Topology):
 	def __init__(self):
@@ -1925,34 +1962,34 @@ class Edge(Topology):
 		self._curve = None # Lying on one the Adjacent faces
 		self.sense  = 'forward'
 		self.text   = ''
-	def set(self, entity):
-		i = super(Edge, self).set(entity)
-		self._start, i = getRefNode(entity, i, 'vertex')
+	def set(self, record):
+		i = super(Edge, self).set(record)
+		self._start, i = getRefNode(record, i, 'vertex')
 		if (getVersion() > 4.0):
-			self.parameter1, i = getFloat(entity.chunks, i)
+			self.parameter1, i = getFloat(record.chunks, i)
 		else:
 			self.parameter1 = 0.0
-		self._end, i   = getRefNode(entity, i, 'vertex')
+		self._end, i   = getRefNode(record, i, 'vertex')
 		if (getVersion() > 4.0):
-			self.parameter2, i = getFloat(entity.chunks, i)
+			self.parameter2, i = getFloat(record.chunks, i)
 		else:
 			self.parameter2 = 1.0
-		self._owner, i = getRefNode(entity, i, 'coedge')
-		self._curve, i = getRefNode(entity, i, 'curve')
-		self.sense, i  = getEnumByTag(entity.chunks, i, SENSE)
+		self._owner, i = getRefNode(record, i, 'coedge')
+		self._curve, i = getRefNode(record, i, 'curve')
+		self.sense, i  = getEnumByTag(record.chunks, i, SENSE)
 		if (getVersion() > 5.0):
-			self.text, i = getText(entity.chunks, i)
-		self.unknown, i = getUnknownFT(entity.chunks, i)
+			self.text, i = getText(record.chunks, i)
+		self.unknown, i = getUnknownFT(record.chunks, i)
 		return i
-	def getStart(self):  return None if (self._start is None) else self._start.node.getPosition()
-	def getEnd(self):    return None if (self._end   is None) else self._end.node.getPosition()
-	def getParent(self): return None if (self._owner is None) else self._owner.node
-	def getCurve(self):  return None if (self._curve is None) else self._curve.node
+	def getStart(self):  return None if (self._start is None) else self._start.entity.getPosition()
+	def getEnd(self):    return None if (self._end   is None) else self._end.entity.getPosition()
+	def getParent(self): return None if (self._owner is None) else self._owner.entity
+	def getCurve(self):  return None if (self._curve is None) else self._curve.entity
 	def getPoints(self):
 		points = []
-		ptStart = None if (self._start is None) else self._start.node
+		ptStart = None if (self._start is None) else self._start.entity
 		if (ptStart is not None): points.append(ptStart.getPosition())
-		ptEnd = None if (self._end   is None) else self._end.node
+		ptEnd = None if (self._end   is None) else self._end.entity
 		if ((ptEnd is not None) and (ptEnd.index != ptStart.index)): points.append(ptEnd.getPosition())
 		return points
 	def build(self):
@@ -1971,8 +2008,8 @@ class EdgeTolerance(Edge):
 	def __init__(self):
 		super(EdgeTolerance, self).__init__()
 		self.tolerance = 0.0
-	def set(self, entity):
-		i = super(EdgeTolerance, self).set(entity)
+	def set(self, record):
+		i = super(EdgeTolerance, self).set(record)
 		return i
 class Vertex(Topology):
 	def __init__(self):
@@ -1980,17 +2017,17 @@ class Vertex(Topology):
 		self._owner = None # One of the vertex' owners
 		self._point = None # The vertex' location
 		self.count  = -1   # Number of edges using this vertex
-	def set(self, entity):
-		i = super(Vertex, self).set(entity)
-		self._owner, i = getRefNode(entity, i, 'edge')
+	def set(self, record):
+		i = super(Vertex, self).set(record)
+		self._owner, i = getRefNode(record, i, 'edge')
 		if (getAsmMajor() > 217): i += 1
 		# inventor-version: 2010 -> workaround
-		if (entity.chunks[i].tag != 0xC):
+		if (record.chunks[i].tag != 0xC):
 			i += 1 # number of edges using this vertex
-		self._point, i  = getRefNode(entity, i, 'point')
+		self._point, i  = getRefNode(record, i, 'point')
 		return i
-	def getParent(self):   return None if (self._owner is None) else self._owner.node
-	def getPoint(self):    return None if (self._point is None) else self._point.node
+	def getParent(self):   return None if (self._owner is None) else self._owner.entity
+	def getPoint(self):    return None if (self._point is None) else self._point.entity
 	def getPosition(self):
 		p = self.getPoint()
 		return None if (p is None) else p.position
@@ -1998,10 +2035,10 @@ class VertexTolerance(Vertex):
 	def __init__(self):
 		super(VertexTolerance, self).__init__()
 		self.tolerance = 0.0
-	def set(self, entity):
+	def set(self, record):
 		asm_major = getAsmMajor()
-		i = super(VertexTolerance, self).set(entity)
-		self.tolerance, i = getFloat(entity.chunks, i)
+		i = super(VertexTolerance, self).set(record)
+		self.tolerance, i = getFloat(record.chunks, i)
 		if (asm_major > 217): i += 2 # skip floats
 		return i
 
@@ -2010,20 +2047,20 @@ class Geometry(Entity):
 	def __init__(self, name):
 		super(Geometry, self).__init__()
 		self.__name__ = name
-	def set(self, entity):
-		i = super(Geometry, self).set(entity)
+	def set(self, record):
+		i = super(Geometry, self).set(record)
 		if ((getVersion() > 10.0) and (isASM() == False)): i += 1 # skip ???
 		if (getVersion() > 6.0):
-			anyRef, i = getRefNode(entity, i, None)
+			anyRef, i = getRefNode(record, i, None)
 		return i
 	def getSatTextSub(self, index):
-		e = self.entity
+		record = self.record
 		if (getVersion() > 6.0):
-			return "%s %s" %(e.chunks[index], self.getSatTextGeometry(index + 1))
+			return "%s %s" %(record.chunks[index], self.getSatTextGeometry(index + 1))
 		return self.getSatTextGeometry(index)
-	def getSatTextGeometry(self, index): return ''.join("%s" %(c) for c in self.entity.chunks[index:])
+	def getSatTextGeometry(self, index): return ''.join("%s" %(c) for c in self.record.chunks[index:])
 	def __repr__(self):
-		if (self.entity is None):
+		if (self.record is None):
 			if (hasattr(self, 'ref')):
 				return "%s { ref %d }" %(self.__name__, self.ref)
 			if (hasattr(self, 'subtype')):
@@ -2036,9 +2073,9 @@ class Curve(Geometry):
 		self.shape = None
 	def setSubtype(self, chunks, index):
 		return index
-	def set(self, entity):
-		i = super(Curve, self).set(entity)
-		i = self.setSubtype(entity.chunks, i)
+	def set(self, record):
+		i = super(Curve, self).set(record)
+		i = self.setSubtype(record.chunks, i)
 		return i
 	def build(self, start, end): # by default: return a line-segment!
 		logWarning(u"    ... '%s' not yet supported - forced to straight-curve!", self.__class__.__name__)
@@ -2057,7 +2094,7 @@ class CurveDegenerate(Curve):    # degenerate curve "degenerate-curve"
 	def __init__(self):
 		super(CurveDegenerate, self).__init__('degenerate')
 	def getSatTextGeometry(self, index):  return u"%s %s" %(self.start, self.range)
-	def __repr__(self): return u"Curve-Degenerate %s %s #" %s(self.start, self.range)
+	def __repr__(self): return u"Curve-Degenerate %s %s #" %(self.start, self.range)
 	def setSubtype(self, chunks, index):
 		self.start, i = getLocation(chunks, index)
 		self.range, i = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
@@ -2111,6 +2148,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.sense   = 'forward' # The IntCurve's reversal flag
 		self.range   = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
 		self.subtype = subtype
+		self.spline    = None
 		self.curve   = None
 	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
 	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
@@ -2125,9 +2163,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setCurve(self, chunks, index):
 		self.singularity, i = getSingularity(chunks, index)
 		if (self.singularity == 'full'):
-			nubs, i = readBS3Curve(chunks, i)
+			self.spline, i = readBS3Curve(chunks, i)
 			self.tolerance, i = getLength(chunks, i)
-			self.shape = createBSplinesCurve(nubs, self.sense)
 		elif (self.singularity == 'none'):
 			self.range1, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
 			val, i= getValue(chunks, i)
@@ -2139,9 +2176,9 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 			fac, i  = getFloat(chunks, i)
 			clsr, i = getEnumByValue(chunks, i, CLOSURE)
 		elif (self.singularity == 'v'):
-			nubs = BS3_Curve(False, False, 3)
-			nubs.uKnots, i = getFloatArray(chunks, i) # nubs 3 0 n
-			nubs.uMults = [3] * len(nubs.uKnots)
+			self.spline = BS_Curve(False, False, 3)
+			self.spline.uKnots, i = getFloatArray(chunks, i) # nubs 3 0 n
+			self.spline.uMults = [3] * len(self.spline.uKnots)
 			self.tolerance, i = getLength(chunks, i)
 			f2, i = getFloat(chunks, i)
 		else:
@@ -2515,7 +2552,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def setRef(self, chunks, index):
 		self.subtype = 'ref'
 		self.ref, i = getInteger(chunks, index)
-		self.curve  = getReader().getSubtypeNode(self.ref)
+		self.curve  = getReader().getSubtypeEntity(self.ref)
 		if (not isinstance(self.curve, Curve)):
 			logError("Expeced CURVE for 'ref %d' but found %s", self.ref, self.curve.__name__)
 			self.curve = None
@@ -2527,7 +2564,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		try:
 			if ((getVersion() >= 25.0) and (isASM() == False)):
 				id, i = getInteger(chunks, i) # subtype table index
-			getReader().addSubtypeNode(self)
+			getReader().addSubtypeEntity(self)
 			prm = CURVE_SET_DATA[self.subtype]
 			fkt = getattr(self, prm[0])
 		except KeyError as ke:
@@ -2542,6 +2579,8 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def build(self, start=None, end=None):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
+			self.shape = createBSplinesCurve(self.spline, self.sense)
+
 			if (self.subtype == 'ref'):
 				cur = self.curve
 				if ((cur is not None) and (not isinstance(cur, Curve))):
@@ -2596,7 +2635,7 @@ class CurveIntInt(CurveInt):  # interpolated int-curve "intcurve-intcurve-curve"
 			return self.setRef(chunks, i)
 		if ((getVersion() >= 25.0) and (isASM() == False)):
 			id, i = getInteger(chunks, i) # subtype table index
-		getReader().addSubtypeNode(self)
+		getReader().addSubtypeEntity(self)
 		if (self.subtype == 'lawintcur'):        return self.setLaw(chunks, i, False)
 		if (self.subtype == 'law_int_cur'):      return self.setLaw(chunks, i + 1, True)
 		raise Exception("No implementation available for intcurve-intcurve'%s'!" %(self.subtype))
@@ -2630,7 +2669,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 	def setRef(self, chunks, index):
 		self.subtype = 'ref'
 		self.ref, i = getInteger(chunks, index)
-		self.pcurve = getReader().getSubtypeNode(self.ref)
+		self.pcurve = getReader().getSubtypeEntity(self.ref)
 		if (not isinstance(self.pcurve, CurveP)):
 			logError("Expeced PCURVE for 'ref %d' but found %s", self.ref, self.pcurve.__name__)
 			self.pcurve = None
@@ -2642,7 +2681,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		try:
 			if ((getVersion() >= 25.0) and (isASM() == False)):
 				id, i = getInteger(chunks, i) # subtype table index
-			getReader().addSubtypeNode(self)
+			getReader().addSubtypeEntity(self)
 			prm = PCURVE_SET_DATA[self.subtype]
 			fkt = getattr(self, prm)
 		except KeyError as ke:
@@ -2655,15 +2694,15 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.u, i = getFloat(chunks, i + 1)
 		self.v, i = getFloat(chunks, i)
 		return i
-	def set(self, entity):
-		i = super(Curve, self).set(entity)
-		self.type, i = getInteger(entity.chunks, i)
+	def set(self, record):
+		i = super(Curve, self).set(record)
+		self.type, i = getInteger(record.chunks, i)
 		if (self.type == 0):
-			i = self.setSubtype(entity.chunks, i)
+			i = self.setSubtype(record.chunks, i)
 		else:
-			self.pcurve, i = getRefNode(entity, i, 'curve')
-			self.u, i = getFloat(entity.chunks, i)
-			self.v, i = getFloat(entity.chunks, i)
+			self.pcurve, i = getRefNode(record, i, 'curve')
+			self.u, i = getFloat(record.chunks, i)
+			self.v, i = getFloat(record.chunks, i)
 			self.subtype = 'ref'
 		return i
 	def build(self, start, end):
@@ -2714,9 +2753,9 @@ class Surface(Geometry):
 		return self
 	def setSubtype(self, chunks, index):
 		return index
-	def set(self, entity):
-		i = super(Surface, self).set(entity)
-		i = self.setSubtype(entity.chunks, i)
+	def set(self, record):
+		i = super(Surface, self).set(record)
+		i = self.setSubtype(record.chunks, i)
 		return i
 	def build(self, face = None): return None
 class SurfaceCone(Surface):
@@ -3709,7 +3748,7 @@ class SurfaceSpline(Surface):
 	def setRef(self, chunks, index):
 		self.subtype = 'ref'
 		self.ref, i  = getInteger(chunks, index)
-		self.surface = getReader().getSubtypeNode(self.ref)
+		self.surface = getReader().getSubtypeEntity(self.ref)
 		if (not isinstance(self.surface, Surface)):
 			logError("Expeced SURFACE for 'ref %d' but found %s", self.ref, self.surface.__name__)
 			self.surface = None
@@ -3721,7 +3760,7 @@ class SurfaceSpline(Surface):
 		try:
 			if ((getVersion() >= 25.0) and (isASM() == False)):
 				id, i = getInteger(chunks, i) # subtype table index
-			getReader().addSubtypeNode(self)
+			getReader().addSubtypeEntity(self)
 			prm = SURFACE_TYPES[self.subtype]
 			fkt = getattr(self, prm[0])
 		except KeyError as ke:
@@ -3729,9 +3768,9 @@ class SurfaceSpline(Surface):
 		return fkt(chunks, i + prm[1], prm[2])
 	def setSubtype(self, chunks, index):
 		self.sense, i  = getEnumByTag(chunks, index, SENSE)
-		if (self.entity is None):
-			self.entity = AcisEntity('spline')
-			self.entity.index = self.index
+		if (self.record is None):
+			self.record = Record('spline')
+			self.record.index = self.index
 		i = self.setBulk(chunks, i + 1)
 		assert (chunks[i].tag == TAG_SUBTYPE_CLOSE), u"-%s %s - pending chunks to read: %s" %(self.index, self.subtype, chunks[i:])
 		self.rangeU, i = getInterval(chunks, i + 1, MIN_INF, MAX_INF, getScale())
@@ -3887,9 +3926,9 @@ class Point(Geometry):
 		self.position = CENTER
 		self.count    = -1 # Number of references
 	def getSatTextGeometry(self, index): return "%s #" %(vec2sat(self.position))
-	def set(self, entity):
-		i = super(Point, self).set(entity)
-		self.position, i = getLocation(entity.chunks, i)
+	def set(self, record):
+		i = super(Point, self).set(record)
+		self.position, i = getLocation(record.chunks, i)
 		return i
 
 class Refinement(Entity):
@@ -3916,9 +3955,9 @@ class AsmHeader(Entity):
 	def __init__(self):
 		super(Entity, self).__init__()
 		self.version = '7.0'
-	def set(self, entity):
-		i = super(AsmHeader, self).set(entity)
-		version, i = getText(entity.chunks, i)
+	def set(self, record):
+		i = super(AsmHeader, self).set(record)
+		version, i = getText(record.chunks, i)
 		v = AsmHeader.getVersion(version)
 		self.major	  = int(v[0][0])
 		self.minor	  = int(v[0][1])
@@ -3933,13 +3972,13 @@ class Attributes(Entity):
 		self._next     = None
 		self._previous = None
 		self._owner    = None
-	def set(self, entity):
-		i = super(Attributes, self).set(entity)
-		i = _set_attribute_(self, entity, i)
+	def set(self, record):
+		i = super(Attributes, self).set(record)
+		i = _set_attribute_(self, record, i)
 		return i
-	def getNext(self):     return None if (self._next is None)     else self._next.node
-	def getPrevious(self): return None if (self._previous is None) else self._previous.node
-	def getOwner(self):    return None if (self._owner is None)    else self._owner.node
+	def getNext(self):     return None if (self._next is None)     else self._next.entity
+	def getPrevious(self): return None if (self._previous is None) else self._previous.entity
+	def getOwner(self):    return None if (self._owner is None)    else self._owner.entity
 class Attrib(Attributes):
 	def __init__(self): super(Attrib, self).__init__()
 class AttribBt(Attrib):
@@ -3952,17 +3991,17 @@ class AttribADesk(Attrib):
 class AttribADeskColor(AttribADesk):
 	def __init__(self):
 		super(AttribADeskColor, self).__init__()
-	def set(self, entity):
-		i = super(AttribADeskColor, self).set(entity)
-		coloridx, i = getInteger(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribADeskColor, self).set(record)
+		coloridx, i = getInteger(record.chunks, i)
 		return i
 class AttribADeskMaterial(AttribADesk):
 	def __init__(self):
 		super(AttribADeskMaterial, self).__init__()
-	def set(self, entity):
-		i = super(AttribADeskMaterial, self).set(entity)
-		self.val1, i = getInteger(entity.chunks, i)
-		self.val2, i = getInteger(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribADeskMaterial, self).set(record)
+		self.val1, i = getInteger(record.chunks, i)
+		self.val2, i = getInteger(record.chunks, i)
 		return i
 class AttribADeskTrueColor(AttribADesk):
 	def __init__(self):
@@ -3971,9 +4010,9 @@ class AttribADeskTrueColor(AttribADesk):
 		self.red   = .749
 		self.green = .749
 		self.blue  = .749
-	def set(self, entity):
-		i = super(AttribADeskTrueColor, self).set(entity)
-		rgba, i = getInteger(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribADeskTrueColor, self).set(record)
+		rgba, i = getInteger(record.chunks, i)
 		self.alhpa = ((rgba >> 24) & 0xFF) / 255.0
 		self.red   = ((rgba >> 16) & 0xFF) / 255.0
 		self.green = ((rgba >>  8) & 0xFF) / 255.0
@@ -4018,45 +4057,45 @@ class AttribGenName(AttribGen):
 	def __init__(self):
 		super(AttribGenName, self).__init__()
 		self.text = ''
-	def set(self, entity):
-		i = super(AttribGenName, self).set(entity)
+	def set(self, record):
+		i = super(AttribGenName, self).set(record)
 		vers = getVersion()
 		if (vers > 1.7):
 			if (vers < 16.0) or (isASM()):
 				i += 4 # [(keep|copy) , (keep_keep), (ignore), (copy)]
-			self.text, i = getText(entity.chunks, i)
+			self.text, i = getText(record.chunks, i)
 		return i
 class AttribGenNameInt32(AttribGenName):
 	def __init__(self):
 		super(AttribGenNameInt32, self).__init__()
 		self.value = 0
-	def set(self, entity):
-		i = super(AttribGenNameInt32, self).set(entity)
-		self.value, i = getInteger(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribGenNameInt32, self).set(record)
+		self.value, i = getInteger(record.chunks, i)
 		return i
 class AttribGenNameInt64(AttribGenName):
 	def __init__(self):
 		super(AttribGenNameInt64, self).__init__()
 		self.value = 0
-	def set(self, entity):
-		i = super(AttribGenNameInt64, self).set(entity)
-		self.value, i = getInteger(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribGenNameInt64, self).set(record)
+		self.value, i = getInteger(record.chunks, i)
 		return i
 class AttribGenNameString(AttribGenName):
 	def __init__(self):
 		super(AttribGenNameString, self).__init__()
 		self.value = ''
-	def set(self, entity):
-		i = super(AttribGenNameString, self).set(entity)
-		self.value, i = getText(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribGenNameString, self).set(record)
+		self.value, i = getText(record.chunks, i)
 		return i
 class AttribGenNameReal(AttribGenName):
 	def __init__(self):
 		super(AttribGenNameReal, self).__init__()
 		self.value = ''
-	def set(self, entity):
-		i = super(AttribGenNameReal, self).set(entity)
-		self.value, i = getFloat(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribGenNameReal, self).set(record)
+		self.value, i = getFloat(record.chunks, i)
 		return i
 class AttribKcId(Attrib):
 	# string with numbers
@@ -4097,11 +4136,11 @@ class AttribStRgbColor(AttribSt):
 		self.red   = 0.749
 		self.green = 0.749
 		self.blue  = 0.749
-	def set(self, entity):
-		i = super(AttribStRgbColor, self).set(entity)
-		self.red,   i = getFloat(entity.chunks, i)
-		self.green, i = getFloat(entity.chunks, i)
-		self.blue,  i = getFloat(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribStRgbColor, self).set(record)
+		self.red,   i = getFloat(record.chunks, i)
+		self.green, i = getFloat(record.chunks, i)
+		self.blue,  i = getFloat(record.chunks, i)
 		return i
 class AttribStDisplay(AttribSt):
 	def __init__(self): super(AttribStDisplay, self).__init__()
@@ -4124,8 +4163,8 @@ class AttribTsl(Attrib):
 class AttribTslColour(AttribTsl):
 	def __init__(self):
 		super(AttribTslColour, self).__init__()
-	def set(self, entity):
-		i = super(AttribTslColour, self).set(entity)
+	def set(self, record):
+		i = super(AttribTslColour, self).set(record)
 		return i
 class AttribTslId(AttribTsl):
 	def __init__(self): super(AttribTslId, self).__init__()
@@ -4181,17 +4220,17 @@ class AttribMixOrganizationUnfoldInfo(AttribMixOrganization):
 	def __init__(self): super(AttribMixOrganizationUnfoldInfo, self).__init__()
 class AttribNamingMatching(Attrib):
 	def __init__(self): super(AttribNamingMatching, self).__init__()
-	def set(self, entity):
-		i = super(AttribNamingMatching, self).set(entity)
+	def set(self, record):
+		i = super(AttribNamingMatching, self).set(record)
 		if (getAsmMajor() > 215): i += 1 # i == 5???
 		return i
 class AttribNamingMatchingNMxMatchedEntity(AttribNamingMatching):
 	# [dxIdx, msk] n1, n2
 	def __init__(self): super(AttribNamingMatchingNMxMatchedEntity, self).__init__()
-	def set(self, entity):
-		i = super(AttribNamingMatchingNMxMatchedEntity, self).set(entity)
-		self.mapping, i = getDcIndexMappings(entity.chunks, i, self)
-		self.a      , i = getIntegers(entity.chunks, i, 2)
+	def set(self, record):
+		i = super(AttribNamingMatchingNMxMatchedEntity, self).set(record)
+		self.mapping, i = getDcIndexMappings(record.chunks, i, self)
+		self.a      , i = getIntegers(record.chunks, i, 2)
 		return i
 class AttribNamingMatchingNMxEdgeCurve(AttribNamingMatching):
 	def __init__(self): super(AttribNamingMatchingNMxEdgeCurve, self).__init__()
@@ -4212,48 +4251,48 @@ class AttribNamingMatchingNMxFFColorEntity(AttribNamingMatching):
 		self.idxCreator = -1
 		self.mapping    = []
 		self.red = self.green = self.blue = 0xBE / 255.0 # light gray
-	def set(self, entity):
-		i = super(AttribNamingMatchingNMxFFColorEntity, self).set(entity)
-		self.a1     , i = getIntegers(entity.chunks, i, 2)
-		self.name   , i = getText(entity.chunks, i)
-		self.mapping, i = getDcIndexMappings(entity.chunks, i, self)
+	def set(self, record):
+		i = super(AttribNamingMatchingNMxFFColorEntity, self).set(record)
+		self.a1     , i = getIntegers(record.chunks, i, 2)
+		self.name   , i = getText(record.chunks, i)
+		self.mapping, i = getDcIndexMappings(record.chunks, i, self)
 		return i
 class AttribNamingMatchingNMxThreadEntity(AttribNamingMatching):
 	# x1, x2, V1, V2, n1, V2, [????]
 	def __init__(self): super(AttribNamingMatchingNMxThreadEntity, self).__init__()
-	def set(self, entity):
-		i = super(AttribNamingMatchingNMxThreadEntity, self).set(entity)
-		self.x      , i = getFloat(entity.chunks, i)
-		self.y      , i = getFloat(entity.chunks, i)
-		self.n1     , i = getInteger(entity.chunks, i)
-		self.p1     , i = getPoint(entity.chunks, i)
-		self.p2     , i = getPoint(entity.chunks, i)
-		self.n2     , i = getInteger(entity.chunks, i)
-		self.p3     , i = getPoint(entity.chunks, i)
-		self.n2     , i = getInteger(entity.chunks, i)
-		self.t1     , i = getText(entity.chunks, i)
-		self.t2     , i = getText(entity.chunks, i)
-		self.n3     , i = getInteger(entity.chunks, i)
-		self.t3     , i = getText(entity.chunks, i)
-		self.t4     , i = getText(entity.chunks, i)
-		self.t5     , i = getText(entity.chunks, i)
-		self.n4     , i = getInteger(entity.chunks, i)
-		self.t3     , i = getText(entity.chunks, i)
+	def set(self, record):
+		i = super(AttribNamingMatchingNMxThreadEntity, self).set(record)
+		self.x      , i = getFloat(record.chunks, i)
+		self.y      , i = getFloat(record.chunks, i)
+		self.n1     , i = getInteger(record.chunks, i)
+		self.p1     , i = getPoint(record.chunks, i)
+		self.p2     , i = getPoint(record.chunks, i)
+		self.n2     , i = getInteger(record.chunks, i)
+		self.p3     , i = getPoint(record.chunks, i)
+		self.n2     , i = getInteger(record.chunks, i)
+		self.t1     , i = getText(record.chunks, i)
+		self.t2     , i = getText(record.chunks, i)
+		self.n3     , i = getInteger(record.chunks, i)
+		self.t3     , i = getText(record.chunks, i)
+		self.t4     , i = getText(record.chunks, i)
+		self.t5     , i = getText(record.chunks, i)
+		self.n4     , i = getInteger(record.chunks, i)
+		self.t3     , i = getText(record.chunks, i)
 		self.lst = []
 		for n in range(self.n2):
-			t1, i = getText(entity.chunks, i)
-			t2, i = getText(entity.chunks, i)
-			t3, i = getText(entity.chunks, i)
-			t4, i = getText(entity.chunks, i)
-			t5, i = getText(entity.chunks, i)
-			t6, i = getText(entity.chunks, i)
-			t7, i = getText(entity.chunks, i)
-			t8, i = getText(entity.chunks, i)
+			t1, i = getText(record.chunks, i)
+			t2, i = getText(record.chunks, i)
+			t3, i = getText(record.chunks, i)
+			t4, i = getText(record.chunks, i)
+			t5, i = getText(record.chunks, i)
+			t6, i = getText(record.chunks, i)
+			t7, i = getText(record.chunks, i)
+			t8, i = getText(record.chunks, i)
 			self.lst.append((t1, t2, t3, t4, t5, t6, t7, t8))
-		self.mapping, i = getDcIndexMappings(entity.chunks, i, self)
-		self.p4     , i = getPoint(entity.chunks, i)
-		self.p5     , i = getPoint(entity.chunks, i)
-		self.n5     , i = getInteger(entity.chunks, i)
+		self.mapping, i = getDcIndexMappings(record.chunks, i, self)
+		self.p4     , i = getPoint(record.chunks, i)
+		self.p5     , i = getPoint(record.chunks, i)
+		self.n5     , i = getInteger(record.chunks, i)
 
 		return i
 class AttribNamingMatchingNMxTagWeldLateralFaceName(AttribNamingMatching):
@@ -4271,11 +4310,11 @@ class AttribNamingMatchingNMxWireTag(AttribNamingMatching):
 class AttribNamingMatchingNMxFeatureOrientation(AttribNamingMatching):
 	def __init__(self):
 		super(AttribNamingMatchingNMxFeatureOrientation, self).__init__()
-	def set(self, entity):
-		i = super(AttribNamingMatchingNMxFeatureOrientation, self).set(entity)
-		if (entity.chunks[i].tag != TAG_ENTITY_REF): i += 1
-		self.ref1, i = getRefNode(entity, i, 'curve')
-		self.ref2, i = getRefNode(entity, i, 'curve')
+	def set(self, record):
+		i = super(AttribNamingMatchingNMxFeatureOrientation, self).set(record)
+		if (record.chunks[i].tag != TAG_ENTITY_REF): i += 1
+		self.ref1, i = getRefNode(record, i, 'curve')
+		self.ref2, i = getRefNode(record, i, 'curve')
 		return i
 class AttribNamingMatchingNMxGenTagDisambiguation(AttribNamingMatching):
 	# n1
@@ -4286,9 +4325,9 @@ class AttribNamingMatchingNMxFeatureDependency(AttribNamingMatching):
 class AttribNamingMatchingNMxBrepTag(AttribNamingMatching):
 	def __init__(self):
 		super(AttribNamingMatchingNMxBrepTag, self).__init__()
-	def set(self, entity):
-		i = super(AttribNamingMatchingNMxBrepTag, self).set(entity)
-		self.mapping, i = getDcIndexMappings(entity.chunks, i, self) # (DC-index, mask){n}
+	def set(self, record):
+		i = super(AttribNamingMatchingNMxBrepTag, self).set(record)
+		self.mapping, i = getDcIndexMappings(record.chunks, i, self) # (DC-index, mask){n}
 		return i
 class AttribNamingMatchingNMxBrepTagFeature(AttribNamingMatchingNMxBrepTag):
 	# no more values
@@ -4429,12 +4468,12 @@ class AttribNamingMatchingNMxBrepTagNameFoldFace(AttribNamingMatchingNMxBrepTagN
 class AttribNamingMatchingNMxBrepTagNameGenerated(AttribNamingMatchingNMxBrepTagName):
 	# n1, n2, n3
 	def __init__(self): super(AttribNamingMatchingNMxBrepTagNameGenerated, self).__init__()
-	def set(self, entity):
+	def set(self, record):
 		global _nameMtchAttr
-		i = super(AttribNamingMatchingNMxBrepTagNameGenerated, self).set(entity)
-		self.key, i = getInteger(entity.chunks, i)
-		self.n2,  i = getInteger(entity.chunks, i)
-		self.n3,  i = getInteger(entity.chunks, i)
+		i = super(AttribNamingMatchingNMxBrepTagNameGenerated, self).set(record)
+		self.key, i = getInteger(record.chunks, i)
+		self.n2,  i = getInteger(record.chunks, i)
+		self.n3,  i = getInteger(record.chunks, i)
 		lst = _nameMtchAttr.get(self.key, None)
 		if (lst is None):
 			lst = []
@@ -4622,7 +4661,7 @@ class AcisChunkEnumValue(_AcisChunk_):
 		self.values = values
 	def __repr__(self):
 		try:
-			return u"%s " %(values[self.val])
+			return u"%s " %(self.values[self.val])
 		except:
 			return u"%s " %(self.val)
 	def read(self, data, offset):
@@ -4630,14 +4669,14 @@ class AcisChunkEnumValue(_AcisChunk_):
 		self.val, i = _getULong(data, offset)
 		return i
 	def getValue(self):
-		if (values):
+		if (self.values):
 			return self.values.item(self.val)
 		return self.val
 class AcisChunkEntityRef(_AcisChunk_):
 	'''Entity reference'''
-	def __init__(self, value = -1, entity = None):
+	def __init__(self, value = -1, record = None):
 		super(AcisChunkEntityRef, self).__init__(TAG_ENTITY_REF, value)
-		self.entity = entity
+		self.record = record
 	def __repr__(self): return u"$%s " %(self.val)
 class AcisChunkIdent(_AcisChunk_):
 	'''name of the base class'''
@@ -4666,7 +4705,7 @@ class AcisChunkSubtypeClose(_AcisChunk_):
 	def __init__(self, value = None):
 		super(AcisChunkSubtypeClose, self).__init__(TAG_SUBTYPE_CLOSE, u"}")
 class AcisChunkTerminator(_AcisChunk_):
-	'''terminator char ('#') for the entity'''
+	'''terminator char ('#') for the record'''
 	def __init__(self, value = None):
 		super(AcisChunkTerminator, self).__init__(TAG_TERMINATOR, u"#")
 	def __repr__(self): return u"#"
@@ -4715,19 +4754,19 @@ ACIS_VALUE_CHUNKS = {
 }
 
 class History(object):
-	def __init__(self, entity):
+	def __init__(self, record):
 		super(History, self).__init__()
-		self._record = entity
-		entity.index = -1
-		self.history_stream , i = getValue(entity.chunks, 0)
-		self.current_state  , i = getInteger(entity.chunks, i) # current delta_state
-		self.next_state     , i = getInteger(entity.chunks, i) # next state to with respect to roll back
-		self.keep_max_states, i = getInteger(entity.chunks, i) # max number of states to keep
-		self.unknown        , i = getInteger(entity.chunks, i)
-		self.ds_current     , i = getValue(entity.chunks, i)   # current delta state, a.k. "working state"
-		self.ds_root        , i = getValue(entity.chunks, i)   # root delta state
-		self.ds_active      , i = getValue(entity.chunks, i)   # the most recent delta state
-		self.attribute      , i = getValue(entity.chunks, i)   # history's attributes.
+		self._record = record
+		record.index = -1
+		self.history_stream , i = getValue(record.chunks, 0)
+		self.current_state  , i = getInteger(record.chunks, i) # current delta_state
+		self.next_state     , i = getInteger(record.chunks, i) # next state to with respect to roll back
+		self.keep_max_states, i = getInteger(record.chunks, i) # max number of states to keep
+		self.unknown        , i = getInteger(record.chunks, i)
+		self.ds_current     , i = getValue(record.chunks, i)   # current delta state, a.k. "working state"
+		self.ds_root        , i = getValue(record.chunks, i)   # root delta state
+		self.ds_active      , i = getValue(record.chunks, i)   # the most recent delta state
+		self.attribute      , i = getValue(record.chunks, i)   # history's attributes.
 		self.delta_states = []
 	def getRecord(self):
 		return self._record
@@ -4738,7 +4777,7 @@ class History(object):
 		for ds in self.delta_states:
 			ds.resolveLinks()
 	def getRoot(self):
-		return self.ds_root.entity
+		return self.ds_root.record
 	def __str__(self):
 		return "SAT %s: %d %d %d %d %s %s %s %s" %(self.history_stream, self.current_state, self.next_state, self.keep_max_states, self.unknown, self.ds_current, self.ds_root, self.ds_active, self.attribute)
 	def __repr__(self):
@@ -4782,7 +4821,6 @@ def version2int(version):
 ACIS_REF_NONE = AcisChunkEntityRef(-1)
 
 class AcisReader(object):
-	_getLong = getSInt32 # by default 4Bytes
 	def __init__(self, stream):
 		super(AcisReader, self).__init__()
 		self._stream    = stream
@@ -4791,16 +4829,16 @@ class AcisReader(object):
 		self._length    = 0
 		self._refChunks = {-1: ACIS_REF_NONE}
 		self.header     = Header()
-		self._entities  = []
+		self._records  = []
 		self.history    = None
 		self.resolved   = False
 		self.bodies     = []
 		self._subtypes  = []
 
-	def addSubtypeNode(self, node):
-		self._subtypes.append(node)
+	def addSubtypeEntity(self, entity):
+		self._subtypes.append(entity)
 
-	def getSubtypeNode(self, ref):
+	def getSubtypeEntity(self, ref):
 		return self._subtypes[ref]
 
 	def _hasNext(self):
@@ -4858,6 +4896,14 @@ class AcisReader(object):
 				pass
 		return tag, val
 
+	@property
+	def version(self):
+		return self.header.version
+
+	@property
+	def scale(self):
+		return self.header.scale
+
 	def _readChunkText(self):
 		self._skipWhiteSpace()
 		if (self._isSingleChar()):
@@ -4891,14 +4937,6 @@ class AcisReader(object):
 			except KeyError as ke:
 				raise Exception("Don't know to read TAG %X" %(tag))
 		return chunk
-
-	@property
-	def version(self):
-		return self.header.version
-
-	@property
-	def scale(self):
-		return self.header.scale
 
 	def _readHeaderText(self):
 		self._pos      = 0
@@ -4947,8 +4985,9 @@ class AcisReader(object):
 				_getStr_ = _getStr_SpaceClaim
 				_handle_topology_ = _handle_topology_SpaceClaim
 				_set_attribute_ = _set_attribute_SpaceClaim
-				dummy = self._readChunkBinary() # True | False
-				dummy = self._readChunkBinary() # e.g. SPT5X6MJB_CC42A7Z4XQU39P3RUX3QNS8TMFV67BA_VJ86VA83VFP7V2DKCQ8NX2CNKF87AKCQ3R
+				dummy = self._readChunkBinary() # True | False (read next chunk?)
+				if (dummy.tag == TAG_TRUE):
+					dummy = self._readChunkBinary() # e.g. SPT5X6MJB_CC42A7Z4XQU39P3RUX3QNS8TMFV67BA_VJ86VA83VFP7V2DKCQ8NX2CNKF87AKCQ3R
 			return True
 #		setVersion(self.version)
 		return False
@@ -4961,7 +5000,7 @@ class AcisReader(object):
 		if (name.startswith('-')):
 			id = int(name[1:])
 			name = self._readChunkText()
-		record = AcisEntity(name)
+		record = Record(name)
 		record.index = id
 		while (self._hasNext()):
 			token = self._readChunkText()
@@ -4974,7 +5013,7 @@ class AcisReader(object):
 				else:
 					try:
 						chunk = ACIS_VALUE_CHUNKS[tag](val)
-					except KeyError as ke:
+					except KeyError:
 						raise Exception("Don't know to read TAG %X" %(tag))
 				record.chunks.append(chunk)
 				if (chunk.tag == TAG_TERMINATOR):
@@ -4993,7 +5032,7 @@ class AcisReader(object):
 			chunk = self._readChunkBinary()
 			if (chunk.val == 'ASM'): chunk.val = 'ACIS'
 			names.append(chunk.val)
-		record = AcisEntity('-'.join(names))
+		record = Record('-'.join(names))
 		record.index = id
 		if (not record.name.startswith('End-of-')):
 			while (self._hasNext()):
@@ -5006,17 +5045,17 @@ class AcisReader(object):
 	def _resolfChunkReferences(self):
 		for ref in self._refChunks.values():
 			try:
-				ref.entity = self._entities[ref.val]
+				ref.record = self._records[ref.val]
 			except:
 				pass
-		self._refChunks[-1].entity = None
+		self._refChunks[-1].record = None
 		return
 
-	def getEntity(self, index):
-		return self._entities[index]
+	def getRecord(self, index):
+		return self._records[index]
 
-	def getEntities(self):
-		return self._entities
+	def getRecords(self):
+		return self._records
 
 	def readText(self):
 		setReader(self)
@@ -5025,38 +5064,38 @@ class AcisReader(object):
 		self._length   = len(self._data)
 		historySec   = False
 		index        = 0
-		entityIdx    = 0
+		recordIdx    = 0
 		init()
 		record, index = self._readRecordText(index)
 		if (record.name == 'asmheader'):
 			asmheader = AsmHeader()
 			asmheader.set(record)
 		if (record.name != 'T'):
-			self._entities += [None for _ in range(record.index - len(self._entities) + 1)]
-			self._entities[record.index] = record
+			self._records += [None for _ in range(record.index - len(self._records) + 1)]
+			self._records[record.index] = record
 		while (self._hasNext()):
 			record, index = self._readRecordText(index)
 			if (record):
 				if (record.name == "Begin-of-ACIS-History-Data"):
 					historySec = True
-					entityIdx = record.index
+					recordIdx = record.index
 					self.history = History(record)
-					self.history.index = entityIdx
+					self.history.index = recordIdx
 					index = 0
 				elif (record.name == "End-of-ACIS-History-Section"):
 					historySec = False
 					record.index = -1
-					index = entityIdx
+					index = recordIdx
 				elif (record.name == "End-of-ACIS-data"):
 					record.index = -1
-					self._entities.append(record)
+					self._records.append(record)
 				else:
 					if (historySec):
 						ds = DeltaState(self.history, record)
 						self.history.delta_states.append(ds)
 					else:
-						self._entities += [None for _ in range(record.index - len(self._entities) + 1)]
-						self._entities[record.index] = record
+						self._records += [None for _ in range(record.index - len(self._records) + 1)]
+						self._records[record.index] = record
 		self._resolfChunkReferences()
 		return True
 
@@ -5067,7 +5106,7 @@ class AcisReader(object):
 		self._pos      = 0
 		historySec   = False
 		index        = 0
-		entityIdx    = 0
+		recordIdx    = 0
 		init()
 		self._readHeaderBinary()
 		SPACE_CLAIM.clear()
@@ -5076,33 +5115,33 @@ class AcisReader(object):
 			record, index = self._readRecordBinary(index)
 			if (record.name == "Begin-of-ACIS-History-Data"):
 				historySec = True
-				entityIdx = record.index
+				recordIdx = record.index
 				self.history = History(record)
-				self.history.index = entityIdx
+				self.history.index = recordIdx
 				index = 0
 			elif (record.name == "End-of-ACIS-History-Section"):
 				historySec = False
 				record.index = -1
-				index = entityIdx
+				index = recordIdx
 			elif (record.name == "End-of-ACIS-data"):
 				record.index = -1
-				self._entities.append(record)
+				self._records.append(record)
 			else:
 				if (historySec):
 					ds = DeltaState(self.history, record)
 					self.history.delta_states.append(ds)
 				else:
-					self._entities.append(record)
+					self._records.append(record)
 		self._resolfChunkReferences()
 		setReader(self)
 		return True
 
-class AcisEntity(object):
+class Record(object):
 	def __init__(self, name):
 		self.chunks = []
 		self.name   = name
 		self.index  = -1
-		self.node   = None
+		self.entity = None
 
 	def __repr__(self):
 		return "%s %s" %(self.name, ''.join(c.__repr__() for c in self.chunks))
@@ -5260,7 +5299,7 @@ VBL_CLASSES = {
 	"plane":  BDY_GEOM_PLANE
 }
 
-RECORD_2_NODE = {
+RECORD_2_ENTITY = {
 	"annotation":                                                                                  Annotation,
 	"primitive_annotation-annotation":                                                             AnnotationPrimitive,
 	"split_annotation-annotation":                                                                 AnnotationSplit,

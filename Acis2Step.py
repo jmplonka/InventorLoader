@@ -4,13 +4,19 @@
 Acis2Step.py:
 '''
 
+import traceback, os, sys, math, io
+import Part
+import Acis
+
 from datetime          import datetime
 from importerUtils     import isEqual, getDumpFolder
-from FreeCAD           import Vector as VEC, Placement as PLC
-from importerUtils     import logInfo, logWarning, logError, logAlways, isEqual1D, getAuthor, getDescription, getColorDefault
-from importerConstants import CENTER, DIR_X, DIR_Y, DIR_Z, ENCODING_FS
+from FreeCAD           import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT
+from importerUtils     import logInfo, logWarning, logError, isEqual1D, getColorDefault, getDumpFolder, getAuthor, getDescription
+from importerConstants import CENTER, DIR_X, DIR_Y, DIR_Z, EPS
 
-import traceback, inspect, os, sys, Acis, math, re, Part, io
+if (sys.version_info.major > 2):
+	long    = int
+	unicode = str
 
 #############################################################
 # private variables
@@ -37,6 +43,9 @@ TRANSFORM_NONE   = PLC()
 #############################################################
 # private functions
 #############################################################
+
+def _isIdentity(transf):
+	return transf.Base.distanceToPoint(CENTER) < EPS and transf.Rotation.Axis.getAngle(DIR_Z) < EPS
 
 def _getE(o):
 	if (isinstance(o, E)): return o
@@ -90,6 +99,30 @@ def _obj2str(o):
 def _values3D(v):
 	return [v.x, v.y, v.z]
 
+def rotation_matrix(axis, angle):
+	axis.normalize()
+	a = math.cos(angle / 2.0)
+	aa = a * a
+	v = axis * math.sin(angle / -2.0)
+	b = v.x
+	c = v.y
+	d = v.z
+	aa, bb, cc, dd = a * a, b * b, c * c, d * d
+	bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+	m11 = aa + bb - cc - dd
+	m12 = 2 * (bc + ad)
+	m13 = 2 * (bd - ac)
+	m21 = 2 * (bc - ad)
+	m22 = aa + cc - bb - dd
+	m23 = 2 * (cd + ab)
+	m31 = 2 * (bd + ac)
+	m32 = 2 * (cd - ab)
+	m33 = aa + dd - bb - cc
+	return MAT(m11, m12, m13, 0.0, m21, m22, m23, 0.0, m31, m32, m33, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+def _rotate(vec, rotation):
+	return rotation_matrix(rotation.Axis, rotation.Angle) * vec
+
 def getColor(entity):
 	global _colorPalette
 
@@ -127,22 +160,25 @@ def assignColor(color, item, context):
 			_assignments[keyRGB] = assignment
 		style.styles = [assignment]
 
+def _createTransformation(ref1, ref2, idt):
+	return ListEntity(REPRESENTATION_RELATIONSHIP(None, ref1, ref2), REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(idt), SHAPE_REPRESENTATION_RELATIONSHIP())
+
 def _createUnit(tolerance):
-	unit = UNIT()
-	uncr = GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT()
-	glob = GLOBAL_UNIT_ASSIGNED_CONTEXT()
-	repr = REPRESENTATION_CONTEXT()
+	unit     = UNIT()
+	uncr_ctx = GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT()
+	glob_ctx = GLOBAL_UNIT_ASSIGNED_CONTEXT()
+	repr_ctx = REPRESENTATION_CONTEXT()
 
 	length = ListEntity(LENGTH_UNIT(None), NAMED_UNIT(AnyEntity()), SI_UNIT('MILLI', 'METRE'))
 	angle1 = ListEntity(NAMED_UNIT(AnyEntity()), PLANE_ANGLE_UNIT(None), SI_UNIT(None, 'RADIAN'))
 	angle2 = ListEntity(NAMED_UNIT(AnyEntity()), SI_UNIT(None, 'STERADIAN'), SOLID_ANGLE_UNIT(None))
 	uncertainty = UNCERTAINTY_MEASURE_WITH_UNIT(tolerance, length)
 
-	uncr.units = (uncertainty,)
+	uncr_ctx.units = (uncertainty,)
 
-	glob.assignments = (length, angle1, angle2)
+	glob_ctx.assignments = (length, angle1, angle2)
 
-	unit.entities =  _createGeometricRepresentationList(uncr, glob, repr)
+	unit.entities =  _createGeometricRepresentationList(uncr_ctx, glob_ctx, repr_ctx)
 	return unit
 
 def _createCartesianPoint(fcVec, name = ''):
@@ -212,24 +248,24 @@ def _createEdgeCurve(p1, p2, curve, sense):
 		_edgeCurves[key] = ec
 	return ec
 
-def _exportList_(a):
+def _exportInternalList_(a):
 	step = ''
 	for i in a:
 		if (isinstance(i, ExportEntity)):
 			step += i.exportSTEP()
 		elif (type(i) == list):
-			step += _exportList_(i)
+			step += _exportInternalList_(i)
 		elif (type(i) == tuple):
-			step += _exportList_(i)
+			step += _exportInternalList_(i)
 	return step
 
 def _createCurveComp(acisCurve):
-    # TODO
-	return acisCurve
+	# TODO
+	return None
 
 def _createCurveDegenerate(acisCurve):
-    # TODO
-	return acisCurve
+	# TODO
+	return None
 
 def _createCurveEllipse(acisCurve):
 	global _ellipses
@@ -246,57 +282,162 @@ def _createCurveEllipse(acisCurve):
 		_ellipses[key] = circle
 	return circle
 
-def _createCurveInt(acisCurve):
-	global _curveBSplines
-	shape = acisCurve.build()
-	if (isinstance(shape, Part.Edge)):
-		bsc = shape.Curve
-		if (isinstance(bsc, Part.BSplineCurve)):
-			points = [_createCartesianPoint(v, 'Ctrl Pts') for v in bsc.getPoles()]
-			k1 = ",".join(["#%d"%(p.id) for p in points])
-			k2 = ""
-			mults = bsc.getMultiplicities()
-			if (mults is not None):
-				k2 = ",".join(["%d" %(d) for d in mults])
-			k3 = ""
-			knots = bsc.getKnots()
-			if (knots is not None): k3 = ",".join(["%r" %(r) for r in knots])
-			key = "(%s),(%s),(%s)" %(k1, k2, k3)
-			try:
-				curve = _curveBSplines[key]
-			except:
-				if (bsc.isRational()):
-					p0 = BOUNDED_CURVE()
-					p1 = B_SPLINE_CURVE(name=None, degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False)
-					p2 = B_SPLINE_CURVE_WITH_KNOTS(mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
-					p3 = CURVE()
-					p4 = GEOMETRIC_REPRESENTATION_ITEM()
-					p5 = RATIONAL_B_SPLINE_CURVE(bsc.getWeights())
-					p6 = REPRESENTATION_ITEM('')
-					curve = ListEntity(p0, p1, p2, p3, p4, p5, p6)
-				else:
-					curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False, mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
-				_curveBSplines[key] = curve
-			return curve
-		if (isinstance(bsc, Part.Line)):
-			key = "%s,%s" %(bsc.Location, bsc.Direction)
-			try:
-				line = _lines[key]
-			except:
-				line = LINE('', None, None)
-				line.pnt = _createCartesianPoint(bsc.Location)
-				line.dir = _createVector(bsc.Direction)
-				_lines[key] = line
-			return line
+def __create_b_spline_curve(spline):
+	if (spline):
+		points = [_createCartesianPoint(pole, 'Ctrl Pts') for pole in spline.poles]
+		k1 = ",".join(["#%d"%(point.id) for point in points])
+		k2 = ""
+		mults = spline.uMults
+		if (mults):
+			k2 = ",".join(["%d" %(mult) for mult in mults])
+		k3 = ""
+		knots = spline.uKnots
+		if (knots):
+			k3 = ",".join(["%r" %(knot) for knot in knots])
+		key = "(%s),(%s),(%s)" %(k1, k2, k3)
+		try:
+			curve = _curveBSplines[key]
+		except:
+			degree = spline.uDegree
+			closed = (spline.poles[0] == spline.poles[-1])
+			if (spline.rational):
+				p0 = BOUNDED_CURVE()
+				p1 = B_SPLINE_CURVE(name=None, degree=degree, points=points, form='UNSPECIFIED', closed=closed, selfIntersecting=False)
+				p2 = B_SPLINE_CURVE_WITH_KNOTS(mults=mults, knots=knots, form2='UNSPECIFIED')
+				p3 = CURVE()
+				p4 = GEOMETRIC_REPRESENTATION_ITEM()
+				p5 = RATIONAL_B_SPLINE_CURVE(spline.weights)
+				p6 = REPRESENTATION_ITEM('')
+				curve = ListEntity(p0, p1, p2, p3, p4, p5, p6)
+			else:
+				curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=degree, points=points, form='UNSPECIFIED', closed=closed , selfIntersecting=False, mults=spline.uMults, knots=spline.uKnots, form2='UNSPECIFIED')
+			_curveBSplines[key] = curve
+		return curve
+	return None
+
+def _createCurveIntExact(acisCurve):
+#	acisCurve.spline
+#	acisCurve.singularity
+#	acisCurve.surface1# readSurface(chunks, i)
+#	acisCurve.surface2# readSurface(chunks, i)
+#	acisCurve.pcurve1 # readBS2Curve(chunks, i)
+#	acisCurve.pcurve2 # readBS2Curve(chunks, i)
+#
+	__create_b_spline_curve(acisCurve.spline)
+	return curve
+
+def _createCurveIntBlend(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntBlendSpring(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntLaw(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntOff(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntOffset(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntOffsetSurface(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntSilhouetteParameter(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntParameter(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntProject(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntSurface(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntSilhouetteTaper(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntComp(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntDefm(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntHelix(acisCurve):
+	# TODO
+	return None
+
+def _createCurveIntSSS(acisCurve):
+	# TODO
 	return None
 
 def _createCurveIntInt(acisCurve):
-    # TODO
-	return acisCurve
+	# TODO
+	return None
+
+CREATE_CURVE_INT ={
+	'bldcur':              _createCurveIntBlend,
+	'blend_int_cur':       _createCurveIntBlend,
+	'blndsprngcur':        _createCurveIntBlendSpring,
+	'spring_int_cur':      _createCurveIntBlendSpring,
+	'exactcur':            _createCurveIntExact,
+	'exact_int_cur':       _createCurveIntExact,
+	'lawintcur':           _createCurveIntLaw,
+	'law_int_cur':         _createCurveIntLaw,
+	'offintcur':           _createCurveIntOff,
+	'off_int_cur':         _createCurveIntOff,
+	'offsetintcur':        _createCurveIntOffset,
+	'offset_int_cur':      _createCurveIntOffset,
+	'offsurfintcur':       _createCurveIntOffsetSurface,
+	'off_surf_int_cur':    _createCurveIntOffsetSurface,
+	'parasil':             _createCurveIntSilhouetteParameter,
+	'para_silh_int_cur':   _createCurveIntSilhouetteParameter,
+	'parcur':              _createCurveIntParameter,
+	'par_int_cur':         _createCurveIntParameter,
+	'projcur':             _createCurveIntProject,
+	'proj_int_cur':        _createCurveIntProject,
+#	'd5c2_cur':            _createCurveIntSkin,       # !!!No examples available!!!
+#	'skin_int_cur':        _createCurveIntSkin,       # !!!No examples available!!!
+#	'subsetintcur':        _createCurveIntSubset,     # !!!No examples available!!!
+#	'subset_int_cur':      _createCurveIntSubset,     # !!!No examples available!!!
+	'surfcur':             _createCurveIntSurface,
+	'surf_int_cur':        _createCurveIntSurface,
+	'surfintcur':          _createCurveIntInt,
+	'int_int_cur':         _createCurveIntInt,
+#	'tapersil':            _createCurveIntSilhouetteTaper,  # !!!No examples available!!!
+#	'taper_silh_int_cur':  _createCurveIntSilhouetteTaper,  # !!!No examples available!!!
+## ASM Extensions ##
+	'comp_int_cur':        _createCurveIntComp,
+	'defm_int_cur':        _createCurveIntDefm,
+	'helix_int_cur':       _createCurveIntHelix,
+	'sss_int_cur':         _createCurveIntSSS,
+}
+def _createCurveInt(acisCurve):
+	try:
+		create = CREATE_CURVE_INT[acisCurve.subtype]
+		return create(acisCurve)
+	except:
+		logError("Don't know how how to create INT_CURVE %s!" %(acisCurve.subtype))
+	return None
 
 def _createCurveP(acisCurve):
-    # TODO
-	return acisCurve
+	# TODO
+	return None
 
 def _createCurveStraight(acisCurve):
 	global _lines
@@ -390,7 +531,7 @@ def _createSurfaceCone(center, axis, cosine, sine, major, sense):
 		cone = _cones[key]
 	except:
 		if (cosine * sine < 0):
-			plc = _createAxis2Placement3D('', center, 'Origin', axis.negative(), 'center_axis',  major, 'ref_axis')
+			plc = _createAxis2Placement3D('', center, 'Origin', axis.negative(), 'center_axis', major, 'ref_axis')
 		else:
 			plc = _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis',  major, 'ref_axis')
 		radius = major.Length
@@ -433,7 +574,7 @@ def _createSurfaceRevolution(curve, center, axis, sense):
 	ref = _calculateRef(axis)
 	revolution = SURFACE_OF_REVOLUTION('', None, None)
 	revolution.curve = _createCurve(curve)
-	revolution.placement =  _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis', ref, 'ref_axis')
+	revolution.placement = _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis', ref, 'ref_axis')
 	return revolution, (sense == 'forward')
 
 def _createSurfaceSphere(center, radius, pole, sense):
@@ -455,16 +596,20 @@ def _createSurfaceToroid(major, minor, center, axis, sense):
 	if (minor < 0.0): return torus, (sense != 'forward')
 	return torus, (sense == 'forward')
 
-def _createSurfaceFaceShape(acisFace, shape):
-	surface = acisFace._surface.getSurface()
+def _createSurfaceFaceShape(acisFace):
+	surface = acisFace.getSurface()
 	if (isinstance(surface, Acis.SurfaceCone)):
 		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
+#	if (isinstance(surface, Acis.SurfaceMesh)):
+#		return _createSurfaceMesh(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
 	if (isinstance(surface, Acis.SurfacePlane)):
 		return _createSurfacePlane(surface.root, surface.normal, acisFace.sense)
 	if (isinstance(surface, Acis.SurfaceSphere)):
 		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, acisFace.sense)
 	if (isinstance(surface, Acis.SurfaceTorus)):
 		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
+
+	shape = acisFace.build()
 	if (isinstance(shape, Part.BSplineSurface)):
 		return _createSurfaceBSpline(shape, surface, acisFace.sense)
 #	if (isinstance(shape, Part.Mesh)):
@@ -481,35 +626,26 @@ def _createSurfaceFaceShape(acisFace, shape):
 		return _createSurfaceRevolution(surface.profile, surface.center, surface.axis, acisFace.sense)
 	if (isinstance(shape, Part.Toroid)):
 		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
-	logWarning("Can't export surface '%s.%s'!" %(shape.__class__.__module__, shape.__class__.__name__))
-	return None
+	logWarning("Can't export surface '%s.%s'!" %(surface.__class__.__module__, surface.__class__.__name__))
+	return None, (acisFace.sense == 'forward')
 
-def _createSurface(acisFace):
-	faces = []
-	shape = acisFace.build() # will Return Face!
-	if (shape):
-		for face in shape.Faces:
-			f = _createSurfaceFaceShape(acisFace, face.Surface)
-			if (f):
-				faces.append(f)
-	return faces
-
-def _convertFace(acisFace, representation, parentColor, context):
+def _convertFace(acisFace, parentColor, context):
 	color = getColor(acisFace)
 	if (color is None):
 		color = parentColor
-	shells = []
-	faces = _createSurface(acisFace)
-	for surface, sense in faces:
+
+	surface, sense = _createSurfaceFaceShape(acisFace)
+	if (surface):
 		face = ADVANCED_FACE('', surface, sense)
 		face.bounds = _createBoundaries(acisFace.getLoops())
 		assignColor(color, face, context)
-		shells.append(face)
+		return face
 
-	return shells
+	return None
 
-def _convertShell(acisShell, representation, shape, parentColor, transformation):
+def _convertShell(acisShell, representation, parentColor):
 	# FIXME how to distinguish between open or closed shell?
+	# MC: vedi OPEN_SHELL e CLOSED_SHELL, ma alla fine non le usa
 	faces = acisShell.getFaces()
 	if (len(faces) > 0):
 		color = getColor(acisShell)
@@ -517,37 +653,93 @@ def _convertShell(acisShell, representation, shape, parentColor, transformation)
 		shell = OPEN_SHELL('',[])
 
 		for acisFace in faces:
-			faces = _convertFace(acisFace, representation, defColor, representation.context)
-			shell.faces += faces
+			face = _convertFace(acisFace, defColor, representation.context)
+			if (face):
+				shell.faces.append(face)
 
-			assignColor(defColor, shell, representation.context)
+		assignColor(defColor, shell, representation.context)
 		return shell
 
 	return None
 
 def _convertLump(acisLump, name, appContext, parentColor, transformation):
-	# TODO how to attach placement to a shell?
+	#MC:
+	#NOTA quando si volesse usare Part nativo, siccome li le trasformate le ho gia applicate, bastera esportare in STEP
+
+	# Da OCCT
+	#product_definition
+	#	A shape corresponding to the component type of for components. Each assembly or component has its own product_definition. It is used as a starting point for translation when read.step.product.mode is ON.
+	#product_definition_shape
+	#	This entity provides a link between product_definition and corresponding shape_definition_representation, or between next_assembly_usage_occurence and corresponding context_dependent_shape_representation.
+	#shape_definition_representation
+	#	A TopoDS_Compound for assemblies, a CASCADE shape corresponding to the component type for components.	Each assembly or component has its own shape_definition_representation. The graph of dependencies is modified in such a way that shape_definition_representations of all components of the assembly are referred by the shape_definition_representation of the assembly.
+	#next_assembly_usage_occurence
+	#	This entity defines a relationship between the assembly and its component. It is used to introduce (in the dependencies graph) the links between shape_definition_representation of the assembly and shape_definition_representations and context_dependent_shape_representations of all its components.
+	#context_dependent_shape_representation
+	#	This entity is associated with the next_assembly_usage_occurence entity and defines a placement of the component in the assembly. The graph of dependencies is modified so that each context_dependent_shape_representation is referred by shape_definition_representation of the corresponding assembly.
+	#shape_representation_relationship_with_transformation
+	#	This entity is associated with context_dependent_shape_representation and defines a transformation necessary to apply to the component in order to locate it in its place in the assembly.
+	#item_defined_transformation
+	#	This entity defines a transformation operator used by shape_representation_relationship_with_transformation or mapped_item entity
 
 	name = "%s_L_%02d" %(name, acisLump.index)
-	shape = SHAPE_DEFINITION_REPRESENTATION(name, appContext)
-
-	shapeRepresentation = SHAPE_REPRESENTATION()
-	lump = SHELL_BASED_SURFACE_MODEL()
-	shapeRepresentation.items.append(lump)
+	frames          = [PRODUCT_CONTEXT('', appContext, 'mechanical')]
+	prod            = PRODUCT(name, frames)
+	prod_def_form   = PRODUCT_DEFINITION_FORMATION(name + '_def_form', prod)
+	prod_def_ctx    = PRODUCT_DEFINITION_CONTEXT(name + '_def_ctx', appContext, 'design')
+	prod_transf_def = PRODUCT_DEFINITION(name, prod_def_form, prod_def_ctx)
+	prod_def_shape  = PRODUCT_DEFINITION_SHAPE(name + '_def_shape', '', prod_transf_def)
+	shapeOriginalWithProductInfo = SHAPE_DEFINITION_REPRESENTATION(name, prod_def_shape)
 	unit = _createUnit(1e-7)
-	shapeRepresentation.context = unit
 
-	shape.representation = shapeRepresentation
+	lump = SHELL_BASED_SURFACE_MODEL()
 	color = getColor(acisLump)
 	defColor = parentColor if (color is None) else color
+	assignColor(defColor, lump, unit)
+	if ((not transformation is None) and (_isIdentity(transformation)==False)):
+		placement    = TRANSFORM_NONE.Base
+		zDir         = DIR_Z
+		xDir         = DIR_X
+		ident_transf = _createAxis2Placement3D('', placement, '', zDir, '', xDir, '')
+
+		advShapeRepresentation = ADVANCED_BREP_SHAPE_REPRESENTATION('', [], unit)
+		advShapeRepresentation.items.append(lump)
+		advShapeRepresentation.items.append(ident_transf) # a rhino basta questo con la trasformata effettiva, senza relazioni niente
+
+		placement = transformation.Base
+		zDir      = _rotate(DIR_Z, transformation.Rotation)
+		xDir      = _rotate(DIR_X, transformation.Rotation)
+		transf    = _createAxis2Placement3D('', placement, '', zDir, '', xDir, '')
+
+		# rappresentazione contenente tutte le trasformate utilizzate nelle istanze
+		shapeRepresentation_trsfs = SHAPE_REPRESENTATION(unit)
+		shapeRepresentation_trsfs.items.append(ident_transf)
+		shapeRepresentation_trsfs.items.append(transf)
+
+		idt = ITEM_DEFINED_TRANSFORMATION('', None, ident_transf, transf)
+		rr_transf = _createTransformation(advShapeRepresentation, shapeRepresentation_trsfs, idt)
+		prod_transf = PRODUCT('', frames)
+		prod_transf_def_form = PRODUCT_DEFINITION_FORMATION(prod_transf.name + '_trans_def_form', prod_transf)
+		prod_transf_def = PRODUCT_DEFINITION(prod.name + '_trans_def', prod_transf_def_form, prod_def_ctx)
+		prod_transf_def_shape = PRODUCT_DEFINITION_SHAPE(name + '_transdef_shape', '', prod_transf_def)
+		shapeToBeTransformed = SHAPE_DEFINITION_REPRESENTATION(name, prod_transf_def_shape)
+		shapeToBeTransformed.representation = advShapeRepresentation
+		nas = NEXT_ASSEMBLY_USAGE_OCCURRENCE(name + '_inst', name + '_inst', '', shapeOriginalWithProductInfo.definition.definition, shapeToBeTransformed.definition.definition)
+		prod_def_shape = PRODUCT_DEFINITION_SHAPE(None, None, nas)
+		CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(rr_transf, prod_def_shape)
+		shapeRet = shapeToBeTransformed
+	else:
+		shapeRepresentation = SHAPE_REPRESENTATION(unit)
+		shapeRepresentation.items.append(lump)
+		shapeOriginalWithProductInfo.representation = shapeRepresentation
+		shapeRet = shapeOriginalWithProductInfo
+
 	for acisShell in acisLump.getShells():
-		shell = _convertShell(acisShell, shapeRepresentation, shape, defColor, transformation)
+		shell = _convertShell(acisShell, shapeRet.representation, defColor)
 		if (shell is not None):
 			lump.items.append(shell)
 
-	assignColor(defColor, lump, unit)
-
-	return shape
+	return shapeRet
 
 def _convertBody(acisBody, appPrtDef):
 	bodies = []
@@ -620,11 +812,11 @@ def _setExported(l, b):
 	if ((type(l) == dict) or (type(l) == list)):
 		for p in l:
 			if (isinstance(p, ExportEntity)):
-				p.isexported = b
+				p.has_been_exported = b
 			else:
-				l[p].isexported = b
+				l[p].has_been_exported = b
 	if (isinstance(l, ExportEntity)):
-		l.isexported = b
+		l.has_been_exported = b
 
 def _exportList(l):
 	step = u''
@@ -681,7 +873,7 @@ class AnonymEntity(object):
 class ExportEntity(AnonymEntity):
 	def __init__(self):
 		super(ExportEntity, self).__init__()
-		self.isexported = False
+		self.has_been_exported = False
 	def _getClassName(self):
 		return self.__class__.__name__
 	def exportProperties(self):
@@ -692,14 +884,14 @@ class ExportEntity(AnonymEntity):
 				if (isinstance(a, ReferencedEntity)):
 					step += a.exportSTEP()
 				elif (type(a) == list):
-					step += _exportList_(a)
+					step += _exportInternalList_(a)
 				elif (type(a) == tuple):
-					step += _exportList_(a)
+					step += _exportInternalList_(a)
 			except:
 				logError(traceback.format_exc())
 		return step
 	def exportSTEP(self):
-		if (self.isexported):
+		if (self.has_been_exported):
 			return ''
 		step = u""
 		if (hasattr(self, '__acis__')):
@@ -709,7 +901,7 @@ class ExportEntity(AnonymEntity):
 				step += u"/*\n * $%d\n */\n" %(self.__acis__.index)
 		step += u"%s;\n" %(self.__repr__())
 		step += self.exportProperties()
-		self.isexported = True
+		self.has_been_exported = True
 		return step
 
 class ReferencedEntity(ExportEntity):
@@ -800,15 +992,44 @@ class PRODUCT_RELATED_PRODUCT_CATEGORY(NamedEntity):
 	def _getParameters(self):
 		return super(PRODUCT_RELATED_PRODUCT_CATEGORY, self)._getParameters() + [self.description, self.products]
 
+class PRODUCT_DEFINITION_RELATIONSHIP(NamedEntity):
+	def __init__(self, identifier = None, name = None, description = None, relating_product_definition = None, related_product_definition = None):
+		super(PRODUCT_DEFINITION_RELATIONSHIP, self).__init__(name)
+		self.identifier = identifier
+		self.description = description
+		self.relating_product_definition = relating_product_definition
+		self.related_product_definition	= related_product_definition
+	def _getParameters(self):
+		return super(PRODUCT_DEFINITION_RELATIONSHIP, self)._getParameters() + [self.identifier, self.description, self.relating_product_definition, self.related_product_definition]
+
+class PRODUCT_DEFINITION_USAGE(PRODUCT_DEFINITION_RELATIONSHIP):
+	def __init__(self, identifier = None, name = None, description = None, relating_product_definition = None, related_product_definition = None):
+		super(PRODUCT_DEFINITION_USAGE, self).__init__(identifier, name, description, relating_product_definition, related_product_definition)
+	def _getParameters(self):
+		return super(PRODUCT_DEFINITION_USAGE, self)._getParameters()
+
+class ASSEMBLY_COMPONENT_USAGE(PRODUCT_DEFINITION_USAGE):
+	def __init__(self, identifier = None, name = None, description = None, relating_product_definition = None, related_product_definition = None, reference_designator = None):
+		super(ASSEMBLY_COMPONENT_USAGE, self).__init__(identifier, name, description, relating_product_definition, related_product_definition)
+		self.reference_designator = reference_designator
+	def _getParameters(self):
+		return super(ASSEMBLY_COMPONENT_USAGE, self)._getParameters() + [self.reference_designator]
+
+class NEXT_ASSEMBLY_USAGE_OCCURRENCE(ASSEMBLY_COMPONENT_USAGE):
+	def __init__(self, identifier = None, name = None, description = None, relating_product_definition = None, related_product_definition = None, reference_designator = None):
+		super(NEXT_ASSEMBLY_USAGE_OCCURRENCE, self).__init__(identifier, name, description, relating_product_definition, related_product_definition, reference_designator)
+	def _getParameters(self):
+		return super(NEXT_ASSEMBLY_USAGE_OCCURRENCE, self)._getParameters()
+
 class PRODUCT(ReferencedEntity):
-	def __init__(self, name, context = APPLICATION_CONTEXT()):
+	def __init__(self, name, frames):
 		super(PRODUCT, self).__init__()
-		self.identifyer = name
+		self.identifier = name
 		self.name = name
 		self.description = ''
-		self.frames = [PRODUCT_CONTEXT('', context, 'mechanical')]
+		self.frames = frames
 	def _getParameters(self):
-		return super(PRODUCT, self)._getParameters() + [self.identifyer, self.name, self.description, self.frames]
+		return super(PRODUCT, self)._getParameters() + [self.identifier, self.name, self.description, self.frames]
 
 class PRODUCT_CONTEXT(NamedEntity):
 	def __init__(self, name = 'part definition', frame = None, discipline = 'mechanical'):
@@ -898,7 +1119,7 @@ class ListEntity(ReferencedEntity):
 		params = sorted(params)
 		return params
 	def exportSTEP(self):
-		if (self.isexported):
+		if (self.has_been_exported):
 			return ''
 		step = u""
 		if (hasattr(self, '__acis__')):
@@ -912,12 +1133,12 @@ class ListEntity(ReferencedEntity):
 				if (isinstance(e, ExportEntity)):
 					step += e.exportProperties()
 				elif (type(e) == list):
-					step += _exportList_(e)
+					step += _exportInternalList_(e)
 				elif (type(e) == tuple):
-					step += _exportList_(e)
+					step += _exportInternalList_(e)
 			except:
 				logError(traceback.format_exc())
-		self.isexported = True
+		self.has_been_exported = True
 		return step
 	def __repr__(self):
 		return u"#%d\t= (%s)" %(self.id, " ".join(["%s" % (e.toString()) for e in self.entities]))
@@ -930,7 +1151,7 @@ class NAMED_UNIT(ExportEntity):
 	def __init__(self, dimensions):
 		super(NAMED_UNIT, self).__init__()
 		self.dimensions = dimensions
-		self.isexported = True
+		self.has_been_exported = True
 	def _getParameters(self):
 		l = super(NAMED_UNIT, self)._getParameters()
 		if (self.dimensions is not None):
@@ -940,6 +1161,69 @@ class NAMED_UNIT(ExportEntity):
 class LENGTH_UNIT(NAMED_UNIT):
 	def __init__(self, dimensions):
 		super(LENGTH_UNIT, self).__init__(dimensions)
+
+class REPRESENTATION_RELATIONSHIP(NamedEntity):
+	def __init__(self, descr = None, repr1 = None, repr2 = None):
+		super(REPRESENTATION_RELATIONSHIP, self).__init__()
+		self.description = descr
+		self.repr1		 = repr1
+		self.repr2		 = repr2
+		self.has_been_exported = True # fa parte di una listEntity
+	def _getParameters(self):
+		return super(REPRESENTATION_RELATIONSHIP, self)._getParameters() + [self.description, self.repr1, self.repr2]
+
+#The entity shape_representation_relationship_is a subtype of representation_relationship. The subtype adds
+#specific local constraints that ensures that it defines a relationship between two shape_representations. To
+#define a relationship between two shape_representations that is established via a transformation, a complex
+#instantiation of shape_representation_relationship AND representation_relationship_with_transformation is
+#used.
+class SHAPE_REPRESENTATION_RELATIONSHIP(REPRESENTATION_RELATIONSHIP):
+	def __init__(self, repr1 = None, repr2 = None):
+		super(SHAPE_REPRESENTATION_RELATIONSHIP, self).__init__(repr1, repr2)
+		self.has_been_exported = True # fa parte di una listEntity
+	def _getParameters(self):
+		return [] # nella pratica shape_representation_relationship e sempre senza argomenti
+
+#The entity representation_relationship_with_transformation_is a subtype of representation_relationship.
+#The subtype adds the attribute transformation_operator as a reference to a transformation. To define a
+#relationship between two shape_representations that is established via a transformation, a complex
+#instantiation of shape_representation_relationship AND representation_relationship_with_transformation is
+#used.
+#NOTA peccato che nella pratica shape_representation_relationship sia sempre senza argomenti
+class REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(REPRESENTATION_RELATIONSHIP):
+	def __init__(self, transform):
+		super(REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION, self).__init__()
+		self.transform = transform
+		self.has_been_exported = True # fa parte di una listEntity
+	def _getParameters(self):
+		return [self.transform] # MC non mi interessa del resto
+
+#An item_defined_transformation models a transformation performed by defining two representation_items
+#before and after applying the transformation function The transformation function is not explicitly
+#provided, but it is derived through its relationship to the representation_items.
+class ITEM_DEFINED_TRANSFORMATION(NamedEntity):
+	def __init__(self, name = '', description = None, trans_before = None, trans_after = None):
+		self.description = description
+		self.trans_before = trans_before
+		self.trans_after = trans_after
+		super(ITEM_DEFINED_TRANSFORMATION, self).__init__(name)
+	def _getParameters(self):
+		return super(ITEM_DEFINED_TRANSFORMATION, self)._getParameters() + [self.description, self.trans_before, self.trans_after]
+
+#The relationships between the assembly and the component on the product_definition level and the shape_-
+#representation level has to be linked through a context_dependent_shape_representation. This is necessary
+#to distinguish between several occurrences of the same component within an assembly
+#A context_dependent_shape_representation associates a shape_representation_relationship with a product_-
+#definition_shape. In the given context this allows the explicit specification of a shape of the assembly 'as
+#assembled'. Since elements when assembled might change their shape - e.g., under pressure - this
+#representation may differ from the geometric assembly of the individual shapes.
+class CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(ExportEntity):
+	def __init__(self, shape_unassembled = None, shape_assembled = None):
+		super(CONTEXT_DEPENDENT_SHAPE_REPRESENTATION, self).__init__()
+		self.shape_unassembled = shape_unassembled
+		self.shape_assembled = shape_assembled
+	def _getParameters(self):
+		return [self.shape_unassembled, self.shape_assembled] # MC non mi interessa di scrivere il nome
 
 class SOLID_ANGLE_UNIT(NAMED_UNIT):
 	def __init__(self, dimensions):
@@ -978,12 +1262,12 @@ class PLANE_ANGLE_MEASURE(ValueObject):
 class GEOMETRIC_REPRESENTATION_CONTEXT(ValueObject):
 	def __init__(self, value):
 		super(GEOMETRIC_REPRESENTATION_CONTEXT, self).__init__(value)
-		self.isexported = True
+		self.has_been_exported = True
 
 class LENGTH_MEASURE(ValueObject):
 	def __init__(self, value):
 		super(LENGTH_MEASURE, self).__init__(value)
-		self.isexported = True
+		self.has_been_exported = True
 
 class UNCERTAINTY_MEASURE_WITH_UNIT(ReferencedEntity):
 	def __init__(self, value, length):
@@ -999,7 +1283,7 @@ class GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(ExportEntity):
 	def __init__(self):
 		super(GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT, self).__init__()
 		self.units = []
-		self.isexported = True
+		self.has_been_exported = True
 	def _getParameters(self):
 		return super(GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT, self)._getParameters() + [self.units]
 
@@ -1007,18 +1291,18 @@ class GLOBAL_UNIT_ASSIGNED_CONTEXT(ExportEntity):
 	def __init__(self):
 		super(GLOBAL_UNIT_ASSIGNED_CONTEXT, self).__init__()
 		self.assignments = []
-		self.isexported = True
+		self.has_been_exported = True
 	def _getParameters(self):
 		return super(GLOBAL_UNIT_ASSIGNED_CONTEXT, self)._getParameters() + [self.assignments]
 
 class REPRESENTATION_CONTEXT(ExportEntity):
-	def __init__(self, identifyer = '', t = '3D'):
+	def __init__(self, identifier = '', t = '3D'):
 		super(REPRESENTATION_CONTEXT, self).__init__()
-		self.identifyer = identifyer
+		self.identifier = identifier
 		self.type = t
-		self.isexported = True
+		self.has_been_exported = True
 	def _getParameters(self):
-		return super(REPRESENTATION_CONTEXT, self)._getParameters() + [self.identifyer, self.type]
+		return super(REPRESENTATION_CONTEXT, self)._getParameters() + [self.identifier, self.type]
 
 class PLANE_ANGLE_MEASURE_WITH_UNIT(ReferencedEntity):
 	def __init__(self, value):
@@ -1096,30 +1380,39 @@ class APPLIED_DATE_AND_TIME_ASSIGNMENT(ReferencedEntity):
 		return super(APPLIED_DATE_AND_TIME_ASSIGNMENT, self)._getParameters() + [self.datetime, self.role, self.products]
 
 class PRODUCT_DEFINITION_SHAPE(NamedEntity):
-	def __init__(self, name, context):
-		super(PRODUCT_DEFINITION_SHAPE, self).__init__()
-		self.description = ''
-		self.definition  = PRODUCT_DEFINITION(name, context)
+	def __init__(self, name = None, description = None, definition = None):
+		super(PRODUCT_DEFINITION_SHAPE, self).__init__(name)
+		self.description = description
+		self.definition  = definition
 	def _getParameters(self):
 		return super(PRODUCT_DEFINITION_SHAPE, self)._getParameters() + [self.description, self.definition]
 
-class SHAPE_REPRESENTATION(NamedEntity):
-	def __init__(self):
-		super(SHAPE_REPRESENTATION, self).__init__('')
+class REPRESENTATION(NamedEntity):
+	def __init__(self, context):
+		super(REPRESENTATION, self).__init__('')
+		#The items attribute collects the items of the shape_representation.
 		self.items = []
-		self.context = None
+		# The context_of_items attribute references a geometric_representation_context that establishes
+		# the coordinate space for the shape_representation
+		self.context = context
 	def _getParameters(self):
-		return super(SHAPE_REPRESENTATION, self)._getParameters() + [self.items, self.context]
+		return super(REPRESENTATION, self)._getParameters() + [self.items, self.context]
+
+class SHAPE_REPRESENTATION(REPRESENTATION):
+	def __init__(self, context):
+		super(SHAPE_REPRESENTATION, self).__init__(context)
+	def _getParameters(self):
+		return super(SHAPE_REPRESENTATION, self)._getParameters()
 
 class MANIFOLD_SURFACE_SHAPE_REPRESENTATION(SHAPE_REPRESENTATION):
 	def __init__(self):
 		super(MANIFOLD_SURFACE_SHAPE_REPRESENTATION, self).__init__()
 
 class SHAPE_DEFINITION_REPRESENTATION(ReferencedEntity):
-	def __init__(self, name, context):
+	def __init__(self, name, definition = None, representation = None):
 		super(SHAPE_DEFINITION_REPRESENTATION, self).__init__()
-		self.definition = PRODUCT_DEFINITION_SHAPE(name, context)
-		self.representation = None
+		self.definition = definition
+		self.representation = representation
 	def _getParameters(self):
 		return super(SHAPE_DEFINITION_REPRESENTATION, self)._getParameters() + [self.definition, self.representation]
 	def getProduct(self):
@@ -1128,10 +1421,10 @@ class SHAPE_DEFINITION_REPRESENTATION(ReferencedEntity):
 		return self.definition.definition.frame.context
 
 class PRODUCT_DEFINITION_FORMATION(NamedEntity):
-	def __init__(self, name, context):
-		super(PRODUCT_DEFINITION_FORMATION, self).__init__('')
+	def __init__(self, name, product):
+		super(PRODUCT_DEFINITION_FORMATION, self).__init__(name)
 		self.description = ''
-		self.product     = PRODUCT(name, context)
+		self.product     = product
 	def _getParameters(self):
 		return super(PRODUCT_DEFINITION_FORMATION, self)._getParameters() + [self.description, self.product]
 
@@ -1144,11 +1437,11 @@ class PRODUCT_DEFINITION_CONTEXT(NamedEntity):
 		return super(PRODUCT_DEFINITION_CONTEXT, self)._getParameters() + [self.context, self.stage]
 
 class PRODUCT_DEFINITION(NamedEntity):
-	def __init__(self, name, context):
-		super(PRODUCT_DEFINITION, self).__init__('design')
+	def __init__(self, name, formation, context):
+		super(PRODUCT_DEFINITION, self).__init__(name)
 		self.description = ''
-		self.formation   = PRODUCT_DEFINITION_FORMATION(name, context)
-		self.frame       = PRODUCT_DEFINITION_CONTEXT('part definition', context, 'design')
+		self.formation   = formation
+		self.frame       = context
 	def _getParameters(self):
 		return super(PRODUCT_DEFINITION, self)._getParameters() + [self.description, self.formation, self.frame]
 
@@ -1167,15 +1460,6 @@ class MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION(ItemsRepresentatio
 class ADVANCED_BREP_SHAPE_REPRESENTATION(ItemsRepresentationEntity):
 	def __init__(self, name, items, context):
 		super(ADVANCED_BREP_SHAPE_REPRESENTATION, self).__init__(name, items, context)
-
-class SHAPE_REPRESENTATION_RELATIONSHIP(NamedEntity):
-	def __init__(self, name, description, rep1, rep2):
-		super(SHAPE_REPRESENTATION_RELATIONSHIP, self).__init__(name)
-		self.description = description
-		self.rep1        = rep1
-		self.rep2        = rep2
-	def _getParameters(self):
-		return super(SHAPE_REPRESENTATION_RELATIONSHIP, self)._getParameters() + [self.description, self.rep1, self.rep2]
 
 class CLOSED_SHELL(NamedEntity):
 	def __init__(self, name, faces):
@@ -1450,7 +1734,7 @@ def export(filename, satHeader, satBodies):
 	user   = getAuthor()
 	desc   = getDescription()
 	orga   = ''
-	proc   = 'InventorImporter 0.9'
+	proc   = 'InventorImporter'
 	auth   = ''
 
 	_initExport()
@@ -1459,11 +1743,12 @@ def export(filename, satHeader, satBodies):
 	_scale = satHeader.scale
 
 	appPrtDef = APPLICATION_PROTOCOL_DEFINITION()
-	bodies = []
+
 	for body in satBodies:
 		body.name = filename
-		bodies += _convertBody(body, appPrtDef)
-	PRODUCT_RELATED_PRODUCT_CATEGORY('part', bodies)
+		part = _convertBody(body, appPrtDef)
+		# MC: fanno tutti 1 body -> 1 parte
+		PRODUCT_RELATED_PRODUCT_CATEGORY('part', part)
 
 	path, f = os.path.split(filename)
 	name, x = os.path.splitext(f)
@@ -1494,7 +1779,6 @@ def export(filename, satHeader, satBodies):
 
 	with io.open(stepfile, 'wt', encoding="UTF-8") as stepFile:
 		stepFile.write(step)
-#		logAlways(u"STEP file written to '%s'.", stepfile)
 		logInfo(u"STEP file written to '%s'.", stepfile)
 
 	_finalizeExport()

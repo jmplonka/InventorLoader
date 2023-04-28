@@ -5,11 +5,11 @@ importerSAT.py:
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-import os, sys, tokenize, FreeCAD, Part, re, traceback, datetime, ImportGui, io
-from importerUtils   import logInfo, logWarning, logError, logAlways, getUInt8A, getUInt32, chooseImportStrategyAcis, STRATEGY_SAT, STRATEGY_NATIVE, STRATEGY_STEP, setDumpFolder, getDumpFolder
+from msilib import CreateRecord
+import os, FreeCAD, Part, ImportGui, io
+from importerUtils   import logInfo, logAlways, chooseImportStrategyAcis, STRATEGY_SAT, STRATEGY_NATIVE, STRATEGY_STEP, setDumpFolder, getDumpFolder
 from Acis2Step       import export
-from math            import fabs
-from Acis            import TAG_ENTITY_REF, getReader, setReader, AcisReader, AcisChunkPosition, setVersion, createNode, init
+from Acis            import TAG_ENTITY_REF, getReader, setReader, AcisReader, createEntity, init
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -127,12 +127,12 @@ def resolveNodes(acis):
 	if (getDumpFolder()[-3:].lower() != 'sat'):
 		name = _getSatFileName(acis.name)
 		dumpSat(name, acis)
-	for entity in acis.getEntities():
-		node = createNode(entity)
-		if (node):
-			if (doAdd and (entity.name == 'body')):
-				bodies.append(node)
-			if (entity.name in ['Begin-of-ACIS-History-Data', 'End-of-ACIS-data']):
+	for record in acis.getRecords():
+		entity = createEntity(record)
+		if entity:
+			if (doAdd and (record.name == 'body')):
+				bodies.append(entity)
+			if (record.name in ['Begin-of-ACIS-History-Data', 'End-of-ACIS-data']):
 				doAdd = False
 
 	return bodies
@@ -187,7 +187,6 @@ def create3dModel(group, doc):
 def dumpSat(name, acis, use_dump_folder = True):
 	header     = acis.header
 	history    = acis.history
-	entities   = acis.getEntities()
 	dumpFolder = getDumpFolder()
 	historyIdx = None
 
@@ -201,7 +200,7 @@ def dumpSat(name, acis, use_dump_folder = True):
 			satFile = name
 		with io.open(satFile, 'wt', encoding='utf-8') as sat:
 			sat.write(header.__str__())
-			for record in entities:
+			for record in acis.getRecords():
 				if (record.index == historyIdx):
 					sat.write(u"%r\n"%(history.getRecord()))
 					for ds in history.delta_states:

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
+__author__     = 'Jens M. Plonka'
+__copyright__  = 'Copyright 2023, Germany'
+__url__        = "https://www.github.com/jmplonka/InventorLoader"
+
 '''
 importerFreeCAD.py
 '''
-import sys, FreeCAD, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, Acis, re
+import FreeCAD, Draft, Part, Sketcher, traceback, Mesh, InventorViewProviders, Acis, re
 
 from importerClasses   import *
 from importerUtils     import *
 from importerSegNode   import SecNode, SecNodeRef, setParameter
-from math              import sqrt, tan, degrees, pi
-from FreeCAD           import Vector as VEC, Rotation as ROT, Placement as PLC, Version, ParamGet
+from math              import sqrt, tan, degrees, pi, asin
+from FreeCAD           import Vector as VEC, Rotation as ROT, Placement as PLC, ParamGet
 from importerConstants import CENTER, DIR_X, DIR_Y, DIR_Z
-
-__author__     = 'Jens M. Plonka'
-__copyright__  = 'Copyright 2018, Germany'
-__url__        = "https://www.github.com/jmplonka/InventorLoader"
 
 BIT_GEO_ALIGN_HORIZONTAL    = 1 <<  0
 BIT_GEO_ALIGN_VERTICAL      = 1 <<  1
@@ -162,7 +162,7 @@ def newObject(className, name, body = None):
 				body.addObject(obj)
 			except:
 				obj.adjustRelativeLinks(body)
-				body.ViewObject.dropObject(obj, None, '', [])
+				body.ViewObject.dropObject(obj, None, name, [])
 	return obj
 
 def createGroup(name):
@@ -282,11 +282,10 @@ def getDimension(node, varName):
 	dimension  = node.get(varName)
 
 	if (dimension.typeName == 'Line2D'):
-		dimension = DimensionValue(Length(getLengthLine(dimension)))
+		dimension = Length(getLengthLine(dimension))
 	elif (dimension.typeName == 'Point2D'):
-		dimension = DimensionValue(Length(0))
-
-	if (dimension.typeName != 'Parameter'):
+		dimension = Length(0)
+	elif (dimension.typeName != 'Parameter'):
 		logError(u"Expected Dimension for (%04X): %s - NOT %s", node.index, node.typeName, dimension.typeName)
 
 	return dimension
@@ -528,7 +527,7 @@ def adjustFxColor(entity, nodColor):
 	return
 
 def __hide__(geo):
-	if (geo is not None):
+	if (geo):
 		geo.ViewObject.Visibility = False
 	return
 
@@ -832,7 +831,7 @@ class FreeCADImporter(object):
 			if (name in self.bodyNodes):
 				baseGeo = self.getGeometry(self.bodyNodes[name])
 				if (baseGeo is None):
-					logWarning(u"    Base2 (%04X): %s -> (%04X): %s can't be created!", base.index, baseNode.typeName, bodyNode.index, bodyNode.typeName)
+					logWarning(u"    Base2 = '%s' -> (%04X): %s can't be created!", name, base.index, base.typeName)
 				else:
 					logInfo(u"        ... Base2 = '%s'", name)
 			else:
@@ -860,7 +859,7 @@ class FreeCADImporter(object):
 						# ensure that the sketch is already created!
 						toolGeo = self.getGeometry(self.bodyNodes[name])
 						if (toolGeo is None):
-							logWarning(u"        Tool (%04X): %s -> (%04X): %s can't be created", node.index, node.typeName, toolData.index, toolData.typeName)
+							logWarning(u"        Tool = '%s' -> (%04X): %s can't be created", name, node.index, node.typeName)
 						else:
 							geometries.append(toolGeo)
 							logInfo(u"        ... Tool = '%s'", name)
@@ -1429,12 +1428,12 @@ class FreeCADImporter(object):
 
 		if ((lineIdx is None) or (lineIdx < 0)):
 			logWarning(u"        ... can't added symmetric constraint between Point and %s - no line index for (%04X)!", moving.typeName[0:-2], moving.index)
-		elif ((symmetryIdx is None) or (symmetryIdx < 0) or (symmetryPos < -1)):
+		elif ((symmetryIdx is None) or (symmetryIdx < 0) or (symmetryIdx < -1)):
 			logWarning(u"        ... can't added symmetric constraint between Point and %s - no point index for (%04X)!", moving.typeName[0:-2], constraintNode.get('point').index)
 		else:
 			key = 'SymmetryPoint_%s_%s' %(lineIdx, symmetryIdx)
 			if (not key in self.mapConstraints):
-				constraint = Sketcher.Constraint('Symmetric', lineIdx, 1, lineIdx, 2, symmetryIdx, symmetryPos)
+				constraint = Sketcher.Constraint('Symmetric', lineIdx, 1, lineIdx, 2, symmetryIdx, symmetryIdx)
 				index = self.addConstraint(sketchObj, constraint, key)
 				constraintNode.setGeometry(constraint, index)
 				logInfo(u"        ... added symmetric constraint between Point %s and %s %s", symmetryIdx, moving.typeName[0:-2], lineIdx)
@@ -2714,7 +2713,7 @@ class FreeCADImporter(object):
 		# create a subfolder
 		name = InventorViewProviders.getObjectName(clientNode.name)
 		if ((name is None) or (len(name) == 0)):
-			name = node.typeName
+			name = clientNode.typeName
 
 		fx = createGroup(name)
 		# add/move all objects to this folder

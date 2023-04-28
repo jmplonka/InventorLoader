@@ -5,7 +5,7 @@ importerReader.py:
 Simple approach to read/analyse Autodesk (R) Invetor (R) files.
 '''
 
-import sys, os, uuid, datetime, re, zlib, operator, glob, struct, codecs, xlrd, FreeCAD, Import_IPT, importerOle10Nateive
+import zlib, codecs, xlrd, importerOle10Nateive
 from importerClasses     import *
 from importerSegment     import SegmentReader
 from importerApp         import AppReader
@@ -253,7 +253,7 @@ def ReadProtein(data):
 
 def ReadWorkbook(data, name, stream):
 	dumpFolder = getDumpFolder()
-	if (not (dumpFolder is None)):
+	if (dumpFolder):
 		##create a new Spreadsheet in new document
 		wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
 		for nameValues in wbk.name_obj_list:

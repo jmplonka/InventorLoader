@@ -11,7 +11,7 @@ from PySide.QtGui      import *
 from struct            import Struct, unpack_from, pack
 from FreeCAD           import Vector as VEC, Console, ParamGet
 from olefile           import OleFileIO
-from importerConstants import ENCODING_FS
+from importerConstants import ENCODING_FS, CENTER
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
@@ -232,6 +232,7 @@ def setAuthor(author):
 	return
 
 def getAuthor():
+	global _author
 	return _author
 
 def setCompany(company):
@@ -924,11 +925,7 @@ def PrintableName(fname):
 def decode(filename, utf=False):
 	if (isinstance(filename, unicode)):
 		# workaround since ifcopenshell currently can't handle unicode filenames
-		if (utf):
-			encoding = "utf8"
-		else:
-			import sys
-			encoding = sys.getfilesystemencoding()
+		encoding = ENCODING_FS if (utf) else sys.getfilesystemencoding()
 		filename = filename.encode(encoding).decode("utf-8")
 	return filename
 

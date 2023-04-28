@@ -11,7 +11,7 @@ from importerClasses        import *
 from importerTransformation import Transformation2D, Transformation3D
 from importerSegNode        import isList, CheckList, SecNode, SecNodeRef, _TYP_NODE_REF_, _TYP_UINT32_A_, REF_PARENT, REF_CHILD, REF_CROSS
 from importerUtils          import *
-from Acis                   import clearEntities, AcisReader, setVersion, TAG_ENTITY_REF, getInteger, createNode, getNameMatchAttributes, getDcAttributes
+from Acis                   import clearEntities, AcisReader, setVersion, TAG_ENTITY_REF, createEntity, getNameMatchAttributes, getDcAttributes
 from importerSAT            import dumpSat
 from uuid                   import UUID
 import importerUtils
@@ -28,8 +28,8 @@ def resolveEntityReferences(node):
 	acis = node.get('SAT')
 	try:
 		# create a node for each entity
-		for entity in acis.getEntities():
-			createNode(entity)
+		for record in acis.getRecords():
+			createEntity(record)
 
 		dumpSat("%04X" %(node.index), acis)
 		# resolve the roll-back information from the history

@@ -47,3 +47,5 @@ DIR_Y  = VEC(0, 1, 0)
 DIR_Z  = VEC(0, 0, 1)
 
 ENCODING_FS      = 'utf8'
+
+EPS = 1.0e-6
