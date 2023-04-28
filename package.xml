@@ -31,4 +31,5 @@
 <depend>xlrd</depend>
 <depend>xlwt</depend>
 <depend>xlutils</depend>
+<depend>ezdxf</depend>
 </package>
