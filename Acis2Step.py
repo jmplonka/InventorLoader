@@ -48,8 +48,8 @@ def _isIdentity(transf):
 	return transf.Base.distanceToPoint(CENTER) < EPS and transf.Rotation.Axis.getAngle(DIR_Z) < EPS
 
 def _getE(o):
-	if (isinstance(o, E)): return o
 	if (o is None): return None
+	if (isinstance(o, E)): return o
 	return E(o)
 
 def _dbl2str(d):
@@ -68,8 +68,7 @@ def _bool2str(v):
 	return u".T." if v else u".F."
 
 def _str2str(s):
-	if (s is None):
-		return '$'
+	if (s is None): return '$'
 	return u"'%s'" %(s)
 
 def _entity2str(e):
@@ -148,7 +147,7 @@ def getColor(entity):
 def assignColor(color, item, context):
 	global _assignments
 
-	if (color is not None):
+	if (color):
 		keyRGB = "%g,%g,%g" %(color.red, color.green, color.blue)
 		representation = MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('', [], context)
 		style = STYLED_ITEM('color', [], item)
@@ -303,14 +302,14 @@ def __create_b_spline_curve(spline):
 			if (spline.rational):
 				p0 = BOUNDED_CURVE()
 				p1 = B_SPLINE_CURVE(name=None, degree=degree, points=points, form='UNSPECIFIED', closed=closed, selfIntersecting=False)
-				p2 = B_SPLINE_CURVE_WITH_KNOTS(mults=mults, knots=knots, form2='UNSPECIFIED')
+				p2 = B_SPLINE_CURVE_WITH_KNOTS(name='', mults=mults, knots=knots, form2='UNSPECIFIED', closed=closed)
 				p3 = CURVE()
 				p4 = GEOMETRIC_REPRESENTATION_ITEM()
 				p5 = RATIONAL_B_SPLINE_CURVE(spline.weights)
 				p6 = REPRESENTATION_ITEM('')
 				curve = ListEntity(p0, p1, p2, p3, p4, p5, p6)
 			else:
-				curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=degree, points=points, form='UNSPECIFIED', closed=closed , selfIntersecting=False, mults=spline.uMults, knots=spline.uKnots, form2='UNSPECIFIED')
+				curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=degree, points=points, form='UNSPECIFIED', closed=closed, selfIntersecting=False, mults=spline.uMults, knots=spline.uKnots, form2='UNSPECIFIED')
 			_curveBSplines[key] = curve
 		return curve
 	return None
@@ -323,7 +322,7 @@ def _createCurveIntExact(acisCurve):
 #	acisCurve.pcurve1 # readBS2Curve(chunks, i)
 #	acisCurve.pcurve2 # readBS2Curve(chunks, i)
 #
-	__create_b_spline_curve(acisCurve.spline)
+	curve = __create_b_spline_curve(acisCurve.spline)
 	return curve
 
 def _createCurveIntBlend(acisCurve):
@@ -428,12 +427,17 @@ CREATE_CURVE_INT ={
 	'sss_int_cur':         _createCurveIntSSS,
 }
 def _createCurveInt(acisCurve):
-	try:
-		create = CREATE_CURVE_INT[acisCurve.subtype]
-		return create(acisCurve)
-	except:
-		logError("Don't know how how to create INT_CURVE %s!" %(acisCurve.subtype))
-	return None
+	spline = acisCurve.spline
+	if (spline):
+		curve = __create_b_spline_curve(spline)
+		return curve
+	else:
+		try:
+			create = CREATE_CURVE_INT[acisCurve.subtype]
+			return create(acisCurve)
+		except Exception as ex:
+			logError("Don't know how how to create INT_CURVE %s - %s" %(acisCurve.subtype, ex))
+		return None
 
 def _createCurveP(acisCurve):
 	# TODO
@@ -469,18 +473,20 @@ def _createCurve(acisCurve):
 		return _createCurveP(acisCurve)
 	if (isinstance(acisCurve, Acis.CurveStraight)):
 		return _createCurveStraight(acisCurve)
-	raise AttributeError("Don't know how to create curve %s" %(acisCurve.__class__.__name__))
+	return None
 
 def _createCoEdge(acisCoEdge):
-	acisEdge = acisCoEdge.getEdge()
-	curve    = _createCurve(acisEdge.getCurve())
-	if (curve is not None):
+	acisEdge  = acisCoEdge.getEdge()
+	acisCurve = acisEdge.getCurve()
+	curve     = _createCurve(acisCurve)
+	if (curve):
 		oe = ORIENTED_EDGE((acisCoEdge.sense == 'forward'))
-		p1      = _createVertexPoint(acisEdge.getStart())
-		p2      = _createVertexPoint(acisEdge.getEnd())
-		e       = _createEdgeCurve(p1, p2, curve, (acisEdge.sense == 'forward'))
+		p1 = _createVertexPoint(acisEdge.getStart())
+		p2 = _createVertexPoint(acisEdge.getEnd())
+		e  = _createEdgeCurve(p1, p2, curve, (acisEdge.sense == 'forward'))
 		oe.edge = e
 		return oe
+	logError("Failed to create CoEdge for %s", acisCurve)
 	return None
 
 def _createBoundaries(acisLoops):
@@ -491,7 +497,7 @@ def _createBoundaries(acisLoops):
 		edges = []
 		for acisCoEdge in coedges:
 			edge = _createCoEdge(acisCoEdge)
-			if (edge is not None):
+			if (edge):
 				edges.append(edge)
 		if (len(edges) > 0):
 			face = FACE_BOUND('', True)
@@ -589,26 +595,31 @@ def _createSurfaceSphere(center, radius, pole, sense):
 		_spheres[key] = sphere
 	return sphere, (sense == 'forward')
 
-def _createSurfaceToroid(major, minor, center, axis, sense):
-	torus = TOROIDAL_SURFACE('', None, major, math.fabs(minor))
-	ref = _calculateRef(axis)
-	torus.placement = _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis', ref, 'ref_axis')
-	if (minor < 0.0): return torus, (sense != 'forward')
-	return torus, (sense == 'forward')
+def _createSurfaceBS(acisSurface, sense):
+	spline = acisSurface.spline
+	points = []
+	for u in spline.poles:
+		p = [_createCartesianPoint(v, 'Ctrl Pts') for v in u]
+		points.append(p)
+	if (spline.rational):
+		p0 = BOUNDED_SURFACE()
+		p1 = B_SPLINE_SURFACE(spline.uDegree, spline.vDegree, points, 'UNSPECIFIED', spline.uPeriodic, spline.vPeriodic, False)
+		p2 = B_SPLINE_SURFACE_WITH_KNOTS(uMults=spline.uMults, vMults=spline.vMults, uKnots=spline.uKnots, vKnots=spline.vKnots, form2='UNSPECIFIED')
+		p3 = GEOMETRIC_REPRESENTATION_ITEM()
+		p4 = RATIONAL_B_SPLINE_SURFACE(spline.weights)
+		p5 = REPRESENTATION_ITEM('')
+		p6 = SURFACE()
+		spline = ListEntity(p0, p1, p2, p3, p4, p5, p6)
+	else:
+		spline = B_SPLINE_SURFACE_WITH_KNOTS(name='', uDegree=spline.uDegree, vDegree=spline.vDegree, points=points, form='UNSPECIFIED', uClosed=spline.uPeriodic, vClosed=spline.vPeriodic, selfIntersecting=False, uMults=spline.uMults, vMults=spline.vMults, uKnots=spline.uKnots, vKnots=spline.vKnots, form2='UNSPECIFIED')
+	spline.__acis__ = acisSurface
+	return spline, sense == 'forward'
 
-def _createSurfaceFaceShape(acisFace):
+def _createSurfaceSpline(acisFace):
 	surface = acisFace.getSurface()
-	if (isinstance(surface, Acis.SurfaceCone)):
-		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
-#	if (isinstance(surface, Acis.SurfaceMesh)):
-#		return _createSurfaceMesh(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
-	if (isinstance(surface, Acis.SurfacePlane)):
-		return _createSurfacePlane(surface.root, surface.normal, acisFace.sense)
-	if (isinstance(surface, Acis.SurfaceSphere)):
-		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, acisFace.sense)
-	if (isinstance(surface, Acis.SurfaceTorus)):
-		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
-
+	if (surface.subtype == 'ref'): surface = surface.getSurface()
+	if (surface.spline):
+		return _createSurfaceBS(surface, acisFace.sense)
 	shape = acisFace.build()
 	if (isinstance(shape, Part.BSplineSurface)):
 		return _createSurfaceBSpline(shape, surface, acisFace.sense)
@@ -625,14 +636,36 @@ def _createSurfaceFaceShape(acisFace):
 	if (isinstance(shape, Part.SurfaceOfRevolution)):
 		return _createSurfaceRevolution(surface.profile, surface.center, surface.axis, acisFace.sense)
 	if (isinstance(shape, Part.Toroid)):
+		return _createSurfaceToroid(shape.MajorRadius, shape.MinorRadius, shape.Center, shape.Axis, acisFace.sense)
+	return None
+
+def _createSurfaceToroid(major, minor, center, axis, sense):
+	torus = TOROIDAL_SURFACE('', None, major, math.fabs(minor))
+	ref = _calculateRef(axis)
+	torus.placement = _createAxis2Placement3D('', center, 'Origin', axis, 'center_axis', ref, 'ref_axis')
+	if (minor < 0.0): return torus, (sense != 'forward')
+	return torus, (sense == 'forward')
+
+def _createSurfaceFaceShape(acisFace):
+	surface = acisFace.getSurface()
+	if (isinstance(surface, Acis.SurfaceCone)):
+		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
+#	if (isinstance(surface, Acis.SurfaceMesh)):
+#		return _createSurfaceMesh(surface, acisFace.sense)
+	if (isinstance(surface, Acis.SurfacePlane)):
+		return _createSurfacePlane(surface.root, surface.normal, acisFace.sense)
+	if (isinstance(surface, Acis.SurfaceSphere)):
+		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, acisFace.sense)
+	if (isinstance(surface, Acis.SurfaceSpline)):
+		return _createSurfaceSpline(acisFace)
+	if (isinstance(surface, Acis.SurfaceTorus)):
 		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
 	logWarning("Can't export surface '%s.%s'!" %(surface.__class__.__module__, surface.__class__.__name__))
 	return None, (acisFace.sense == 'forward')
 
 def _convertFace(acisFace, parentColor, context):
 	color = getColor(acisFace)
-	if (color is None):
-		color = parentColor
+	if (color is None): color = parentColor
 
 	surface, sense = _createSurfaceFaceShape(acisFace)
 	if (surface):
@@ -649,15 +682,14 @@ def _convertShell(acisShell, representation, parentColor):
 	faces = acisShell.getFaces()
 	if (len(faces) > 0):
 		color = getColor(acisShell)
-		defColor = parentColor if (color is None) else color
+		if (color is None): color = parentColor
 		shell = OPEN_SHELL('',[])
 
 		for acisFace in faces:
-			face = _convertFace(acisFace, defColor, representation.context)
-			if (face):
-				shell.faces.append(face)
-
-		assignColor(defColor, shell, representation.context)
+			face = _convertFace(acisFace, color, representation.context)
+			if (not shell.addFace(face)):
+				logError("Failed to create SAT face %s", acisFace)
+		assignColor(color, shell, representation.context)
 		return shell
 
 	return None
@@ -685,17 +717,17 @@ def _convertLump(acisLump, name, appContext, parentColor, transformation):
 	name = "%s_L_%02d" %(name, acisLump.index)
 	frames          = [PRODUCT_CONTEXT('', appContext, 'mechanical')]
 	prod            = PRODUCT(name, frames)
-	prod_def_form   = PRODUCT_DEFINITION_FORMATION(name + '_def_form', prod)
+	prod_def_fmt    = PRODUCT_DEFINITION_FORMATION(name + '_def_fmt', prod)
 	prod_def_ctx    = PRODUCT_DEFINITION_CONTEXT(name + '_def_ctx', appContext, 'design')
-	prod_transf_def = PRODUCT_DEFINITION(name, prod_def_form, prod_def_ctx)
+	prod_transf_def = PRODUCT_DEFINITION(name, prod_def_fmt, prod_def_ctx)
 	prod_def_shape  = PRODUCT_DEFINITION_SHAPE(name + '_def_shape', '', prod_transf_def)
 	shapeOriginalWithProductInfo = SHAPE_DEFINITION_REPRESENTATION(name, prod_def_shape)
 	unit = _createUnit(1e-7)
 
 	lump = SHELL_BASED_SURFACE_MODEL()
 	color = getColor(acisLump)
-	defColor = parentColor if (color is None) else color
-	assignColor(defColor, lump, unit)
+	if (color is None): color = parentColor
+	assignColor(color, lump, unit)
 	if ((not transformation is None) and (_isIdentity(transformation)==False)):
 		placement    = TRANSFORM_NONE.Base
 		zDir         = DIR_Z
@@ -735,9 +767,9 @@ def _convertLump(acisLump, name, appContext, parentColor, transformation):
 		shapeRet = shapeOriginalWithProductInfo
 
 	for acisShell in acisLump.getShells():
-		shell = _convertShell(acisShell, shapeRet.representation, defColor)
-		if (shell is not None):
-			lump.items.append(shell)
+		shell = _convertShell(acisShell, shapeRet.representation, color)
+		if (not lump.add(shell)):
+			logError("Failed to create shell %s", acisShell)
 
 	return shapeRet
 
@@ -754,9 +786,9 @@ def _convertBody(acisBody, appPrtDef):
 	else:
 		transformation = TRANSFORM_NONE
 	for acisLump in acisBody.getLumps():
-		shape = _convertLump(acisLump, name, appPrtDef.application, getColor(acisBody), transformation)
-		if (shape is not None):
-			bodies.append(shape.getProduct())
+		lump = _convertLump(acisLump, name, appPrtDef.application, getColor(acisBody), transformation)
+		if (lump):
+			bodies.append(lump.getProduct())
 
 	return bodies
 
@@ -1154,7 +1186,7 @@ class NAMED_UNIT(ExportEntity):
 		self.has_been_exported = True
 	def _getParameters(self):
 		l = super(NAMED_UNIT, self)._getParameters()
-		if (self.dimensions is not None):
+		if (self.dimensions):
 			l += [self.dimensions]
 		return l
 
@@ -1474,6 +1506,9 @@ class OPEN_SHELL(NamedEntity):
 		self.faces = faces
 	def _getParameters(self):
 		return super(OPEN_SHELL, self)._getParameters() + [self.faces]
+	def addFace(self, face):
+		if (face): self.faces.append(face)
+		return not face is None
 
 class SHELL_BASED_SURFACE_MODEL(NamedEntity):
 	def __init__(self, ):
@@ -1481,6 +1516,9 @@ class SHELL_BASED_SURFACE_MODEL(NamedEntity):
 		self.items = []
 	def _getParameters(self):
 		return super(SHELL_BASED_SURFACE_MODEL, self)._getParameters() + [self.items]
+	def add(self, child):
+		if (child): self.items.append(child)
+		return not child is None
 
 class MANIFOLD_SOLID_BREP(NamedEntity):
 	def __init__(self, name, outer):
@@ -1607,7 +1645,7 @@ class RATIONAL_B_SPLINE_CURVE(ReferencedEntity):
 		return super(RATIONAL_B_SPLINE_CURVE, self)._getParameters() + [self.weights]
 
 class B_SPLINE_CURVE(ReferencedEntity):
-	def __init__(self, name=None, degree=None, points=None, form=None, closed=None, selfIntersecting=None):
+	def __init__(self, name='', degree=None, points=None, form=None, closed=None, selfIntersecting=None):
 		super(B_SPLINE_CURVE, self).__init__()
 		self.name             = name
 		self.degree           = degree
@@ -1626,7 +1664,7 @@ class B_SPLINE_CURVE(ReferencedEntity):
 		return l
 
 class B_SPLINE_CURVE_WITH_KNOTS(B_SPLINE_CURVE):
-	def __init__(self, name=None, degree=None, points=None, form=None, closed=None, selfIntersecting=None, mults=None, knots=None, form2=None):
+	def __init__(self, name='', degree=None, points=None, form=None, closed=False, selfIntersecting=False, mults=None, knots=None, form2=None):
 		super(B_SPLINE_CURVE_WITH_KNOTS, self).__init__(name, degree, points, form, closed, selfIntersecting)
 		self.mults            = mults
 		self.knots            = knots
@@ -1685,12 +1723,12 @@ class B_SPLINE_SURFACE_WITH_KNOTS(ReferencedEntity):
 	def _getParameters(self):
 		l = super(B_SPLINE_SURFACE_WITH_KNOTS, self)._getParameters()
 		if (self.name             is not None): l.append(self.name)
-		if (self.uDegree		  is not None): l.append(self.uDegree)
-		if (self.vDegree		  is not None): l.append(self.vDegree)
-		if (self.points			  is not None): l.append(self.points)
-		if (self.form			  is not None): l.append(self.form)
-		if (self.uClosed		  is not None): l.append(self.uClosed)
-		if (self.vClosed		  is not None): l.append(self.vClosed)
+		if (self.uDegree          is not None): l.append(self.uDegree)
+		if (self.vDegree          is not None): l.append(self.vDegree)
+		if (self.points           is not None): l.append(self.points)
+		if (self.form             is not None): l.append(self.form)
+		if (self.uClosed          is not None): l.append(self.uClosed)
+		if (self.vClosed          is not None): l.append(self.vClosed)
 		if (self.selfIntersecting is not None): l.append(self.selfIntersecting)
 		if (self.uMults           is not None): l.append(self.uMults)
 		if (self.vMults           is not None): l.append(self.vMults)

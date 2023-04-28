@@ -1517,7 +1517,7 @@ class Entity(object):
 		self.record  = None
 		self.history = None
 		self.record  = None
-		self.shape   = None      # FreeCAD shape of the face
+		self.shape   = None
 		self.__ready_to_build__ = True # Don't try to create me more than once
 	def set(self, record):
 		try:
@@ -2910,11 +2910,11 @@ class SurfaceSphere(Surface):
 			sphere.Radius = fabs(self.radius)
 			self.shape = sphere.toShape()
 		return self.shape
-
 class SurfaceSpline(Surface):
 	def __init__(self):
 		super(SurfaceSpline, self).__init__('spline')
 		self.surface = None
+		self.spline  = None
 	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
 	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
 	def _readLoftData(self, chunks, index):
@@ -3111,8 +3111,8 @@ class SurfaceSpline(Surface):
 		return sNext
 	def setSurfaceShape(self, chunks, index, inventor, subtype = 'spl_sur'):
 		self.subtype = subtype
-		spline, self.tolerance, i = readSplineSurface(chunks, index, True)
-		self.shape = createBSplinesSurface(spline)
+		self.spline, self.tolerance, i = readSplineSurface(chunks, index, True)
+#		self.shape = createBSplinesSurface(selfspline)
 		if (getVersion() >= 2.0):
 			arr, i  = getDiscontinuityInfo(chunks, i, inventor)
 		return i
@@ -3879,7 +3879,6 @@ class SurfaceSpline(Surface):
 					logWarning(u"    ... Don't know how to build surface '-%d %s' - only edges displayed!", self.index, self.type )
 			self.failed = (self.shape is None)
 		return self.shape
-
 class SurfaceTorus(Surface):
 	'''
 	The torus surface is defined by the center point, normal vector, the major
