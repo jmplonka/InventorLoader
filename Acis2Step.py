@@ -11,7 +11,7 @@ import Acis
 from datetime          import datetime
 from importerUtils     import isEqual, getDumpFolder
 from FreeCAD           import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT
-from importerUtils     import logInfo, logWarning, logError, isEqual1D, getColorDefault, getDumpFolder, getAuthor, getDescription
+from importerUtils     import logInfo, logWarning, logError, logAlways, isEqual1D, getColorDefault, getDumpFolder, getAuthor, getDescription
 from importerConstants import CENTER, DIR_X, DIR_Y, DIR_Z, EPS
 
 if (sys.version_info.major > 2):
@@ -486,7 +486,6 @@ def _createCoEdge(acisCoEdge):
 		e  = _createEdgeCurve(p1, p2, curve, (acisEdge.sense == 'forward'))
 		oe.edge = e
 		return oe
-	logError("Failed to create CoEdge for %s", acisCurve)
 	return None
 
 def _createBoundaries(acisLoops):
@@ -637,7 +636,7 @@ def _createSurfaceSpline(acisFace):
 		return _createSurfaceRevolution(surface.profile, surface.center, surface.axis, acisFace.sense)
 	if (isinstance(shape, Part.Toroid)):
 		return _createSurfaceToroid(shape.MajorRadius, shape.MinorRadius, shape.Center, shape.Axis, acisFace.sense)
-	return None
+	return None, acisFace.sense == 'forwared'
 
 def _createSurfaceToroid(major, minor, center, axis, sense):
 	torus = TOROIDAL_SURFACE('', None, major, math.fabs(minor))
@@ -667,13 +666,15 @@ def _convertFace(acisFace, parentColor, context):
 	color = getColor(acisFace)
 	if (color is None): color = parentColor
 
-	surface, sense = _createSurfaceFaceShape(acisFace)
-	if (surface):
-		face = ADVANCED_FACE('', surface, sense)
-		face.bounds = _createBoundaries(acisFace.getLoops())
-		assignColor(color, face, context)
-		return face
-
+	try:
+		surface, sense = _createSurfaceFaceShape(acisFace)
+		if (surface):
+			face = ADVANCED_FACE('', surface, sense)
+			face.bounds = _createBoundaries(acisFace.getLoops())
+			assignColor(color, face, context)
+			return face
+	except:
+		logError('Fatal forr acisFace= %s', acisFace.getSurface().getSurface())
 	return None
 
 def _convertShell(acisShell, representation, parentColor):
@@ -687,8 +688,7 @@ def _convertShell(acisShell, representation, parentColor):
 
 		for acisFace in faces:
 			face = _convertFace(acisFace, color, representation.context)
-			if (not shell.addFace(face)):
-				logError("Failed to create SAT face %s", acisFace)
+			shell.addFace(face)
 		assignColor(color, shell, representation.context)
 		return shell
 
@@ -850,16 +850,6 @@ def _setExported(l, b):
 	if (isinstance(l, ExportEntity)):
 		l.has_been_exported = b
 
-def _exportList(l):
-	step = u''
-	if (type(l) == list):
-		d = l
-	else:
-		d = l.values()
-	for p in d:
-		step += p.exportSTEP()
-	return step
-
 def _createGeometricRepresentationList(*entities):
 	return (GEOMETRIC_REPRESENTATION_CONTEXT(len(entities)),) + entities
 
@@ -915,9 +905,7 @@ class ExportEntity(AnonymEntity):
 			try:
 				if (isinstance(a, ReferencedEntity)):
 					step += a.exportSTEP()
-				elif (type(a) == list):
-					step += _exportInternalList_(a)
-				elif (type(a) == tuple):
+				elif (type(a) in (list, tuple)):
 					step += _exportInternalList_(a)
 			except:
 				logError(traceback.format_exc())
@@ -1768,6 +1756,8 @@ class GROUP(NamedEntity):
 #############################################################
 
 def export(filename, satHeader, satBodies):
+	global _scale, _entities
+
 	dt     = datetime.now() # 2018-05-13T08:03:27-07:00
 	user   = getAuthor()
 	desc   = getDescription()
@@ -1777,7 +1767,6 @@ def export(filename, satHeader, satBodies):
 
 	_initExport()
 
-	global _scale
 	_scale = satHeader.scale
 
 	appPrtDef = APPLICATION_PROTOCOL_DEFINITION()
@@ -1810,15 +1799,17 @@ def export(filename, satHeader, satBodies):
 	step += u"\n"
 	step += u"DATA;\n"
 
-	step += _exportList(_entities)
+	for entity in _entities:
+		step += entity.exportSTEP()
 
 	step += u"ENDSEC;\n"
 	step += u"END-ISO-10303-21;"
 
 	with io.open(stepfile, 'wt', encoding="UTF-8") as stepFile:
 		stepFile.write(step)
-		logInfo(u"STEP file written to '%s'.", stepfile)
 
 	_finalizeExport()
+
+	logInfo(u"STEP file written to '%s'.", stepfile)
 
 	return stepfile

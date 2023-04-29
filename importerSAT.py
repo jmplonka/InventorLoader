@@ -5,7 +5,6 @@ importerSAT.py:
 Collection of classes necessary to read and analyse Autodesk (R) Invetor (R) files.
 '''
 
-from msilib import CreateRecord
 import os, FreeCAD, Part, ImportGui, io
 from importerUtils   import logInfo, logAlways, chooseImportStrategyAcis, STRATEGY_SAT, STRATEGY_NATIVE, STRATEGY_STEP, setDumpFolder, getDumpFolder
 from Acis2Step       import export

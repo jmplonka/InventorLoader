@@ -1382,6 +1382,31 @@ class Helix(object):
 		helix.translate(self.posCenter)
 		return helix.toShape()
 
+	def buildSurfaceLine(self, p1, p2):
+		min_U   = self.radAngles.getLowerLimit()
+		max_U   = self.radAngles.getUpperLimit()
+		r_maj   = self.dirMajor.Length
+		r_min   = self.dirMinor.Length
+		pitch   = self.dirPitch.Length
+		steps_U = Helix.calcSteps(min_U, max_U, 8)
+		handed  = 1 if (self.isLeftHanded()) else -1
+		points  = []
+
+		for u  in steps_U:
+			c = Helix.calcPoint(u, min_U, self.facApex, r_maj, r_min, handed, pitch)
+			m = MAT(cos(u), sin(u), 0, 0, -sin(u), cos(u), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+			p_1 = m.multiply(p1) + c
+			p_2 = m.multiply(p2) + c
+			points.append((p_1, p_2))
+
+		# bring the helix into the correct position:
+		helix = Part.BSplineSurface()
+		helix.interpolate(points)
+		self.rotateShape(helix, DIR_X, VEC(self.dirMajor.x, self.dirMajor.y, 0), DIR_Z)
+		self.rotateShape(helix, DIR_Z, self.vecAxis, DIR_X)
+		helix.translate(self.posCenter)
+		return helix.toShape()
+
 class Range(object):
 	def __init__(self, type, limit, scale = 1.0):
 		self.type  = type
@@ -1779,7 +1804,12 @@ class Face(Topology):
 	def getNext(self):    return None if (self._next is None)    else self._next.entity
 	def getLoop(self):    return None if (self._loop is None)    else self._loop.entity
 	def getParent(self):  return None if (self._parent is None)  else self._parent.entity
-	def getSurface(self): return None if (self._surface is None) else self._surface.entity
+	def getSurface(self):
+		if (self._surface):
+			if (self._surface.entity.subtype == 'ref'):
+				return self._surface.entity.getSurface()
+			return self._surface.entity
+		return None
 	def buildCoEdges(self):
 		edges = []
 		loop = self.getLoop()
@@ -1790,10 +1820,9 @@ class Face(Topology):
 	def build(self):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
-			self._surface = self.getSurface()
 			edges = self.buildCoEdges()
 			if (self._surface):
-				surface = self._surface.build()
+				surface = self.getSurface().build()
 				if (surface):
 					if (self.sense == 'reversed'):
 						surface.reverse()
@@ -2403,6 +2432,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.shape = self.helix.build()
 		if (not self.setProjectionSurface(s1, p1)):
 			self.setProjectionSurface(s2, p2)
+		self.__ready_to_build__ = (self.shape is None)
 		return i
 	def setInt(self, chunks, index, inventor):
 		i = self.setSurfaceCurve(chunks, index, inventor, 'int_int_cur')
@@ -3352,21 +3382,20 @@ class SurfaceSpline(Surface):
 		return i
 	def setHelixCircle(self, chunks, index, inventor):
 		self.subtype = 'helix_spl_circ'
-		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
-		dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
-		length, i = getLength(chunks, i) # pi / 2
-		curve = CurveInt(subtype="helix_int_cur")
-		i = curve.setHelix(chunks, i, inventor)
-		radius, i  = getLength(chunks, i) # radius of the circle
-		self.shape = curve.helix.buildSurfaceCircle(radius, angle.getLowerLimit(), angle.getUpperLimit())
+		self.angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
+		self.dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, getScale())
+		self.length, i = getLength(chunks, i) # pi / 2
+		self.path = CurveInt(subtype="helix_int_cur")
+		i = self.path.setHelix(chunks, i, inventor)
+		self.radius, i  = getLength(chunks, i) # radius of the circle
 		return i
 	def setHelixLine(self, chunks, index, inventor):
 		self.subtype = 'helix_spl_line'
-		angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
-		dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, 1.0)
-		curve = CurveInt(subtype="helix_int_cur")
-		i = curve.setHelix(chunks, i, inventor)
-		posCenter, i = getLocation(chunks, i)
+		self.angle, i  = getInterval(chunks, index, MIN_PI, MAX_PI, 1.0)
+		self.dime1, i  = getInterval(chunks, i, -MAX_LEN, MAX_LEN, 1.0)
+		self.path = CurveInt(subtype="helix_int_cur")
+		i = self.path.setHelix(chunks, i, inventor)
+		self.origin, i = getLocation(chunks, i)
 		return i
 	def setLoft(self, chunks, index, inventor):
 		self.ls1, i   = self._readLofSection(chunks, index, inventor)
@@ -3778,6 +3807,7 @@ class SurfaceSpline(Surface):
 		if (self.record is None):
 			self.record = Record('spline')
 			self.record.index = self.index
+			self.record.entity = self
 		i = self.setBulk(chunks, i + 1)
 		assert (chunks[i].tag == TAG_SUBTYPE_CLOSE), u"-%s %s - pending chunks to read: %s" %(self.index, self.subtype, chunks[i:])
 		self.rangeU, i = getInterval(chunks, i + 1, MIN_INF, MAX_INF, getScale())
@@ -3872,6 +3902,11 @@ class SurfaceSpline(Surface):
 					path = self.path.build(None, None)
 					if (path):
 						self.shape = Part.makeSweepSurface(path, profile)
+			elif (self.subtype == 'helix_spl_circ'):
+				self.shape = self.path.helix.buildSurfaceCircle(self.radius, self.angle.getLowerLimit(), self.angle.getUpperLimit())
+#			elif (self.subtype == 'helix_spl_line'):
+#				# TODO pt1 = ???, pt2 = ???
+#				self.shape = self.path.helix.buildSurfaceLine(pt1, pt2)
 			if (isinstance(self.surface, Surface)):
 				self.shape = self.surface.build()
 				if ((self.shape is not None) and (isinstance(self.shape.Surface, Part.SurfaceOfRevolution))):

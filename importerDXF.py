@@ -45,13 +45,12 @@ def read(filename):
 	setDumpFolder(filename)
 	doc = readfile(filename)
 	for entry in doc.entities:
-		if (isinstance(entry, Solid3d)):
-			if (__is_binary__(entry)):
-				__read_binary__(entry.sab, '%s_%d' %(name, i))
-				i += 1
-			elif (__is_text__(entry)):
-				__read_text__(entry.sat, '%s_%d' %(os.path.basename(os.path.splitext(filename)[0]), i))
-				i += 1
+		if (__is_binary__(entry)):
+			__read_binary__(entry.sab, '%s_%d' %(name, i))
+			i += 1
+		elif (__is_text__(entry)):
+			__read_text__(entry.sat, '%s_%d' %(os.path.basename(os.path.splitext(filename)[0]), i))
+			i += 1
 	return True
 
 def create3dModel(group, doc):
