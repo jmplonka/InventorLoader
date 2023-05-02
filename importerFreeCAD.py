@@ -3613,19 +3613,42 @@ class FreeCADImporter(object):
 		return self.notYetImplemented(snapFitNode, bodySet) # Cut Geometry (Wedge - Cube)
 
 	# Features requiring SheetMetal
-	def Create_FxPlate(self, trimNode):
-		properties = trimNode.get('properties')
-#		getProperty(properties, 0) # FaceBoundOuterProxy
-#		getProperty(properties, 1) # Direction - (0,0,1)
-#		getProperty(properties, 2) # Boolean=False
-#		getProperty(properties, 3) # Parameter 'Thickness'=1.524mm
-#		getProperty(properties, 4) # PlateDef
-#		edgeSet1 = getProperty(properties, 5) # EdgeCollection
-		body = getProperty(properties, 6) # SurfaceBody 'Solid1'
-#		edgeSet2 = getProperty(properties, 7) # EdgeCollection
-#		getProperty(properties, 8) # FeatureDimensions
+	def Create_FxPlate(self, sheetMetalNode):
+		properties = sheetMetalNode.get('properties')
+#		           = getProperty(properties, 0x00) # FaceBoundOuterProxy
+		extrudeDir = getProperty(properties, 0x01) # Direction - (0,0,1)
+#		           = getProperty(properties, 0x02) # FlipOffset/Boolean=False
+		thickness  = getProperty(properties, 0x03) # Parameter 'Thickness'=1.524mm
+#		           = getProperty(properties, 0x04) # PlateDef
+#		edgeSet1   = getProperty(properties, 0x05) # EdgeCollection
+#		body       = getProperty(properties, 0x06) # SurfaceBody 'Solid1'
+#		edgeSet2   = getProperty(properties, 0x07) # EdgeCollection
+#		           = getProperty(properties, 0x08) # FeatureDimensions
+#		           = getProperty(properties, 0x09) # CornerSeam
+#		           = getProperty(properties, 0x0A) # 96058864
+#		           = getProperty(properties, 0x0B) # BendTransition
+#		           = getProperty(properties, 0x0C) # 299B2DCE
+#		           = getProperty(properties, 0x0D) # E5721705
+#		           = getProperty(properties, 0x0E) # FaceBendCollection
+#		           = getProperty(properties, 0x0F) # ObjectCollection
+#		           = getProperty(properties, 0x10) # PartFeatureOperation
 
-		return self.notYetImplemented(trimNode, body)
+		# get profile for the plate
+		participant = sheetMetalNode.get('next').get('next').get('next').get('participant')
+		profile = self.getGeometry(participant)
+
+		# extrude the profile
+		plate = newObject('Part::Extrusion', sheetMetalNode.name)
+		plate.Base      = profile
+		plate.Solid     = True
+		plate.Reversed  = False
+		plate.Dir       = extrudeDir.get('dir')
+		plate.DirMode   = 'Normal'
+		plate.LengthFwd = getMM(thickness)
+		plate.Symmetric = False
+		setDefaultViewObjectValues(plate)
+		hide(plate.Base)
+		return plate
 
 	def Create_FxBend(self, bendNode):
 		properties = bendNode.get('properties')
