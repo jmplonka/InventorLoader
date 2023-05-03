@@ -10,31 +10,21 @@
     <height>296</height>
    </rect>
   </property>
-  <property name="windowTitle">
-   <string>IPT</string>
-  </property>
+  <property name="windowTitle"><string>IPT</string></property>
   <layout class="QVBoxLayout" name="verticalLayout_5">
    <item>
     <widget class="QGroupBox" name="groupBox_2">
-     <property name="title">
-      <string>Import</string>
-     </property>
+     <property name="title"><string>Import</string></property>
      <layout class="QVBoxLayout" name="verticalLayout_6">
       <item>
        <widget class="QTabWidget" name="tabWidget">
-        <property name="currentIndex">
-         <number>0</number>
-        </property>
+        <property name="currentIndex"><number>0</number></property>
         <widget class="QWidget" name="tabSketches">
-         <attribute name="title">
-          <string>Sketches</string>
-         </attribute>
+         <attribute name="title"><string>Sketches</string></attribute>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
            <widget class="QToolBox" name="toolBox">
-            <property name="currentIndex">
-             <number>0</number>
-            </property>
+            <property name="currentIndex"><number>0</number></property>
             <widget class="QWidget" name="pagConstraints">
              <property name="geometry">
               <rect>
@@ -44,21 +34,15 @@
                <height>147</height>
               </rect>
              </property>
-             <attribute name="label">
-              <string>Constraints</string>
-             </attribute>
+             <attribute name="label"><string>Constraints</string></attribute>
              <layout class="QHBoxLayout" name="horizontalLayout">
               <item>
                <widget class="QGroupBox" name="grpGeometric">
-                <property name="title">
-                 <string>Geometric:</string>
-                </property>
+                <property name="title"><string>Geometric:</string></property>
                 <layout class="QVBoxLayout" name="verticalLayout_2">
                  <item>
                   <widget class="QScrollArea" name="scrollArea">
-                   <property name="widgetResizable">
-                    <bool>true</bool>
-                   </property>
+                   <property name="widgetResizable"><bool>true</bool></property>
                    <widget class="QWidget" name="scrollAreaWidgetContents">
                     <property name="geometry">
                      <rect>
@@ -70,234 +54,168 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout">
                      <item row="0" column="0">
-                      <widget class="QCheckBox" name="cbxGeoAlignHorizontal">
-                       <property name="text">
-                        <string>align horizontal</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Align_Horizontal.svg</normaloff>../icons/Constraint_Align_Horizontal.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoAlignHorizontal">
+                       <property name="text"><string>align horizontal</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Align_Horizontal.svg</normaloff>../icons/Constraint_Align_Horizontal.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "align horizontal" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.AlignHorizontal</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="0" column="1">
-                      <widget class="QCheckBox" name="cbxGeoAlignVertical">
-                       <property name="text">
-                        <string>align vertical</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Align_Vertical.svg</normaloff>../icons/Constraint_Align_Vertical.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoAlignVertical">
+                       <property name="text"><string>align vertical</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Align_Vertical.svg</normaloff>../icons/Constraint_Align_Vertical.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "align vertical" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.AlignVertical</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="1" column="0">
-                      <widget class="QCheckBox" name="cbxGeoCoincident">
-                       <property name="text">
-                        <string>coincident</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_PointOnPoint.svg</normaloff>../icons/Constraint_PointOnPoint.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoCoincident">
+                       <property name="text"><string>coincident</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_PointOnPoint.svg</normaloff>../icons/Constraint_PointOnPoint.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "coincident" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Coincident</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="2" column="0">
-                      <widget class="QCheckBox" name="cbxGeoEqual">
-                       <property name="text">
-                        <string>equal</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_EqualLength.svg</normaloff>../icons/Constraint_EqualLength.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoEqual">
+                       <property name="text"><string>equal</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_EqualLength.svg</normaloff>../icons/Constraint_EqualLength.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "equal" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Equal</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="3" column="0">
-                      <widget class="QCheckBox" name="cbxGeoFix">
-                       <property name="enabled">
-                        <bool>true</bool>
-                       </property>
-                       <property name="text">
-                        <string>fix</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Fix.svg</normaloff>../icons/Constraint_Fix.svg</iconset>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoFix">
+                       <property name="text"><string>fix</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Fix.svg</normaloff>../icons/Constraint_Fix.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "fix" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Fix</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="3" column="1">
-                      <widget class="QCheckBox" name="cbxGeoHorizontal">
-                       <property name="text">
-                        <string>horizontal</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Horizontal.svg</normaloff>../icons/Constraint_Horizontal.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoHorizontal">
+                       <property name="text"><string>horizontal</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Horizontal.svg</normaloff>../icons/Constraint_Horizontal.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "horizontal" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Horizontal</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="4" column="0">
-                      <widget class="QCheckBox" name="cbxGeoVertical">
-                       <property name="text">
-                        <string>vertical</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Vertical.svg</normaloff>../icons/Constraint_Vertical.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoVertical">
+                       <property name="text"><string>vertical</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Vertical.svg</normaloff>../icons/Constraint_Vertical.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "vertical" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Vertical</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="6" column="0">
-                      <widget class="QCheckBox" name="cbxGeoOffset">
-                       <property name="enabled">
-                        <bool>true</bool>
-                       </property>
-                       <property name="text">
-                        <string>offset</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Offset.svg</normaloff>../icons/Constraint_Offset.svg</iconset>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoOffset">
+                       <property name="text"><string>offset</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Offset.svg</normaloff>../icons/Constraint_Offset.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "offset" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Offset</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="4" column="1">
-                      <widget class="QCheckBox" name="cbxGeoParallel">
-                       <property name="text">
-                        <string>parallel</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Parallel.svg</normaloff>../icons/Constraint_Parallel.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoParallel">
+                       <property name="text"><string>parallel</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Parallel.svg</normaloff>../icons/Constraint_Parallel.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "parallel" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Parallel</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="5" column="0">
-                      <widget class="QCheckBox" name="cbxGeoPerpendicular">
-                       <property name="text">
-                        <string>perpendicular</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Perpendicular.svg</normaloff>../icons/Constraint_Perpendicular.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoPerpendicular">
+                       <property name="text"><string>perpendicular</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Perpendicular.svg</normaloff>../icons/Constraint_Perpendicular.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "perpendicular" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Perpendicular</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="5" column="1">
-                      <widget class="QCheckBox" name="cbxGeoTangential">
-                       <property name="text">
-                        <string>tangential</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Tangent.svg</normaloff>../icons/Constraint_Tangent.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoTangential">
+                       <property name="text"><string>tangential</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Tangent.svg</normaloff>../icons/Constraint_Tangent.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "tangential" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Tangential</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="6" column="1">
-                      <widget class="QCheckBox" name="cbxGeoPolygon">
-                       <property name="text">
-                        <string>polygon</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Polygon.svg</normaloff>../icons/Constraint_Polygon.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoPolygon">
+                       <property name="text"><string>polygon</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Polygon.svg</normaloff>../icons/Constraint_Polygon.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "polygon" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Polygon</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="7" column="0">
-                      <widget class="QCheckBox" name="cbxGeoRadius">
-                       <property name="text">
-                        <string>radius</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Radius.svg</normaloff>../icons/Constraint_Radius.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoRadius">
+                       <property name="text"><string>radius</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Radius.svg</normaloff>../icons/Constraint_Radius.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "radius" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.Radius</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="7" column="1">
-                      <widget class="QCheckBox" name="cbxGeoSplineFitpoint">
-                       <property name="enabled">
-                        <bool>true</bool>
-                       </property>
-                       <property name="text">
-                        <string>spline fit point</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_SplineFitPoint.svg</normaloff>../icons/Constraint_SplineFitPoint.svg</iconset>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoSplineFitpoint">
+                       <property name="text"><string>spline fit point</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_SplineFitPoint.svg</normaloff>../icons/Constraint_SplineFitPoint.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "spline fit point" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.SplineFitPoint</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="8" column="0">
-                      <widget class="QCheckBox" name="cbxGeoSymmetryLine">
-                       <property name="text">
-                        <string>symmetry line</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_SymmetricLine.svg</normaloff>../icons/Constraint_SymmetricLine.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>false</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoSymmetryLine">
+                       <property name="text"><string>symmetry line</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_SymmetricLine.svg</normaloff>../icons/Constraint_SymmetricLine.svg</iconset></property>
+                       <property name="checked"><bool>false</bool></property>
+                       <property name="toolTip"><string>Import "symmetry line" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.SymmetryLine</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="8" column="1">
-                      <widget class="QCheckBox" name="cbxGeoSymmetryPoint">
-                       <property name="text">
-                        <string>symmetry point</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_SymmetricPoint.svg</normaloff>../icons/Constraint_SymmetricPoint.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>false</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxGeoSymmetryPoint">
+                       <property name="text"><string>symmetry point</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_SymmetricPoint.svg</normaloff>../icons/Constraint_SymmetricPoint.svg</iconset></property>
+                       <property name="checked"><bool>false</bool></property>
+                       <property name="toolTip"><string>Import "symmetry point" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Geometric.SymmetryPoint</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item row="9" column="0">
                       <spacer name="verticalSpacer">
-                       <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                       </property>
+                       <property name="orientation"><enum>Qt::Vertical</enum></property>
                        <property name="sizeHint" stdset="0">
                         <size>
                          <width>0</width>
@@ -315,15 +233,11 @@
               </item>
               <item>
                <widget class="QGroupBox" name="grpDimension">
-                <property name="title">
-                 <string>Dimension:</string>
-                </property>
+                <property name="title"><string>Dimension:</string></property>
                 <layout class="QVBoxLayout" name="verticalLayout_4">
                  <item>
                   <widget class="QScrollArea" name="scrollArea">
-                   <property name="widgetResizable">
-                    <bool>true</bool>
-                   </property>
+                   <property name="widgetResizable"><bool>true</bool></property>
                    <widget class="QWidget" name="scrollAreaWidgetContents">
                     <property name="geometry">
                      <rect>
@@ -335,94 +249,68 @@
                     </property>
                     <layout class="QVBoxLayout" name="verticalLayout_3">
                      <item>
-                      <widget class="QCheckBox" name="cbxDimAngle2Line">
-                       <property name="text">
-                        <string>angle between 2 lines</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_InternalAngleLine.svg</normaloff>../icons/Constraint_InternalAngleLine.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>false</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxDimAngle2Line">
+                       <property name="text"><string>angle between 2 lines</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_InternalAngleLine.svg</normaloff>../icons/Constraint_InternalAngleLine.svg</iconset></property>
+                       <property name="checked"><bool>false</bool></property>
+                       <property name="toolTip"><string>Import "angle between 2 lines" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Dimension.Angle2Line</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QCheckBox" name="cbxDimAngle3Point">
-                       <property name="text">
-                        <string>angle between 3 points</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_InternalAnglePoint.svg</normaloff>../icons/Constraint_InternalAnglePoint.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>false</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxDimAngle3Point">
+                       <property name="text"><string>angle between 3 points</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_InternalAnglePoint.svg</normaloff>../icons/Constraint_InternalAnglePoint.svg</iconset></property>
+                       <property name="checked"><bool>false</bool></property>
+                       <property name="toolTip"><string>Import "angle between 3 points" constraints in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Dimension.Angle3Point</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QCheckBox" name="cbxDimRadius">
-                       <property name="text">
-                        <string>radius</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Radius.svg</normaloff>../icons/Constraint_Radius.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxDimRadius">
+                       <property name="text"><string>radius</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Radius.svg</normaloff>../icons/Constraint_Radius.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "radius" dimensions in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Dimension.Radius</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QCheckBox" name="cbxDimDiameter">
-                       <property name="text">
-                        <string>diameter</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Diameter.svg</normaloff>../icons/Constraint_Diameter.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxDimDiameter">
+                       <property name="text"><string></string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Diameter.svg</normaloff>../icons/Constraint_Diameter.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "diameter" dimensions in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Dimension.Diameter</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QCheckBox" name="cbxDimDistance">
-                       <property name="text">
-                        <string>distance</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Length.svg</normaloff>../icons/Constraint_Length.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>true</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxDimDistance">
+                       <property name="text"><string>distance</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Length.svg</normaloff>../icons/Constraint_Length.svg</iconset></property>
+                       <property name="checked"><bool>true</bool></property>
+                       <property name="toolTip"><string>Import "distance" dimensions in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Dimension.Distance</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QCheckBox" name="cbxDimOffsetSpline">
-                       <property name="text">
-                        <string>offset spline</string>
-                       </property>
-                       <property name="icon">
-                        <iconset>
-                         <normaloff>../icons/Constraint_Length_Driven.svg</normaloff>../icons/Constraint_Length_Driven.svg</iconset>
-                       </property>
-                       <property name="checked">
-                        <bool>false</bool>
-                       </property>
+                      <widget class="Gui::PrefCheckBox" name="cbxDimOffsetSpline">
+                       <property name="text"><string>offset spline</string></property>
+                       <property name="icon"><iconset><normaloff>../icons/Constraint_Length_Driven.svg</normaloff>../icons/Constraint_Length_Driven.svg</iconset></property>
+                       <property name="checked"><bool>false</bool></property>
+                       <property name="toolTip"><string>Import "offset spline" dimensions in 2D and 3D sketches.</string></property>
+                       <property name="prefEntry" stdset="0"><cstring>Sketch.Constraint.Dimension.OffsetSpline</cstring></property>
+                       <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
                       </widget>
                      </item>
                      <item>
                       <spacer name="verticalSpacer_2">
-                       <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                       </property>
+                       <property name="orientation"><enum>Qt::Vertical</enum></property>
                        <property name="sizeHint" stdset="0">
                         <size>
                          <width>0</width>
@@ -449,15 +337,11 @@
                <height>28</height>
               </rect>
              </property>
-             <attribute name="label">
-              <string>Others</string>
-             </attribute>
+             <attribute name="label"><string>Others</string></attribute>
              <layout class="QVBoxLayout" name="verticalLayout_8">
               <item>
                <spacer name="verticalSpacer_4">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
+                <property name="orientation"><enum>Qt::Vertical</enum></property>
                 <property name="sizeHint" stdset="0">
                  <size>
                   <width>0</width>
@@ -473,36 +357,18 @@
          </layout>
         </widget>
         <widget class="QWidget" name="tabOthers">
-         <attribute name="title">
-          <string>Others</string>
-         </attribute>
+         <attribute name="title"><string>Others</string></attribute>
          <layout class="QFormLayout" name="formLayout">
           <item row="0" column="0" colspan="2">
-           <widget class="QCheckBox" name="cbxDumpThumbnail">
-            <property name="text">
-             <string>dump thumbnails</string>
-            </property>
+           <widget class="Gui::PrefCheckBox" name="cbxDumpThumbnail">
+            <property name="text"><string>dump thumbnails</string></property>
+            <property name="prefEntry" stdset="0"><cstring>Others.DumpThumbnails</cstring></property>
+            <property name="prefPath" stdset="0"><cstring>Mod/InventorLoader</cstring></property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lblLogLevel">
-            <property name="text">
-             <string>Loggign level:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="cbxLogLevel">
-            <property name="currentText">
-             <string>INFO</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
+          <item row="1" column="0" colspan="2">
            <spacer name="verticalSpacer_3">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
+            <property name="orientation"><enum>Qt::Vertical</enum></property>
             <property name="sizeHint" stdset="0">
              <size>
               <width>0</width>

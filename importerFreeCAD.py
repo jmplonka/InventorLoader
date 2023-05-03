@@ -142,6 +142,10 @@ def _initPreferences():
 	_enableConstraint('Sketch.Constraint.Dimension.Distance',        BIT_DIM_DISTANCE         , True)
 	_enableConstraint('Sketch.Constraint.Dimension.OffsetSpline',    BIT_DIM_OFFSET_SPLINE    , False)
 
+def skipConstraint(bit):
+	global SKIP_CONSTRAINTS
+	return (SKIP_CONSTRAINTS & bit == 0)
+
 def ignoreBranch(node):
 	return None
 
@@ -982,34 +986,35 @@ class FreeCADImporter(object):
 
 		return None, None, None, None
 
-	def addDistanceConstraint(self, sketchObj, dimensionNode, skipMask, name, prefix):
-		if (SKIP_CONSTRAINTS & skipMask == 0): return
+	def addDistanceConstraint(self, sketchObj, dimensionNode, name, prefix):
+		if (skipConstraint(BIT_DIM_DISTANCE)): return
 
 		entity1   = dimensionNode.get('entity1')
 		entity2   = dimensionNode.get('entity2')
 		index1, pos1, index2, pos2 = self.getIndexPos(sketchObj, entity1, entity2)
-		prefix    = '%s ' %(prefix) if (len(prefix) > 0) else ''
+		prefix    = '%s-' %(prefix) if (prefix) else ''
 
 		if ((index1 is None) or (index2 is None)):
-			logWarning(u"        ... skipped %sdimension between %s and %s - not (yet) supported!", prefix, entity1.node.getRefText(), entity2.node.getRefText())
+			logWarning(u"        ... skipped %sdistance dimension between %s and %s - not (yet) supported!", prefix, entity1.node.getRefText(), entity2.node.getRefText())
 		else:
 			if (pos1 is None and entity1.typeName == 'Point2D' and index1 != index2):
-				logWarning(u"        ... skipped %sdimension - can't find geometry for %s (entity2: %s,%s)!", prefix, entity1.node.getRefText(), index2, pos2)
-				return
-			constraint = None
-			key = 'Distance%s_%s_%s' %(prefix, index1, index2)
-			if (not key in self.mapConstraints):
-				dimension = getDimension(dimensionNode, 'parameter')
-				distance = getMM(dimension)
-				if (index1 == index2):
-					constraint = Sketcher.Constraint(name, index1, distance)
-				elif (pos1 is None):
-					if (pos2 is not None):
-						constraint = Sketcher.Constraint(name, index2, pos2, index1, distance)
-				elif (pos2 is None):
-					constraint = Sketcher.Constraint(name, index1, pos1, index2, distance)
-				else:
-					constraint = Sketcher.Constraint(name, index1, pos1, index2, pos2, distance)
+				logWarning(u"        ... skipped %sdistance dimension - can't find geometry for %s (entity2: %s,%s)!", prefix, entity1.node.getRefText(), index2, pos2)
+			else:
+				constraint = None
+				key = 'Distance%s_%s_%s' %(prefix, index1, index2)
+				if (not key in self.mapConstraints):
+					# constraint not yet created!
+					dimension = getDimension(dimensionNode, 'parameter')
+					distance = getMM(dimension)
+					if (index1 == index2):
+						constraint = Sketcher.Constraint(name, index1, distance)
+					elif (pos1 is None):
+						if (pos2 is not None):
+							constraint = Sketcher.Constraint(name, index2, pos2, index1, distance)
+					elif (pos2 is None):
+						constraint = Sketcher.Constraint(name, index1, pos1, index2, distance)
+					else:
+						constraint = Sketcher.Constraint(name, index1, pos1, index2, pos2, distance)
 
 				if (constraint):
 					index = self.addDimensionConstraint(sketchObj, dimension, constraint, key, (pos1 != 3) and (pos2 != 3))
@@ -1392,11 +1397,11 @@ class FreeCADImporter(object):
 		A fix constraint doesn't exists in FreeCAD.
 		Workaround: two distance constraints (X and Y)
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_FIX == 0): return
+		if (skipConstraint(BIT_GEO_FIX)): return
 		return
 
 	def addSketch_Geometric_PolygonCenter2D(self, constraintNode, sketchObj):
-		if (SKIP_CONSTRAINTS & BIT_GEO_POLYGON == 0): return
+		if (skipConstraint(BIT_GEO_POLYGON)): return
 		center = constraintNode.get('center')
 		construction = constraintNode.get('construction')
 		if (construction):
@@ -1409,7 +1414,7 @@ class FreeCADImporter(object):
 		return ignoreBranch(constraintNode)
 
 	def addSketch_Geometric_Coincident2D(self, constraintNode, sketchObj):
-		if (SKIP_CONSTRAINTS & BIT_GEO_COINCIDENT == 0): return
+		if (skipConstraint(BIT_GEO_COINCIDENT)): return
 		entity1 = constraintNode.get('entity1')
 		entity2 = constraintNode.get('entity2')
 		if (entity1.typeName == 'Point2D'):
@@ -1419,7 +1424,7 @@ class FreeCADImporter(object):
 		return
 
 	def addSketch_Geometric_SymmetryPoint2D(self, constraintNode, sketchObj):
-		if (SKIP_CONSTRAINTS & BIT_GEO_SYMMETRY_POINT == 0): return
+		if (skipConstraint(BIT_GEO_SYMMETRY_POINT)): return
 		point = constraintNode.get('point')
 		symmetryIdx = point.sketchIndex
 
@@ -1440,7 +1445,7 @@ class FreeCADImporter(object):
 		return
 
 	def addSketch_Geometric_SymmetryLine2D(self, constraintNode, sketchObj):
-		if (SKIP_CONSTRAINTS & BIT_GEO_SYMMETRY_LINE == 0): return
+		if (skipConstraint(BIT_GEO_SYMMETRY_LINE)): return
 		entity1    = constraintNode.get('entity1')
 		entity2    = constraintNode.get('entity2')
 		symmetry   = constraintNode.get('symmetry')
@@ -1473,7 +1478,7 @@ class FreeCADImporter(object):
 		idx1: The index of the sketch object, that will not change by applying the constraint
 		idx2: The index of the sketch object, that will change by applying the constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_PARALLEL == 0): return
+		if (skipConstraint(BIT_GEO_PARALLEL)): return
 		index1 = constraintNode.get('line1').sketchIndex
 		if (index1 is None): return
 		index2 = constraintNode.get('line2').sketchIndex
@@ -1491,7 +1496,7 @@ class FreeCADImporter(object):
 		idx1: The index of the sketch object, that will not change by applying the constraint
 		idxMov: The index of the sketch object, that will change by applying the constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_PERPENDICULAR == 0): return
+		if (skipConstraint(BIT_GEO_PERPENDICULAR)): return
 		index1 = constraintNode.get('line1').sketchIndex
 		index2 = constraintNode.get('line2').sketchIndex
 		if (index1 is None):
@@ -1512,7 +1517,7 @@ class FreeCADImporter(object):
 		idx1: The index of the sketch object, that will not change by applying the constraint
 		idx2: The index of the sketch object, that will change by applying the constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_TANGENTIAL == 0): return
+		if (skipConstraint(BIT_GEO_TANGENTIAL)): return
 		index1 = constraintNode.get('line1').sketchIndex
 		index2 = constraintNode.get('line2').sketchIndex
 		if (index1 is None):
@@ -1533,7 +1538,7 @@ class FreeCADImporter(object):
 		idx1: The index of the sketch object, that will not change by applying the constraint
 		idx2: The index of the sketch object, that will change by applying the constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_TANGENTIAL == 0): return
+		if (skipConstraint(BIT_GEO_TANGENTIAL)): return
 		entity1Node = constraintNode.get('entity1')
 		entity2Node = constraintNode.get('entity2')
 		entity1Name = entity1Node.typeName[0:-2]
@@ -1557,7 +1562,7 @@ class FreeCADImporter(object):
 		'''
 		index: The index of the sketch object, that will change by applying the constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_VERTICAL == 0): return
+		if (skipConstraint(BIT_GEO_VERTICAL)): return
 		index = constraintNode.get('line').sketchIndex
 		if (index is not None):
 			key = 'Vertical_%s' %(index)
@@ -1572,7 +1577,7 @@ class FreeCADImporter(object):
 		'''
 		index: The index of the sketch object, that will change by applying the constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_HORIZONTAL == 0): return
+		if (skipConstraint(BIT_GEO_HORIZONTAL)): return
 		entity = constraintNode.get('line')
 		if (entity.typeName == 'Line2D'):
 			index = entity.sketchIndex
@@ -1591,7 +1596,7 @@ class FreeCADImporter(object):
 		'''
 		Create an equal length constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_EQUAL == 0): return
+		if (skipConstraint(BIT_GEO_EQUAL)): return
 		index1 = constraintNode.get('line1').sketchIndex
 		index2 = constraintNode.get('line2').sketchIndex
 		if (index1 is None):
@@ -1611,7 +1616,7 @@ class FreeCADImporter(object):
 		'''
 		Create an equal radius constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_EQUAL == 0): return
+		if (skipConstraint(BIT_GEO_EQUAL)): return
 		index1 = constraintNode.get('circle1').sketchIndex
 		index2 = constraintNode.get('circle2').sketchIndex
 		if (index1 is None):
@@ -1866,19 +1871,19 @@ class FreeCADImporter(object):
 		'''
 		Create an offset constraint.
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_OFFSET == 0): return
+		if (skipConstraint(BIT_GEO_OFFSET)): return
 		return
 	def addSketch_Geometric_AlignHorizontal2D(self, node, sketchObj):
 		'''
 		Create a horizontal align constraint.
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_ALIGN_HORIZONTAL == 0): return
+		if (skipConstraint(BIT_GEO_ALIGN_HORIZONTAL)): return
 		return
 	def addSketch_Geometric_AlignVertical2D(self, node, sketchObj):
 		'''
 		Create a vertical align constraint.
 		'''
-		if (SKIP_CONSTRAINTS & BIT_GEO_ALIGN_VERTICAL == 0): return
+		if (skipConstraint(BIT_GEO_ALIGN_VERTICAL)): return
 		return
 	def addSketch_Transformation(self, transformationNode, sketchObj):   return ignoreBranch(transformationNode)
 	def addSketch_RtfContent(self, stringNode, sketchObj):               return ignoreBranch(stringNode)
@@ -1887,28 +1892,28 @@ class FreeCADImporter(object):
 		'''
 		Create a horizontal dimension constraint
 		'''
-		self.addDistanceConstraint(sketchObj, dimensionNode, BIT_DIM_DISTANCE, 'DistanceX', 'horizontal')
+		self.addDistanceConstraint(sketchObj, dimensionNode, 'DistanceX', 'horizontal')
 		return
 
 	def addSketch_Dimension_Distance_Vertical2D(self, dimensionNode, sketchObj):
 		'''
 		Create a vertical dimension constraint
 		'''
-		self.addDistanceConstraint(sketchObj, dimensionNode, BIT_DIM_DISTANCE, 'DistanceY', 'vertical')
+		self.addDistanceConstraint(sketchObj, dimensionNode, 'DistanceY', 'vertical')
 		return
 
 	def addSketch_Dimension_Distance2D(self, dimensionNode, sketchObj):
 		'''
 		Create a distance constraint
 		'''
-		self.addDistanceConstraint(sketchObj, dimensionNode, BIT_DIM_DISTANCE, 'Distance', '')
+		self.addDistanceConstraint(sketchObj, dimensionNode, 'Distance', '')
 		return
 
 	def addSketch_Dimension_Radius2D(self, dimensionNode, sketchObj):
 		'''
 		Create a radius constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_DIM_RADIUS == 0): return
+		if (skipConstraint(BIT_DIM_RADIUS)): return
 		circle    = dimensionNode.get('circle')
 		index     = circle.sketchIndex
 		if (index is not None):
@@ -1923,7 +1928,7 @@ class FreeCADImporter(object):
 		return
 
 	def addSketch_Dimension_RadiusA2D(self, dimensionNode, sketchObj):
-		if (SKIP_CONSTRAINTS & BIT_DIM_RADIUS == 0): return
+		if (skipConstraint(BIT_DIM_RADIUS)): return
 		dimension = getDimension(dimensionNode, 'parameter')
 		circle    = dimensionNode.get('ellipse')
 		index     = circle.sketchIndex
@@ -1933,7 +1938,7 @@ class FreeCADImporter(object):
 		return
 
 	def addSketch_Dimension_RadiusB2D(self, dimensionNode, sketchObj):
-		if (SKIP_CONSTRAINTS & BIT_DIM_RADIUS == 0): return
+		if (skipConstraint(BIT_DIM_RADIUS)): return
 		dimension = getDimension(dimensionNode, 'parameter')
 		circle    = dimensionNode.get('ellipse')
 		index     = circle.sketchIndex
@@ -1947,7 +1952,7 @@ class FreeCADImporter(object):
 		Create a diameter (not available in FreeCAD) constraint
 		Workaround: Radius and Center constraint.
 		'''
-		if (SKIP_CONSTRAINTS & BIT_DIM_DIAMETER == 0): return
+		if (skipConstraint(BIT_DIM_DIAMETER)): return
 		circle = dimensionNode.get('circle')
 		index  = circle.sketchIndex
 		if (index is not None):
@@ -1964,7 +1969,7 @@ class FreeCADImporter(object):
 		'''
 		Create an angle constraint between the three points.
 		'''
-		if (SKIP_CONSTRAINTS & BIT_DIM_ANGLE_3_POINT == 0): return
+		if (skipConstraint(BIT_DIM_ANGLE_3_POINT)): return
 		pt1Ref = dimensionNode.get('point1')
 		pt2Ref = dimensionNode.get('point2') # the center point
 		pt3Ref = dimensionNode.get('point3')
@@ -1974,7 +1979,7 @@ class FreeCADImporter(object):
 		'''
 		Create an angle constraint
 		'''
-		if (SKIP_CONSTRAINTS & BIT_DIM_ANGLE_2_LINE == 0): return
+		if (skipConstraint(BIT_DIM_ANGLE_2_LINE)): return
 		line1 = dimensionNode.get('line1')
 		line2 = dimensionNode.get('line2')
 		index1 = line1.sketchIndex
@@ -2025,7 +2030,7 @@ class FreeCADImporter(object):
 		'''
 		Create distance constraint for an offset spline.
 		'''
-		if (SKIP_CONSTRAINTS & BIT_DIM_OFFSET_SPLINE == 0): return
+		if (skipConstraint(BIT_DIM_OFFSET_SPLINE)): return
 		dimensionNode.setGeometry(None)
 		return
 
@@ -3616,7 +3621,7 @@ class FreeCADImporter(object):
 	def Create_FxPlate(self, sheetMetalNode):
 		properties = sheetMetalNode.get('properties')
 #		           = getProperty(properties, 0x00) # FaceBoundOuterProxy
-		extrudeDir = getProperty(properties, 0x01) # Direction - (0,0,1)
+		direction  = getProperty(properties, 0x01) # Direction - (0,0,1)
 #		           = getProperty(properties, 0x02) # FlipOffset/Boolean=False
 		thickness  = getProperty(properties, 0x03) # Parameter 'Thickness'=1.524mm
 #		           = getProperty(properties, 0x04) # PlateDef
@@ -3633,22 +3638,22 @@ class FreeCADImporter(object):
 #		           = getProperty(properties, 0x0F) # ObjectCollection
 #		           = getProperty(properties, 0x10) # PartFeatureOperation
 
-		# get profile for the plate
-		participant = sheetMetalNode.get('next').get('next').get('next').get('participant')
-		profile = self.getGeometry(participant)
-
-		# extrude the profile
-		plate = newObject('Part::Extrusion', sheetMetalNode.name)
-		plate.Base      = profile
-		plate.Solid     = True
-		plate.Reversed  = False
-		plate.Dir       = extrudeDir.get('dir')
-		plate.DirMode   = 'Normal'
-		plate.LengthFwd = getMM(thickness)
-		plate.Symmetric = False
-		setDefaultViewObjectValues(plate)
-		hide(plate.Base)
-		return plate
+#		# get profile for the plate
+#		participant = sheetMetalNode.get('next').get('next').get('next').get('participant')
+#		profile = self.getGeometry(participant)
+#
+#		# extrude the profile
+#		plate = newObject('Part::Extrusion', sheetMetalNode.name)
+#		plate.Base      = profile
+#		plate.Solid     = True
+#		plate.Reversed  = False
+##		plate.Dir       = extrudeDir.get('dir')
+#		plate.DirMode   = 'Normal'
+#		plate.LengthFwd = getMM(thickness)
+#		plate.Symmetric = False
+#		setDefaultViewObjectValues(plate)
+#		hide(plate.Base)
+		return None
 
 	def Create_FxBend(self, bendNode):
 		properties = bendNode.get('properties')
@@ -3717,7 +3722,7 @@ class FreeCADImporter(object):
 
 	def Create_FxCornerGap(self, cornerNode):
 		properties = cornerNode.get('properties')
-		gapType    = getProperty(properties, 0) # CornerGapType
+#		gapType    = getProperty(properties, 0) # CornerGapType
 #		getProperty(properties, 1) # Boolean
 #		getProperty(properties, 2) # Parameter
 #		getProperty(properties, 3) # Parameter
@@ -3741,19 +3746,33 @@ class FreeCADImporter(object):
 
 	def Create_FxFace(self, faceNode):
 		properties = faceNode.get('properties')
-		plate      = getProperty(properties, 0) # FxPlate 'Plate1'
+		plateNode  = getProperty(properties, 0) # FxPlate 'Plate1'
+		# get profile for the plate
+		participant = plateNode.get('next').get('next').get('next').get('participant')
+		profile = self.getGeometry(participant)
+		thickness = getProperty(plateNode.get('properties'), 0x03)
+		# extrude the profile
+		plate = self.createEntity(faceNode, 'Part::Extrusion')
+		plate.Base      = profile
+		plate.Solid     = True
+		plate.Reversed  = False
+		plate.DirMode   = 'Normal'
+		plate.LengthFwd = getMM(thickness)
+		plate.Symmetric = False
+		setDefaultViewObjectValues (plate)
+		hide(plate.Base)
 
-		return self.getGeometry(plate)
+		return plate
 
 	def Create_FxFlange(self, flangeNode):
 		properties = flangeNode.get('properties')
-		plate      = getProperty(properties, 0) # FxPlate
-		bend       = getProperty(properties, 1) # FxBend
-		corner     = getProperty(properties, 2) # FxCorner
+		plateNode  = getProperty(properties, 0) # FxPlate
+		bendNode   = getProperty(properties, 1) # FxBend
+		cornerNode = getProperty(properties, 2) # FxCorner
 
-		self.getGeometry(plate)
-		self.getGeometry(bend)
-		self.getGeometry(corner)
+		self.getGeometry(plateNode)
+		self.getGeometry(bendNode)
+		self.getGeometry(cornerNode)
 		return
 
 	def Create_FxFlangeContour(self, flangeNode):
@@ -3990,7 +4009,7 @@ class FreeCADImporter(object):
 	def addSketch_Dimension_Length3D(self, dimensionNode, sketchObj):       return None # notSupportedNode(dimensionNode)
 	def addSketch_Dimension_Angle2Planes3D(self, dimensionNode, sketchObj):  return None # notSupportedNode(dimensionNode)
 	def addSketch_Geometric_Bend3D(self, geometricNode, sketchObj):
-		if (SKIP_CONSTRAINTS & BIT_GEO_BEND == 0): return
+		if (skipConstraint(BIT_GEO_BEND)): return
 		entities = geometricNode.get('lst0')
 		p1  = entities[0] # connection point of Line 1 and 2
 		l1  = entities[1] # 1st line

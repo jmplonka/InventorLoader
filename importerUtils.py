@@ -376,7 +376,7 @@ class Thumbnail(object):
 		self.height = self.icon.height()
 	def readData(self, filename):
 		with open(filename, 'rb') as f:
-			setIconData(f.read())
+			self.setIconData(f.read())
 			self.type = filename[-3:].upper()
 	def setData(self, data):
 		# skip thumbnail class header (-1, -1, 3, 0, bpp, width, height, 0)
