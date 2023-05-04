@@ -83,7 +83,7 @@ def __dumpProperties__(fxNode):
 
 def _enableConstraint(name, bit, preset):
 	global SKIP_CONSTRAINTS
-	SKIP_CONSTRAINTS &= ~bit        # clear the bit if already set.
+	SKIP_CONSTRAINTS &= ~bit    # clear the bit if already set.
 	enable = ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool(name, preset)
 	if (enable):
 		SKIP_CONSTRAINTS |= bit # now set the bit if desired.
@@ -158,7 +158,14 @@ def unsupportedNode(node):
 	return None
 
 def newObject(className, name, body = None):
-	obj = FreeCAD.ActiveDocument.addObject(className, InventorViewProviders.getObjectName(name))
+	doc  = FreeCAD.ActiveDocument
+	view = FreeCADGui.ActiveDocument.ActiveView
+	activeBody = None
+	if hasattr(view,'getActiveObject'):
+		activeBody = view.getActiveObject('pdbody')
+	obj = doc.addObject(className, InventorViewProviders.getObjectName(name))
+	if (activeBody):
+		activeBody.addObject(obj)
 	if (obj):
 		obj.Label = name
 		if (body):
@@ -733,7 +740,7 @@ def findFcFaceIndex(fcShape, acisFaces):
 
 def getFxAttribute(node, typeNames):
 	attr = node.get('next')
-	while not(attr is None):
+	while (attr):
 		if (attr.typeName in typeNames):
 			return attr
 		attr = attr.get('next')
@@ -2088,7 +2095,7 @@ class FreeCADImporter(object):
 	def addSketch_DD80AC37(self, node, sketchObj): return
 
 	def handleAssociativeID(self, node):
-		styles  = getFxAttribute(node, 'Styles')
+		styles  = getFxAttribute(node, 'FxAttrStyles')
 		if (styles is None): return
 		id = styles.get('associativeID')
 		sketch = node.get('sketch')
@@ -2432,10 +2439,9 @@ class FreeCADImporter(object):
 		axisData     = getProperty(properties, 0x0E) # AxisEntity
 
 		if (len(participants) == 0):
-			participants = []
-			participants = patternNode.get('next').get('participants')
+			participants = patternNode.getParticipants()
 			if (len(participants) == 0):
-				attr = getFxAttribute(patternNode, ['01E7910C', '91637937'])
+				attr = getFxAttribute(patternNode, ['FxAttr_01E7910C', 'FxAttr_91637937'])
 				lst0 = attr.get('lst0') or []
 				for ref in lst0:
 					if (ref.name in self.bodyNodes):
@@ -2506,9 +2512,9 @@ class FreeCADImporter(object):
 		midplane2Ref  = getProperty(properties, 0x19 + offset)
 
 		if (len(participants) == 0):
-			participants = patternNode.get('next').get('participants')
+			participants = patternNode.getParticipants()
 			if (len(participants) == 0):
-				attr = getFxAttribute(patternNode, ['01E7910C', '91637937'])
+				attr = getFxAttribute(patternNode, ['FxAttr_01E7910C', 'FxAttr_91637937'])
 				lst0 = attr.get('lst0') or []
 				for ref in lst0:
 					if (ref.name in self.bodyNodes):
@@ -3748,7 +3754,7 @@ class FreeCADImporter(object):
 		properties = faceNode.get('properties')
 		plateNode  = getProperty(properties, 0) # FxPlate 'Plate1'
 		# get profile for the plate
-		participant = plateNode.get('next').get('next').get('next').get('participant')
+		participant = plateNode.getParticipants()
 		profile = self.getGeometry(participant)
 		thickness = getProperty(plateNode.get('properties'), 0x03)
 		# extrude the profile

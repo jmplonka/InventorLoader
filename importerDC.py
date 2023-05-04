@@ -1215,10 +1215,10 @@ class DCReader(EeDataReader):
 		i = self.ReadCntHdr2S(node)
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
-		if (node.get('next') is None):
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		else:
+		if (node.get('next')):
 			i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst1')
+		else:
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		return i
 
 	def Read_CAB7E237(self, node): # General Surface Profile Tolerance
@@ -5851,12 +5851,14 @@ class DCReader(EeDataReader):
 		return i
 
 	##########################
-	# Linked element sections
+	# Linked element sections => FX-Attributes
 	def ReadHeaderLinkedElement(self, node, typeName = None):
 		'''
 		Read the default header a0=UInt32[2], owner=SecNodeRef, next=SecNodeRef
 		'''
-		i = node.Read_Header0(typeName)
+		tn = typeName
+		if (tn is None): tn = "FxAttr_" + node.typeName
+		i = node.Read_Header0(tn)
 		i = node.ReadUInt32A(i, 2, 'a0')
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'owner')
@@ -5877,8 +5879,8 @@ class DCReader(EeDataReader):
 		i = self.ReadEdgeList(node, i)
 		return i
 
-	def Read_0229768D(self, node): # Parameter-Comment
-		i = self.ReadHeaderLinkedElement(node, 'ParameterComment')
+	def Read_0229768D(self, node): # FX-Attrirbute Parameter-Comment
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrParameterComment')
 		i = node.ReadLen32Text16(i)
 		i = self.skipBlockSize(i)
 		return i
@@ -5889,7 +5891,7 @@ class DCReader(EeDataReader):
 		i = node.ReadSInt32A(i, 3, 'a1')
 		return i
 
-	def Read_03D6552D(self, node): # Sketch2D-Pre-Style
+	def Read_03D6552D(self, node): # FX-Attrirbute Sketch2D-Pre-Style
 		i = self.ReadHeaderLinkedElement(node)
 		i = node.ReadCrossRef(i, 'entity2')
 		i = node.ReadUInt8(i, 'u8_0')
@@ -5901,7 +5903,7 @@ class DCReader(EeDataReader):
 		i = node.ReadLen32Text16(i, 'txt1')
 		return i
 
-	def Read_0A3BA89C(self, node): # Sketch2D-Pre-Style
+	def Read_0A3BA89C(self, node): # FX-Attrirbute Sketch2D-Pre-Style
 		i = self.ReadHeaderLinkedElement(node)
 		i = node.ReadCrossRef(i, 'entity2')
 		return i
@@ -5911,8 +5913,8 @@ class DCReader(EeDataReader):
 		i = node.ReadLen32Text16(i)
 		return i
 
-	def Read_10587822(self, node): # Faces
-		i = self.ReadHeaderLinkedElement(node, 'Faces')
+	def Read_10587822(self, node): # FX-Attrirbute Faces
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrFaces')
 		i = self.ReadNtEntryList(node, i, 'entries')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
@@ -6014,8 +6016,8 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderLinkedElement(node)
 		return i
 
-	def Read_327D097B(self, node): # FlatPatternPunchRepresentation
-		i = self.ReadHeaderLinkedElement(node, 'FlatPatternPunchRepresentation')
+	def Read_327D097B(self, node): # FX-Attrirbute FlatPatternPunchRepresentation
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrFlatPatternPunchRepresentation')
 		# (01|00) (00|01) 00
 		return i
 
@@ -6023,13 +6025,13 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderLinkedElement(node)
 		return i
 
-	def Read_3A98DCE3(self, node): # EntityReference
-		i = self.ReadHeaderLinkedElement(node, 'EntityReference')
+	def Read_3A98DCE3(self, node): # FX-Attrirbute EntityReference
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrEntityReference')
 		i = node.ReadCrossRef(i, 'ref_2')
 		return i
 
-	def Read_454C24A9(self, node): # Line style
-		i = self.ReadHeaderLinkedElement(node, 'StyleLine')
+	def Read_454C24A9(self, node): # FX-Attrirbute Line style
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrStyleLine')
 		i = node.ReadColorRGBA(i, 'color')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = node.ReadFloat32(i, 'width')
@@ -6043,8 +6045,8 @@ class DCReader(EeDataReader):
 		i = node.ReadSInt16A(i, 2, 'a5')
 		return i
 
-	def Read_46407F70(self, node):
-		i = self.ReadHeaderLinkedElement(node, 'ClearanceHole')
+	def Read_46407F70(self, node): # FX-Attrirbute ClearanceHole
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrClearanceHole')
 		i = node.ReadLen32Text16(i, 'standard')
 		i = node.ReadLen32Text16(i, 'fastener')
 		i = node.ReadLen32Text16(i, 'size')
@@ -6061,8 +6063,8 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32A(i, cnt, 'a1')
 		return i
 
-	def Read_475E7861(self, node): # FeatureDimensionStateAttr
-		i = self.ReadHeaderLinkedElement(node, 'FeatureDimensionStateAttr')
+	def Read_475E7861(self, node): # FX-Attrirbute DimensionState
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrDimensionState')
 		i = node.ReadChildRef(i, 'attr')
 		i = node.ReadUInt16(i, 'u16_0')
 		i = self.skipBlockSize(i)
@@ -6075,7 +6077,7 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt16(i, 'u16_0')
 		return i
 
-	def Read_4F8A6797(self, node): # Sketch2D-Pre-Style
+	def Read_4F8A6797(self, node): # FX-Attrirbute Sketch2D-Pre-Style
 		i = self.ReadHeaderLinkedElement(node)
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -6086,7 +6088,7 @@ class DCReader(EeDataReader):
 		i = node.ReadList8(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		return i
 
-	def Read_54829655(self, node): # NameTableKeyDef
+	def Read_54829655(self, node): # FX-Attrirbute NameTableKeyDef
 		i = self.ReadHeaderLinkedElement(node, 'NameTableKeyDef')
 		i = node.ReadUInt32(i, 'ntKey') # the key that is referenced by the name table entry.
 		key = node.get('ntKey')
@@ -6099,8 +6101,8 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt8(i, 'u8_0')
 		return i
 
-	def Read_59C3DD6C(self, node):
-		i = self.ReadHeaderLinkedElement(node, 'Label')
+	def Read_59C3DD6C(self, node): # FX-Attrirbute Label
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrLabel')
 		i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadChildRef(i, 'ref_2')
 		i = node.ReadChildRef(i, 'ref_3')
@@ -6129,8 +6131,8 @@ class DCReader(EeDataReader):
 		i = node.ReadChildRef(i, 'ref_2')
 		return i
 
-	def Read_60452313(self, node): # UserSettingsAttribute
-		i = self.ReadHeaderLinkedElement(node, 'UserSettingsAttribute')
+	def Read_60452313(self, node): # FX-Attrirbute UserSettingsAttribute
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrUserSettings')
 		properties = []
 		for j in range(12):
 			ref, i = self.ReadNodeRef(node, i, j, importerSegNode.REF_CROSS, 'properties')
@@ -6169,14 +6171,14 @@ class DCReader(EeDataReader):
 				i += 4
 		return i
 
-	def Read_614A01F1(self, node):
-		i = self.ReadHeaderLinkedElement(node, 'SurfaceTexture')
+	def Read_614A01F1(self, node): # FX-Attrirbute SurfaceTexture
+		i = self.ReadHeaderLinkedElement(node, 'FX-Attr-SurfaceTexture')
 		i = node.ReadUInt32A(i, 3, 'a1')
 		i = node.ReadLen32Text8(i, 'txt_0')
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_63E209F9(self, node): # Sketch2D-Pre-Style
+	def Read_63E209F9(self, node): # FX-Attrirbute Sketch2D-Pre-Style
 		i = self.ReadHeaderLinkedElement(node)
 		return i
 
@@ -6212,8 +6214,8 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderLinkedElement(node)
 		return i
 
-	def Read_7A1BCDC6(self, node):
-		i = self.ReadHeaderLinkedElement(node)
+	def Read_7A1BCDC6(self, node): # FX-Attribute Flange
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrFlange')
 		i = node.ReadCrossRef(i, 'flange') # Feature
 		i = self.skipBlockSize(i)
 		i = node.ReadCrossRef(i, 'extent') # Parameter
@@ -6294,13 +6296,13 @@ class DCReader(EeDataReader):
 		if (self.version > 2010): i += 48 # skip trailing 0x00's !
 		return i
 
-	def Read_903F453F(self, node): # ExtrusionSurface
-		i = self.ReadHeaderLinkedElement(node, 'ExtrusionSurface')
+	def Read_903F453F(self, node): # FX-Attribute ExtrusionSurface
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrExtrusionSurface')
 		i = node.ReadUInt32(i, 'u32_0')
 		return i
 
-	def Read_90874D15(self, node): # Styles
-		i = self.ReadHeaderLinkedElement(node, 'Styles')
+	def Read_90874D15(self, node): # FX-Attribute Styles
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrStyles')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadUInt32(i, 'associativeID') # Number of the entity inside the sketch
 		i = node.ReadUInt32(i, 'typEntity')
@@ -6335,16 +6337,16 @@ class DCReader(EeDataReader):
 		i = node.ReadUInt32(i, 'u32_1')
 		return i
 
-	def Read_9A94E347(self, node): # ToolBodyCacheAttribute
-		i = self.ReadHeaderLinkedElement(node, 'ToolBodyCacheAttribute')
+	def Read_9A94E347(self, node): # FX-Attribute ToolBodyCache
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrToolBodyCache')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
 		i = node.ReadUInt32(i, 'u32_0')
 		cnt, i = getUInt32(node.data, i)
 		i = self.ReadUInt32A(node, i, cnt, 'lst1', 4)
 		return i
 
-	def Read_A4087E1F(self, node):
-		i = self.ReadHeaderLinkedElement(node, 'TappedHole')
+	def Read_A4087E1F(self, node): # FX-Attribute TappedHole
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrTappedHole')
 		i = node.ReadLen32Text16(i)
 		i = node.ReadLen32Text16(i, 'txt0')
 		i = node.ReadLen32Text16(i, 'standard')
@@ -6397,8 +6399,8 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderLinkedElement(node)
 		return i
 
-	def Read_B269ACEF(self, node):
-		i = self.ReadHeaderLinkedElement(node, 'TaperTappedHole')
+	def Read_B269ACEF(self, node): # FX-Attrbute TaperTappedHole
+		i = self.ReadHeaderLinkedElement(node, 'FxAttrTaperTappedHole')
 		i = node.ReadLen32Text16(i, 'size')
 		i = node.ReadLen32Text16(i, 'txt0')
 		i = node.ReadLen32Text16(i, 'txt1')
@@ -6476,7 +6478,7 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'parameter')
 		return i
 
-	def Read_BFD09C43(self, node): # Sketch2D-Pre-Style
+	def Read_BFD09C43(self, node): # FX-Attribute Sketch2D-Pre-Style
 		i = self.ReadHeaderLinkedElement(node)
 		i = node.ReadCrossRef(i, 'entity2')
 		i = node.ReadFloat64A(i, 4, 'a1')
@@ -6491,7 +6493,7 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderLinkedElement(node)
 		return i
 
-	def Read_C89EF3C0(self, node): # Sketch2D-Pre-Style
+	def Read_C89EF3C0(self, node): # FX-Attribute Sketch2D-Pre-Style
 		i = self.ReadHeaderLinkedElement(node)
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
@@ -6632,7 +6634,7 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'parameter3')
 		return i
 
-	def Read_EEE03AF5(self, node): # Sketch2D-Pre-Style
+	def Read_EEE03AF5(self, node): # FX-Attribute Sketch2D-Pre-Style
 		i = self.ReadHeaderLinkedElement(node)
 		i = node.ReadChildRef(i, 'entity2')
 		i = node.ReadUInt16(i, 'u16_0')
@@ -7437,7 +7439,7 @@ class DCReader(EeDataReader):
 					i = node.ReadFloat64A(i, 6, 'a1')
 		else:
 			node.delete('hdr')
-			i = self.ReadHeaderLinkedElement(node, 'Label')
+			i = self.ReadHeaderLinkedElement(node, 'FxAttrLabel')
 			i = node.ReadUInt32(i, 'index')
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'participants')
 			i = node.ReadLen32Text16(i)

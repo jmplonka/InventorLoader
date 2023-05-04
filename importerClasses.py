@@ -714,14 +714,23 @@ class DataNode(object):
 			return node.typeName
 		return None
 
+	def getFxAttributes(self):
+		attributes = {}
+		nxt = self
+		while (nxt):
+			nxt_old = nxt
+			nxt = nxt_old.get('next')
+			if (nxt):
+				attributes[nxt.typeName] = nxt
+		return attributes
 	def getParticipants(self):
-		label = self
-		while (label.typeName != 'Label'):
-			label = label.get('next')
-			if (label is None):
-				logError(u"    (%04X): %s - has no required next attribute!", label.index, label.typeName)
-				return []
-		return label.get('participants')
+		attributes = self.getFxAttributes()
+		for atrName in attributes:
+			atribute = attributes[atrName]
+			participants = atribute.get('participants')
+			if (participants):
+				return participants
+		return []
 
 class ParameterNode(DataNode):
 	def __init__(self, data):

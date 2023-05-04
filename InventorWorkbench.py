@@ -85,11 +85,11 @@ _FREEFORM_TORUS       = PREFIX + 'FreeformTorus'     # FX missing
 _FREEFORM_QUAD_BALL   = PREFIX + 'FreeformQuadBall'  # FX missing
 _FREEFORMS_           = PREFIX + 'Freeforms'
 # Sheet-Metal
-_SHEET_METAL_FACE_    = PREFIX + 'FxFace'
+_SHEET_METAL_FACE_    = PREFIX + 'FxFace'            # FX missing
 _SHEET_METAL_FLANGE_  = PREFIX + 'FxFlange'
 _SHEET_METAL_CONTOUR_ = PREFIX + 'FxFlangeContour'   # FX missing
 _SHEET_METAL_LOFTED_  = PREFIX + 'FxLoftedFlange'    # FX missing
-_SHEET_METAL_FLANGES_ = PREFIX + 'FxFlanges'
+_SHEET_METAL_FLANGES_ = PREFIX + 'FxFlanges'         # FX missing
 _SHEET_METAL_ROLL_    = PREFIX + 'FxContourRoll'     # FX missing
 _SHEET_METAL_HEM_     = PREFIX + 'FxHem'             # FX missing
 _SHEET_METAL_BEND_    = PREFIX + 'FxBend'            # FX missing
@@ -118,10 +118,6 @@ def runPartCommand(cmd):
 	if FreeCAD.ActiveDocument:
 		import Part
 		FreeCADGui.runCommand("Part_" + cmd)
-
-def runSheetMetalCommad(cmd):
-	if FreeCAD.ActiveDocument:
-		FreeCADGui.runCommand('SM' + cmd, 0)
 
 def runPartDesignCommand(cmd):
 	import PartDesign
@@ -525,7 +521,8 @@ class _CmdSheetMetalFace(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalFace, self).__init__(menuText="Plate", toolTip="Face for sheet metal", pixmap=getIconPath("SheetMetalFace.png"))
 	def Activated(self):
-		return runSheetMetalCommad('Base')
+		import SheetMetalBaseCmd
+		FreeCADGui.runCommand('SMBase', 0)
 	def IsActive(self):
 		if super().IsActive():
 			sel = FreeCADGui.Selection.getSelection()
@@ -537,7 +534,8 @@ class _CmdSheetMetalFlange(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalFlange, self).__init__(menuText="Flange", toolTip="Flange sheet metal", pixmap=getIconPath("SheetMetalFlange.png"))
 	def Activated(self):
-		runSheetMetalCommad('MakeWall')
+		import SheetMetalCmd
+		FreeCADGui.runCommand('SMMakeWall', 0)
 	def IsActive(self):
 		result = False
 		if super().IsActive():
@@ -579,11 +577,27 @@ class _CmdSheetMetalBend(_CmdAbstract):
 class _CmdSheetMetalFold(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalFold, self).__init__(menuText="Fold", toolTip="Fold sheet metal", pixmap=getIconPath("SheetMetalFold.png"))
+	def Activated(self):
+		import SheetMetalFoldCmd
+		FreeCADGui.runCommand('SMFoldWall', 0)
+	def IsActive(self):
+		result = False
+		if (super().IsActive()):
+			sel = FreeCADGui.Selection.getSelectionEx()
+			if (len(sel) < 2):
+				return False
+			faces = sel[0].SubObjects
+			for face in faces:
+				result = result or (type(face) != Part.Face)
+			result = result or FreeCADGui.Selection.getSelection()[1].isDerivedFrom('Sketcher::SketchObject')
+			return result
+		return result
 class _CmdSheetMetalUnfold(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalUnfold, self).__init__(menuText="Unfold", toolTip="Unfold sheet metal", pixmap=getIconPath("SheetMetalUnfold.png"))
 	def Activated(self):
-		runSheetMetalCommad('Unfold')
+		import SheetMetalUnfolder
+		runSheetMetalCommad('SMUnfold', 0)
 	def IsActive(self):
 		if (super().IsActive()):
 			sel = FreeCADGui.Selection.getSelectionEx()[0].SubObjects

@@ -1806,9 +1806,7 @@ class Face(Topology):
 	def getParent(self):  return None if (self._parent is None)  else self._parent.entity
 	def getSurface(self):
 		if (self._surface):
-			if (self._surface.entity.subtype == 'ref'):
-				return self._surface.entity.getSurface()
-			return self._surface.entity
+			return self._surface.entity.getSurface()
 		return None
 	def buildCoEdges(self):
 		edges = []
@@ -1822,25 +1820,27 @@ class Face(Topology):
 			self.__ready_to_build__ = False
 			edges = self.buildCoEdges()
 			if (self._surface):
-				surface = self.getSurface().build()
-				if (surface):
-					if (self.sense == 'reversed'):
-						surface.reverse()
-					if (len(edges) > 0):
-						tolerance = 0.1
-						component, elements = surface.generalFuse(edges, tolerance)
-						faces = elements[0]
-						if (len(faces) == 0):
-							logWarning("Can't apply wires for face (no elements) for %s" %(self._surface))
+				_surface = self.getSurface()
+				if (_surface):
+					surface = self.getSurface().build()
+					if (surface):
+						if (self.sense == 'reversed'):
+							surface.reverse()
+						if (len(edges) > 0):
+							tolerance = 0.1
+							component, elements = surface.generalFuse(edges, tolerance)
+							faces = elements[0]
+							if (len(faces) == 0):
+								logWarning("Can't apply wires for face (no elements) for %s" %(self._surface))
+							else:
+								self.shape = eliminateOuterFaces(faces, edges)
+								if (self.shape is None):
+									# edges can be empty because not all edges can be created right now :(
+									logWarning("Can't apply wires for face %s!" %(surface.Surface))
+									for f in faces:
+										Part.show(f, "Face-%d" %(self.record.index))
 						else:
-							self.shape = eliminateOuterFaces(faces, edges)
-							if (self.shape is None):
-								# edges can be empty because not all edges can be created right now :(
-								logWarning("Can't apply wires for face %s!" %(surface.Surface))
-								for f in faces:
-									Part.show(f, "Face-%d" %(self.record.index))
-					else:
-						self.shape = surface
+							self.shape = surface
 		return self.shape
 	def isCone(self):   return isinstance(self.getSurface(), SurfaceCone)
 	def isMesh(self):   return isinstance(self.getSurface(), SurfaceMesh)
@@ -2947,13 +2947,125 @@ class SurfaceSphere(Surface):
 			sphere.Radius = fabs(self.radius)
 			self.shape = sphere.toShape()
 		return self.shape
+class SurfaceTSpline(Surface):
+	def __init__(self, data, values):
+		import logging
+		super().__init__('t_spline')
+		self.subtype = ''
+		self.lines  = data.split('\n')
+		self.ln_idx = 0
+		self.values = values.split('\n')
+		self.line   = None
+		self.values = None
+		self.logger = logging.getLogger("SurfaceTSpline")
+		self.dispatcher = self._build_dispatch_map()
+		self.strict = False
+		self.header = {}
+		self._f         = []
+		self._e         = []
+		self._v         = []
+		self._l         = []
+		self._ec        = []
+		self._0m        = []
+		self._0g        = []
+		self._100verts  = []
+		self._105sym    = []
+		self._105plane  = []
+		self._105a      = []
+		self._50000grip = []
+	def parse_degree(self):           self.header[self.values[0]] = self.values[1]
+	def parse_cap_type(self):         self.header[self.values[0]] = self.values[1]
+	def parse_units(self):            self.header[self.values[0]] = self.values[1]
+	def parse_end_conditions(self):   self.header[self.values[0]] = self.values[1]
+	def parse_star_knot_rule(self):   self.header[self.values[0]] = self.values[1]
+	def parse_star_smoothness(self):  self.header[self.values[0]] = self.values[1]
+	def parse_tol(self):              self.header[self.values[0]] = self.values[1]
+	def parse_ver(self):              self.header[self.values[0]] = self.values[1]
+	def parse_behavior_version(self): self.header[self.values[0]] = self.values[1]
+	def parse_f(self):                self._f.append(self.values[1:])
+	def parse_e(self):                self._e.append(self.values[1:])
+	def parse_v(self):                self._v.append(self.values[1:])
+	def parse_l(self):                self._l.append(self.values[1:])
+	def parse_ec(self):               self._ec.append(self.values[1:])
+	def parse_0m(self):               self._0m.append(self.values[1:])
+	def parse_0g(self):               self._0g.append(self.values[1:])
+	def parse_100verts(self):         self._100verts.append(self.values[1:])
+	def parse_105sym(self):           self._105sym.append(self.values[1:])
+	def parse_105plane(self):
+		center = VEC(self.values[1:4]) * getScale()
+		self._105plane.append((center, self.values[4:]))
+	def parse_105a(self):
+		sub_type = self.values[1]
+		if (sub_type == 'fr'):
+			r = [sub_type,] + self.values[2:] # [self.f[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'er'):
+			r = [sub_type,] + self.values[2:] #[self.e[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'vr'):
+			r = [sub_type,] + self.values[2:] #[self.v[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'f'):
+			r = [sub_type,] + self.values[2:] #[self.f[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'e'):
+			r = [sub_type,] + self.values[2:] #[self.e[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'v'):
+			r = [sub_type,] + self.values[2:] #[self.v[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		else:
+			r = [sub_type,] + self.values[2:] #
+			self._105a.append(r)
+	def parse_50000grip(self): self._50000grip.append(self.values[1:])
+
+	def next_line(self):
+		self.line = self.lines[self.ln_idx]
+		self.values = self.line.split()
+		self.ln_idx += 1
+		if (len(self.lines) <= self.ln_idx): raise StopIteration()
+	def consume_line(self):
+		self.line   = None
+		self.values = None
+	def parse_fallback(self):
+			"""Fallback method when parser doesn't know the statement"""
+			if self.strict:
+				raise Exception("Unimplemented TSpline statement '%s' on line '%s'" % (self.values[0], self.line.rstrip()))
+			else:
+				self.logger.warning("Unimplemented TSpline statement '%s' on line '%s'" % (self.values[0], self.line.rstrip()))
+
+	def parse(self):
+		"""
+		Parse all the lines in the data
+		Determines what type of line we are and dispatch appropriately.
+		"""
+		try:
+			# Continues until `next_line()` raises StopIteration
+			# This can trigger here or in parse functions in the subclass
+			while True:
+				# Only advance the parser if the previous line was consumed.
+				# Parse functions reading multiple lines can end up reading one line too far,
+				# so they return without consuming the line and we pick it up here
+				while not self.line:
+					self.next_line()
+
+				if self.line[0] == '#' or len(self.values) < 2:
+					self.consume_line()
+					continue
+
+				self.dispatcher.get(self.values[0].replace('-', '_'), self.parse_fallback)()
+				self.consume_line()
+		except StopIteration:
+			pass
+	def _build_dispatch_map(self):
+		return {"_".join(a.split("_")[1:]): getattr(self, a) for a in dir(self) if a.startswith("parse_")}
 class SurfaceSpline(Surface):
 	def __init__(self):
 		super(SurfaceSpline, self).__init__('spline')
 		self.surface = None
 		self.spline  = None
-	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
-	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
+	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self.subtype)
+	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self.subtype)
 	def _readLoftData(self, chunks, index):
 		ld = LoftData()
 		ld.surface, i = readSurface(chunks, index)
@@ -3629,9 +3741,12 @@ class SurfaceSpline(Surface):
 		i += 1
 		# block: ((t_spl_subtrans_object, flag?, values (str))|ref number)
 		if (chunks[i].val == 't_spl_subtrans_object'):
-			self.tSplineText, i = getValue(chunks, i + 1)
+			data, i = getValue(chunks, i + 1)
 			if (chunks[i].tag != TAG_UTF8_U16): i += 1
-			self.tSplineValues, i = getValue(chunks, i)
+			values, i = getValue(chunks, i)
+			t_spline = SurfaceTSpline(data, values)
+			getReader().addSubtypeEntity(t_spline)
+			t_spline.parse()
 		else:
 			assert (chunks[i].val == 'ref')
 			self.tRef, i = getInteger(chunks, i + 1)
