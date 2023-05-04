@@ -971,15 +971,15 @@ class EnumNode(DataNode):
 		value = self.get('value')
 		if (type(enum) is list):
 			if (value < len(enum)):
-				return u"'%s'" % enum[value]
+				return "%s" % enum[value]
 			return value
 		assert (type(enum) is dict), "Expected %s to contain dict or list as enum values!"
 		if (value in enum.keys()):
-			return u"'%s'" % enum[value]
+			return "%s" % enum[value]
 		return value
 
 	def getRefText(self): # return unicode
-		return u'(%04X): %s=%s' %(self.index, self.get('Enum'), self.getValueText())
+		return "(%04X): %s='%s'" %(self.index, self.get('Enum'), self.getValueText())
 
 	def __str__(self):
 		node = self.data

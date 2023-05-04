@@ -1523,6 +1523,11 @@ class SecNodeRef(object):
 		if (node): return node.getValue()
 		return None
 
+	def getValueText(self):
+		node = self.node
+		if (node): return node.getValueText()
+		return None
+
 	def getNominalValue(self):
 		value = self.getValue()
 		if (value): return value.getNominalValue()

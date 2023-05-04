@@ -87,7 +87,8 @@ def _enableConstraint(name, bit, preset):
 	enable = ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool(name, preset)
 	if (enable):
 		SKIP_CONSTRAINTS |= bit # now set the bit if desired.
-	ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").SetBool(name, enable)
+	if (enable != preset):
+		ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").SetBool(name, enable)
 	return
 
 def getCoord(point, coordName, scale = 10.0):
@@ -2841,7 +2842,7 @@ class FreeCADImporter(object):
 			sweepGeo.Sections = sections
 			sweepGeo.Spine    = (path, edges)
 			sweepGeo.Solid    = solid
-			#sweepGeo.Frenet   = (frenet.getValueText() == u"'ParallelToOriginalProfile'")
+			#sweepGeo.Frenet   = (frenet.getValueText() == u"ParallelToOriginalProfile")
 			hide(sections)
 			hide(path)
 			setDefaultViewObjectValues(sweepGeo)
@@ -3420,7 +3421,7 @@ class FreeCADImporter(object):
 			base = fxNode.segment.indexNodes[idxCreator].geometry
 			shell.Faces = (base, faceNames)
 			shell.Join  = u"Intersection"
-			if (direction.node.getValueText() == 'inside'):
+			if (direction.getValueText() == 'Inside'):
 				shell.Value = -getMM(thickness)
 			else:
 				shell.Value = getMM(thickness)
@@ -4208,6 +4209,8 @@ class FreeCADImporter(object):
 		return
 
 	def importModel(self, root):
+		_initPreferences()
+
 		dc = getModel().getDC()
 		doc = dc.tree.getFirstChild('Document')
 		if (doc is not None):
