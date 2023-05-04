@@ -730,18 +730,18 @@ class _Coil(_ObjectProxy):
 		fp.addProperty("App::PropertyLink"       , "Profile"     , "Base", "The profile for the coil").Profile = None
 		fp.addProperty("App::PropertyVector"     , "Axis"        , "Coil", "The direction of the coil's axis").Axis = DIR_Z
 		fp.addProperty("App::PropertyVector"     , "Center"      , "Coil", "The origin of the coil").Center = DIR_Z
-		fp.addProperty("App::PropertyBoolean"    , "Reversed"    , "Coil", "Indicator for reversed direction").Reversed = False
+		fp.addProperty("App::PropertyBool"       , "Reversed"    , "Coil", "Indicator for reversed direction").Reversed = False
 		fp.addProperty("App::PropertyEnumeration", "Rotation"    , "Coil", "Sens of rotation").Rotation =['Clockwise', 'Counterclockwise']
 		fp.addProperty("App::PropertyEnumeration", "CoilType"    , "Coil", "Specifies a pair of parameters").CoilType = ['PitchAndRevolution', 'RevolutionAndHeight', 'PitchAndHeight', 'Spiral']
 		fp.addProperty("App::PropertyLength"     , "Pitch"       , "Coil", "The elevation gain for each revolution of the helix").Pitch = 1.0
 		fp.addProperty("App::PropertyLength"     , "Height"      , "Coil", "The height of the coil from the center of the profile at the start to the center of the profile at the end").Height= 2.0
 		fp.addProperty("App::PropertyFloat"      , "Revolutions" , "Coil", "The number of revolutions for the coil").Revolutions = 2.0
 		fp.addProperty("App::PropertyAngle"      , "TaperAngle"  , "Coil", "The taper angle, if needed, for all coil types except spiral").TaperAngle = 0 # Cylinder!
-		fp.addProperty("App::PropertyBoolean"    , "Solid"       , "Coil", "Create a solid insteat of a shell").Solid = True
-		fp.addProperty("App::PropertyBoolean"    , "StartTransit", "Ends", "The type of the start coil's end").StartTransit = False
+		fp.addProperty("App::PropertyBool"       , "Solid"       , "Coil", "Create a solid insteat of a shell").Solid = True
+		fp.addProperty("App::PropertyBool"       , "StartTransit", "Ends", "The type of the start coil's end").StartTransit = False
 		fp.addProperty("App::PropertyAngle"      , "StartFlat"   , "Ends", "The degrees the coil extends after transition with not pitch").StartFlat  = 0
 		fp.addProperty("App::PropertyAngle"      , "StartSegue"  , "Ends", "The transition angle of the start coil's end").StartSegue = 0
-		fp.addProperty("App::PropertyBoolean"    , "EndTransit"  , "Ends", "The type of the end coil's end").EndTransit = False
+		fp.addProperty("App::PropertyBool"       , "EndTransit"  , "Ends", "The type of the end coil's end").EndTransit = False
 		fp.addProperty("App::PropertyAngle"      , "EndSegue"    , "Ends", "The transition angle of the end coil's end").EndTrans = 0
 		fp.addProperty("App::PropertyAngle"      , "EndFlat"     , "Ends", "The degrees the coil extends after transition with not pitch").EndFlat  = 0
 
