@@ -397,38 +397,45 @@ def adjustViewObject(newGeo, baseGeo):
 	newGeo.ViewObject.ShapeColor   = baseGeo.ViewObject.ShapeColor
 	newGeo.ViewObject.Transparency = baseGeo.ViewObject.Transparency
 
-def getMM(length):
-	if (length is None): return 0.0
-	if (type(length) == float): return length
-	if (isinstance(length, AbstractValue)):
-		val = length
-	else:
-		val = length.getValue()
-	if (isinstance(val, Length)): return val.getMM()
-	if (isinstance(val, Scalar)): return val.x * 10
-	return val * 10.0
+def getBOOL(parameter):
+	if (parameter is None): return False
+	if (type(parameter) == bool): return parameter
+	boolean = parameter.get('value')
+	if (type(boolean) == bool): return boolean
+	return boolean
 
-def getGRAD(angle):
-	if (angle is None): return 0.0
-	if (type(angle) == float): return angle
-	if (isinstance(angle, AbstractValue)):
-		val = angle
+def getMM(parameter):
+	if (parameter is None): return 0.0
+	if (type(parameter) == float): return parameter
+	if (isinstance(parameter, AbstractValue)):
+		mm = parameter
 	else:
-		val = angle.getValue()
-	if (isinstance(val, Angle)): return val.getGRAD()
-	if (isinstance(val, Scalar)): return val.x
-	return val
+		mm = parameter.getValue()
+	if (isinstance(mm, Length)): return mm.getMM()
+	if (isinstance(mm, Scalar)): return mm.x * 10
+	return mm * 10.0
 
-def getRAD(angle):
-	if (angle is None): return 0.0
-	if (type(angle) == float): return angle
-	if (isinstance(angle, AbstractValue)):
-		val = angle
+def getGRAD(parameter):
+	if (parameter is None): return 0.0
+	if (type(parameter) == float): return parameter
+	if (isinstance(parameter, AbstractValue)):
+		angle = parameter
 	else:
-		val = angle.getValue()
-	if (isinstance(val, Angle)): return val.getRAD()
-	if (isinstance(val, Scalar)): return val.x
-	return val
+		angle = parameter.getValue()
+	if (isinstance(angle, Angle)):  return angle.getGRAD()
+	if (isinstance(angle, Scalar)): return angle.x
+	return angle
+
+def getRAD(parameter):
+	if (parameter is None): return 0.0
+	if (type(parameter) == float): return parameter
+	if (isinstance(parameter, AbstractValue)):
+		angle = parameter
+	else:
+		angle = parameter.getValue()
+	if (isinstance(angle, Angle)):  return angle.getRAD()
+	if (isinstance(angle, Scalar)): return angle.x
+	return angle
 
 def isTrue(param):
 	if (param is None): return False
@@ -2916,87 +2923,60 @@ class FreeCADImporter(object):
 	# Inventor workbench features
 
 	def Create_FxCoil(self, coilNode):
+		from InventorViewProviders import makeCoil
 		properties  = coilNode.get('properties')
-#		operation   = getProperty(properties, 0x00) # PartFeatureOperation=Join
-#		profile     = getProperty(properties, 0x01) # BoundaryPatch
-#		axis        = getProperty(properties, 0x02) # Line3D - (-1.49785,-1.08544,1.11022e-16) - (-1.49785,-0.085438,1.11022e-16)
-#		negative    = getProperty(properties, 0x03) # Boolean 'AxisDirectionReversed'
-#		rotate      = getProperty(properties, 0x04) # RotateClockwise clockwise=0
-#		coilType    = getProperty(properties, 0x05) # EnumCoilType=010003, u32_0=0
-#		pitch       = getProperty(properties, 0x06) # Parameter 'd21'=1.1176mm
-#		height      = getProperty(properties, 0x07) # Parameter 'd22'=25.4mm
-#		revolutions = getProperty(properties, 0x08) # Parameter 'd23'=2
-#		taperAngle  = getProperty(properties, 0x09) # Parameter 'd24'=0°
-#		startIsFlat = getProperty(properties, 0x0A) # Boolean=False
-#		startTrans  = getProperty(properties, 0x0B) # Parameter 'd15'=90°
-#		startFlat   = getProperty(properties, 0x0C) # Parameter 'd16'=90°
-#		endIsFlat   = getProperty(properties, 0x0D) # Boolean=False
-#		endTrans    = getProperty(properties, 0x0E) # Parameter 'd17'=0°
-#		endFlat     = getProperty(properties, 0x0F) # Parameter 'd18'=0°
-##		getProperty(properties, 0x10) # ???
-		surface     = getProperty(properties, 0x11) # SurfaceBody 'Surface1'
-##		getProperty(properties, 0x12) # FeatureDimensions
+#		operation   = getProperty(properties, 0x00) # PartFeatureOperation = Join
+		profile     = getProperty(properties, 0x01) # BoundaryPatch
+		axis        = getProperty(properties, 0x02) # Line3D - (-1.49785,-1.08544,1.11022e-16) - (-1.49785,-0.085438,1.11022e-16)
+		reverse     = getProperty(properties, 0x03) # Boolean 'AxisDirectionReversed'
+		rotate      = getProperty(properties, 0x04) # RotateClockwise clockwise=0
+		coilType    = getProperty(properties, 0x05) # EnumCoilType=010003, u32_0=0
+		pitch       = getProperty(properties, 0x06) # Parameter 'd21'=1.1176mm
+		height      = getProperty(properties, 0x07) # Parameter 'd22'=25.4mm
+		revolutions = getProperty(properties, 0x08) # Parameter 'd23'=2
+		taperAngle  = getProperty(properties, 0x09) # Parameter 'd24'=0°
+		startIsFlat = getProperty(properties, 0x0A) # Boolean=False
+		startTrans  = getProperty(properties, 0x0B) # Parameter 'd15'=90°
+		startFlat   = getProperty(properties, 0x0C) # Parameter 'd16'=90°
+		endIsFlat   = getProperty(properties, 0x0D) # Boolean=False
+		endTrans    = getProperty(properties, 0x0E) # Parameter 'd17'=0°
+		endFlat     = getProperty(properties, 0x0F) # Parameter 'd18'=0°
+#		getProperty(properties, 0x10) # ???
+#		surface     = getProperty(properties, 0x11) # SurfaceBody 'Surface1'
+#		getProperty(properties, 0x12) # FeatureDimensions
 		solid       = getProperty(properties, 0x13) # SolidBody 'Solid1'
-#
-#		boundary = self.createBoundary(profile)
-#		base    = p2v(axis)
-#		dir     = axis.get('dir').normalize()
-#		if (isTrue(negative)): dir = dir.negative()
-#
-#		sweepGeo = self.createEntity(coilNode, 'Part::Sweep')
-#		r = revolutions.getValue().x
-#		if (coilType.get('value') == 3):
-#			coilGeo = newObject('Part::Spiral', sweepGeo.Name + '_coil')
-#			setParameter(coilGeo, 'Growth', pitch, getMM)
-#			setParameter(coilGeo, 'Rotations', revolutions)
-#			if (isTrue(rotate)): dir = dir.negative()
-#		else:
-#			coilGeo = newObject('Part::Helix', sweepGeo.Name + '_coil')
-#			if (coilType.get('value') == 0):   # PitchAndRevolution
-#				setParameter(coilGeo, 'Pitch', pitch, getMM)
-#				coilGeo.Height = getMM(pitch) * revolutions.getValue().x
-#				coilGeo.setExpression('Height', "%s * %s" %(pitch.get('alias'), revolutions.get('alias')))
-#			elif (coilType.get('value') == 1): # RevolutionAndHeight
-#				coilGeo.Pitch  = height.getNominalValue() /  revolutions.getNominalValue()
-#				coilGeo.setExpression("Pitch", "%s / %s" %(height.get('alias'), revolutions.get('alias')))
-#				setParameter(coilGeo, 'Height', height, getMM)
-#			else:
-#				setParameter(coilGeo, 'Pitch', pitch, getMM)
-#				setParameter(coilGeo, 'Height', height, getMM)
-#			if (rotate.get('value')):
-#				coilGeo.LocalCoord = 1 # "Right handed"
-#			else:
-#				coilGeo.LocalCoord = 0 # "Left handed"
-#			setParameter(coilGeo, 'Angle', taperAngle, getGRAD)
-#		c   = boundary.Shape.BoundBox.Center
-#		r   = c.distanceToLine(base, dir) # Helix-Radius
-#		b   = CENTER.projectToLine(c-base, dir).normalize()
-#		z   = DIR_Z
-#		rot = ROT(z.cross(dir), degrees(z.getAngle(dir)))
-#		p1  = PLC((c + b*r), rot, CENTER)
-#		x   = rot.multVec(-DIR_X)
-#		p2  = PLC(CENTER, ROT(z, degrees(x.getAngle(b))), CENTER)
-#		coilGeo.Radius    = r
-#		coilGeo.Placement = p1.multiply(p2)
-#
-#		#TODO: add flat start / end to coil wire
-#		if (isTrue(startIsFlat)):
-#			pass
-#		if (isTrue(endIsFlat)):
-#			pass
-#
-#		sweepGeo.Sections = [boundary]
-#		sweepGeo.Spine    = (coilGeo, [])
-#		sweepGeo.Solid    = surface is None
-#		sweepGeo.Frenet   = True
-#		setDefaultViewObjectValues(sweepGeo)
-#
-#		self.addBody(coilNode, sweepGeo, 0x13, 0x11)
-#		hide(coilGeo)
 
-		if (surface):
-			return self.notYetImplemented(coilNode, surface)
-		return self.notYetImplemented(coilNode, solid)
+		if (coilType.getValueText() == "Spiral"):
+			logWarning(u"        ... %s '%s' / Spiral not implemented yet - please use SAT or STEP instead!", coilNode.typeName, coilNode.getSubTypeName())
+			return None
+
+		base      = p2v(axis)
+		direction = axis.get('dir').normalize()
+		boundary  = self.createBoundary(profile)
+		coil      = makeCoil(coilNode.name, boundary)
+		coil.Axis       = direction
+		coil.Center     = base
+		coil.Reversed   = getBOOL(reverse)
+		coil.Rotation   = 'Clockwise' if getBOOL(rotate) else 'Counterclockwise'
+		coil.CoilType   = coilType.getValueText()
+		coil.TaperAngle = getGRAD(taperAngle)
+		coil.Solid      = (not solid is None)
+		if (coil.CoilType == "PitchAndRevolution"):
+			coil.Pitch        = getMM(pitch)
+			coil.Revolutions  = revolutions.getNominalValue()
+		elif (coil.CoilType == "RevolutionAndHeight"):
+			coil.Revolutions  = revolutions.getNominalValue()
+			coil.Height       = getMM(height)
+		elif (coil.CoilType == "PitchAndHeight"):
+			coil.Pitch        = getMM(pitch)
+			coil.Height       = getMM(height)
+		if (getBOOL(startIsFlat) == False):
+			coil.StartTransit = getGRAD(startTrans)
+			coil.StartFlat    = getGRAD(startFlat)
+		if (getBOOL(endIsFlat) == False):
+			coil.EndTransit   = getGRAD(endTrans)
+			coil.EndFlat      = getGRAD(endFlat)
+		return coil
 
 	def Create_FxChamfer(self, chamferNode):
 		properties  = chamferNode.get('properties')
