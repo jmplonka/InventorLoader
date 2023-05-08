@@ -746,10 +746,10 @@ class _Coil(_ObjectProxy):
 		coil.addProperty("App::PropertyFloat"      , "Revolutions" , "Coil", "The number of revolutions for the coil").Revolutions = 2.0
 		coil.addProperty("App::PropertyAngle"      , "TaperAngle"  , "Coil", "The taper angle, if needed, for all coil types except spiral").TaperAngle = 0.0 # Cylinder!
 		coil.addProperty("App::PropertyBool"       , "Solid"       , "Coil", "Create a solid insteat of a shell").Solid = True
-		coil.addProperty("App::PropertyAngle"      , "StartTransit", "Ends", "The type of the start coil's end").StartTransit = 0.0
-		coil.addProperty("App::PropertyAngle"      , "StartFlat"   , "Ends", "The degrees the coil extends after transition with not pitch").StartFlat  = 0.0
-		coil.addProperty("App::PropertyAngle"      , "EndTransit"  , "Ends", "The type of the end coil's end").EndTransit = 0.0
-		coil.addProperty("App::PropertyAngle"      , "EndFlat"     , "Ends", "The degrees the coil extends after transition with not pitch").EndFlat  = 0.0
+		coil.addProperty("App::PropertyAngle"      , "StartTransit", "Ends", "The degrees over wich the coil achieves the start transition (normally less than one revolution)").StartTransit = 0.0
+		coil.addProperty("App::PropertyAngle"      , "StartFlat"   , "Ends", "The degrees the coil extends before transition with not pitch").StartFlat  = 0.0
+		coil.addProperty("App::PropertyAngle"      , "EndTransit"  , "Ends", "The degrees over wich the coil achieves the end transition (normally less than one revolution)").EndTransit = 0.0
+		coil.addProperty("App::PropertyAngle"      , "EndFlat"     , "Ends", "The degrees the coil extends after transition with no pitch (flat)").EndFlat  = 0.0
 		if (profile):
 			coil.Profile = profile
 		self.pathWires = []
