@@ -68,7 +68,7 @@ class BaseWriter:
     the specified sources.
     It is designed for sequential use so when, for example, writing
     two workbooks, the calls must be ordered as follows:
-    
+
     - :meth:`workbook` call for first workbook
     - :meth:`sheet` call for first sheet
     - :meth:`row` call for first row
@@ -85,9 +85,9 @@ class BaseWriter:
 
     Usually, only the :meth:`get_stream` method needs to be implemented in subclasses.
     """
-    
+
     wtbook = None
-    
+
     close_after_write = True
 
     def get_stream(self,filename):
@@ -104,10 +104,10 @@ class BaseWriter:
         This method should be called before processing of a batch of input.
         This allows the filter to initialise any required data
         structures and dispose of any existing state from previous
-        batches. 
+        batches.
         """
         self.wtbook = None
-        
+
     def close(self):
         if self.wtbook is not None:
             stream = self.get_stream(self.wtname)
@@ -131,7 +131,7 @@ class BaseWriter:
         :param wtbook_name: the name of the workbook into which content
                       will be written.
         """
-        self.close()        
+        self.close()
         self.rdbook = rdbook
         self.wtbook = xlwt.Workbook(style_compression=2)
         self.wtbook.dates_1904 = rdbook.datemode
@@ -164,12 +164,12 @@ class BaseWriter:
             wtf.bold = rdf.bold #### This attribute is redundant, should be driven by weight
             wtf._weight = rdf.weight #### Why "private"?
             wtf.escapement = rdf.escapement
-            wtf.underline = rdf.underline_type #### 
+            wtf.underline = rdf.underline_type ####
             # wtf.???? = rdf.underline #### redundant attribute, set on the fly when writing
             wtf.family = rdf.family
             wtf.charset = rdf.character_set
             wtf.name = rdf.name
-            # 
+            #
             # protection
             #
             wtp = wtxf.protection
@@ -184,13 +184,13 @@ class BaseWriter:
             wtb.left   = rdb.left_line_style
             wtb.right  = rdb.right_line_style
             wtb.top    = rdb.top_line_style
-            wtb.bottom = rdb.bottom_line_style 
+            wtb.bottom = rdb.bottom_line_style
             wtb.diag   = rdb.diag_line_style
-            wtb.left_colour   = rdb.left_colour_index 
-            wtb.right_colour  = rdb.right_colour_index 
+            wtb.left_colour   = rdb.left_colour_index
+            wtb.right_colour  = rdb.right_colour_index
             wtb.top_colour    = rdb.top_colour_index
-            wtb.bottom_colour = rdb.bottom_colour_index 
-            wtb.diag_colour   = rdb.diag_colour_index 
+            wtb.bottom_colour = rdb.bottom_colour_index
+            wtb.diag_colour   = rdb.diag_colour_index
             wtb.need_diag1 = rdb.diag_down
             wtb.need_diag2 = rdb.diag_up
             #
@@ -217,7 +217,7 @@ class BaseWriter:
             # wta.merg = ????
             #
             self.style_list.append(wtxf)
-   
+
     def sheet(self,rdsheet,wtsheet_name):
         """
         This method should be called every time processing of a new
@@ -229,7 +229,7 @@ class BaseWriter:
         :param wtsheet_name: the name of the sheet into which content
                        will be written.
         """
-        
+
         # these checks should really be done by xlwt!
         if not wtsheet_name:
             raise ValueError('Empty sheet name will result in invalid Excel file!')
@@ -241,14 +241,14 @@ class BaseWriter:
         if len(wtsheet_name)>31:
             raise ValueError('Sheet name cannot be more than 31 characters long, '
                              'supplied name was %i characters long!'%l_wtsheet_name)
-        
+
         self.rdsheet = rdsheet
         self.wtsheet_name=wtsheet_name
         self.wtsheet = wtsheet = self.wtbook.add_sheet(wtsheet_name,cell_overwrite_ok=True)
         self.wtcols = set() # keep track of which columns have had their attributes set up
         #
         # MERGEDCELLS
-        # 
+        #
         mc_map = {}
         mc_nfa = set()
         for crange in rdsheet.merged_cells:
@@ -265,7 +265,7 @@ class BaseWriter:
         # default column width: STANDARDWIDTH, DEFCOLWIDTH
         #
         if rdsheet.standardwidth is not None:
-            # STANDARDWIDTH is expressed in units of 1/256 of a 
+            # STANDARDWIDTH is expressed in units of 1/256 of a
             # character-width, but DEFCOLWIDTH is expressed in units of
             # character-width; we lose precision by rounding to
             # the higher whole number of characters.
@@ -294,7 +294,7 @@ class BaseWriter:
             self.wtbook.active_sheet = self.wtsheet_index
             wtsheet.sheet_visible = 1
         self.wtsheet_index +=1
-        
+
         wtsheet.page_preview = rdsheet.show_in_page_break_preview
         wtsheet.first_visible_row = rdsheet.first_visible_rowx
         wtsheet.first_visible_col = rdsheet.first_visible_colx
@@ -314,7 +314,7 @@ class BaseWriter:
         # BOUNDSHEET
         #
         wtsheet.visibility = rdsheet.visibility
-       
+
         #
         # PANE
         #
@@ -325,7 +325,7 @@ class BaseWriter:
             wtsheet.horz_split_first_visible = rdsheet.horz_split_first_visible
             wtsheet.vert_split_pos =           rdsheet.vert_split_pos
             wtsheet.vert_split_first_visible = rdsheet.vert_split_first_visible
-            
+
     def set_rdsheet(self,rdsheet):
         """
         This should only ever called by a filter that
@@ -337,7 +337,7 @@ class BaseWriter:
 
         """
         self.rdsheet = rdsheet
-        
+
     def row(self,rdrowx,wtrowx):
         """
         This should be called every time processing of a new
@@ -369,10 +369,10 @@ class BaseWriter:
         """
         This should be called for every cell in the sheet being processed.
 
-        :param rdrowx: the index of the row to be read from in the current sheet. 
-        :param rdcolx: the index of the column to be read from in the current sheet. 
-        :param wtrowx: the index of the row to be written to in the current output sheet. 
-        :param wtcolx: the index of the column to be written to in the current output sheet. 
+        :param rdrowx: the index of the row to be read from in the current sheet.
+        :param rdcolx: the index of the column to be read from in the current sheet.
+        :param wtrowx: the index of the row to be written to in the current output sheet.
+        :param wtcolx: the index of the column to be written to in the current output sheet.
         """
         cell = self.rdsheet.cell(rdrowx,rdcolx)
         # setup column attributes if not already set
@@ -395,13 +395,13 @@ class BaseWriter:
             style = default_style
         rdcoords2d = (rdrowx, rdcolx)
         if rdcoords2d in self.merged_cell_top_left_map:
-            # The cell is the governing cell of a group of 
+            # The cell is the governing cell of a group of
             # merged cells.
             rlo, rhi, clo, chi = self.merged_cell_top_left_map[rdcoords2d]
             assert (rlo, clo) == rdcoords2d
             self.wtsheet.write_merge(
                 wtrowx, wtrowx + rhi - rlo - 1,
-                wtcolx, wtcolx + chi - clo - 1, 
+                wtcolx, wtcolx + chi - clo - 1,
                 cell.value, style)
             return
         if rdcoords2d in self.merged_cell_already_set:
@@ -446,7 +446,7 @@ class XLRDReader(BaseReader):
     def __init__(self,wb,filename):
         self.wb = wb
         self.filename = filename
-        
+
     def get_workbooks(self):
         "Yield the workbook passed during instantiation."
         yield (self.wb,self.filename)
