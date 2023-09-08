@@ -62,5 +62,5 @@ qgisMaximumVersion=
 
 [dependencies]
 workbenches=Part,Draft,Sketcher
-pylibs=olefile,xlrd,xlwt,xlutils
+pylibs=olefile,xlrd,xlwt
 FCaddon=sheetmetal
