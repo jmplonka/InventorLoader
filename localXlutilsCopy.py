@@ -485,8 +485,6 @@ def process(reader, *chain):
 # http://www.opensource.org/licenses/mit-license.html
 # See license.txt for more details.
 
-from xlutils.filter import process,XLRDReader,XLWTWriter
-
 def copy(wb):
     """
     Copy an :class:`xlrd.Book` into an :class:`xlwt.Workbook` preserving as much
