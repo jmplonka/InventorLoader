@@ -54,9 +54,9 @@ class BaseReader:
             for sheet_x in range(workbook.nsheets):
                 sheet = workbook.sheet_by_index(sheet_x)
                 filter.sheet(sheet,sheet.name)
-                for row_x in xrange(sheet.nrows):
+                for row_x in range(sheet.nrows):
                     filter.row(row_x,row_x)
-                    for col_x in xrange(sheet.row_len(row_x)):
+                    for col_x in range(sheet.row_len(row_x)):
                         filter.cell(row_x,col_x,row_x,col_x)
                 if workbook.on_demand:
                     workbook.unload_sheet(sheet_x)
@@ -254,8 +254,8 @@ class BaseWriter:
         for crange in rdsheet.merged_cells:
             rlo, rhi, clo, chi = crange
             mc_map[(rlo, clo)] = crange
-            for rowx in xrange(rlo, rhi):
-                for colx in xrange(clo, chi):
+            for rowx in range(rlo, rhi):
+                for colx in range(clo, chi):
                     mc_nfa.add((rowx, colx))
         self.merged_cell_top_left_map = mc_map
         self.merged_cell_already_set = mc_nfa
