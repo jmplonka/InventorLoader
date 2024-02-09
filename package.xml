@@ -3,7 +3,7 @@
 <version>1.4</version>
 <date>2023-04-29</date>
 <maintainer email="jens.m.plonka@gmail.com">jmplonka</maintainer>
-<license>LGPLv3</license>
+<license>LGPL-3.0-or-later</license>
 <description>This plugin enables FreeCAD to import Inventor part files (*.IPT), ACIS files (*.SAT, *.SAB), 3D-Solids from DXF files and Fusion360 (*.f3d) files.</description>
 <icon>Icon.png</icon>
 <url type="bugtracker">https://github.com/jmplonka/InventorLoader/issues</url>
