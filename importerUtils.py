@@ -168,8 +168,8 @@ STRATEGY_CANCEL = -1
 
 __strategy__ = __prmPrefIL__.GetInt("strategy", STRATEGY_SAT)
 
-IS_CELL_REF = re.compile('^[a-z](\d+)?$', re.IGNORECASE)
-IS_BETA     = re.compile('^.* Beta(\d+) .*$', re.IGNORECASE)
+IS_CELL_REF = re.compile('^[a-z](\\d+)?$', re.IGNORECASE)
+IS_BETA     = re.compile('^.* Beta(\\d+) .*$', re.IGNORECASE)
 _author         = ''
 _company        = ''
 _comment        = ''
@@ -379,17 +379,17 @@ class Thumbnail(object):
 			self.setIconData(f.read())
 			self.type = filename[-3:].upper()
 	def setData(self, data):
-		# skip thumbnail class header (-1, -1, 3, 0, bpp, width, height, 0)
-		buffer = data[0x10:]
-		self.width, i = getUInt16(data, 0x0A)
+		# skip thumbnail class header (3, 0, bpp, width, height, 0)
+		self.bpp, i = getUInt16(data, 4)
+		self.width, i = getUInt16(data, i)
 		self.height, i = getUInt16(data, i)
-
+		buffer = data[i+2:]
 		if (buffer[0x1:0x4] == b'PNG'):
 			self.type = 'PNG'
 			self.data_ = buffer
 		else: # it's old BMP => rebuild header
 			self.type = 'BMP'
-			fmt, dummy = getUInt32(buffer, 0x12)
+			fmt, dummy = getUInt32(buffer, 0x0E)
 			if (fmt == 3):
 				offset = 0x50
 			elif (fmt == 5):
@@ -410,7 +410,7 @@ def writeThumbnail(data):
 	global _thumbnail
 	if (data):
 		thumbnail = Thumbnail()
-		thumbnail.setData(data)
+		thumbnail.setData(data[1])
 		dumpFolder = getDumpFolder()
 		if ((not (dumpFolder is None)) and ParamGet("User parameter:BaseApp/Preferences/Mod/InventorLoader").GetBool('Others.DumpThumbnails', True)):
 			with open(u"%s/_.%s" %(dumpFolder, thumbnail.type.lower()), 'wb') as file:
@@ -923,10 +923,11 @@ def PrintableName(fname):
 	return repr('/'.join(fname))
 
 def decode(filename, utf=False):
-	if (isinstance(filename, unicode)):
-		# workaround since ifcopenshell currently can't handle unicode filenames
-		encoding = ENCODING_FS if (utf) else sys.getfilesystemencoding()
-		filename = filename.encode(encoding).decode("utf-8")
+	if (sys.version_info.major < 3):
+		if (isinstance(filename, unicode)):
+			# workaround since ifcopenshell currently can't handle unicode filenames
+			encoding = ENCODING_FS if (utf) else sys.getfilesystemencoding()
+			filename = filename.encode(encoding).decode("utf-8")
 	return filename
 
 def isEmbeddings(names):
@@ -1070,8 +1071,8 @@ def setInventorFile(file):
 
 def isString(value):
 	if (type(value) is str): return True
-	if (sys.version_info.major < 3):
-		if (type(value) is unicode): return True
+	if (sys.version_info.major < 3) and (type(value) is unicode):
+		return True
 	return False
 
 class Color(object):
@@ -1125,7 +1126,7 @@ def setTableValue(table, col, row, val):
 	if (type(val) == str):
 		table.set(getCellRef(col, row), val)
 	else:
-		if ((sys.version_info.major <= 2) and (type(val) == unicode)):
+		if ((sys.version_info.major < 3) and (type(val) == unicode)):
 			table.set(getCellRef(col, row), "%s" %(val.encode("utf8")))
 		else:
 			table.set(getCellRef(col, row), str(val))
