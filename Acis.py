@@ -15,7 +15,7 @@ import traceback, Part, FreeCAD, re
 
 from importerUtils     import *
 from FreeCAD           import Vector as VEC, Placement as PLC, Matrix as MAT, Base
-from math              import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
+from math              import inf, pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
 from importerConstants import MIN_0, MIN_PI, MIN_PI2, MIN_INF, MAX_2PI, MAX_PI, MAX_PI2, MAX_INF, MAX_LEN, CENTER, DIR_X, DIR_Y, DIR_Z, ENCODING_FS
 
 V2D = Base.Vector2d
@@ -91,7 +91,7 @@ scale = 1.0
 _nameMtchAttr    = {}
 _dcIdxAttributes = {} # dict of an attribute list
 
-LENGTH_TEXT = re.compile('[ \t]*(\d+) +(.*)')
+LENGTH_TEXT = re.compile('[ \t]*(\\d+) +(.*)')
 
 TOKEN_TRANSLATIONS = {
 	'0x0a':       TAG_TRUE,
@@ -410,8 +410,11 @@ def getFloats(chunks, index, count):
 			arr += chunk.val
 			n += len(chunk.val)
 		else:
-			arr.append(float(chunk.val))
-			n += 1
+			try:
+				arr.append(float(chunk.val))
+				n += 1
+			except Exception as ex:
+				raise(ex)
 	return arr, i
 
 def getFloatsScaled(chunks, index, count):
@@ -890,7 +893,7 @@ def createBSplinesPCurve(pcurve, surface, sense):
 		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
 	return shape
 
-def createBSplinesCurve(nubs, sense):
+def createBSplinesCurve(nubs, sense, subtype):
 	if (nubs is None):
 		return None
 	number_of_poles = len(nubs.poles)
@@ -920,7 +923,7 @@ def createBSplinesCurve(nubs, sense):
 			# periodic = nubs.uPeriodic
 			shape = bsc.toShape()
 		except Exception as e:
-			logError(traceback.format_exc())
+			logWarning("Can't create BSpline-Curve for suptype '%s'!" %(subtype))
 	if (shape is not None):
 		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
 	return shape
@@ -1333,6 +1336,12 @@ class Helix(object):
 		return VEC(x, y, z)
 
 	def build(self):
+		# TODO: see InporterViewProvider._Coil._makeHelix(self, coil) instead:
+		# line = Part.Line(self.posCenter, self.posCenter + self.vecAxis)
+		# radius = line.projectPoint(self.Profile.Shape.CenterOfMass, "LowerDistance")
+		# helix = Part.makeLongHelix(slef.getPitch(), self.getHeight(), self.getRadius(), self.getApexAngle(), self.isLeftHanded())
+		# self.pathWires.append(helix)
+
 		min_U   = self.radAngles.getLowerLimit()
 		max_U   = self.radAngles.getUpperLimit()
 		r_maj   = self.dirMajor.Length
@@ -1806,7 +1815,9 @@ class Face(Topology):
 	def getParent(self):  return None if (self._parent is None)  else self._parent.entity
 	def getSurface(self):
 		if (self._surface):
-			return self._surface.entity.getSurface()
+			if (self._surface.entity.subtype == 'ref'):
+				return self._surface.entity.getSurface()
+			return self._surface.entity
 		return None
 	def buildCoEdges(self):
 		edges = []
@@ -1820,27 +1831,25 @@ class Face(Topology):
 			self.__ready_to_build__ = False
 			edges = self.buildCoEdges()
 			if (self._surface):
-				_surface = self.getSurface()
-				if (_surface):
-					surface = self.getSurface().build()
-					if (surface):
-						if (self.sense == 'reversed'):
-							surface.reverse()
-						if (len(edges) > 0):
-							tolerance = 0.1
-							component, elements = surface.generalFuse(edges, tolerance)
-							faces = elements[0]
-							if (len(faces) == 0):
-								logWarning("Can't apply wires for face (no elements) for %s" %(self._surface))
-							else:
-								self.shape = eliminateOuterFaces(faces, edges)
-								if (self.shape is None):
-									# edges can be empty because not all edges can be created right now :(
-									logWarning("Can't apply wires for face %s!" %(surface.Surface))
-									for f in faces:
-										Part.show(f, "Face-%d" %(self.record.index))
+				surface = self.getSurface().build()
+				if (surface):
+					if (self.sense == 'reversed'):
+						surface.reverse()
+					if (len(edges) > 0):
+						tolerance = 0.1
+						component, elements = surface.generalFuse(edges, tolerance)
+						faces = elements[0]
+						if (len(faces) == 0):
+							logWarning("Can't apply wires for face (no elements) for %s" %(self._surface))
 						else:
-							self.shape = surface
+							self.shape = eliminateOuterFaces(faces, edges)
+							if (self.shape is None):
+								# edges can be empty because not all edges can be created right now :(
+								logWarning("Can't apply wires for face %s!" %(surface.Surface))
+								for f in faces:
+									Part.show(f, "Face-%d" %(self.record.index))
+					else:
+						self.shape = surface
 		return self.shape
 	def isCone(self):   return isinstance(self.getSurface(), SurfaceCone)
 	def isMesh(self):   return isinstance(self.getSurface(), SurfaceMesh)
@@ -2616,7 +2625,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def build(self, start=None, end=None):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
-			self.shape = createBSplinesCurve(self.spline, self.sense)
+			self.shape = createBSplinesCurve(self.spline, self.sense, self.subtype)
 
 			if (self.subtype == 'ref'):
 				cur = self.curve
@@ -2772,11 +2781,17 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 			if (start is None):
 				start = self.root
 			elif (type(start) == float):
-				start = line.value(start)
+				if (start == inf or start == -inf):
+					start = self.root
+				else:
+					start = line.value(start)
 			if (end is None):
 				end = self.dir + self.root
 			elif (type(end) == float):
-				end = line.value(end)
+				if (end == inf or end == -inf):
+					end = self.root + self.dir
+				else:
+					end = line.value(end)
 			self.shape = createLine(start, end)
 		return self.shape
 
@@ -2809,6 +2824,7 @@ class SurfaceCone(Surface):
 		self.sense  = 'forward'
 		self.urange = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.apex   = None
 	def getSatTextGeometry(self, index):
 		if (getVersion() >= 4.0):
 			return "%s %s %s %g %s %g %g %g %s %s %s #" %(
@@ -2851,7 +2867,7 @@ class SurfaceCone(Surface):
 		self.sense, i  = getEnumByTag(chunks, i, SENSE)
 		self.urange, i = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		self.vrange, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		if (self.sine == 0.):
+		if (isEqual1D(self.sine, 0.)): # 90 Deg
 			self.apex = None
 		else:
 			h = self.major.Length / tan(asin(self.sine))
@@ -2968,10 +2984,12 @@ class SurfaceTSpline(Surface):
 		self._ec        = []
 		self._0m        = []
 		self._0g        = []
+		self._100edges  = []
 		self._100verts  = []
 		self._105sym    = []
 		self._105plane  = []
 		self._105a      = []
+		self._106ek     = []
 		self._50000grip = []
 	def parse_degree(self):           self.header[self.values[0]] = self.values[1]
 	def parse_cap_type(self):         self.header[self.values[0]] = self.values[1]
@@ -2989,6 +3007,7 @@ class SurfaceTSpline(Surface):
 	def parse_ec(self):               self._ec.append(self.values[1:])
 	def parse_0m(self):               self._0m.append(self.values[1:])
 	def parse_0g(self):               self._0g.append(self.values[1:])
+	def parse_100edges(self):         self._100edges.append(self.values[1:])
 	def parse_100verts(self):         self._100verts.append(self.values[1:])
 	def parse_105sym(self):           self._105sym.append(self.values[1:])
 	def parse_105plane(self):
@@ -3017,6 +3036,8 @@ class SurfaceTSpline(Surface):
 		else:
 			r = [sub_type,] + self.values[2:] #
 			self._105a.append(r)
+	def parse_106ek(self):
+		self._106ek.append(self.values[1:])
 	def parse_50000grip(self): self._50000grip.append(self.values[1:])
 
 	def next_line(self):
@@ -3068,9 +3089,11 @@ class SurfaceSpline(Surface):
 	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self.subtype)
 	def _readLoftData(self, chunks, index):
 		ld = LoftData()
-		ld.surface, i = readSurface(chunks, index)
+		i = index
+		ld.surface, i = readSurface(chunks, i)
 		ld.bs2cur, i  = readBS2Curve(chunks, i)
 		ld.e1, i      = getBoolean(chunks, i)
+		if (isASM() and getAsmMajor() > 228): i += 1 # skip -1
 		subdata, i    = readLofSubdata(chunks, i)
 		(ld.type, n, m, v) = subdata
 		ld.e2, i      = getBoolean(chunks, i)
@@ -3374,11 +3397,10 @@ class SurfaceSpline(Surface):
 			v31, i = getFloat(chunks, i)
 		elif (t1 == 5):
 			self.surface, i = readSurface(chunks, i)
+			i32, i = getLong(chunks, i) # iEdidF{...}
 			e31, i = getBoolean(chunks, i)
 			f32, i = getFloat(chunks, i)
 			i33, i = getInteger(chunks, i)
-			if (getVersion() > 225) and isASM():
-				i34, i = getEnumByTag(chunks, i, [])
 			f34, i = getFloat(chunks, i)
 			self.curve = CurveInt()
 			i = self.curve.setSubtype(chunks, i)
@@ -3999,10 +4021,10 @@ class SurfaceSpline(Surface):
 					else:
 						logError("    Can't create curve for revolution of (%r)" %(self.profile))
 			elif (self.subtype == 'sum_spl_sur'):
-				rngU = self.tolerance[2]
+				rngU = self.rangeU
 				curve1 = self.curve1.build(rngU.getLowerLimit(), rngU.getUpperLimit())
 				if (curve1 is not None):
-					rngV = self.tolerance[3]
+					rngV = self.rangeV
 					curve2 = self.curve2.build(rngV.getLowerLimit(), rngV.getUpperLimit())
 					if (curve2 is not None):
 						self.shape = Part.makeRuledSurface(curve1, curve2)
@@ -4051,6 +4073,7 @@ class SurfaceTorus(Surface):
 		self.sensev   = 'forward_v'
 		self.urange   = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange   = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
+		self.profile  = None
 	def getSatTextGeometry(self, index): return "%s %s %s %s %s %s %s %s #" %(vec2sat(self.center), vec2sat(self.axis), self.major, self.minor, vec2sat(self.uvorigin), self.sensev, self.urange, self.vrange)
 	def __repr__(self):      return "Surface-Torus: center=%s, normal=%s, R=%g, r=%g, uvorigin=%s" %(self.center, self.axis, self.major, self.minor, self.uvorigin)
 	def setSubtype(self, chunks, index):
@@ -4959,13 +4982,6 @@ class Header(object):
 			sat += "%g %g %g\n" %(self.scale, self.resabs, self.resnor)
 		return sat
 
-def getNextText(data):
-	m = LENGTH_TEXT.match(data)
-	count = int(m.group(1))
-	text  = m.group(2)[0:count]
-	remaining = m.group(2)[count+1:]
-	return text, remaining
-
 def int2version(num):
 	return float("%d.%d" %(num / 100, num % 100))
 
@@ -5104,9 +5120,9 @@ class AcisReader(object):
 		self.header.flags   = int(tokens[3])
 		if (self.version >= 2.0):
 			data = self._stream.readline()
-			self.header.prodId,  data = getNextText(data)
-			self.header.prodVer, data = getNextText(data)
-			self.date,    data = getNextText(data)
+			self.header.prodId,  data = self._getNextText(data)
+			self.header.prodVer, data = self._getNextText(data)
+			self.date,    data = self._getNextText(data)
 			data = self._stream.readline()
 			tokens = data.split(' ')
 			self.header.scale  = fabs(float(tokens[0])) # prevent STEP importer from handling negative scales -> "Cannot compute Inventor representation for the shape of Part__Feature"
@@ -5291,6 +5307,18 @@ class AcisReader(object):
 		self._resolfChunkReferences()
 		setReader(self)
 		return True
+
+	def _getNextText(self, data):
+		i = 0
+		while (data[i].isdigit()):
+			i += 1
+		count = int(data[:i])
+		data = data[i+1:]
+		if (len(data) < count):
+			data = self._stream.readline()
+		text  = data[0:count]
+		remaining = data[count+1:]
+		return text, remaining
 
 class Record(object):
 	def __init__(self, name):
