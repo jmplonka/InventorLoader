@@ -453,6 +453,8 @@ def Property_VT_CY(s, offset): # 8 Byte Currency
 def Property_VT_DECIMAL(s, offset): # 96 bit Decimal
 	reserved, i = getSInt16(s, offset)
 	scale, i = getUInt8(s, i)
+	if (scale == 0):
+		return None, offset
 	sign, i = getUInt8(s, i)
 	hi32, i = getUInt32(s, i)
 	hi64, i = getUInt64(s, i)
@@ -468,13 +470,16 @@ def Property_VT_DISPATCH(s, offset): # B byte floating point
 def Property_VT_UNKNOWN(s, offset): # B byte floating point
 	logWarning("Don't know how to read VT_UNKNOW data!")
 	return  None, offset # FIXME convert to datetime!
+def Property_VT_VARIANT(s, offset): # B byte floating point
+	logWarning("Don't know how to read VT_VARIANT data!")
+	return  None, offset # FIXME convert to datetime!
 
 def _parse_property_basic(s, offset, property_id, property_type):
+	type_name = VT.get(property_type, f"VT_{property_type}")
 	# test for common types first (should perhaps use a dictionary instead?)
-	fkt_name = f"Property_{VT.get(property_type, 'UNKNOWN')}"
+	fkt_name = f"Property_{type_name}"
 	fkt = getattr(sys.modules[__name__], fkt_name, None)
 	if (fkt is None):
-		type_name = VT.get(property_type, "UNKNOWN")
 		logError(f"property id={property_id:08X}: {type_name} not implemented in parser yet")
 		# see https://msdn.microsoft.com/en-us/library/dd942033.aspx
 		return None, offset
