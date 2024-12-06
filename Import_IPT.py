@@ -319,10 +319,10 @@ def GetProperties(ole, filename):
 		fp.seek(offset)
 		# get section
 		b_size = fp.read(4)
-		size = UINT32(b_size, 0)
+		size = UINT32(b_size, 0)[0]
 		s = b_size + fp.read(size-4)
 		# number of properties:
-		num_props = UINT32(s, 4)
+		num_props = UINT32(s, 4)[0]
 	except BaseException as exc:
 		# catch exception while parsing property header, and only raise
 		# a DEFECT_INCORRECT then return an empty dict, because this is not
@@ -358,24 +358,20 @@ def _parse_property(s, offset, property_id, property_type):
 		v, _ = _parse_property_basic(s, offset, property_id, property_type)
 	elif property_type == VT_VECTOR | VT_VARIANT:
 		logWarning('property_type == VT_VECTOR | VT_VARIANT')
-		off = 4
-		count = UINT32(s, offset)
+		count, i = getUInt32(s, offset)
 		values = []
 		for _ in range(count):
-			property_type = UINT32(s, offset + off)
-			v, sz  = _parse_property_basic(s, offset + off + 4, property_id, property_type)
+			property_type, i = getUInt32(s, i)
+			v, i  = _parse_property_basic(s, i, property_id, property_type)
 			values.append(v)
-			off = sz + 4
 		v = values
-
 	elif property_type & VT_VECTOR:
 		property_type_base = property_type & ~VT_VECTOR
 		logWarning('property_type == VT_VECTOR | %s' % VT.get(property_type_base, 'UNKNOWN'))
-		off = 4
-		count = UINT32(s, offset)
+		count, i = getUInt32(s, offset)
 		values = []
 		for _ in range(count):
-			v, off = _parse_property_basic(s, offset + off, property_id, property_type & ~VT_VECTOR)
+			v, i = _parse_property_basic(s, i, property_id, property_type & ~VT_VECTOR)
 			values.append(v)
 		v = values
 	else:
@@ -411,10 +407,11 @@ def Property_VT_BSTR(s, offset): # CodePageString, see https://msdn.microsoft.co
 	# size is a 32 bits integer, including the null terminator, and
 	# possibly trailing or embedded null chars
 	# TODO: if codepage is unicode, the string should be converted as such
-	value, i = getLen32Text8(s, offset)
-	return  value.replace(b'\x00', b''), i
+	ptr, i = getUInt32(s, offset)
+	value, i = getLen32Text16(s, i)
+	return  value.replace('\x00', ''), i
 def Property_VT_LPSTR(s, offset):
-	return Property_VT_LPSTR(s, offset)
+	return Property_VT_BSTR(s, offset)
 def Property_VT_BLOB(s, offset): # binary large object (BLOB)
 	# see https://msdn.microsoft.com/en-us/library/dd942282.aspx
 	count, i = getUInt32(s, offset)
@@ -464,15 +461,20 @@ def Property_VT_DECIMAL(s, offset): # 96 bit Decimal
 	return value, i
 def Property_VT_DATE(s, offset): # B byte floating point
 	return  getFloat64(s, offset) # FIXME convert to datetime!
-
+def Property_VT_DISPATCH(s, offset): # B byte floating point
+	logWarning("Don't know how to read VT_DISPATCH data!")
+	return  None, offset # FIXME convert to datetime!
+def Property_VT_UNKNOWN(s, offset): # B byte floating point
+	logWarning("Don't know how to read VT_UNKNOW data!")
+	return  None, offset # FIXME convert to datetime!
 
 def _parse_property_basic(s, offset, property_id, property_type):
-		# test for common types first (should perhaps use
-		# a dictionary instead?)
-		fkt_name = f"Property_{VT.get(property_type, 'UNKNOWN')}"
-		fkt = getattr(sys.modules[__name__], fkt_name, None)
-		if (fkt is None):
-			logError('property id=%d: type=%d not implemented in parser yet' % (property_id, property_type))
-			# see https://msdn.microsoft.com/en-us/library/dd942033.aspx
-			return None, offset
-		return fkt(s, offset)
+	# test for common types first (should perhaps use a dictionary instead?)
+	fkt_name = f"Property_{VT.get(property_type, 'UNKNOWN')}"
+	fkt = getattr(sys.modules[__name__], fkt_name, None)
+	if (fkt is None):
+		type_name = VT.get(property_type, "UNKNOWN")
+		logError(f"property id={property_id:08X}: {type_name} not implemented in parser yet")
+		# see https://msdn.microsoft.com/en-us/library/dd942033.aspx
+		return None, offset
+	return fkt(s, offset)
