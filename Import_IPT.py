@@ -411,7 +411,8 @@ def Property_VT_BSTR(s, offset): # CodePageString, see https://msdn.microsoft.co
 	value, i = getLen32Text16(s, i)
 	return  value.replace('\x00', ''), i
 def Property_VT_LPSTR(s, offset):
-	return Property_VT_BSTR(s, offset)
+	value, i = getLen32Text8(s, offset)
+	return  value.replace('\x00', ''), i
 def Property_VT_BLOB(s, offset): # binary large object (BLOB)
 	# see https://msdn.microsoft.com/en-us/library/dd942282.aspx
 	count, i = getUInt32(s, offset)
