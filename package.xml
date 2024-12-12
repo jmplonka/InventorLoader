@@ -1,6 +1,6 @@
 <package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
 <name>InventorLoader</name>
-<version>1.5</version>
+<version>1.5.1</version>
 <date>2024-12-12</date>
 <maintainer email="jens.m.plonka@gmail.com">jmplonka</maintainer>
 <license>LGPL-3.0-or-later</license>

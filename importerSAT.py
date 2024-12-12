@@ -156,7 +156,7 @@ def readText(fileName):
 
 	result = False
 	setDumpFolder(fileName)
-	with open(fileName, 'rU') as file:
+	with open(fileName, 'r') as file:
 		reader = AcisReader(file)
 		reader.name, trash = os.path.splitext(os.path.basename(fileName))
 		result = reader.readText()
