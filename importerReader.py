@@ -24,7 +24,7 @@ from importerSheetDL     import SheetDlReader
 from importerSheetSM     import SheetSmReader
 from importerResults     import ResultReader
 from importerUtils       import *
-from xlutils.copy        import copy
+from localXlutilsCopy    import copy
 
 __author__     = 'Jens M. Plonka'
 __copyright__  = 'Copyright 2018, Germany'
