@@ -715,16 +715,20 @@ class SheetSmReader(SegmentReader):
 
 	def Read_946501D5(self, node):
 		i = node.Read_Header0()
-		i = node.ReadUInt32A(i, 2, 'a0')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'attrs')
 		i = node.ReadBoolean(i, 'b0')
 		i = self.skipBlockSize(i)
 		i = node.ReadChildRef(i, 'ref_0')
-		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadUInt16(i, 'u16_0')
-		i = node.ReadUInt32A(i, 5, 'a2')
-		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		i = node.ReadUInt32A(i, 5, 'a1')
+		if (self.version < 2024):
+			i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		else:
+			i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_U8_, 'lst0')
 		i = self.skipBlockSize(i)
-		i = node.ReadFloat64_2D(i, 'a3')
+		i = node.ReadFloat64_2D(i, 'a2')
 		i = self.skipBlockSize(i, 2)
 		i = self.ReadTransformation3D(node, i)
 		i = self.skipBlockSize(i)
@@ -735,6 +739,5 @@ class SheetSmReader(SegmentReader):
 		i = node.ReadFloat32A(i, 5, 'a6')
 		i = node.ReadUInt32A(i, 2, 'a7')
 		i = node.ReadFloat64_2D(i, 'a8')
-
 		# f f f f f f f f f f f f f f f f f
 		return i

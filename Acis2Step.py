@@ -2,6 +2,9 @@
 
 '''
 Acis2Step.py:
+MC:
+ Le classi maiuscolo sono 1-1 con le entity STEP. E' buono cosi si rimodella agevolmente l'object model di STEP.
+ Con la reflection viene dumpato il nome della classe.
 '''
 
 import traceback, os, sys, math, io
@@ -9,9 +12,8 @@ import Part
 import Acis
 
 from datetime          import datetime
-from importerUtils     import isEqual, getDumpFolder
-from FreeCAD           import Vector as VEC, Rotation as ROT, Placement as PLC, Matrix as MAT
-from importerUtils     import logInfo, logWarning, logError, logAlways, isEqual1D, getColorDefault, getDumpFolder, getAuthor, getDescription
+from FreeCAD           import Vector as VEC, Placement as PLC, Matrix as MAT
+from importerUtils     import logInfo, logWarning, logError, isEqual1D, getColorDefault, getDumpFolder, getAuthor, getDescription
 from importerConstants import CENTER, DIR_X, DIR_Y, DIR_Z, EPS
 
 if (sys.version_info.major > 2):
@@ -67,6 +69,7 @@ def _dbl2str(d):
 def _bool2str(v):
 	return u".T." if v else u".F."
 
+# $ significa null (come $-1 in ACIS SAT)
 def _str2str(s):
 	if (s is None): return '$'
 	return u"'%s'" %(s)
@@ -120,6 +123,7 @@ def rotation_matrix(axis, angle):
 	return MAT(m11, m12, m13, 0.0, m21, m22, m23, 0.0, m31, m32, m33, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 def _rotate(vec, rotation):
+	if rotation.Axis.Length < EPS: return vec
 	return rotation_matrix(rotation.Axis, rotation.Angle) * vec
 
 def getColor(entity):
@@ -177,7 +181,7 @@ def _createUnit(tolerance):
 
 	glob_ctx.assignments = (length, angle1, angle2)
 
-	unit.entities =  _createGeometricRepresentationList(uncr_ctx, glob_ctx, repr_ctx)
+	unit.entities = _createGeometricRepresentationList(uncr_ctx, glob_ctx, repr_ctx)
 	return unit
 
 def _createCartesianPoint(fcVec, name = ''):
@@ -426,18 +430,61 @@ CREATE_CURVE_INT ={
 	'helix_int_cur':       _createCurveIntHelix,
 	'sss_int_cur':         _createCurveIntSSS,
 }
+
+#MC vecchio/nuovo mergiato
 def _createCurveInt(acisCurve):
+	global _curveBSplines
+	shape = acisCurve.build() # fa il build con Part, va benissimo
 	spline = acisCurve.spline
 	if (spline):
 		curve = __create_b_spline_curve(spline)
 		return curve
+	elif (isinstance(shape, Part.Edge)):
+		bsc = shape.Curve
+		if (isinstance(bsc, Part.BSplineCurve)):
+			points = [_createCartesianPoint(v, 'Ctrl Pts') for v in bsc.getPoles()]
+			k1 = ",".join(["#%d"%(p.id) for p in points])
+			k2 = ""
+			mults = bsc.getMultiplicities()
+			if (mults is not None):
+				k2 = ",".join(["%d" %(d) for d in mults])
+			k3 = ""
+			knots = bsc.getKnots()
+			if (knots is not None): k3 = ",".join(["%r" %(r) for r in knots])
+			key = "(%s),(%s),(%s)" %(k1, k2, k3)
+			try:
+				curve = _curveBSplines[key]
+			except:
+				if (bsc.isRational()):
+					p0 = BOUNDED_CURVE()
+					p1 = B_SPLINE_CURVE(name=None, degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False)
+					p2 = B_SPLINE_CURVE_WITH_KNOTS(mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
+					p3 = CURVE()
+					p4 = GEOMETRIC_REPRESENTATION_ITEM()
+					p5 = RATIONAL_B_SPLINE_CURVE(bsc.getWeights())
+					p6 = REPRESENTATION_ITEM('')
+					curve = ListEntity(p0, p1, p2, p3, p4, p5, p6)
+				else:
+					curve = B_SPLINE_CURVE_WITH_KNOTS(name='', degree=bsc.Degree, points=points, form='UNSPECIFIED', closed=bsc.isClosed(), selfIntersecting=False, mults=bsc.getMultiplicities(), knots=bsc.getKnots(), form2='UNSPECIFIED')
+				_curveBSplines[key] = curve
+			return curve
+		if (isinstance(bsc, Part.Line)):
+			key = "%s,%s" %(bsc.Location, bsc.Direction)
+			try:
+				line = _lines[key]
+			except:
+				line = LINE('', None, None)
+				line.pnt = _createCartesianPoint(bsc.Location)
+				line.dir = _createVector(bsc.Direction)
+				_lines[key] = line
+			return line
 	else:
 		try:
 			create = CREATE_CURVE_INT[acisCurve.subtype]
 			return create(acisCurve)
 		except Exception as ex:
 			logError("Don't know how how to create INT_CURVE %s - %s" %(acisCurve.subtype, ex))
-		return None
+	return None
 
 def _createCurveP(acisCurve):
 	# TODO
@@ -616,7 +663,9 @@ def _createSurfaceBS(acisSurface, sense):
 
 def _createSurfaceSpline(acisFace):
 	surface = acisFace.getSurface()
-	if (surface.subtype == 'ref'): surface = surface.getSurface()
+	if (surface.subtype == 'ref'):
+		surface = surface.getSurface()
+
 	if (surface.spline):
 		return _createSurfaceBS(surface, acisFace.sense)
 	shape = acisFace.build()
@@ -636,7 +685,8 @@ def _createSurfaceSpline(acisFace):
 		return _createSurfaceRevolution(surface.profile, surface.center, surface.axis, acisFace.sense)
 	if (isinstance(shape, Part.Toroid)):
 		return _createSurfaceToroid(shape.MajorRadius, shape.MinorRadius, shape.Center, shape.Axis, acisFace.sense)
-	return None, acisFace.sense == 'forwared'
+
+	return None, acisFace.sense == 'forward'
 
 def _createSurfaceToroid(major, minor, center, axis, sense):
 	torus = TOROIDAL_SURFACE('', None, major, math.fabs(minor))
@@ -655,12 +705,41 @@ def _createSurfaceFaceShape(acisFace):
 		return _createSurfacePlane(surface.root, surface.normal, acisFace.sense)
 	if (isinstance(surface, Acis.SurfaceSphere)):
 		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, acisFace.sense)
-	if (isinstance(surface, Acis.SurfaceSpline)):
-		return _createSurfaceSpline(acisFace)
 	if (isinstance(surface, Acis.SurfaceTorus)):
 		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
+	if (isinstance(surface, Acis.SurfaceSpline)):
+		return _createSurfaceSpline(acisFace)
 	logWarning("Can't export surface '%s.%s'!" %(surface.__class__.__module__, surface.__class__.__name__))
 	return None, (acisFace.sense == 'forward')
+
+# MC vecchio
+def _createSurfaceFaceShapeOld(acisFace, shape):
+	surface = acisFace.getSurface()
+	if (isinstance(shape, Part.BSplineSurface)):
+		return _createSurfaceBSpline(shape, surface, acisFace.sense)
+	elif (isinstance(shape, Part.Cone)):
+		return _createSurfaceCone(surface.center, surface.axis, surface.cosine, surface.sine, surface.major, acisFace.sense)
+	elif (isinstance(shape, Part.Cylinder)):
+		return _createSurfaceCylinder(shape.Center, shape.Axis, shape.Radius, acisFace.sense)
+	elif (isinstance(shape, Part.Plane)):
+		return _createSurfacePlane(shape.Position, shape.Axis, acisFace.sense)
+	elif (isinstance(shape, Part.Sphere)):
+		return _createSurfaceSphere(surface.center, surface.radius, surface.pole, acisFace.sense)
+	elif (isinstance(shape, Part.SurfaceOfRevolution)):
+		return _createSurfaceRevolution(surface.profile, surface.profile.center, surface.profile.axis, acisFace.sense)
+	elif (isinstance(shape, Part.Toroid)):
+		return _createSurfaceToroid(surface.major, surface.minor, surface.center, surface.axis, acisFace.sense)
+
+# MC vecchio
+def _createSurfaceOld(acisFace):
+	faces = []
+	shape = acisFace.build() # will Return one single Face!
+	if (shape):
+		for face in shape.Faces:
+			f = _createSurfaceFaceShapeOld(acisFace, face.Surface)
+			if (f):
+				faces.append(f)
+	return faces
 
 def _convertFace(acisFace, parentColor, context):
 	color = getColor(acisFace)
@@ -672,9 +751,18 @@ def _convertFace(acisFace, parentColor, context):
 			face = ADVANCED_FACE('', surface, sense)
 			face.bounds = _createBoundaries(acisFace.getLoops())
 			assignColor(color, face, context)
-			return face
+			return [face]
+		else:
+			shells = []
+			faces = _createSurfaceOld(acisFace)
+			for surface, sense in faces:
+				face = ADVANCED_FACE('', surface, sense)
+				face.bounds = _createBoundaries(acisFace.getLoops())
+				assignColor(color, face, context)
+				shells.append(face)
+			return shells
 	except:
-		logError('Fatal forr acisFace= %s', acisFace.getSurface().getSurface())
+		logError('Fatal for acisFace= %s', acisFace.getSurface().getSurface())
 	return None
 
 def _convertShell(acisShell, representation, parentColor):
@@ -687,8 +775,12 @@ def _convertShell(acisShell, representation, parentColor):
 		shell = OPEN_SHELL('',[])
 
 		for acisFace in faces:
-			face = _convertFace(acisFace, color, representation.context)
-			shell.addFace(face)
+			#>MC vecchio
+			faces = _convertFace(acisFace, color, representation.context)
+			shell.faces += faces
+
+			#face = _convertFace(acisFace, color, representation.context)
+			#shell.addFace(face)
 		assignColor(color, shell, representation.context)
 		return shell
 
@@ -721,11 +813,10 @@ def _convertLump(acisLump, name, appContext, parentColor, transformation):
 	prod_def_ctx    = PRODUCT_DEFINITION_CONTEXT(name + '_def_ctx', appContext, 'design')
 	prod_transf_def = PRODUCT_DEFINITION(name, prod_def_fmt, prod_def_ctx)
 	prod_def_shape  = PRODUCT_DEFINITION_SHAPE(name + '_def_shape', '', prod_transf_def)
-	shapeOriginalWithProductInfo = SHAPE_DEFINITION_REPRESENTATION(name, prod_def_shape)
-	unit = _createUnit(1e-7)
-
-	lump = SHELL_BASED_SURFACE_MODEL()
+	unit  = _createUnit(1e-7)
+	lump  = SHELL_BASED_SURFACE_MODEL()
 	color = getColor(acisLump)
+
 	if (color is None): color = parentColor
 	assignColor(color, lump, unit)
 	if ((not transformation is None) and (_isIdentity(transformation)==False)):
@@ -748,21 +839,24 @@ def _convertLump(acisLump, name, appContext, parentColor, transformation):
 		shapeRepresentation_trsfs.items.append(ident_transf)
 		shapeRepresentation_trsfs.items.append(transf)
 
+		shapeOriginalWithProductInfo = SHAPE_DEFINITION_REPRESENTATION(prod_def_shape, shapeRepresentation_trsfs)
+
 		idt = ITEM_DEFINED_TRANSFORMATION('', None, ident_transf, transf)
 		rr_transf = _createTransformation(advShapeRepresentation, shapeRepresentation_trsfs, idt)
 		prod_transf = PRODUCT('', frames)
 		prod_transf_def_form = PRODUCT_DEFINITION_FORMATION(prod_transf.name + '_trans_def_form', prod_transf)
 		prod_transf_def = PRODUCT_DEFINITION(prod.name + '_trans_def', prod_transf_def_form, prod_def_ctx)
 		prod_transf_def_shape = PRODUCT_DEFINITION_SHAPE(name + '_transdef_shape', '', prod_transf_def)
-		shapeToBeTransformed = SHAPE_DEFINITION_REPRESENTATION(name, prod_transf_def_shape)
+		nass = NEXT_ASSEMBLY_USAGE_OCCURRENCE(name + '_inst', name + '_inst', '', shapeOriginalWithProductInfo.definition.definition, prod_transf_def)
+		prod_def_shape_nass = PRODUCT_DEFINITION_SHAPE('', None, nass)
+		CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(rr_transf, prod_def_shape_nass)
+		shapeToBeTransformed = SHAPE_DEFINITION_REPRESENTATION(prod_transf_def_shape, advShapeRepresentation)
 		shapeToBeTransformed.representation = advShapeRepresentation
-		nas = NEXT_ASSEMBLY_USAGE_OCCURRENCE(name + '_inst', name + '_inst', '', shapeOriginalWithProductInfo.definition.definition, shapeToBeTransformed.definition.definition)
-		prod_def_shape = PRODUCT_DEFINITION_SHAPE(None, None, nas)
-		CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(rr_transf, prod_def_shape)
 		shapeRet = shapeToBeTransformed
 	else:
 		shapeRepresentation = SHAPE_REPRESENTATION(unit)
 		shapeRepresentation.items.append(lump)
+		shapeOriginalWithProductInfo = SHAPE_DEFINITION_REPRESENTATION(prod_def_shape, shapeRepresentation)
 		shapeOriginalWithProductInfo.representation = shapeRepresentation
 		shapeRet = shapeOriginalWithProductInfo
 
@@ -1116,8 +1210,8 @@ class ELLIPSE(NamedEntity):
 class AXIS1_PLACEMENT(NamedEntity):
 	def __init__(self, name='', location=None, axis=None):
 		super(AXIS1_PLACEMENT, self).__init__(name)
-		self.location  = location
-		self.axis      = axis
+		self.location = location
+		self.axis     = axis
 	def _getParameters(self):
 		return super(AXIS1_PLACEMENT, self)._getParameters() + [self.location, self.axis]
 
@@ -1264,7 +1358,7 @@ class PLANE_ANGLE_UNIT(NAMED_UNIT):
 class CONVERSION_BASED_UNIT(NAMED_UNIT):
 	def __init__(self, name, factor):
 		super(CONVERSION_BASED_UNIT, self).__init__(factor)
-		self.name   = name
+		self.name = name
 	def _getParameters(self):
 		return [self.name] + super(CONVERSION_BASED_UNIT, self)._getParameters()
 
@@ -1341,7 +1435,7 @@ class DIMENSIONAL_EXPONENTS(ReferencedEntity):
 		self.current     = current
 		self.temperature = temperature
 		self.amount      = amount
-		self.luminosity = luminosity
+		self.luminosity  = luminosity
 	def _getParameters(self):
 		return super(DIMENSIONAL_EXPONENTS, self)._getParameters() +[self.length, self.mass, self.time, self.current, self.temperature, self.amount, self.luminosity]
 
@@ -1429,7 +1523,7 @@ class MANIFOLD_SURFACE_SHAPE_REPRESENTATION(SHAPE_REPRESENTATION):
 		super(MANIFOLD_SURFACE_SHAPE_REPRESENTATION, self).__init__()
 
 class SHAPE_DEFINITION_REPRESENTATION(ReferencedEntity):
-	def __init__(self, name, definition = None, representation = None):
+	def __init__(self, definition = None, representation = None):
 		super(SHAPE_DEFINITION_REPRESENTATION, self).__init__()
 		self.definition = definition
 		self.representation = representation
@@ -1619,7 +1713,7 @@ class EDGE_CURVE(NamedEntity):
 class CURVE(ReferencedEntity):
 	def __init__(self, name=None):
 		super(CURVE, self).__init__()
-		self.name             = name
+		self.name = name
 
 class BOUNDED_CURVE(CURVE):
 	def __init__(self, name=None):
@@ -1652,16 +1746,16 @@ class B_SPLINE_CURVE(ReferencedEntity):
 		return l
 
 class B_SPLINE_CURVE_WITH_KNOTS(B_SPLINE_CURVE):
-	def __init__(self, name='', degree=None, points=None, form=None, closed=False, selfIntersecting=False, mults=None, knots=None, form2=None):
+	def __init__(self, name=None, degree=None, points=None, form=None, closed=None, selfIntersecting=None, mults=None, knots=None, form2=None):
 		super(B_SPLINE_CURVE_WITH_KNOTS, self).__init__(name, degree, points, form, closed, selfIntersecting)
-		self.mults            = mults
-		self.knots            = knots
-		self.form2            = _getE(form2)
+		self.mults = mults
+		self.knots = knots
+		self.form2 = _getE(form2)
 	def _getParameters(self):
 		l = super(B_SPLINE_CURVE_WITH_KNOTS, self)._getParameters()
-		if (self.mults            is not None): l.append(self.mults)
-		if (self.knots            is not None): l.append(self.knots)
-		if (self.form2            is not None): l.append(self.form2)
+		if (self.mults is not None): l.append(self.mults)
+		if (self.knots is not None): l.append(self.knots)
+		if (self.form2 is not None): l.append(self.form2)
 		return l
 
 class SURFACE_OF_REVOLUTION(NamedEntity):
@@ -1695,13 +1789,13 @@ class B_SPLINE_SURFACE(ReferencedEntity):
 class B_SPLINE_SURFACE_WITH_KNOTS(ReferencedEntity):
 	def __init__(self, name=None, uDegree=None, vDegree=None, points=None, form=None, uClosed=None, vClosed=None, selfIntersecting=None, uMults=None, vMults=None, uKnots=None, vKnots=None, form2=None):
 		super(B_SPLINE_SURFACE_WITH_KNOTS, self).__init__()
-		self.name			  = name
-		self.uDegree		  = uDegree
-		self.vDegree		  = vDegree
-		self.points			  = points
-		self.form			  = _getE(form)
-		self.uClosed		  = uClosed
-		self.vClosed		  = vClosed
+		self.name             = name
+		self.uDegree          = uDegree
+		self.vDegree          = vDegree
+		self.points           = points
+		self.form             = _getE(form)
+		self.uClosed          = uClosed
+		self.vClosed          = vClosed
 		self.selfIntersecting = selfIntersecting
 		self.uMults           = uMults
 		self.vMults           = vMults
@@ -1812,4 +1906,4 @@ def export(filename, satHeader, satBodies):
 
 	logInfo(u"STEP file written to '%s'.", stepfile)
 
-	return stepfile
+	return stepfile #MC: non lo usa nessuno

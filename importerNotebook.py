@@ -11,6 +11,7 @@ TODO:
 from importerSegment import SegmentReader, checkReadAll
 import importerSegNode
 from importerUtils   import *
+from importerConstants import VAL_UINT32
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -47,36 +48,34 @@ class NotebookReader(SegmentReader):
 		i = self.skipBlockSize(i)
 		return i
 
-	def Read_B33B66CF(self, node):
-		i = node.Read_Header0()
-		i = node.ReadUInt32A(i, 2, 'a0')
+	def ReadArea(self, node, ta = None): # ???Area
+		if (ta is None): ta = 'Area_' + node.typeName
+		i = node.Read_Header0(ta)
+		i = node.ReadUInt32(i, 'u32_0')
+		if (self.version < 2024): i += 4 # skip UInt32
 		i = self.skipBlockSize(i, 2)
-		i = node.ReadUInt32A(i, 5, 'a1')
-		return i
-
-	def Read_CC253BB7(self, node): # TextArea
-		i = node.Read_Header0('TextArea')
-		i = node.ReadUInt32A(i, 2, 'a0')
-		i = self.skipBlockSize(i)
 		i = node.ReadUInt32A(i, 4, 'a1')
 		i = node.ReadLen32Text16(i)
 		i = self.skipBlockSize(i)
+		return i
+
+	def Read_B33B66CF(self, node): # ???Area
+		i = self.ReadArea(node)
+		return i
+
+	def Read_CC253BB7(self, node): # TextArea
+		i = self.ReadArea(node, 'TextArea')
 		i = node.ReadChildRef(i, 'ref_0')
 		i = node.ReadUInt8A(i, 8, 'a2')
 		i = node.ReadLen32Text16(i, 'author')
 		return i
 
 	def Read_D8705BC7(self, node): # GraphicsArea
-		i = node.Read_Header0('GraphicsArea')
-		i = node.ReadUInt32A(i, 2, 'a0')
-		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 4, 'a1')
-		i = node.ReadLen32Text16(i)
-		i = self.skipBlockSize(i)
+		i = self.ReadArea(node, 'GraphicsArea')
 		i = node.ReadFloat64A(i, 7, 'a2')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = node.ReadFloat64A(i, 12, 'a3')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_E23E5AE6(self, node):
@@ -88,7 +87,11 @@ class NotebookReader(SegmentReader):
 	# Int List2 sections
 	def ReadHeaderU32Lst2(self, node, typeName = None):
 		i = node.Read_Header0(typeName)
-		i = node.ReadUInt32A(i, 2, 'a0')
+		if (self.version < 2024):
+			i = node.ReadUInt32A(i, 2, 'a0')
+		else:
+			n, i = getUInt32(node.data, i)
+			node.set('a0', (n, 0), VAL_UINT32)
 		i = self.skipBlockSize(i)
 		i = node.ReadList3(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		i = self.skipBlockSize(i)
@@ -98,7 +101,7 @@ class NotebookReader(SegmentReader):
 		i = self.ReadHeaderU32Lst2(node, 'Notebook')
 		i = node.ReadChildRef(i, 'ref_0')
 		i = node.ReadUInt8(i, 'u8_0')
-		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadUInt32(i, 'self') # looks like self ref!
 		i = node.ReadUInt8(i, 'u8_1')
 		return i
 

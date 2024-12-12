@@ -15,7 +15,7 @@ import traceback, Part, FreeCAD, re
 
 from importerUtils     import *
 from FreeCAD           import Vector as VEC, Placement as PLC, Matrix as MAT, Base
-from math              import pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
+from math              import inf, pi, fabs, degrees, asin, sin, cos, tan, atan2, ceil, e, cosh, sinh, tanh, acos, acosh, asin, asinh, atan, atanh, log, sqrt, exp, log10
 from importerConstants import MIN_0, MIN_PI, MIN_PI2, MIN_INF, MAX_2PI, MAX_PI, MAX_PI2, MAX_INF, MAX_LEN, CENTER, DIR_X, DIR_Y, DIR_Z, ENCODING_FS
 
 V2D = Base.Vector2d
@@ -91,7 +91,7 @@ scale = 1.0
 _nameMtchAttr    = {}
 _dcIdxAttributes = {} # dict of an attribute list
 
-LENGTH_TEXT = re.compile('[ \t]*(\d+) +(.*)')
+LENGTH_TEXT = re.compile('[ \t]*(\\d+) +(.*)')
 
 TOKEN_TRANSLATIONS = {
 	'0x0a':       TAG_TRUE,
@@ -334,8 +334,12 @@ def createEntity(record):
 				i += 1
 		logError(u"    Missing class implementation for '%s' - using base class '%s'!", record.name, t)
 
-	if (hasattr(entity, 'set')):
-		entity.set(record)
+	try:
+		if (hasattr(entity, 'set')):
+			entity.set(record)
+	except:
+		#MC e' importante recuperare quando non si riesce a parsare un item
+		return None
 	return entity
 
 def getValue(chunks, index):
@@ -890,7 +894,7 @@ def createBSplinesPCurve(pcurve, surface, sense):
 		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
 	return shape
 
-def createBSplinesCurve(nubs, sense):
+def createBSplinesCurve(nubs, sense, subtype):
 	if (nubs is None):
 		return None
 	number_of_poles = len(nubs.poles)
@@ -920,7 +924,7 @@ def createBSplinesCurve(nubs, sense):
 			# periodic = nubs.uPeriodic
 			shape = bsc.toShape()
 		except Exception as e:
-			logError(traceback.format_exc())
+			logWarning("Can't create BSpline-Curve for suptype '%s'!" %(subtype))
 	if (shape is not None):
 		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
 	return shape
@@ -1152,19 +1156,19 @@ def pointOnSurface(point, surface): # point should be an ACIS-Point and surface 
 	return False
 
 def getParameterization(pts, fac, closed):
-        # Computes a knot Sequence for a set of points
-        # fac (0-1) : parameterization factor
-        #     0 -> Uniform
-        #     0.5 -> Centripetal
-        #     1.0 -> Chord-Length
-        if closed: # we need to add the first point as the end point
-            pts.append(pts[0])
-        params = [0]
-        for i in range(1, len(pts)):
-            p = pts[i].sub(pts[i-1])
-            pl = pow(p.Length, fac) # parametrization -> Chord-Length
-            params.append(params[-1] + pl)
-        return params
+	# Computes a knot Sequence for a set of points
+	# fac (0-1) : parameterization factor
+	#     0 -> Uniform
+	#     0.5 -> Centripetal
+	#     1.0 -> Chord-Length
+	if closed: # we need to add the first point as the end point
+		pts.append(pts[0])
+	params = [0]
+	for i in range(1, len(pts)):
+		p = pts[i].sub(pts[i-1])
+		pl = pow(p.Length, fac) # parametrization -> Chord-Length
+		params.append(params[-1] + pl)
+	return params
 
 class BDY_GEOM(object):
 	def __init__(self, svId):
@@ -1333,6 +1337,12 @@ class Helix(object):
 		return VEC(x, y, z)
 
 	def build(self):
+		# TODO: see InporterViewProvider._Coil._makeHelix(self, coil) instead:
+		# line = Part.Line(self.posCenter, self.posCenter + self.vecAxis)
+		# radius = line.projectPoint(self.Profile.Shape.CenterOfMass, "LowerDistance")
+		# helix = Part.makeLongHelix(slef.getPitch(), self.getHeight(), self.getRadius(), self.getApexAngle(), self.isLeftHanded())
+		# self.pathWires.append(helix)
+
 		min_U   = self.radAngles.getLowerLimit()
 		max_U   = self.radAngles.getUpperLimit()
 		r_maj   = self.dirMajor.Length
@@ -2616,7 +2626,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 	def build(self, start=None, end=None):
 		if (self.__ready_to_build__):
 			self.__ready_to_build__ = False
-			self.shape = createBSplinesCurve(self.spline, self.sense)
+			self.shape = createBSplinesCurve(self.spline, self.sense, self.subtype)
 
 			if (self.subtype == 'ref'):
 				cur = self.curve
@@ -2772,11 +2782,17 @@ class CurveStraight(Curve):# straight curve "straight-curve"
 			if (start is None):
 				start = self.root
 			elif (type(start) == float):
-				start = line.value(start)
+				if (start == inf or start == -inf):
+					start = self.root
+				else:
+					start = line.value(start)
 			if (end is None):
 				end = self.dir + self.root
 			elif (type(end) == float):
-				end = line.value(end)
+				if (end == inf or end == -inf):
+					end = self.root + self.dir
+				else:
+					end = line.value(end)
 			self.shape = createLine(start, end)
 		return self.shape
 
@@ -2809,6 +2825,7 @@ class SurfaceCone(Surface):
 		self.sense  = 'forward'
 		self.urange = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange = Interval(Range('I', MIN_INF), Range('I', MAX_INF))
+		self.apex   = None
 	def getSatTextGeometry(self, index):
 		if (getVersion() >= 4.0):
 			return "%s %s %s %g %s %g %g %g %s %s %s #" %(
@@ -2851,7 +2868,7 @@ class SurfaceCone(Surface):
 		self.sense, i  = getEnumByTag(chunks, i, SENSE)
 		self.urange, i = getInterval(chunks, i, MIN_0, MAX_2PI, 1.0)
 		self.vrange, i = getInterval(chunks, i, MIN_INF, MAX_INF, getScale())
-		if (self.sine == 0.):
+		if (isEqual1D(self.sine, 0.)): # 90 Deg
 			self.apex = None
 		else:
 			h = self.major.Length / tan(asin(self.sine))
@@ -2947,18 +2964,138 @@ class SurfaceSphere(Surface):
 			sphere.Radius = fabs(self.radius)
 			self.shape = sphere.toShape()
 		return self.shape
+class SurfaceTSpline(Surface):
+	def __init__(self, data, values):
+		import logging
+		super().__init__('t_spline')
+		self.subtype = ''
+		self.lines  = data.split('\n')
+		self.ln_idx = 0
+		self.values = values.split('\n')
+		self.line   = None
+		self.values = None
+		self.logger = logging.getLogger("SurfaceTSpline")
+		self.dispatcher = self._build_dispatch_map()
+		self.strict = False
+		self.header = {}
+		self._f         = []
+		self._e         = []
+		self._v         = []
+		self._l         = []
+		self._ec        = []
+		self._0m        = []
+		self._0g        = []
+		self._100edges  = []
+		self._100verts  = []
+		self._105sym    = []
+		self._105plane  = []
+		self._105a      = []
+		self._106ek     = []
+		self._50000grip = []
+	def parse_degree(self):           self.header[self.values[0]] = self.values[1]
+	def parse_cap_type(self):         self.header[self.values[0]] = self.values[1]
+	def parse_units(self):            self.header[self.values[0]] = self.values[1]
+	def parse_end_conditions(self):   self.header[self.values[0]] = self.values[1]
+	def parse_star_knot_rule(self):   self.header[self.values[0]] = self.values[1]
+	def parse_star_smoothness(self):  self.header[self.values[0]] = self.values[1]
+	def parse_tol(self):              self.header[self.values[0]] = self.values[1]
+	def parse_ver(self):              self.header[self.values[0]] = self.values[1]
+	def parse_behavior_version(self): self.header[self.values[0]] = self.values[1]
+	def parse_geom_tol(self):         self.header[self.values[0]] = self.values[1]
+	def parse_compat_version(self):   self.header[self.values[0]] = self.values[1]
+	def parse_f(self):                self._f.append(self.values[1:])
+	def parse_e(self):                self._e.append(self.values[1:])
+	def parse_v(self):                self._v.append(self.values[1:])
+	def parse_l(self):                self._l.append(self.values[1:])
+	def parse_ec(self):               self._ec.append(self.values[1:])
+	def parse_0m(self):               self._0m.append(self.values[1:])
+	def parse_0g(self):               self._0g.append(self.values[1:])
+	def parse_100edges(self):         self._100edges.append(self.values[1:])
+	def parse_100verts(self):         self._100verts.append(self.values[1:])
+	def parse_105sym(self):           self._105sym.append(self.values[1:])
+	def parse_105plane(self):
+		center = VEC(self.values[1:4]) * getScale()
+		self._105plane.append((center, self.values[4:]))
+	def parse_105a(self):
+		sub_type = self.values[1]
+		if (sub_type == 'fr'):
+			r = [sub_type,] + self.values[2:] # [self.f[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'er'):
+			r = [sub_type,] + self.values[2:] #[self.e[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'vr'):
+			r = [sub_type,] + self.values[2:] #[self.v[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'f'):
+			r = [sub_type,] + self.values[2:] #[self.f[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'e'):
+			r = [sub_type,] + self.values[2:] #[self.e[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		elif (sub_type == 'v'):
+			r = [sub_type,] + self.values[2:] #[self.v[idx] for idx in self.values[2:]]
+			self._105a.append(r)
+		else:
+			r = [sub_type,] + self.values[2:] #
+			self._105a.append(r)
+	def parse_106ek(self):
+		self._106ek.append(self.values[1:])
+	def parse_50000grip(self): self._50000grip.append(self.values[1:])
+	def next_line(self):
+		self.line = self.lines[self.ln_idx]
+		self.values = self.line.split()
+		self.ln_idx += 1
+		if (len(self.lines) <= self.ln_idx): raise StopIteration()
+	def consume_line(self):
+		self.line   = None
+		self.values = None
+	def parse_fallback(self):
+			"""Fallback method when parser doesn't know the statement"""
+			if self.strict:
+				raise Exception("Unimplemented TSpline statement '%s' on line '%s'" % (self.values[0], self.line.rstrip()))
+			else:
+				self.logger.warning("Unimplemented TSpline statement '%s' on line '%s'" % (self.values[0], self.line.rstrip()))
+
+	def parse(self):
+		"""
+		Parse all the lines in the data
+		Determines what type of line we are and dispatch appropriately.
+		"""
+		try:
+			# Continues until `next_line()` raises StopIteration
+			# This can trigger here or in parse functions in the subclass
+			while True:
+				# Only advance the parser if the previous line was consumed.
+				# Parse functions reading multiple lines can end up reading one line too far,
+				# so they return without consuming the line and we pick it up here
+				while not self.line:
+					self.next_line()
+
+				if self.line[0] == '#' or len(self.values) < 2:
+					self.consume_line()
+					continue
+
+				self.dispatcher.get(self.values[0].replace('-', '_'), self.parse_fallback)()
+				self.consume_line()
+		except StopIteration:
+			pass
+	def _build_dispatch_map(self):
+		return {"_".join(a.split("_")[1:]): getattr(self, a) for a in dir(self) if a.startswith("parse_")}
 class SurfaceSpline(Surface):
 	def __init__(self):
 		super(SurfaceSpline, self).__init__('spline')
 		self.surface = None
 		self.spline  = None
-	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
-	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self. subtype)
+	def __str__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self.subtype)
+	def __repr__(self): return "%s %s {%s ...}" %(self.__name__, SENSE.get(self.sense, self.sense), self.subtype)
 	def _readLoftData(self, chunks, index):
 		ld = LoftData()
-		ld.surface, i = readSurface(chunks, index)
+		i = index
+		ld.surface, i = readSurface(chunks, i)
 		ld.bs2cur, i  = readBS2Curve(chunks, i)
 		ld.e1, i      = getBoolean(chunks, i)
+		if (isASM() and getAsmMajor() > 228): i += 1 # skip -1
 		subdata, i    = readLofSubdata(chunks, i)
 		(ld.type, n, m, v) = subdata
 		ld.e2, i      = getBoolean(chunks, i)
@@ -3262,11 +3399,10 @@ class SurfaceSpline(Surface):
 			v31, i = getFloat(chunks, i)
 		elif (t1 == 5):
 			self.surface, i = readSurface(chunks, i)
+			i32, i = getLong(chunks, i) # iEdidF{...}
 			e31, i = getBoolean(chunks, i)
 			f32, i = getFloat(chunks, i)
 			i33, i = getInteger(chunks, i)
-			if (getVersion() > 225) and isASM():
-				i34, i = getEnumByTag(chunks, i, [])
 			f34, i = getFloat(chunks, i)
 			self.curve = CurveInt()
 			i = self.curve.setSubtype(chunks, i)
@@ -3629,9 +3765,12 @@ class SurfaceSpline(Surface):
 		i += 1
 		# block: ((t_spl_subtrans_object, flag?, values (str))|ref number)
 		if (chunks[i].val == 't_spl_subtrans_object'):
-			self.tSplineText, i = getValue(chunks, i + 1)
+			data, i = getValue(chunks, i + 1)
 			if (chunks[i].tag != TAG_UTF8_U16): i += 1
-			self.tSplineValues, i = getValue(chunks, i)
+			values, i = getValue(chunks, i)
+			t_spline = SurfaceTSpline(data, values)
+			getReader().addSubtypeEntity(t_spline)
+			t_spline.parse()
 		else:
 			assert (chunks[i].val == 'ref')
 			self.tRef, i = getInteger(chunks, i + 1)
@@ -3884,10 +4023,10 @@ class SurfaceSpline(Surface):
 					else:
 						logError("    Can't create curve for revolution of (%r)" %(self.profile))
 			elif (self.subtype == 'sum_spl_sur'):
-				rngU = self.tolerance[2]
+				rngU = self.rangeU
 				curve1 = self.curve1.build(rngU.getLowerLimit(), rngU.getUpperLimit())
 				if (curve1 is not None):
-					rngV = self.tolerance[3]
+					rngV = self.rangeV
 					curve2 = self.curve2.build(rngV.getLowerLimit(), rngV.getUpperLimit())
 					if (curve2 is not None):
 						self.shape = Part.makeRuledSurface(curve1, curve2)
@@ -3936,6 +4075,7 @@ class SurfaceTorus(Surface):
 		self.sensev   = 'forward_v'
 		self.urange   = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
 		self.vrange   = Interval(Range('I', MIN_0), Range('I', MAX_2PI))
+		self.profile  = None
 	def getSatTextGeometry(self, index): return "%s %s %s %s %s %s %s %s #" %(vec2sat(self.center), vec2sat(self.axis), self.major, self.minor, vec2sat(self.uvorigin), self.sensev, self.urange, self.vrange)
 	def __repr__(self):      return "Surface-Torus: center=%s, normal=%s, R=%g, r=%g, uvorigin=%s" %(self.center, self.axis, self.major, self.minor, self.uvorigin)
 	def setSubtype(self, chunks, index):

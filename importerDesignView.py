@@ -8,9 +8,10 @@ The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Old
 TODO:
 '''
 
+from importerConstants import VAL_REF
 from importerSegment import SegmentReader
 from importerUtils   import *
-from importerSegNode import _TYP_NODE_REF_, _TYP_UINT32_, _TYP_LIST_UINT32_A_
+from importerSegNode import _TYP_NODE_REF_, _TYP_UINT32_, _TYP_LIST_UINT32_A_, _TYP_NODE_REF_
 
 __author__      = 'Jens M. Plonka'
 __copyright__   = 'Copyright 2017, Germany'
@@ -70,14 +71,19 @@ class DesignViewReader(SegmentReader):
 
 	def Read_9B043321(self, node):
 		i = node.Read_Header0()
-		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'ref0')
-		i = self.skipBlockSize(i)
-		if (self.version < 2020):
-			i = node.ReadLen32Text16(i)
-		else:
+		if (self.version > 2024):
+			i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
 			i = node.ReadUInt32(i, 'u32_1')
-		if (self.version > 2012): i += 4 # skip ?? ?? ?? ??
+			i = node.ReadUInt32(i, 'u32_2')
+		else:
+			i = self.skipBlockSize(i)
+			i = node.ReadChildRef(i, 'ref0')
+			i = self.skipBlockSize(i)
+			if (self.version < 2020):
+				i = node.ReadLen32Text16(i)
+			else:
+				i = node.ReadUInt32(i, 'u32_1')
+			if (self.version > 2012): i += 4 # skip ?? ?? ?? ??
 		return i
 
 	def Read_551FB1BF(self, node):
@@ -134,7 +140,13 @@ class DesignViewReader(SegmentReader):
 	def Read_D9980532(self, node):
 		i = node.Read_Header0()
 		i = self.skipBlockSize(i)
-		i = node.ReadChildRef(i, 'ref0')
+		if (self.version < 2024):
+			i = node.ReadChildRef(i, 'ref0')
+			ref0 = node.get('ref0')
+			node.delete('ref0')
+			node.set('lst0', (ref0,), VAL_REF)
+		else:
+			i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
 		i = self.skipBlockSize(i)
 		i = node.ReadBoolean(i, 'b0')
 		i = self.skipBlockSize(i)

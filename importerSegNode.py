@@ -22,6 +22,7 @@ APP_4_B1 = Struct('<ffHB').unpack_from
 APP_4_B2 = Struct('<ffHH').unpack_from
 APP_5_A  = Struct('<ddL').unpack_from
 APP_5_B  = Struct('<BBH').unpack_from
+APP_5_C  = Struct('<BBHB').unpack_from
 MTM_LST  = Struct('<LBL').unpack_from
 
 def isList(data, code):
@@ -76,6 +77,7 @@ _TYP_MTM_LST_               = 0x004A
 _TYP_NODE_LST2_X_REF_       = 0x004B
 _TYP_TRANSFORMATIONS_       = 0x004C
 _TYP_U16_COLOR_             = 0x004D
+_TYP_F64_F64_U32_U8_U8_U16_U8_ = 0x004E
 
 _TYP_LIST_UINT16_A_         = 0x8001
 _TYP_LIST_SINT16_A_         = 0x8002
@@ -101,18 +103,19 @@ _TYP_MAP_TEXT16_X_REF_      = 0x700B
 _TYP_MAP_TEXT16_UINT32_     = 0x700C
 _TYP_MAP_X_REF_REF_         = 0x700D
 _TYP_MAP_X_REF_FLOAT64_     = 0x700E
-_TYP_MAP_X_REF_2D_UINT32_   = 0x700F
-_TYP_MAP_X_REF_X_REF_       = 0x7010
-_TYP_MAP_U32_LIST2_XREF_    = 0x7011
-_TYP_MAP_X_REF_LIST2_XREF_  = 0x7012
-_TYP_MAP_UID_UINT32_        = 0x7013
-_TYP_MAP_UID_X_REF_         = 0x7014
-_TYP_MAP_UID_REF_           = 0x7015
-_TYP_MAP_U16_U16_           = 0x7016
-_TYP_MAP_U16_XREF_          = 0x7017
-_TYP_MAP_KEY_APP_1_         = 0x7018
-_TYP_MAP_KEY_MAP_APP_1_     = 0x7019
-_TYP_MAP_TXT16_UINT32_7_    = 0x7020
+_TYP_MAP_X_REF_1D_UINT32_   = 0x700F
+_TYP_MAP_X_REF_2D_UINT32_   = 0x7010
+_TYP_MAP_X_REF_X_REF_       = 0x7011
+_TYP_MAP_U32_LIST2_XREF_    = 0x7012
+_TYP_MAP_X_REF_LIST2_XREF_  = 0x7013
+_TYP_MAP_UID_UINT32_        = 0x7014
+_TYP_MAP_UID_X_REF_         = 0x7015
+_TYP_MAP_UID_REF_           = 0x7016
+_TYP_MAP_U16_U16_           = 0x7017
+_TYP_MAP_U16_XREF_          = 0x7018
+_TYP_MAP_KEY_APP_1_         = 0x7019
+_TYP_MAP_KEY_MAP_APP_1_     = 0x7020
+_TYP_MAP_TXT16_UINT32_7_    = 0x7021
 
 _TYP_MAP_MDL_TXN_MGR_       = 0x6001
 
@@ -151,6 +154,7 @@ TYP_LIST_FUNC = {
 	_TYP_U32_TXT_U32_LST2_:      'getListApp3',
 	_TYP_APP_1_:                 'getListApp4',
 	_TYP_F64_F64_U32_U8_U8_U16_: 'getListApp5',
+	_TYP_F64_F64_U32_U8_U8_U16_U8_: 'getListApp6',
 	_TYP_NT_ENTRY_:              'getListNtEntries',
 	_TYP_MTM_LST_:               'getListMdlrTxnMgr',
 	_TYP_NODE_LST2_X_REF_:       'getListList2XRef',
@@ -202,6 +206,7 @@ TYP_MAP_FUNC = {
 	_TYP_MAP_X_REF_REF_:        'getMapXRefRef',
 	_TYP_MAP_X_REF_FLOAT64_:    'getMapXRefF64',
 	_TYP_MAP_X_REF_X_REF_:      'getMapXRefXRef',
+	_TYP_MAP_X_REF_1D_UINT32_:  'getMapXRefU1D',
 	_TYP_MAP_X_REF_2D_UINT32_:  'getMapXRefU2D',
 	_TYP_MAP_U32_LIST2_XREF_:   'getMapU32XRefL',
 	_TYP_MAP_X_REF_LIST2_XREF_: 'getMapXRefXRefL',
@@ -613,18 +618,24 @@ class SecNode(AbstractData):
 	def getListApp1(self, name, offset, cnt, arraysize):
 		lst = []
 		i   = offset
-		skip = (getFileVersion() < 2011)
-		if (skip):
+		skip = False
+		if (getFileVersion() < 2011):
+			skip = True
 			APP_1 = Struct('<ddLLBBBBL').unpack_from
+			size = 32
+		elif (getFileVersion() > 2023):
+			APP_1 = Struct('<ddLBBBBB').unpack_from
+			size = 25
 		else:
 			APP_1 = Struct('<ddLBBBB').unpack_from
+			size = 24
 		for j in range(cnt):
 			val = APP_1(self.data, i)
 			if (skip):
 				val = val[0:3] + val[4:8]
-				i += 32
 			else:
-				i += 24
+				val = val[0:7]
+			i += size
 			lst.append(val)
 		self.set(name, lst)
 		return i
@@ -708,7 +719,22 @@ class SecNode(AbstractData):
 			n2, n3, n4 = APP_5_B(self.data, i)
 			i += 4
 			i += skip
-			lst.append((f1, f2, n1, n2,  n3,  n4))
+			lst.append((f1, f2, n1, n2,  n3,  n4, 0))
+		self.set(name, lst)
+		return i
+
+	def getListApp6(self, name, offset, cnt, arraysize):
+		lst  = []
+		i    = offset
+		skip = getBlockSize()
+		for j in range(cnt):
+			f1, f2, n1 = APP_5_A(self.data, i)
+			i += 20
+			i += skip
+			n2, n3, n4, n5 = APP_5_C(self.data, i)
+			i += 5
+			i += skip
+			lst.append((f1, f2, n1, n2,  n3,  n4, n5))
 		self.set(name, lst)
 		return i
 
@@ -989,7 +1015,7 @@ class SecNode(AbstractData):
 		i = func(name, i, cnt)
 		return i
 
-	def	getMapU16U16(self, name, offset, cnt):
+	def getMapU16U16(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -999,7 +1025,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_UINT16)
 		return i
 
-	def	getMapU16XRef(self, name, offset, cnt):
+	def getMapU16XRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1009,7 +1035,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapU32U8(self, name, offset, cnt):
+	def getMapU32U8(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1019,7 +1045,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_UINT8)
 		return i
 
-	def	getMapU32U32(self, name, offset, cnt):
+	def getMapU32U32(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1029,7 +1055,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_UINT32)
 		return i
 
-	def	getMapU32F64(self, name, offset, cnt):
+	def getMapU32F64(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1039,7 +1065,7 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
-	def	getMapU32Ref(self, name, offset, cnt):
+	def getMapU32Ref(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1049,7 +1075,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapU32XRef(self, name, offset, cnt):
+	def getMapU32XRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1059,7 +1085,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapRefRef(self, name, offset, cnt):
+	def getMapRefRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1070,7 +1096,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapXRefRef(self, name, offset, cnt):
+	def getMapXRefRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1081,7 +1107,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapXRefXRef(self, name, offset, cnt):
+	def getMapXRefXRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1092,7 +1118,18 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapXRefU2D(self, name, offset, cnt):
+	def getMapXRefU1D(self, name, offset, cnt):
+		lst = {}
+		i   = offset
+		for j in range(cnt):
+			i = self.ReadCrossRef(i, name, j)
+			key = self.get(name)
+			val, i = getUInt32(self.data, i)
+			lst[key] = val
+		self.set(name, lst, VAL_UINT32)
+		return i
+
+	def getMapXRefU2D(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1103,7 +1140,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_UINT32)
 		return i
 
-	def	getMapXRefF64(self, name, offset, cnt):
+	def getMapXRefF64(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1114,7 +1151,7 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
-	def	getMapU32XRefL(self, name, offset, cnt):
+	def getMapU32XRefL(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1126,7 +1163,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapXRefXRefL(self, name, offset, cnt):
+	def getMapXRefXRefL(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1140,7 +1177,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapUidU32(self, name, offset, cnt):
+	def getMapUidU32(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1150,7 +1187,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_UINT32)
 		return i
 
-	def	getMapUidCRef(self, name, offset, cnt):
+	def getMapUidCRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1160,7 +1197,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapUidXRef(self, name, offset, cnt):
+	def getMapUidXRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1170,7 +1207,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapT8Ref(self, name, offset, cnt):
+	def getMapT8Ref(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1180,7 +1217,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapT8XRef(self, name, offset, cnt):
+	def getMapT8XRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1190,7 +1227,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapT83dF64(self, name, offset, cnt):
+	def getMapT83dF64(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1200,7 +1237,7 @@ class SecNode(AbstractData):
 		self.set(name, lst)
 		return i
 
-	def	getMapT16Ref(self, name, offset, cnt):
+	def getMapT16Ref(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1210,7 +1247,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapT16XRef(self, name, offset, cnt):
+	def getMapT16XRef(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1220,7 +1257,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_REF)
 		return i
 
-	def	getMapT16U32(self, name, offset, cnt):
+	def getMapT16U32(self, name, offset, cnt):
 		lst = {}
 		i   = offset
 		for j in range(cnt):
@@ -1230,7 +1267,7 @@ class SecNode(AbstractData):
 		self.set(name, lst, VAL_UINT32)
 		return i
 
-	def	getMapMdlTxnMgr(self, name, offset, cnt):
+	def getMapMdlTxnMgr(self, name, offset, cnt):
 		lst = []
 		i   = offset
 		skip = getBlockSize()
@@ -1521,6 +1558,11 @@ class SecNodeRef(object):
 	def getValue(self):
 		node = self.node
 		if (node): return node.getValue()
+		return None
+
+	def getValueText(self):
+		node = self.node
+		if (node): return node.getValueText()
 		return None
 
 	def getNominalValue(self):

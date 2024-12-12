@@ -144,6 +144,8 @@ class EeSceneReader(StyleReader):
 	def Read_D79AD3F3(self, node): # Edge ...
 		i = self.Read_A79EACD2(node, None)
 		i = self.skipBlockSize(i)
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst5')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT8_A_, 'lst6', 4)
 		return i
 
 	def Read_37DB9D1E(self, node): # Plane surface
@@ -175,7 +177,17 @@ class EeSceneReader(StyleReader):
 		return i
 
 	def Read_A529D1E2(self, node): # Part GroupNode
-		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
+		i = node.Read_Header0('GroupNode')
+		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'attrs')
+		i = node.ReadUInt8(i, 'u8_0')
+		i = self.skipBlockSize(i)
+		if (self.version < 2025):
+			i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'parts')
+		else:
+			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
+#		i = self.skipBlockSize(i)
+#		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
 		return i
 
 	def Read_36ABFE49(self, node): # Assembly GroupNode
@@ -365,18 +377,21 @@ class EeSceneReader(StyleReader):
 		i = node.Read_Header0('MultiBodyNode')
 		i = node.ReadUInt32(i, 'u32_0')
 		i = node.ReadChildRef(i, 'attrs')
-		i = node.ReadUInt8(i, 'u8_0')
+		i = node.ReadBoolean(i, 'b0')
 		i = self.skipBlockSize(i)
-		i = node.ReadUInt32A(i, 3, 'a1')
+		i = node.ReadUInt32A(i, 3, 'a0')
 		i = node.ReadUInt8(i, 'u8_1')
 		i = node.ReadChildRef(i, 'body')
 		if (self.version < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt16(i, 'u16_0')
-		i = node.ReadUInt32A(i, 5, 'a3')
-		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		i = node.ReadUInt32A(i, 5, 'a1')
+		if (self.version < 2024):
+			i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		else:
+			i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_U8_, 'lst0')
 		i = self.skipBlockSize(i)
-		i = node.ReadFloat64_2D(i, 'a4')
+		i = node.ReadFloat64_2D(i, 'a2')
 		i = self.skipBlockSize(i, 2)
 		cnt, i = getUInt32(node.data, i)
 		lst = []

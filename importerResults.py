@@ -68,8 +68,8 @@ class ResultReader(SegmentReader):
 		i = node.ReadSInt32(i, 's32_0')
 		i = self.skipBlockSize(i)
 		i = node.ReadParentRef(i)
-		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'numbers') # see "*_sat.history" file for details
-		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'delta_states')
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'delta_states') # see "*_sat.history" file for details
+		i = node.ReadList6(i, importerSegNode._TYP_MAP_KEY_REF_, 'delta_mapping')
 		i = node.ReadChildRef(i, 'ref_1')
 		return i
 

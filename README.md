@@ -7,7 +7,7 @@ imported into FreeCAD.
 
 As Fusion360 files contains a complete ACIS model representation these files can also be opened in FreeCAD.
 ## Status:
-**Released 1.3**
+**Released 1.5**
 
 ## Screenshots
 [Demo-Status](https://github.com/jmplonka/InventorLoader/tree/master/Demo-Status/) subdirectory shows examples of this Addon.

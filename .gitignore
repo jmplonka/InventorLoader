@@ -1,7 +1,7 @@
 *.pyc
 /libs
 *.log
-
+._*
 _.png
 0???.sat
 .DS_Store

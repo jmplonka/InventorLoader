@@ -7,7 +7,7 @@ GUI representations for objectec imported from Inventor
 
 import os, re, sys, Part, FreeCAD, FreeCADGui
 from importerUtils   import logInfo, getIconPath, getTableValue, setTableValue, logInfo, logWarning, logError, getCellRef, setTableValue, calcAliasname
-from FreeCAD         import Vector as VEC
+from FreeCAD         import Vector as VEC, Rotation as ROT
 from importerClasses import ParameterTableModel, VariantTableModel
 from math            import degrees, radians, pi, sqrt, cos, sin, atan
 from PySide.QtCore   import *
@@ -40,9 +40,9 @@ DIM_CONSTRAINTS = {
 }
 
 def createPartFeature(doctype, name):
-	fp = FreeCAD.ActiveDocument.addObject(doctype, getObjectName(name))
-	fp.Label = name
-	return fp
+	iPart = FreeCAD.ActiveDocument.addObject(doctype, getObjectName(name))
+	iPart.Label = name
+	return iPart
 
 def getObjectName(name):
 	if (sys.version_info.major < 3):
@@ -98,61 +98,64 @@ class _ViewProviderBoundaryPatch(_ViewProvider):
 		return getIconPath('FxBoundaryPatch.xpm')
 
 def makeBoundaryPatch(edges, name = "BoundaryPatch"):
-	fp = createPartFeature("Part::FeaturePython", name)
-	fp.Shape = Part.Face(Part.Wire(edges))
+	bPatch = createPartFeature("Part::FeaturePython", name)
+	bPatch.Shape = Part.Face(Part.Wire(edges))
 	if FreeCAD.GuiUp:
-		_ViewProviderBoundaryPatch(fp.ViewObject)
+		_ViewProviderBoundaryPatch(bPatch.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
-	return fp
+	return bPatch
 
 class _Stich(_ObjectProxy):
-	def __init__(self, fp, solid, faces):
-		super(_Stich, self).__init__(fp)
-		fp.addProperty("App::PropertyBool",     "Solid", "Stitch", "Create a solid if possible")
-		fp.addProperty("App::PropertyLinkList", "FaceList", "Stitch", "List of faces to stitch together")
-		fp.Solid    = solid
-		fp.FaceList = faces
+	def __init__(self, stich, solid, faces):
+		super(_Stich, self).__init__(stich)
+		stich.addProperty("App::PropertyBool",     "Solid", "Stitch", "Create a solid if possible")
+		stich.addProperty("App::PropertyLinkList", "FaceList", "Stitch", "List of faces to stitch together")
+		stich.Solid    = solid
+		stich.FaceList = faces
 
-	def execute(self, fp):
-		faces = [f.Shape for f in fp.FaceList if not f.Shape is None]
-		fp.Shape = Part.Shell(faces)
-		if (fp.Solid):
-			if (fp.Shape.isClosed()):
-				fp.Shape = Part.Solid(fp.Shape)
+	def execute(self, stich):
+		faces = [f.Shape for f in stich.FaceList if not f.Shape is None]
+		stich.Shape = Part.Shell(faces)
+		if (stich.Solid):
+			if (stich.Shape.isClosed()):
+				stich.Shape = Part.Solid(stich.Shape)
 
 class _ViewProviderStitch(_ViewProvider):
-	def __init__(self, vp):
-		super(_ViewProviderStitch, self).__init__(vp)
+	def __init__(self, stich):
+		super(_ViewProviderStitch, self).__init__(stich)
 
 	def claimChildren(self):
-		return self.Object.FaceList
+		children = []
+		if (hasattr(self.Object,"FaceList")):
+			children += self.Object.FaceList
+		return children
 
 	def getIcon(self):
 		return getIconPath('FxStitch.xpm')
 
 def makeStitch(faces, name = u"FxStitch", solid = False):
-	fp = createPartFeature("Part::FeaturePython", name)
-	_Stich(fp, solid, faces)
+	stich = createPartFeature("Part::FeaturePython", name)
+	_Stich(stich, solid, faces)
 	if FreeCAD.GuiUp:
-		_ViewProviderStitch(fp.ViewObject)
+		_ViewProviderStitch(stich.ViewObject)
 	for face in faces:
 		face.ViewObject.Visibility = False
 	FreeCAD.ActiveDocument.recompute()
-	return fp
+	return stich
 
 class _Point(_ObjectProxy):
-	def __init__(self, fp, pt):
-		super(_Point, self).__init__(fp)
-		fp.addProperty("App::PropertyVector", "Point", "Draft", "Location")
-		fp.Point = pt
+	def __init__(self, point, pt):
+		super(_Point, self).__init__(point)
+		point.addProperty("App::PropertyVector", "Point", "Draft", "Location")
+		point.Point = pt
 
-	def execute(self, fp):
-		vec = VEC(fp.Point)
-		fp.Shape = Part.Vertex(vec)
+	def execute(self, point):
+		vec = VEC(point.Point)
+		point.Shape = Part.Vertex(vec)
 
 class _ViewProviderPoint(_ViewProvider):
-	def __init__(self, vp):
-		super(_ViewProviderPoint, self).__init__(vp)
+	def __init__(self, point):
+		super(_ViewProviderPoint, self).__init__(point)
 
 	def getIcon(self):
 		return """
@@ -187,48 +190,48 @@ class _ViewProviderPoint(_ViewProvider):
 			"""
 
 def makePoint(pt, name = u"Point"):
-	fp = createPartFeature("Part::FeaturePython", name)
-	_Point(fp, pt)
+	point = createPartFeature("Part::FeaturePython", name)
+	_Point(point, pt)
 	if FreeCAD.GuiUp:
-		_ViewProviderPoint(fp.ViewObject)
+		_ViewProviderPoint(point.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
-	return fp
+	return point
 
 class _Line(_ObjectProxy):
-	def __init__(self, fp, pt1, pt2):
-		super(_Line, self).__init__(fp)
-		fp.addProperty("App::PropertyVector", "Start", "Line", "start point").Start = pt1
-		fp.addProperty("App::PropertyVector", "End", "Line", "end point").End = pt2
+	def __init__(self, line, pt1, pt2):
+		super(_Line, self).__init__(line)
+		line.addProperty("App::PropertyVector", "Start", "Line", "start point").Start = pt1
+		line.addProperty("App::PropertyVector", "End", "Line", "end point").End = pt2
 
-	def execute(self, fp):
-		pt1 = fp.Start
-		pt2 = fp.End
-		fp.Shape = Part.makeLine(pt1, pt2)
+	def execute(self, line):
+		pt1 = line.Start
+		pt2 = line.End
+		line.Shape = Part.makeLine(pt1, pt2)
 
 class _ViewProviderLine(_ViewProvider):
 	def __init__(self, vp):
 		super(_ViewProviderLine, self).__init__(vp)
 
 def makeLine(pt1, pt2, name = u"Line"):
-	fp = createPartFeature("Part::FeaturePython", name)
-	line = _Line(fp, pt1, pt2)
+	line = createPartFeature("Part::FeaturePython", name)
+	_Line(line, pt1, pt2)
 	if FreeCAD.GuiUp:
-		_ViewProviderLine(fp.ViewObject)
+		_ViewProviderLine(line.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
-	return fp
+	return line
 
 class _Plane(_ObjectProxy):
-	def __init__(self, fp, c, n):
-		super(_Plane, self).__init__(fp)
-		fp.addProperty("App::PropertyVector", "Center", "Plane", "center position")
-		fp.addProperty("App::PropertyVector", "Normal", "Plane", "normal vector of the plane")
-		fp.Center = c
-		fp.Normal = n
+	def __init__(self, plane, c, n):
+		super(_Plane, self).__init__(plane)
+		plane.addProperty("App::PropertyVector", "Center", "Plane", "center position")
+		plane.addProperty("App::PropertyVector", "Normal", "Plane", "normal vector of the plane")
+		plane.Center = c
+		plane.Normal = n
 
-	def execute(self, fp):
-		c = fp.Center
-		n = fp.Normal
-		fp.Shape = Part.Plane(c, n).toShape()
+	def execute(self, plane):
+		c = plane.Center
+		n = plane.Normal
+		plane.Shape = Part.Plane(c, n).toShape()
 
 class _ViewProviderPlane(_ViewProvider):
 	def __init__(self, vp):
@@ -283,29 +286,29 @@ class _ViewProviderPlane(_ViewProvider):
 			"""
 
 def makePlane(c, n, name = u"Plane"):
-	fp = createPartFeature("Part::FeaturePython", name)
-	plane = _Plane(fp, c, n)
+	plane = createPartFeature("Part::FeaturePython", name)
+	_Plane(plane, c, n)
 	if FreeCAD.GuiUp:
-		_ViewProviderPlane(fp.ViewObject)
+		_ViewProviderPlane(plane.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
-	return fp
+	return plane
 
 class _Sketch3D(_ObjectProxy):
-	def __init__(self, fp):
-		super(_Sketch3D, self).__init__(fp)
-		fp.addProperty("App::PropertyPythonObject", "addGeometry").addGeometry = self.addGeometry
-		fp.addProperty("App::PropertyPythonObject", "addConstraint").addConstraint = self.addConstraint
-		fp.addProperty("App::PropertyPythonObject", "Geometry").Geometry = []
-		fp.addProperty("App::PropertyPythonObject", "Constraint").Constraint = []
+	def __init__(self, plane):
+		super(_Sketch3D, self).__init__(plane)
+		plane.addProperty("App::PropertyPythonObject", "addGeometry").addGeometry = self.addGeometry
+		plane.addProperty("App::PropertyPythonObject", "addConstraint").addConstraint = self.addConstraint
+		plane.addProperty("App::PropertyPythonObject", "Geometry").Geometry = []
+		plane.addProperty("App::PropertyPythonObject", "Constraint").Constraint = []
 
-	def execute(self, fp):
-		l = len(fp.Geometry)
+	def execute(self, plane):
+		l = len(plane.Geometry)
 		if (l == 0):
-			fp.Shape = Part.Shape()
+			plane.Shape = Part.Shape()
 		elif (l == 1):
-			fp.Shape = fp.Geometry[0].toShape()
+			plane.Shape = plane.Geometry[0].toShape()
 		else:
-			fp.Shape = Part.Compound([g.toShape() for g in fp.Geometry])
+			plane.Shape = Part.Compound([g.toShape() for g in plane.Geometry])
 
 	def addGeometry(self, geometry, mode = False):
 		index = len(self.Object.Geometry)
@@ -318,22 +321,23 @@ class _Sketch3D(_ObjectProxy):
 		return index
 
 class _ViewProviderSketch3D(_ViewProvider):
-	def __init__(self, vp):
-		super(_ViewProviderSketch3D, self).__init__(vp)
+	def __init__(self, sketch):
+		super(_ViewProviderSketch3D, self).__init__(sketch)
 
 	def claimChildren(self):
-		return []
+		children = []
+		return children
 
 	def getIcon(self):
 		return getIconPath("Sketch3D.xpm")
 
 def makeSketch3D(name = u"Sketch3D"):
-	fp = createPartFeature("Part::FeaturePython", name)
-	sketch3D = _Sketch3D(fp)
+	sketch = createPartFeature("Part::FeaturePython", name)
+	_Sketch3D(sketch)
 	if (FreeCAD.GuiUp):
-		_ViewProviderSketch3D(fp.ViewObject)
+		_ViewProviderSketch3D(sketch.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
-	return fp
+	return sketch
 
 class _PartVariants(_ObjectProxy):
 	def __init__(self, fp):
@@ -360,14 +364,19 @@ class _PartVariants(_ObjectProxy):
 		if (fp.Values is None): return False
 		if (fp.Parameters is None): return False
 
-		fp.Mapping.clear()
-		FreeCAD.ActiveDocument.recompute()
-		parameter  = self._getHeadersByRow_(fp.Parameters)
-		for col in range(1, len(fp.Values[0])):
-			hdr = fp.Values[0][col]
-			cell = parameter[hdr]
-			fp.Mapping[col] = cell
-
+		try:
+			fp.Mapping.clear()
+			FreeCAD.ActiveDocument.recompute()
+			parameter  = self._getHeadersByRow_(fp.Parameters)
+			for col in range(1, len(fp.Values[0])):
+				hdr = fp.Values[0][col]
+				cell = parameter.get(hdr, None)
+				if cell is not None:
+					fp.Mapping[col] = cell
+				else:
+					logWarning(f("PartVariants: UpdateMapping - wrong parameter name '{col}'! Please remove parameter!"))
+		except Exception as ex:
+			FreeCAD.Console.PrintMessage(f"PartVariants: Failed to update mapping - {ex}!\n")
 		return True
 
 	def _updateVariant_(self, fp):
@@ -375,7 +384,7 @@ class _PartVariants(_ObjectProxy):
 			if (not self._updateMapping_(fp)):
 				return False
 			r = fp.Rows[fp.Variant]
-			FreeCAD.Console.PrintMessage("Set parameters according to variant '%s' (row %d):\n" %(fp.Variant, r))
+			FreeCAD.Console.PrintMessage(f"Set parameters according to variant '{fp.Variant}' (row={r}):\n")
 			for col in fp.Mapping:
 				prm = fp.Values[0][col]
 				val = fp.Values[r][col]
@@ -386,7 +395,8 @@ class _PartVariants(_ObjectProxy):
 			if (FreeCAD.ActiveDocument):
 				FreeCAD.ActiveDocument.recompute()
 			return True
-		except:
+		except Exception as ex:
+			FreeCAD.Console.PrintMessage(f"PartVariants: Failed to update v - {ex}!\n")
 			return False
 
 	def _updateValues_(self, fp):
@@ -424,6 +434,7 @@ class DlgIPartVariants(object):
 		QObject.connect(self.form.btnParamDel, SIGNAL("clicked()"), self.delParam)
 		VariantTableModel(table, fp.Values)
 		self.fp = fp
+#		self.form.height = self.form.sizeHint().height()
 
 	def getParameters(self):
 		parameters = []
@@ -441,16 +452,20 @@ class DlgIPartVariants(object):
 		model = table.model()
 		rows  = model.rowCount(table)
 		index = table.currentIndex()
+
 		if (index.isValid()):
 			row = index.row() + 1
 		else:
 			row = rows
+
 		if (model.insertRow(row)):
 			index = model.index(row, 0)
 			model.setData(index, 'Part-%02d' %(rows+1), Qt.EditRole)
+			self.form.height += 24
 			FreeCAD.ActiveDocument.recompute()
 		else:
 			logError("Failed to insert row %d", row)
+
 		return
 
 	def delPart(self):
@@ -509,30 +524,27 @@ class DlgIPartVariants(object):
 		values = []
 		cols   = model.columnCount(table)
 		rows   = model.rowCount(table)
-		hdrLst = []
-		for col in range(cols):
-			hdrLst.append(model.headerData(col, Qt.Horizontal, Qt.DisplayRole))
+		hdrLst = [model.headerData(col, Qt.Horizontal, Qt.DisplayRole) for col in range(cols)]
+
 		values.append(hdrLst)
 		for row in range(rows):
-			rowLst = []
-			for col in range(cols):
-				index = model.index(row, col)
-				rowLst.append(model.data(index, Qt.DisplayRole))
+			rowLst = [model.data(model.index(row, col), Qt.DisplayRole) for col in range(cols)]
 			values.append(rowLst)
+
 		self.fp.Values = values
 		FreeCADGui.ActiveDocument.resetEdit()
 		FreeCAD.ActiveDocument.recompute()
 		return True
 
 class _ViewProviderPartVariants(_ViewProvider):
-	def __init__(self, vp):
-		super(_ViewProviderPartVariants, self).__init__(vp)
+	def __init__(self, iPart):
+		super(_ViewProviderPartVariants, self).__init__(iPart)
 
 	def claimChildren(self):
 		children = []
-		if (not self.Object.Parameters is None):
+		if (hasattr(self.Object,"Parameters")):
 			children.append(self.Object.Parameters)
-		if (not self.Object.Values is None):
+		if (hasattr(self.Object,"Values")):
 			children.append(self.Object.Values)
 		return children
 
@@ -585,6 +597,14 @@ def searchDocParameters(doc):
 						values.append([False, obj.Name, prp, 'd_%d' %(len(values)), str(value), XPR_PROPERTIES[obj.getTypeIdOfProperty(prp)]])
 	return values
 
+def hasValue(tbl, cell, value):
+	result = False
+	try:
+		result = (table.get(cell) == value)
+	except:
+		pass
+	return result
+
 def getParametersValues(doc):
 	table  = None
 	for t in doc.getObjectsByLabel('Parameters'):
@@ -593,13 +613,13 @@ def getParametersValues(doc):
 			break
 	if (table is None):
 		return None, None, True
-	if ((table.get('A1') != 'Parameter') or (table.get('B1') != 'Value')):
+	if (hasValue(table, 'A1', 'Parameter') and hasValue(table, 'B1', 'Value')):
 		logWarning("Spreadsheet 'Parameters' doesn't meet layout constraints to serve as parameters table!")
 		logWarning("First row must be 'Parameter', 'Value', 'Unit', 'Source' - creating new one.")
 		return None, None, True
-	hasUnit     = (table.get('C1') == 'Unit')
-	hasSource   = (table.get('D1') == 'Source')
-	hasProperty = (table.get('E1') == 'Property')
+	hasUnit     = hasValue(table, 'C1', 'Unit')
+	hasSource   = hasValue(table, 'D1', 'Source')
+	hasProperty = hasValue(table, 'E1', 'Property')
 	row         = 2
 	values      = []
 	while (True):
@@ -633,18 +653,22 @@ def createIPartParameters(doc, values):
 	table.set('C1', 'Unit')
 	table.set('D1', 'Source')
 	table.set('E1', 'Property')
-	for row, data in enumerate(values, 2):
+	row = 1
+	for i, data in enumerate(values, 2):
 		(add, source, property, name, value, unit) = data
-		setTableValue(table, 'A', row, name)
-		try:
-			setTableValue(table, 'B', row, float(value))
-		except:
-			setTableValue(table, 'B', row, '=%s' %(value))
-		setTableValue(table, 'C', row, unit)
-		setTableValue(table, 'D', row, source)
-		setTableValue(table, 'E', row, property)
-		# replace value by expression
-		table.setAlias(u"B%d" %(row), calcAliasname(name))
+		if (add):
+			row = row + 1
+			setTableValue(table, 'A', row, name)
+			try:
+				setTableValue(table, 'B', row, float(value))
+			except:
+				setTableValue(table, 'B', row, '=%s' %(value))
+			setTableValue(table, 'C', row, unit)
+			setTableValue(table, 'D', row, source)
+			setTableValue(table, 'E', row, property)
+			# replace value by expression
+			table.setAlias(u"B%d" %(row), calcAliasname(name))
+
 	doc.recompute()
 	return table
 
@@ -681,28 +705,31 @@ def createIPart():
 	return fp
 
 def makePartVariants(name = u"Variations"):
-	fp = createPartFeature("Part::FeaturePython", name)
-	iPart = _PartVariants(fp)
+	iPart = createPartFeature("Part::FeaturePython", name)
+	_PartVariants(iPart)
 	if (FreeCAD.GuiUp):
-		_ViewProviderPartVariants(fp.ViewObject)
+		_ViewProviderPartVariants(iPart.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
-	return fp
+	return iPart
 
 class _Trim(_ObjectProxy):
-	def __init__(self, fp, patches):
-		super(_Trim, self).__init__(fp)
-		fp.addProperty("App::PropertyPythonObject", "Patches").Patches = patches
-	def execute(self, fp):
-		face = fp.Patches[0].Shape.Faces[0]
-		trim = face.cut([p.Shape.Faces[0] for p in fp.Patches[1:]])
-		fp.Shape = trim
+	def __init__(self, trim, patches):
+		super(_Trim, self).__init__(trim)
+		trim.addProperty("App::PropertyPythonObject", "Patches").Patches = patches
+	def execute(self, trim):
+		face = trim.Patches[0].Shape.Faces[0]
+		trim = face.cut([p.Shape.Faces[0] for p in trim.Patches[1:]])
+		trim.Shape = trim
 
 class _ViewProviderTrim(_ViewProvider):
-	def __init__(self, vp):
-		super(_ViewProviderTrim, self).__init__(vp)
+	def __init__(self, trim):
+		super(_ViewProviderTrim, self).__init__(trim)
 
 	def claimChildren(self):
-		return self.Object.Patches
+		children = []
+		if (hasattr(self.Object,"Patches")):
+			children = self.Object.Patches
+		return children
 
 	def getIcon(self):
 		return getIconPath('FxBoundaryPatch.xpm')
@@ -717,76 +744,75 @@ def makeTrim(name = u"Trim", faces = None):
 				obj.ViewObject.Visibility = False
 				faces.append(obj)
 
-	fp = createPartFeature("Part::FeaturePython", name)
-	_Trim(fp, faces)
+	trim = createPartFeature("Part::FeaturePython", name)
+	_Trim(trim, faces)
 	if FreeCAD.GuiUp:
-		_ViewProviderTrim(fp.ViewObject)
+		_ViewProviderTrim(trim.ViewObject)
 	FreeCAD.ActiveDocument.recompute()
-	return fp
+	return trim
 
 class _Coil(_ObjectProxy):
-	def __init__(self, fp, patches):
-		super(_Coil, self).__init__(fp)
-		fp.addProperty("App::PropertyLink"       , "Profile"     , "Base", "The profile for the coil").Profile = None
-		fp.addProperty("App::PropertyVector"     , "Axis"        , "Coil", "The direction of the coil's axis").Axis = DIR_Z
-		fp.addProperty("App::PropertyVector"     , "Center"      , "Coil", "The origin of the coil").Center = DIR_Z
-		fp.addProperty("App::PropertyBoolean"    , "Reversed"    , "Coil", "Indicator for reversed direction").Reversed = False
-		fp.addProperty("App::PropertyEnumeration", "Rotation"    , "Coil", "Sens of rotation").Rotation =['Clockwise', 'Counterclockwise']
-		fp.addProperty("App::PropertyEnumeration", "CoilType"    , "Coil", "Specifies a pair of parameters").CoilType = ['PitchAndRevolution', 'RevolutionAndHeight', 'PitchAndHeight', 'Spiral']
-		fp.addProperty("App::PropertyLength"     , "Pitch"       , "Coil", "The elevation gain for each revolution of the helix").Pitch = 1.0
-		fp.addProperty("App::PropertyLength"     , "Height"      , "Coil", "The height of the coil from the center of the profile at the start to the center of the profile at the end").Height= 2.0
-		fp.addProperty("App::PropertyFloat"      , "Revolutions" , "Coil", "The number of revolutions for the coil").Revolutions = 2.0
-		fp.addProperty("App::PropertyAngle"      , "TaperAngle"  , "Coil", "The taper angle, if needed, for all coil types except spiral").TaperAngle = 0 # Cylinder!
-		fp.addProperty("App::PropertyBoolean"    , "Solid"       , "Coil", "Create a solid insteat of a shell").Solid = True
-		fp.addProperty("App::PropertyBoolean"    , "StartTransit", "Ends", "The type of the start coil's end").StartTransit = False
-		fp.addProperty("App::PropertyAngle"      , "StartFlat"   , "Ends", "The degrees the coil extends after transition with not pitch").StartFlat  = 0
-		fp.addProperty("App::PropertyAngle"      , "StartSegue"  , "Ends", "The transition angle of the start coil's end").StartSegue = 0
-		fp.addProperty("App::PropertyBoolean"    , "EndTransit"  , "Ends", "The type of the end coil's end").EndTransit = False
-		fp.addProperty("App::PropertyAngle"      , "EndSegue"    , "Ends", "The transition angle of the end coil's end").EndTrans = 0
-		fp.addProperty("App::PropertyAngle"      , "EndFlat"     , "Ends", "The degrees the coil extends after transition with not pitch").EndFlat  = 0
+	def __init__(self, coil, profile = None):
+		super(_Coil, self).__init__(coil)
+		coil.addProperty("App::PropertyLink"       , "Profile"     , "Base", "The profile for the coil")
+		coil.addProperty("App::PropertyVector"     , "Axis"        , "Coil", "The direction of the coil's axis").Axis = DIR_Z
+		coil.addProperty("App::PropertyVector"     , "Center"      , "Coil", "The origin of the coil").Center = DIR_Z
+		coil.addProperty("App::PropertyBool"       , "Reversed"    , "Coil", "Indicator for reversed direction").Reversed = False
+		coil.addProperty("App::PropertyEnumeration", "Rotation"    , "Coil", "Sens of rotation").Rotation =['Clockwise', 'Counterclockwise']
+		coil.addProperty("App::PropertyEnumeration", "CoilType"    , "Coil", "Specifies a pair of parameters").CoilType = ['PitchAndRevolution', 'RevolutionAndHeight', 'PitchAndHeight', 'Spiral']
+		coil.addProperty("App::PropertyLength"     , "Pitch"       , "Coil", "The elevation gain for each revolution of the helix").Pitch = 1.0
+		coil.addProperty("App::PropertyLength"     , "Height"      , "Coil", "The height of the coil from the center of the profile at the start to the center of the profile at the end").Height= 2.0
+		coil.addProperty("App::PropertyFloat"      , "Revolutions" , "Coil", "The number of revolutions for the coil").Revolutions = 2.0
+		coil.addProperty("App::PropertyAngle"      , "TaperAngle"  , "Coil", "The taper angle, if needed, for all coil types except spiral").TaperAngle = 0.0 # Cylinder!
+		coil.addProperty("App::PropertyBool"       , "Solid"       , "Coil", "Create a solid insteat of a shell").Solid = True
+		coil.addProperty("App::PropertyAngle"      , "StartTransit", "Ends", "The degrees over wich the coil achieves the start transition (normally less than one revolution)").StartTransit = 0.0
+		coil.addProperty("App::PropertyAngle"      , "StartFlat"   , "Ends", "The degrees the coil extends before transition with not pitch").StartFlat  = 0.0
+		coil.addProperty("App::PropertyAngle"      , "EndTransit"  , "Ends", "The degrees over wich the coil achieves the end transition (normally less than one revolution)").EndTransit = 0.0
+		coil.addProperty("App::PropertyAngle"      , "EndFlat"     , "Ends", "The degrees the coil extends after transition with no pitch (flat)").EndFlat  = 0.0
+		if (profile):
+			coil.Profile = profile
+		self.pathWires = []
+		self.a = 0.0
 
-	def _createCoilStart(self, fp):
-		pathEdges = []
-		if (fp.StartTransit):
-			m = fp.Profile.Shape.BoundBox.Center # Center of the profile
-			radius = m.distanceToLine(fp.Center, fp.Center+fp.Axis)
-			circleStart = Part.Circle(fp.Center, fp.Axis, radius)
-			a = circle.parameter(m)
-			if (fp.StartFlat > 0): # Angle of the flat part
-				b = a + readians(fp.StartFlat)
-				arc = Part.ArcOfCircle(circleStart, a, b)
+	def _createPathStart(self, coil):
+		if (coil.StartTransit):
+			m = coil.Profile.Shape.BoundBox.Center # Center of the profile
+			radiusStart = m.distanceToLine(coil.Center, coil.Center+coil.Axis)
+			if (coil.StartFlat > 0.0): # Angle of the flat part
+				circleStart = Part.Circle(coil.Center, coil.Axis, radiusStart)
+				self.a = circleStart.parameter(m)
+				b = self.a + radians(coil.StartFlat)
+				arc = Part.ArcOfCircle(circleStart, self.a, b)
+				self.a = b
+				self.pathWires.append(arc)
+			if (coil.StartTransit > 0.0): # Tangent connection between helical and flat part.
+				b = self.a + radians(coil.StartTransit)
+				transit = Part.makeBSpline(points)
 				a = b
-				pathEdges.append(arc.toShape())
-			if (fp.StartSegue > 0): # Tangent connection between flat and helical part.
-				b = a + radians(fp.StartSegue)
-				edge = Part.makeBSpline(points)
-				a = b
-				pathEdges.append(edge)
-		return pathEdges, a
+				self.pathWires.append(transit)
 
-	def _createCoildEnd(self, fp, a):
-		pathEdges = []
-		if (fp.EndTransit):
-			m = fp.Profile.Shape.BoundBox.Center # Center of the profile
-			circleEnd = Part.Circle(fp.Center, fp.Axis, radiusEnd)
-			radius = m.distanceToLine(fp.Center, fp.Center+fp.Axis)
-			radius -= fp.Height * sin(radians(fp.Angle))
-			if (fp.EndSegue > 0): # Tangent connection between helical and flat part.
-				b = a + radians(fp.EndSegue)
-				edge = Part.makeBSpline(points)
+	def _createPathEnd(self, coil):
+		if (coil.EndTransit):
+			m = coil.Profile.Shape.BoundBox.Center # Center of the profile
+			radiusEnd = m.distanceToLine(coil.Center, coil.Center+coil.Axis)
+			circleEnd = Part.Circle(coil.Center, coil.Axis, radiusEnd)
+			radius = m.distanceToLine(coil.Center, coil.Center+coil.Axis)
+			radius -= coil.Height * sin(radians(coil.Angle))
+			if (coil.EndTransit > 0): # Tangent connection between helical and flat part.
+				b = a + radians(coil.EndTransit)
+				transit = Part.makeBSpline(points)
 				a = b
-				pathEdges.append(edge)
-			if (fp.EndFlat > 0):
-				b = a + radians(fp.EndFlat)
-				edge = Part.ArcOfCircle(Part.Circle(fp.Center, fp.Axis, radius), a, b)
+				self.pathWires.append(transit)
+			if (coil.EndFlat > 0):
+				b = a + radians(coil.EndFlat)
+				edge = Part.ArcOfCircle(circleEnd, a, b)
 				a = b
-				profileEdges.append(edge)
-		return pathEdges
+				self.profileEdges.append(edge)
 
-	def CreateSpiral(self, fp, a):
-		m = fp.Profile.Shape.BoundBox.Center # Center of the profile
-		myNumRot = fp.Rotations
-		myRadius = m.distanceToLine(fp.Center, fp.Center+fp.Axis)
+	def _createSpiral(self, coil):
+		m = coil.Profile.Shape.BoundBox.Center # Center of the profile
+		myNumRot = coil.Rotations
+		myRadius = m.distanceToLine(coil.Center, coil.Center+coil.Axis)
 		myGrowth = Growth
 		myPitch  = 1.0
 		myHeight = myNumRot * myPitch
@@ -812,51 +838,79 @@ class _Coil(_ObjectProxy):
 		wire = edgeOnSurf.toShape()
 
 		aPlane = Part.Plane(aPnt, DIR_Z)
-		range = (myNumRot+1) * myGrowth + 1 + myRadius
-		aPlane.toShape().project(wire)
-		return spiral
+		rng = (myNumRot+1) * myGrowth + 1 + myRadius
+		return aPlane.toShape().project(wire)
 
-	def _createHelix(self, fp, a):
-		if (fp.CoilType == 'Spiral'):
-			return self.createSpiral(fp, a)
+	def _createHelix(self, coil):
+		lefthanded = (coil.Rotation == 'Counterclockwise')
+		line = Part.Line(coil.Center, coil.Center + coil.Axis)
+		radius = line.projectPoint(coil.Profile.Shape.CenterOfMass, "LowerDistance")
+		helix = Part.makeLongHelix(coil.Pitch, coil.Height, radius, coil.TaperAngle, lefthanded)
+		self.pathWires.append(helix)
+		return helix
 
-		if (fp.CoilType == 'PitchAndRevolution'):
-			assert fp.Pitch > 0, "Pitch must be greater than zero!"
-			assert fp.Revolutions > 0, "Revolutions must be greater than zero!"
-			fp.Height = fp.Pitch * fp.Revolutions
-		elif (fp.CoilType == 'RevolutionAndHeight'):
-			assert fp.Height > 0, "Height mus be greater than zero!"
-			assert fp.Revolutions > 0, "Revolutions must be greater than zero!"
-			fp.Pitch = fp.Height / fp.Revolutions
-		elif (fp.CoilType == 'PitchAndHeight'):
-			assert fp.Height > 0, "Height mus be greater than zero!"
-			assert fp.Pitch > 0, "Pitch must be greater than zero!"
-			fp.Revolutions = fp.Height / fp.Pitch
-		else:
-			raise Exception(u"Unknown Coil-Type '%s'" %(fp.CoilType))
+	def _createPitchAndRevolution(self, coil):
+		assert coil.Pitch > 0, "Pitch must be greater than zero!"
+		assert coil.Revolutions > 0, "Revolutions must be greater than zero!"
+		coil.Height = coil.Pitch * coil.Revolutions
+		return self._createHelix(coil)
 
-		lefthanded = (fp.Rotation == 'Counterclockwise')
-		edge = Part.makeLongHelix(fp.Pitch, fp.Height, radius, fp.Angle, lefthanded)
-		edge
-		return edge
+	def _createRevolutionAndHeight(self, coil):
+		assert coil.Revolutions > 0, "Revolutions must be greater than zero!"
+		assert coil.Height > 0, "Height mus be greater than zero!"
+		coil.Pitch = coil.Height / coil.Revolutions
+		return self._createHelix(coil)
 
-	def execute(self, fp):
+	def _createPitchAndHeight(self, coil):
+		assert coil.Pitch > 0, "Pitch must be greater than zero!"
+		assert coil.Height > 0, "Height mus be greater than zero!"
+		coil.Revolutions = coil.Height / coil.Pitch
+		return self._createHelix(coil)
+
+	def _createPathMain(self, coil):
+		if (coil.CoilType == 'Spiral'):
+			return self._createSpiral(coil)
+		if (coil.CoilType == 'PitchAndRevolution'):
+			return self._createPitchAndRevolution(coil)
+		if (coil.CoilType == 'RevolutionAndHeight'):
+			return self._createRevolutionAndHeight(coil)
+		if (coil.CoilType == 'PitchAndHeight'):
+			return self._createPitchAndHeight(coil)
+		raise Exception(u"Unknown Coil-Type '%s'" %(coil.CoilType))
+
+	def _createCoil(self, coil):
+		# loft the profile along the path
+		path    = Part.Wire(self.pathWires)
+		profile = Part.Wire(coil.Profile.Shape.Wires)
+		# make profile perpendicular to path
+		e = path.Edges[0]
+		t = e.tangentAt(e.FirstParameter)
+		n = e.normalAt(e.FirstParameter)
+		profile.Placement.Rotation = ROT(n, t.cross(n), t)
+		coil.Shape = path.makePipeShell([profile], coil.Solid, True)
+
+	def execute(self, coil):
 		# Part.ArcOfCircle for Coil's flat ends regardless of the taper angle
 		# Part.??? for coil's transition ends
 		# Part.makeLongHelix for Coil with with pitch, height, radius, angle, lefthanded
 
 		# Radius of the coil
-
-		pathEdges, a = self._createCoilStart(fp)
-		pathEdges.append(_createHelix(fp), a)
-		pathEdges += self._createCoildEnd(fp)
+		self.pathWires = []
+		self.a = 0.0
+		self._createPathStart(coil)
+		self._createPathMain(coil)
+		self._createPathEnd(coil)
+		self._createCoil(coil)
 
 class _ViewProviderCoil(_ViewProvider):
-	def __init__(self, vp):
-		super(_ViewProviderCoil, self).__init__(vp)
+	def __init__(self, coil):
+		super(_ViewProviderCoil, self).__init__(coil)
 
 	def claimChildren(self):
-		return self.Object.Profile
+		children = []
+		if (hasattr(self.Object,"Profile")):
+			children.append(self.Object.Profile)
+		return children
 
 	def getIcon(self):
 		return getIconPath('FxCoil.png')
@@ -865,10 +919,8 @@ def makeCoil(name = u"Coil", profile = None):
 	if (profile is None):
 		profile = getProfileFromSelection()
 
-	fp = createPartFeature("Part::FeaturePython", name)
-	_Coil(fp, profile)
-	fp.Profile = profile
+	coil = createPartFeature("Part::FeaturePython", name)
+	_Coil(coil, profile)
 	if FreeCAD.GuiUp:
-		_ViewProviderCoil(fp.ViewObject)
-	FreeCAD.ActiveDocument.recompute()
-	return fp
+		_ViewProviderCoil(coil.ViewObject)
+	return coil

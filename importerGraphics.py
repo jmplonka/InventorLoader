@@ -679,14 +679,18 @@ class GraphicsReader(EeSceneReader):
 
 	def Read_27F6DF59(self, node):
 		i = node.Read_Header0()
-		i = node.ReadUInt32A(i, 2, 'a0')
-		i = node.ReadBoolean(i, 'b0')
 		i = node.ReadUInt32(i, 'u32_0')
+		i = node.ReadChildRef(i, 'attrs')
+		i = node.ReadBoolean(i, 'b0')
+		i = node.ReadUInt32(i, 'u32_1')
 		if (self.version < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
-		a = Struct('<LHLLLLL').unpack_from(node.data, i)
-		i += 26
-		node.set('a1', a, VAL_UINT32)
-		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		i = node.ReadUInt32(i, 'u32_2')
+		i = node.ReadUInt16(i, 'u16_0')
+		i = node.ReadUInt32A(i, 5, 'a1')
+		if (self.version < 2024):
+			i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		else:
+			i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_U8_, 'lst0')
 		i = node.ReadFloat64_2D(i, 'a2')
 		i = self.ReadTransformation3D(node, i)
 		return i
@@ -849,13 +853,16 @@ class GraphicsReader(EeSceneReader):
 		if (self.version < 2020): i += 8 # skip 00 00 00 00 00 00 00 00
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadUInt16(i, 'u16_1')
-		i = node.ReadUInt32A(i, 5, 'a2')
-		i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		i = node.ReadUInt32A(i, 5, 'a1')
+		if (self.version < 2024):
+			i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_, 'lst0')
+		else:
+			i = node.ReadList2(i, importerSegNode._TYP_F64_F64_U32_U8_U8_U16_U8_, 'lst0')
 		i = self.skipBlockSize(i)
-		i = node.ReadFloat64_2D(i, 'a3')
+		i = node.ReadFloat64_2D(i, 'a2')
 		i = self.skipBlockSize(i, 2)
 		i = node.ReadList7(i, importerSegNode._TYP_MAP_U32_U32_, 'faces2edges') # mapping of face's key to mapping edge object's key
-		i = node.ReadUInt32A(i, 4, 'a4')
+		i = node.ReadSInt32A(i, 4, 'a4')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_2')
 		if (self.version > 2013): i += 1 # skip Boolean

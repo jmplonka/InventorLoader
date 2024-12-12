@@ -204,6 +204,7 @@ class BrowserReader(SegmentReader):
 		else:
 			i = node.ReadChildRef(i, 'ref_1')
 		i = node.ReadUInt8(i, 'u8_0')
+		if (self.version > 2024): i += 1 # skip 00 
 		i = node.ReadLen32Text16(i)
 		i = node.ReadUInt8A(i, 5, 'a0')
 		if (node.get('a0')[4] == 0):
@@ -371,6 +372,7 @@ class BrowserReader(SegmentReader):
 	def Read_767A2031(self, node): # AmPartInstEntry
 		i = self.ReadHeaderFolderItem(node)
 		i = node.ReadUInt32(i, 'u32_1')
+		if (self.version > 2022): i += 4 # skip 01 00 00 00
 		i = node.ReadUInt8(i, 'u8_4')
 		i = node.ReadUInt8(i, 'u8_5')
 		i = node.ReadUInt32(i, 'u32_2')
@@ -904,9 +906,14 @@ class BrowserReader(SegmentReader):
 	def Read_E14BDF12(self, node): # Pivot plate
 		i = self.ReadHeaderEntry(node, 'PivotPlate')
 		return i
+	
+	def Read_E149D710(self, node):
+		i = self.ReadHeaderEntry(node)
+		return i
+	
 
 	def Read_E4B915DD(self, node): # iFeature:N
-		i = self.ReadHeaderEntry(node)
+		i = self.ReadHeaderEntry(node, 'iFeature')
 		return i
 
 	def Read_E7A52E09(self, node): # Lofted Flange
@@ -1267,4 +1274,13 @@ class BrowserReader(SegmentReader):
 	def Read_FC89C973(self, node):
 		i = self.ReadHeaderDx(node)
 		# L L _ L
+		return i
+
+	def Read_3F0906F5(self, node): # UCxSubstitutesFolderEntry
+		i = node.Read_Header0()
+		i = node.ReadList2(i, importerSegNode._TYP_UINT32_, 'lst0') # ???
+		i = self.Read_664(i, node)
+		i = node.ReadLen32Text16(i)
+		i = node.ReadLen32Text16(i, 'type')
+		i = node.ReadBoolean(i, 'b1')
 		return i

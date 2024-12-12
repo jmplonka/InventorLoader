@@ -168,8 +168,8 @@ STRATEGY_CANCEL = -1
 
 __strategy__ = __prmPrefIL__.GetInt("strategy", STRATEGY_SAT)
 
-IS_CELL_REF = re.compile('^[a-z](\d+)?$', re.IGNORECASE)
-IS_BETA     = re.compile('^.* Beta(\d+) .*$', re.IGNORECASE)
+IS_CELL_REF = re.compile('^[a-z](\\d+)?$', re.IGNORECASE)
+IS_BETA     = re.compile('^.* Beta(\\d+) .*$', re.IGNORECASE)
 _author         = ''
 _company        = ''
 _comment        = ''
@@ -376,7 +376,7 @@ class Thumbnail(object):
 		self.height = self.icon.height()
 	def readData(self, filename):
 		with open(filename, 'rb') as f:
-			setIconData(f.read())
+			self.setIconData(f.read())
 			self.type = filename[-3:].upper()
 	def setData(self, data):
 		# skip thumbnail class header (-1, -1, 3, 0, bpp, width, height, 0)
@@ -1013,13 +1013,13 @@ def cleanDumpFolder():
 		p = os.path.join(folder, f)
 		if os.path.isfile(p):
 			os.unlink(p)
-		else:
+		elif os.path.isdir(p):
 			shutil.rmtree(p)
 
 def setDumpFolder(anyInputFile):
 	global _dump_folder
 	fileParts = os.path.splitext(anyInputFile)
-	_dump_folder = u"%s_%s" %(fileParts[0], fileParts[1][1:])
+	_dump_folder = os.path.abspath(u"%s_%s" %(fileParts[0], fileParts[1][1:]))
 
 	if (os.path.exists(_dump_folder)):
 		cleanDumpFolder()

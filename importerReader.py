@@ -256,21 +256,6 @@ def ReadWorkbook(data, name, stream):
 	if (dumpFolder):
 		##create a new Spreadsheet in new document
 		wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
-		for nameValues in wbk.name_obj_list:
-			rng = nameValues.area2d()
-
-		for idx in range(0, wbk.nsheets):
-			sht = wbk.sheet_by_index(idx)
-			rows = sht.nrows
-			cols = sht.ncols
-			shtName = stream + '_' + sht.name
-			#TODO handle merged cells
-			#TODO handle cell names
-			for c in range(0, cols):
-				#spreadsheet.setColumnWidth(chr(0x41+c), sht.computed_column_width(c))
-				for r in range(0, rows):
-					rng = '%s%d' %(chr(0x41+c), r+1)
-			idx += 1
 
 		xls = copy(wbk)
 		xls.save(u"%s/%s.xls" %(dumpFolder, name))

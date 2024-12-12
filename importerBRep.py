@@ -174,8 +174,12 @@ class BRepReader(NameTableReader):
 	def Read_CADD6468(self, node): # BrepComponent
 		i = node.Read_Header0('BrepComponent')
 		i = node.ReadList6(i, _TYP_MAP_KEY_REF_, 'components')
-		i = node.ReadLen32Text16(i, 'length')
-		i = node.ReadLen32Text16(i, 'angle')
+		if (self.version < 2023):
+			i = node.ReadLen32Text16(i, 'length')
+			i = node.ReadLen32Text16(i, 'angle')
+		else:
+			i = node.ReadUInt32(i, 'length')
+			i = node.ReadUInt32(i, 'angle')
 		return i
 
 	def ReadHeaderBRepComponent(self, node):
@@ -285,7 +289,9 @@ class BRepReader(NameTableReader):
 		i = node.ReadLen32Text16(i, 'txt2')
 		i = node.ReadFloat64_3D(i, 'a2')
 		i = node.ReadUInt32A(i, 2, 'a3')
-		i = node.ReadUInt16A(i, 4, 'a4')
+		i = node.ReadUInt16A(i, 3, 'a4')
+		if (self.version > 2024): i += 3 # skip 01 00 00
+		i = node.ReadUInt8A(i, 2, 'a5')
 		i = node.ReadLen32Text16(i, 'txt3')
 		i = node.ReadLen32Text16(i, 'txt4')
 		return i

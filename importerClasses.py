@@ -714,14 +714,24 @@ class DataNode(object):
 			return node.typeName
 		return None
 
+	def getFxAttributes(self):
+		attributes = {}
+		nxt = self
+		while (nxt):
+			nxt_old = nxt
+			nxt = nxt_old.get('next')
+			if (nxt):
+				attributes[nxt.typeName] = nxt
+		return attributes
+
 	def getParticipants(self):
-		label = self
-		while (label.typeName != 'Label'):
-			label = label.get('next')
-			if (label is None):
-				logError(u"    (%04X): %s - has no required next attribute!", label.index, label.typeName)
-				return []
-		return label.get('participants')
+		attributes = self.getFxAttributes()
+		for atrName in attributes:
+			atribute = attributes[atrName]
+			participants = atribute.get('participants')
+			if (participants):
+				return participants
+		return []
 
 class ParameterNode(DataNode):
 	def __init__(self, data):
@@ -962,15 +972,15 @@ class EnumNode(DataNode):
 		value = self.get('value')
 		if (type(enum) is list):
 			if (value < len(enum)):
-				return u"'%s'" % enum[value]
+				return "%s" % enum[value]
 			return value
 		assert (type(enum) is dict), "Expected %s to contain dict or list as enum values!"
 		if (value in enum.keys()):
-			return u"'%s'" % enum[value]
+			return "%s" % enum[value]
 		return value
 
 	def getRefText(self): # return unicode
-		return u'(%04X): %s=%s' %(self.index, self.get('Enum'), self.getValueText())
+		return "(%04X): %s='%s'" %(self.index, self.get('Enum'), self.getValueText())
 
 	def __str__(self):
 		node = self.data
@@ -1365,8 +1375,8 @@ class Segment(object):
 		self.bodies       = {}
 
 	def getDcSatAttributes(self):
-		if (self.acis is None): return []
-		return self.acis.get('dcAttributes')
+		if (self.acis is None): return {}
+		return self.acis.get('dcAttributes', {})
 
 	@property
 	def type(self):
@@ -1590,6 +1600,7 @@ class AbstractData(object):
 		self.valid        = True
 		self.handled      = False
 		self.node         = None
+		self.skipCheck    = True
 
 	def __content__(self, name, value, cls):
 		if cls is None: return ''
@@ -1636,6 +1647,9 @@ class AbstractData(object):
 		value: The value of the property.
 		'''
 		if (name):
+			if (self.skipCheck == False):
+				if (name in self.properties):
+					logError(u" ERROR in %08X.%s: '%s' already set!" %(self.uid.time_low, self.typeName, name))
 			self.properties[name] = (value, cls)
 
 	def get(self, name):
@@ -1732,14 +1746,14 @@ class NtEntry(object):
 		self.entry     = None
 	def __str__(self):
 		if (self.nameTable):
-			return u"%04X[%04X]" %(self.nameTable, self.key)
+			return f"{self.nameTable:04X}[{self.key:04X}]"
 		return u""
 	def __repr__(self):
 		return self.__str__()
 
 class TableModel(QAbstractTableModel):
 	def __init__(self, parent, mylist, header, *args):
-		QAbstractTableModel.__init__(self, parent, *args)
+		super(TableModel, self).__init__(parent, *args)
 		self.mylist = mylist
 		self.header = header
 		parent.setModel(self)
@@ -1871,16 +1885,19 @@ class TableModel(QAbstractTableModel):
 
 class ParameterTableModel(TableModel):
 	def __init__(self, parent, mylist, *args):
-		TableModel.__init__(self, parent, mylist, ['Variant', 'Source', 'Property', 'Parameter', 'Value', 'Units'], *args)
+		super(TableModel, self).__init__(parent, mylist, ['Variant', 'Source', 'Property', 'Parameter', 'Value', 'Units'], *args)
 	def flags(self, index):
 		if (index.column() == 0):
 			return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsUserCheckable
 		if (index.column() in [1, 2, 5]): # make object's name and property and unit column read only!
 			return Qt.ItemIsEnabled
-		return Qt.ItemIsEnabled |Qt.ItemIsEditable
+		return Qt.ItemIsEnabled | Qt.ItemIsEditable
 
 class VariantTableModel(TableModel):
 	def __init__(self, parent, values, *args):
-		TableModel.__init__(self, parent, values[1:], values[0], *args)
+		if (values):
+			super().__init__(parent, values[1:], values[0], *args)
+		else:
+			super().__init__(parent, ['Part-01'], ['Member'], *args)
 	def flags(self, index):
 		return Qt.ItemIsEnabled | Qt.ItemIsEditable

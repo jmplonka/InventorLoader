@@ -25,7 +25,7 @@ _listPattern = re.compile('[^\x00]\x00\x00\x30')
 _fmt_new = False
 
 def resolveEntityReferences(node):
-	acis = node.get('SAT')
+	acis = node.SAT
 	try:
 		# create a node for each entity
 		for record in acis.getRecords():
@@ -304,7 +304,10 @@ class SegmentReader(object):
 		i = node.ReadChildRef(i, 'attrs')
 		i = node.ReadUInt8(i, 'u8_0')
 		i = self.skipBlockSize(i)
-		i = node.ReadList3(i, _TYP_NODE_REF_, lstName)
+		if (self.version < 2025):
+			i = node.ReadList3(i, _TYP_NODE_REF_, lstName)
+		else:
+			i = node.ReadList2(i, _TYP_NODE_REF_, lstName)
 		i = self.skipBlockSize(i)
 		return i
 
@@ -470,8 +473,8 @@ class SegmentReader(object):
 		i = self.skipBlockSize(i)
 		i = self.skipBlockSize(i)
 		node.set('Unit', abbreviation)
-		if (sys.version_info.major < 3) and (not isinstance(abbreviation, unicode)):
-			node.set('Unit', unicode(abbreviation))
+		if (sys.version_info.major < 3) and (not isinstance(abbreviation, str)):
+			node.set('Unit', str(abbreviation))
 		node.set('UnitOffset', offset)
 		node.set('UnitFactor', factor)
 		node.set('UnitSupportet', supported)
@@ -558,6 +561,7 @@ class SegmentReader(object):
 	def Read_5F9D0023(self, node): return self.Read_Unit(node, ''         , 'Empty'                     , 0.0, 1.0         , True)
 
 	def Read_791C333D(self, node): return self.Read_Unit(node, 'XXX',     'User'                        , 0.0, 0.0) # not supported -> Tuner.iam?
+	def Read_9CBB2613(self, node): return self.Read_Unit(node, '9CBB2613' , '9CBB2613'                  , 0.0, 1.0         , True)
 
 	def HandleBlock(self, node):
 		i = 0
@@ -630,19 +634,19 @@ class SegmentReader(object):
 		e = len(node.data) - 17
 		if (self.version > 2018): e -=1
 		if (self.version < 2011): e -=8
-
+#
 		stream = io.BytesIO(node.data[i:e])
 		reader = AcisReader(stream)
 		reader.name = "%04X" %(node.index)
 		if (reader.readBinary()):
-			node.set('SAT', reader)
+			node.SAT = reader
 			resolveEntityReferences(node)
-			node.set('nameMatches', getNameMatchAttributes())
-			node.set('dcAttributes', getDcAttributes())
+			node.nameMatches = getNameMatchAttributes()
+			node.dcAttributes = getDcAttributes()
 			self.segment.AcisList.append(node)
 			i = self.skipBlockSize(e)
 			i = node.ReadUInt32(i, 'selectedKey')
-			i += 1 # skip 00
+			i = node.ReadBoolean(i, 'b1')
 			i = node.ReadSInt32(i, 'delta_state') # active delta-state
 			i = self.skipBlockSize(i)
 			if (self.version > 2018): i += 1 # skip 00
@@ -735,7 +739,7 @@ class SegmentReader(object):
 				l, i = getUInt32(buffer, i)
 				i = self.ReadTrailer(buffer, i)
 				if ((l != 0) and (sec.length != l)):
-					logError('%s: BLOCK[%04X] - incorrect block size %X != 	%X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, u32_0, start, data.typeName))
+					logError('%s: BLOCK[%04X] - incorrect block size %X != 	%X found for offset %X for %s!' %(self.__class__.__name__, data.index, l, sec.length, start, data.typeName))
 
 		self.segment.tree = buildTree(file, self.segment.elementNodes)
 		self.postRead()

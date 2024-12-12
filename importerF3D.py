@@ -128,7 +128,6 @@ def read_manifest(f3d, path):
 		log.write(" ".join(["%02X"%(c) for c in data[i:]]))
 
 	return folder
-	return
 
 def read(filename):
 	global smb_files, bulk_data, sketches, refs

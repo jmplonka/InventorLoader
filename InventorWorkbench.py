@@ -4,7 +4,7 @@
 InventorWorkbench.py
 '''
 
-import os, sys, FreeCAD, FreeCADGui
+import sys, FreeCAD, FreeCADGui
 from InventorViewProviders import *
 from FreeCADGui            import Workbench, addCommand
 from importerUtils         import getIconPath
@@ -86,10 +86,10 @@ _FREEFORM_QUAD_BALL   = PREFIX + 'FreeformQuadBall'  # FX missing
 _FREEFORMS_           = PREFIX + 'Freeforms'
 # Sheet-Metal
 _SHEET_METAL_FACE_    = PREFIX + 'FxFace'            # FX missing
-_SHEET_METAL_FLANGE_  = PREFIX + 'FxFlange'          # FX missing
+_SHEET_METAL_FLANGE_  = PREFIX + 'FxFlange'
 _SHEET_METAL_CONTOUR_ = PREFIX + 'FxFlangeContour'   # FX missing
 _SHEET_METAL_LOFTED_  = PREFIX + 'FxLoftedFlange'    # FX missing
-_SHEET_METAL_FLANGES_ = PREFIX + 'FxFlanges'
+_SHEET_METAL_FLANGES_ = PREFIX + 'FxFlanges'         # FX missing
 _SHEET_METAL_ROLL_    = PREFIX + 'FxContourRoll'     # FX missing
 _SHEET_METAL_HEM_     = PREFIX + 'FxHem'             # FX missing
 _SHEET_METAL_BEND_    = PREFIX + 'FxBend'            # FX missing
@@ -331,6 +331,8 @@ class _CmdFxThicken(_CmdAbstract):
 		super(_CmdFxThicken, self).__init__(menuText="T&hicken", toolTip="", pixmap=getIconPath("FxThicken.png"))
 	def Activated(self):
 		runPartCommand("Offset")
+	def IsActive(self):
+		return False
 class _CmdFxStitch(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxStitch, self).__init__(menuText="&Stitch faces", toolTip="Stitches selected faces", pixmap=getIconPath("FxStitch.png"), accel="I, S")
@@ -339,9 +341,13 @@ class _CmdFxStitch(_CmdAbstract):
 			boundaries = FreeCADGui.Selection.getSelection(FreeCAD.ActiveDocument.Name)
 			if (len(boundaries) > 1):
 				makeStitch(boundaries)
+	def IsActive(self):
+		return False
 class _CmdFxSculpt(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxSculpt, self).__init__(menuText="S&culpt", toolTip="", pixmap=getIconPath("FxSculpt.png"))
+	def IsActive(self):
+		return False
 class _CmdFxPatch(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxPatch, self).__init__(menuText="&Boundary Patch", toolTip="Create a boundary patch for the selected edges", pixmap=getIconPath("FxBoundaryPatch.png"), accel="I, P")
@@ -354,6 +360,8 @@ class _CmdFxPatch(_CmdAbstract):
 					edges += obj.Edges
 			if (len(edges) > 0):
 				makeBoundaryPatch(edges)
+	def IsActive(self):
+		return False
 class _CmdFxTrim(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxTrim, self).__init__(menuText="&Trim face", toolTip="", pixmap=getIconPath("FxTrim.png"))
@@ -365,58 +373,92 @@ class _CmdFxTrim(_CmdAbstract):
 				FreeCADGui.addModule("InventorViewProviders")
 				FreeCADGui.doCommand("InventorViewProviders.makeTrim()")
 				FreeCAD.ActiveDocument.commitTransaction()
+	def IsActive(self):
+		return False
 class _CmdFxFaceDelete(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxFaceDelete, self).__init__(menuText="&Delete face", toolTip="", pixmap=getIconPath("FxFaceDelete.png"))
+	def IsActive(self):
+		return False
 class _CmdFxFaceReplace(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxFaceReplace, self).__init__(menuText="&Replace face", toolTip="", pixmap=getIconPath("FxFaceReplace.png"))
+	def IsActive(self):
+		return False
 class _CmdFxFaceExtend(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxFaceExtend, self).__init__(menuText="&Extend face", toolTip="", pixmap=getIconPath("FxFaceExtend.png"))
+	def IsActive(self):
+		return False
 class _CmdFxRuledSurface(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRuledSurface, self).__init__(menuText="Ruled sur&face", toolTip="", pixmap=getIconPath("FxRuledSurface.png"))
+	def IsActive(self):
+		return False
 
 # Plastic parts
 class _CmdFxGrill(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxGrill, self).__init__(menuText="&Grill", toolTip="The Grill feature is used to create vents or openings on the thin walls of a part to provide air flow for internal components. ", pixmap=getIconPath("FxGrill.png"))
+	def IsActive(self):
+		return False
 class _CmdFxBoss(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxBoss, self).__init__(menuText="&Boss", toolTip="Build a boss feature on a part using points of a 2D sketch or using On Point placement.", pixmap=getIconPath("FxBoss.png"))
+	def IsActive(self):
+		return False
 class _CmdFxRest(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRest, self).__init__(menuText="&Rest", toolTip="Create a Rest", pixmap=getIconPath("FxRest.png"))
+	def IsActive(self):
+		return False
 class _CmdFxSnapFit(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxSnapFit, self).__init__(menuText="&Snap-Fit", toolTip="Create a Snap Fit", pixmap=getIconPath("FxSnapFit.png"))
+	def IsActive(self):
+		return False
 class _CmdFxRuleFillet(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxRuleFillet, self).__init__(menuText="Ruled &Fillet", toolTip="Rule-based fillets are useful for creating grills or adding to machined parts", pixmap=getIconPath("FxRuleFillet.png"))
+	def IsActive(self):
+		return False
 class _CmdFxLip(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxLip, self).__init__(menuText="&Lip", toolTip="Limit the lip extension on one of the paths to two trimming planes", pixmap=getIconPath("FxLip.png"))
+	def IsActive(self):
+		return False
 
 # Freeform
 class _CmdFreeformBox(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFreeformBox, self).__init__(menuText="&Box", toolTip="Create a rectangular boxed freeform", pixmap=getIconPath("FreeformBox.png"))
+	def IsActive(self):
+		return False
 class _CmdFreeformPlane(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFreeformPlane, self).__init__(menuText="&Plane", toolTip="Create a rectangular planar freeform", pixmap=getIconPath("FreeformPlane.png"))
+	def IsActive(self):
+		return False
 class _CmdFreeformCylinder(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFreeformCylinder, self).__init__(menuText="&Cylinder", toolTip="Create a cylindrical freeform", pixmap=getIconPath("FreeformCylinder.png"))
+	def IsActive(self):
+		return False
 class _CmdFreeformSphere(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFreeformSphere, self).__init__(menuText="&Sphere", toolTip="Create a sphercical freeform", pixmap=getIconPath("FreeformSphere.png"))
+	def IsActive(self):
+		return False
 class _CmdFreeformTorus(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFreeformTorus, self).__init__(menuText="&Torus", toolTip="Create a toroidal freeform", pixmap=getIconPath("FreeformTorus.png"))
+	def IsActive(self):
+		return False
 class _CmdFreeformQuadBall(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFreeformQuadBall, self).__init__(menuText="&Quad Ball", toolTip="Create a 'quad ball' freeform", pixmap=getIconPath("FreeformQuadBall.png"))
+	def IsActive(self):
+		return False
 class _CmdFreeforms(_CmdNoCommand):
 	def __init__(self):
 		super(_CmdFreeforms, self).__init__(menuText='Create Freeform', toolTip='Create a freeform')
@@ -424,6 +466,8 @@ class _CmdFreeforms(_CmdNoCommand):
 		return tuple([_FREEFORM_BOX_, _FREEFORM_PLANE_, _FREEFORM_CYLINDER, _FREEFORM_SPHERE, _FREEFORM_TORUS, _FREEFORM_QUAD_BALL])
 	def GetDefaultCommand(self):
 		return 0 # by default 'Box'
+	def IsActive(self):
+		return False
 class  _CmdPrimitiveBox(_CmdAbstract):
 	def __init__(self):
 		super(_CmdPrimitiveBox, self).__init__(menuText="&Box", toolTip="Create a primitive box", pixmap=getIconPath("Primitive_Box.svg"))
@@ -476,15 +520,40 @@ class  _CmdPrimitives(_CmdNoCommand):
 class _CmdSheetMetalFace(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalFace, self).__init__(menuText="Plate", toolTip="Face for sheet metal", pixmap=getIconPath("SheetMetalFace.png"))
+	def Activated(self):
+		import SheetMetalBaseCmd
+		FreeCADGui.runCommand('SMBase', 0)
+	def IsActive(self):
+		if super().IsActive():
+			sel = FreeCADGui.Selection.getSelection()
+			if (sel):
+				obj = sel[0]
+				return obj.isDerivedFrom("Sketcher::SketchObject") or obj.isDerivedFrom("PartDesign::ShapeBinder") or obj.isDerivedFrom("PartDesign::SubShapeBinder")
+		return False
 class _CmdSheetMetalFlange(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalFlange, self).__init__(menuText="Flange", toolTip="Flange sheet metal", pixmap=getIconPath("SheetMetalFlange.png"))
+	def Activated(self):
+		import SheetMetalCmd
+		FreeCADGui.runCommand('SMMakeWall', 0)
+	def IsActive(self):
+		result = False
+		if super().IsActive():
+			sel = FreeCADGui.Selection.getSelectionEx()[0].SubObjects
+			if (len(sel)):
+				for selFace in sel:
+					result = result or (type(selFace) == Part.Face)
+		return result
 class _CmdSheetMetalFlangeContour(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalFlangeContour, self).__init__(menuText="Contour Flange", toolTip="Contour flange sheet metal", pixmap=getIconPath("SheetMetalFlangeContour.png"))
+	def IsActive(self):
+		return False
 class _CmdSheetMetalFlangeLofted(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalFlangeLofted, self).__init__(menuText="Lofted Flange", toolTip="Lofted flange sheet metal", pixmap=getIconPath("SheetMetalFlangeLofted.png"))
+	def IsActive(self):
+		return False
 class _CmdSheetMetalFlanges(_CmdNoCommand):
 	def __init__(self):
 		super(_CmdSheetMetalFlanges, self).__init__(menuText='Create Flange', toolTip='Create flanges for sheet metal')
@@ -495,30 +564,68 @@ class _CmdSheetMetalFlanges(_CmdNoCommand):
 class _CmdSheetMetalContourRoll(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalContourRoll, self).__init__(menuText="Contour Roll", toolTip="Contour Rolll sheet metal", pixmap=getIconPath("SheetMetalContourRoll.png"))
+	def IsActive(self):
+		return False
 class _CmdSheetMetalHem(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalHem, self).__init__(menuText="Hem", toolTip="Hem sheet metal", pixmap=getIconPath("SheetMetalHem.png"))
+	def IsActive(self):
+		return False
 class _CmdSheetMetalBend(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalBend, self).__init__(menuText="Bend", toolTip="Bend sheet metal", pixmap=getIconPath("SheetMetalBend.png"))
 class _CmdSheetMetalFold(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalFold, self).__init__(menuText="Fold", toolTip="Fold sheet metal", pixmap=getIconPath("SheetMetalFold.png"))
+	def Activated(self):
+		import SheetMetalFoldCmd
+		FreeCADGui.runCommand('SMFoldWall', 0)
+	def IsActive(self):
+		result = False
+		if (super().IsActive()):
+			sel = FreeCADGui.Selection.getSelectionEx()
+			if (len(sel) < 2):
+				return False
+			faces = sel[0].SubObjects
+			for face in faces:
+				result = result or (type(face) != Part.Face)
+			result = result or FreeCADGui.Selection.getSelection()[1].isDerivedFrom('Sketcher::SketchObject')
+			return result
+		return result
 class _CmdSheetMetalUnfold(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalUnfold, self).__init__(menuText="Unfold", toolTip="Unfold sheet metal", pixmap=getIconPath("SheetMetalUnfold.png"))
+	def Activated(self):
+		import SheetMetalUnfolder
+		runSheetMetalCommad('SMUnfold', 0)
+	def IsActive(self):
+		if (super().IsActive()):
+			sel = FreeCADGui.Selection.getSelectionEx()[0].SubObjects
+			if (len(sel) != 1):
+				return False
+			selFace = sel[0]
+			return (type(selFace) == Part.Face)
+		return False
 class _CmdSheetMetalRefold(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalRefold, self).__init__(menuText="Refold", toolTip="Refold sheet metal", pixmap=getIconPath("SheetMetalRefold.png"))
+	def IsActive(self):
+		return False
 class _CmdSheetMetalCut(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalCut, self).__init__(menuText="Cut", toolTip="Cut sheet metal", pixmap=getIconPath("SheetMetalCut.png"))
+	def IsActive(self):
+		return False
 class _CmdSheetMetalCorner(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalCorner, self).__init__(menuText="Corner", toolTip="Corner sheet metal", pixmap=getIconPath("SheetMetalCorner.png"))
+	def IsActive(self):
+		return False
 class _CmdSheetMetalRip(_CmdAbstract):
 	def __init__(self):
 		super(_CmdSheetMetalRip, self).__init__(menuText="Rip", toolTip="Rip sheet metal", pixmap=getIconPath("SheetMetalRip.png"))
+	def IsActive(self):
+		return False
 
 # others
 class _CmdiPart(_CmdAbstract):

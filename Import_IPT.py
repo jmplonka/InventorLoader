@@ -272,7 +272,7 @@ def create3dModel(root, doc):
 	else:
 		brep = getModel().getBRep()
 		for asm in brep.AcisList:
-			setReader(asm.get('SAT'))
+			setReader(asm.SAT)
 			if (strategy == STRATEGY_SAT):
 				importModel(root)
 			elif (strategy == STRATEGY_STEP):
