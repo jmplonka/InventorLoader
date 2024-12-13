@@ -5302,10 +5302,12 @@ class AcisReader(object):
 				self.history = History(record)
 				self.history.index = recordIdx
 				index = 0
+				self._records.append(record)
 			elif (record.name == "End-of-ACIS-History-Section"):
 				historySec = False
 				record.index = -1
 				index = recordIdx
+				self._records.append(record)
 			elif (record.name == "End-of-ACIS-data"):
 				record.index = -1
 				self._records.append(record)

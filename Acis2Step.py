@@ -776,7 +776,8 @@ def _convertShell(acisShell, representation, parentColor):
 		for acisFace in faces:
 			#>MC vecchio
 			faces = _convertFace(acisFace, color, representation.context)
-			shell.faces += faces
+			if (faces):
+				shell.faces += faces
 
 			#face = _convertFace(acisFace, color, representation.context)
 			#shell.addFace(face)
