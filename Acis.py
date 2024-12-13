@@ -950,7 +950,7 @@ def createBSplinesSurface(nubs):
 			vdegree   = nubs.vDegree,   \
 			weights   = _weights        \
 		)
-	else:
+	except:
 		bss.buildFromPolesMultsKnots(       \
 			poles     = nubs.poles,     \
 			umults    = nubs.uMults,    \
