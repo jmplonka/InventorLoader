@@ -120,19 +120,17 @@ def buildBody(root, node):
 def resolveNodes(acis):
 	init()
 	bodies = []
-	doAdd  = True
 	setReader(acis)
 
 	if (getDumpFolder()[-3:].lower() != 'sat'):
 		name = _getSatFileName(acis.name)
 		dumpSat(name, acis)
 	for record in acis.getRecords():
+		if (record.name in ['Begin-of-ACIS-History-Data', 'End-of-ACIS-History-Section', 'End-of-ACIS-data']):
+			break
 		entity = createEntity(record)
-		if entity:
-			if (doAdd and (record.name == 'body')):
-				bodies.append(entity)
-			if (record.name in ['Begin-of-ACIS-History-Data', 'End-of-ACIS-data']):
-				doAdd = False
+		if (record.name == 'body'):
+			bodies.append(entity)
 
 	return bodies
 
