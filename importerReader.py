@@ -256,9 +256,8 @@ def ReadWorkbook(data, name, stream):
 	if (dumpFolder):
 		##create a new Spreadsheet in new document
 		wbk = xlrd.book.open_workbook_xls(file_contents=data, formatting_info=True)
-
 		xls = copy(wbk)
-		xls.save(u"%s/%s.xls" %(dumpFolder, name))
+		xls.save(f"{dumpFolder}/{name}.xls")
 	return len(data)
 
 def ReadOle10Native(stream, fnames):

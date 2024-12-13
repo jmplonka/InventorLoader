@@ -143,7 +143,8 @@ def open(filename, skip = [], only = [], root = None):
 	In addition to insert (import), the iProperties are as well added to the document.
 	'''
 	if (isFileValid(filename)):
-		logAlways(u"Reading: %s", os.path.abspath(filename))
-		_open(filename, skip, only, root)
-		logInfo(u"DONE!")
+		abs_file_name = os.path.abspath(filename)
+		logAlways(f"Reading: {abs_file_name}")
+		_open(abs_file_name, skip, only, root)
+		logInfo('DONE!')
 	return

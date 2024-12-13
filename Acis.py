@@ -872,22 +872,24 @@ def createBSplinesPCurve(pcurve, surface, sense):
 	if (surf is None):
 		return None
 	bsc = Part.Geom2d.BSplineCurve2d()
-	if (pcurve.rational):
-		bsc.buildFromPolesMultsKnots(      \
-			poles    = pcurve.poles,   \
-			mults    = pcurve.uMults,  \
-			knots    = pcurve.uKnots,  \
-			periodic = False,          \
-			degree   = pcurve.uDegree, \
-			weights  = pcurve.weights  \
+	_weights = pcurve.weights if (pcurve.rational) else None
+	try:
+		bsc.buildFromPolesMultsKnots(    \
+			poles    = pcurve.poles,     \
+			mults    = pcurve.uMults,    \
+			knots    = pcurve.uKnots,    \
+			periodic = pcurve.uPeriodic, \
+			degree   = pcurve.uDegree,   \
+			weights  = _weights          \
 		)
-	else:
-		bsc.buildFromPolesMultsKnots(      \
-			poles    = pcurve.poles,   \
-			mults    = pcurve.uMults,  \
-			knots    = pcurve.uKnots,  \
-			periodic = False,          \
-			degree   = pcurve.uDegree  \
+	except:
+		bsc.buildFromPolesMultsKnots(    \
+			poles    = pcurve.poles,     \
+			mults    = pcurve.uMults,    \
+			knots    = pcurve.uKnots,    \
+			periodic = False,            \
+			degree   = pcurve.uDegree,   \
+			weights  = _weights          \
 		)
 	shape = bsc.toShape(surf, bsc.FirstParameter, bsc.LastParameter)
 	if (shape is not None):
@@ -904,24 +906,25 @@ def createBSplinesCurve(nubs, sense, subtype):
 		shape = None
 		try:
 			bsc = Part.BSplineCurve()
-			if (nubs.rational):
+			_weights = nubs.weights if (nubs.rational) else None
+			try:
+				bsc.buildFromPolesMultsKnots(       \
+					poles         = nubs.poles,     \
+					mults         = nubs.uMults,    \
+					knots         = nubs.uKnots,    \
+					periodic      = nubs.uPeriodic, \
+					degree        = nubs.uDegree,   \
+					weights       = _weights        \
+				)
+			except:
 				bsc.buildFromPolesMultsKnots(       \
 					poles         = nubs.poles,     \
 					mults         = nubs.uMults,    \
 					knots         = nubs.uKnots,    \
 					periodic      = False,          \
 					degree        = nubs.uDegree,   \
-					weights       = nubs.weights
+					weights       = _weights        \
 				)
-			else:
-				bsc.buildFromPolesMultsKnots(       \
-					poles         = nubs.poles,     \
-					mults         = nubs.uMults,    \
-					knots         = nubs.uKnots,    \
-					periodic      = False,          \
-					degree        = nubs.uDegree
-				)
-			# periodic = nubs.uPeriodic
 			shape = bsc.toShape()
 		except Exception as e:
 			logWarning("Can't create BSpline-Curve for suptype '%s'!" %(subtype))
@@ -932,39 +935,35 @@ def createBSplinesCurve(nubs, sense, subtype):
 def createBSplinesSurface(nubs):
 	if (nubs is None):
 		return None
+	bss = Part.BSplineSurface()
+	_weights = nubs.weights if (nubs.rational) else None
 	try:
-		bss = Part.BSplineSurface()
-		if (nubs.rational):
-			bss.buildFromPolesMultsKnots(       \
-				poles     = nubs.poles,     \
-				umults    = nubs.uMults,    \
-				vmults    = nubs.vMults,    \
-				uknots    = nubs.uKnots,    \
-				vknots    = nubs.vKnots,    \
-				uperiodic = False,          \
-				vperiodic = False,          \
-				udegree   = nubs.uDegree,   \
-				vdegree   = nubs.vDegree,   \
-				weights   = nubs.weights    \
-			)
-		else:
-			bss.buildFromPolesMultsKnots(       \
-				poles     = nubs.poles,     \
-				umults    = nubs.uMults,    \
-				vmults    = nubs.vMults,    \
-				uknots    = nubs.uKnots,    \
-				vknots    = nubs.vKnots,    \
-				uperiodic = False,          \
-				vperiodic = False,          \
-				udegree   = nubs.uDegree,   \
-				vdegree   = nubs.vDegree    \
-			)
-		# uperiodic = nubs.uPeriodic
-		# vperiodic = nubs.vPeriodic
-		return bss.toShape()
-	except Exception as e:
-		logError(traceback.format_exc())
-	return None
+		bss.buildFromPolesMultsKnots(   \
+			poles     = nubs.poles,     \
+			umults    = nubs.uMults,    \
+			vmults    = nubs.vMults,    \
+			uknots    = nubs.uKnots,    \
+			vknots    = nubs.vKnots,    \
+			uperiodic = nubs.uPeriodic, \
+			vperiodic = nubs.vPeriodic, \
+			udegree   = nubs.uDegree,   \
+			vdegree   = nubs.vDegree,   \
+			weights   = _weights        \
+		)
+	else:
+		bss.buildFromPolesMultsKnots(       \
+			poles     = nubs.poles,     \
+			umults    = nubs.uMults,    \
+			vmults    = nubs.vMults,    \
+			uknots    = nubs.uKnots,    \
+			vknots    = nubs.vKnots,    \
+			uperiodic = False,          \
+			vperiodic = False,          \
+			udegree   = nubs.uDegree,   \
+			vdegree   = nubs.vDegree,   \
+			weights   = _weights        \
+		)
+	return bss.toShape()
 
 def readBS2Curve(chunks, index):
 	nbs, dgr, i = getDimensionCurve(chunks, index)
@@ -3612,8 +3611,8 @@ class SurfaceSpline(Surface):
 		vrs = getVersion()
 		if ((vrs > 11.0) and (isASM() == False)): # ?!? correct ?!?
 			r11, i = getText(chunks, i)
-		self.s1, i      = getEnumByTag(chunks, i, SURF_SWEEP)
-		if (chunks[i].tag == TAG_LONG):
+		self.s1, i = getEnumByTag(chunks, i, SURF_SWEEP)
+		if (chunks[i].tag in (TAG_LONG, TAG_FLOAT, TAG_DOUBLE)):
 			n, i = getInteger(chunks, i) # ???? s1 = normal
 			self.profile, i = readCurve(chunks, i) # prfile[0]
 			self.prof_rng, i  = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
@@ -3628,7 +3627,7 @@ class SurfaceSpline(Surface):
 			self.v4, i = getVector(chunks, i)       #
 			self.v5, i = getVector(chunks, i)       #
 			self.v6, i = getVector(chunks, i)       #
-			if (chunks[i].tag in [TAG_LONG, TAG_FLOAT]):
+			if (chunks[i].tag in (TAG_LONG, TAG_FLOAT, TAG_DOUBLE)):
 				n2, i = getInteger(chunks, i)		    # 2
 				bln2, i = getBoolean(chunks, i)		    # F
 				self.path, i = readCurve(chunks, i)     # sweep-path
@@ -4048,8 +4047,11 @@ class SurfaceSpline(Surface):
 #				self.shape = self.path.helix.buildSurfaceLine(pt1, pt2)
 			if (isinstance(self.surface, Surface)):
 				self.shape = self.surface.build()
-				if ((self.shape is not None) and (isinstance(self.shape.Surface, Part.SurfaceOfRevolution))):
-					self.profile = self.surface.profile
+				try:
+					if (isinstance(self.shape.Surface, Part.SurfaceOfRevolution)):
+						self.profile = self.surface.profile
+				except AttributeError:
+					pass
 			if (self.shape is None):
 				if (hasattr(self, 'subtype')):
 					if (self.subtype != 'ref'):

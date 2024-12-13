@@ -18,6 +18,30 @@ from importerFreeCAD   import FreeCADImporter
 from importerSAT       import importModel, convertModel
 from Acis              import setReader
 from PySide.QtGui      import QMessageBox
+from struct            import unpack
+
+VT_EMPTY=0; VT_NULL=1; VT_I2=2; VT_I4=3; VT_R4=4; VT_R8=5; VT_CY=6;
+VT_DATE=7; VT_BSTR=8; VT_DISPATCH=9; VT_ERROR=10; VT_BOOL=11;
+VT_VARIANT=12; VT_UNKNOWN=13; VT_DECIMAL=14; VT_I1=16; VT_UI1=17;
+VT_UI2=18; VT_UI4=19; VT_I8=20; VT_UI8=21; VT_INT=22; VT_UINT=23;
+VT_VOID=24; VT_HRESULT=25; VT_PTR=26; VT_SAFEARRAY=27; VT_CARRAY=28;
+VT_USERDEFINED=29; VT_LPSTR=30; VT_LPWSTR=31;
+VT_USER_42=42; VT_USER_48=48; VT_USER_49=49; VT_FILETIME=64;
+VT_BLOB=65; VT_STREAM=66; VT_STORAGE=67; VT_STREAMED_OBJECT=68;
+VT_STORED_OBJECT=69; VT_BLOB_OBJECT=70; VT_CF=71; VT_CLSID=72;
+VT_VECTOR=0x1000;
+
+VT = dict([(v, k) for k, v in list(vars().items()) if k[:3] == "VT_"])
+
+# For Python 3.x, need to redefine long as int:
+if str is not bytes:
+    long = int
+
+# [PL]: Defect levels to classify parsing errors - see OleFileIO._raise_defect()
+DEFECT_UNSURE =    10    # a case which looks weird, but not sure it's a defect
+DEFECT_POTENTIAL = 20    # a potential defect
+DEFECT_INCORRECT = 30    # an error according to specifications, but parsing can go on
+DEFECT_FATAL =     40    # an error which cannot be ignored, parsing is impossible
 
 def ReadIgnorable(fname):
 	logInfo(u"    IGNORED: '%s'" %(fname[-1]))
@@ -171,7 +195,7 @@ def read(ole):
 #			getModel().UFRxDoc = importerUFRxDoc.read(ufrxDoc)
 			handled[PrintableName(fname)] = True
 		elif (name.startswith('\x05')):
-			props = ole.getproperties(fname, convert_time=True)
+			props = GetProperties(ole, fname)
 			if (name == '\x05Aaalpg0m0wzvuhc41dwauxbwJc'):
 				ReadOtherProperties(props, fname, Inventor_Document_Summary_Information)
 				setCompany(getProperty(props, KEY_DOC_SUM_INFO_COMPANY))
@@ -278,3 +302,215 @@ def create3dModel(root, doc):
 			elif (strategy == STRATEGY_STEP):
 				convertModel(root, doc.Name)
 	return
+
+def _get_property_data(section, index, s):
+	begin = section[index + 1]
+	adr_lst = []
+
+	i = len(section)-1
+	while (i > 0):
+		adr = section[i]
+		if (adr > begin):
+			adr_lst.append(adr)
+		i -= 2
+	adr_lst.sort()
+
+	if (len(adr_lst)):
+		return s[begin:adr_lst[0]]
+
+	return s[begin:]
+
+def GetProperties(ole, filename):
+	streampath = filename
+	if not isinstance(streampath, str):
+		streampath = '/'.join(streampath)
+	fp = ole.openstream(filename)
+	data = {}
+	try:
+		# header
+		s = fp.read(0x30)
+		magic, i = getUInt16A(s, 0, 4)
+		clsid, i = getUUID(s, i)
+		ukn1, i = getUInt32(s, i)
+		fmtid, i = getUUID(s, i)
+		offset, i = getUInt32(s, i)
+		fp.seek(offset)
+		# get section
+		s = fp.read()
+		size, i = getUInt32(s, 0)
+		# number of properties:
+		num_props, i = getUInt32(s, i)
+		num_props = min(num_props, int(len(s) / 8))
+		section, i = getUInt32A(s, i, num_props * 2)
+		i = 0
+		while (num_props>0):
+			prop_id = section[i]
+			offset = section[i+1]
+			prop_data = _get_property_data(section, i, s)
+			prop_value = _parse_property(prop_id, prop_data, offset)
+			data[prop_id] = prop_value
+			i += 2
+			num_props -= 1
+	except BaseException as exc:
+		# catch exception while parsing property header, and only raise
+		# a DEFECT_INCORRECT then return an empty dict, because this is not
+		# a fatal error when parsing the whole file
+		msg = f"Error while parsing properties header in stream {repr(streampath)}: {exc}"
+		raise Exception(DEFECT_INCORRECT, msg, type(exc))
+
+	fp.close()
+
+	return data
+
+def _parse_property(property_id, s, offset):
+	property_type, i = getUInt32(s, 0)
+	vt_name = VT.get(property_type, f'VT_{property_type:08X}')
+	logInfo(f'property id={property_id}: {vt_name}@0x{offset:08X}')
+
+	if property_type <= VT_BLOB or property_type in (VT_CLSID, VT_CF):
+		value, _ = _parse_property_basic(s, i, property_id, property_type)
+		return value
+
+	if property_type == VT_VECTOR | VT_VARIANT:
+		count, i = getUInt32(s, i)
+		logWarning('property_type == VT_VECTOR | VT_VARIANT')
+		values = []
+		for _ in range(count):
+			property_type, i = getUInt32(s, i)
+			v, i  = _parse_property_basic(s, i, property_id, property_type)
+			values.append(v)
+		return values
+
+	if property_type & VT_VECTOR:
+		count, i = getUInt32(s, i)
+		property_type_base = property_type & ~VT_VECTOR
+		logWarning('property_type == %s * %s' % (VT.get(property_type_base, f'VT_{property_type_base:08X}'), count))
+		values = []
+		for _ in range(count):
+			v, i = _parse_property_basic(s, i, property_id, property_type_base)
+			values.append(v)
+		return values
+
+	logWarning('property id=%d: type=%d not implemented in parser yet' % (property_id, property_type))
+	return None
+
+def Property_VT_NULL(s, offset):
+	return None, offset
+def Property_VT_EMPTY(s, offset):
+	return None, offset
+def Property_VT_I1(s, offset): # 8-bit signed integer
+	return getSInt8(s, offset)
+def Property_VT_I2(s, offset): # 16-bit signed integer
+	return getSInt16(s, offset)
+def Property_VT_UI22(s, offset): # 2-byte unsigned integer
+	return  getUInt16(s, offset)
+def Property_VT_I4(s, offset):# VT_I4: 32-bit signed integer
+	return getSInt32(s, offset)
+def Property_VT_INT(s, offset):
+	return getSInt32(s, offset)
+def Property_VT_ERROR(s, offset): # VT_ERROR: HRESULT, similar to 32-bit signed integer
+	# see https://msdn.microsoft.com/en-us/library/cc230330.aspx
+	return getUInt32(s, offset)
+def Property_VT_I8(s, offset): # 8-byte signed integer
+	return  getSInt64(s, offset)
+def Property_VT_UI8(s, offset): # 8-byte unsigned integer
+	return getUInt64(s, offset)
+def Property_VT_UI4(s, offset):
+	return getUInt32(s, offset)
+def Property_VT_UINT2(s, offset): # 4-byte unsigned integer
+	return getUInt32(s, offset)
+def Property_VT_BSTR(s, offset): # CodePageString, see https://msdn.microsoft.com/en-us/library/dd942354.aspx
+	# size is a 32 bits integer, including the null terminator, and
+	# possibly trailing or embedded null chars
+	# TODO: if codepage is unicode, the string should be converted as such
+	ptr, i = getUInt32(s, offset)
+	value, i = getLen32Text16(s, i)
+	return  value.replace('\x00', ''), i
+def Property_VT_LPSTR(s, offset):
+	value, i = getLen32Text8(s, offset)
+	return  value.replace('\x00', ''), i
+def Property_VT_BLOB(s, offset): # binary large object (BLOB)
+	# see https://msdn.microsoft.com/en-us/library/dd942282.aspx
+	count, i = getUInt32(s, offset)
+	return getUInt8A(s, i, count)
+def Property_VT_LPWSTR(s, offset): # UnicodeString
+	# see https://msdn.microsoft.com/en-us/library/dd942313.aspx
+	# "the string should NOT contain embedded or additional trailing null characters."
+	return getLen32Text16(s, offset)
+def Property_VT_USERDEFINED(s, offset):
+	value = []
+	i = offset
+	while i < (len(s)):
+		n, i = getUInt32(s, i)
+		v, i = getLen32Text16(s, i)
+		i += i % 4
+		value.append((n, v))
+	return value, i
+def Property_VT_USER_42(s, offset):
+	return Property_VT_USERDEFINED(s, offset)
+def Property_VT_USER_48(s, offset): # used for dimenstions
+	return Property_VT_USERDEFINED(s, offset)
+def Property_VT_USER_49(s, offset):
+	return Property_VT_USERDEFINED(s, offset)
+def Property_VT_FILETIME(s, offset): # FILETIME is a 64-bit int: "number of 100ns periods since Jan 1,1601".
+	value, i = getUInt64(s, offset)
+	# convert FILETIME to Python datetime.datetime
+	# inspired from https://code.activestate.com/recipes/511425-filetime-to-datetime/
+	_FILETIME_null_date = datetime.datetime(1601, 1, 1, 0, 0, 0)
+	logInfo('timedelta days=%d' % (value//(10*1000000*3600*24)))
+	return _FILETIME_null_date + datetime.timedelta(microseconds=value//10), i
+def Property_VT_UI1(s, offset): # 1-byte unsigned integer
+	return getUInt8(s, offset)
+def Property_VT_CLSID(s, offset):
+	return getUUID(s, offset)
+def Property_VT_CF(s, offset): # PropertyIdentifier or ClipboardData??
+	# see https://msdn.microsoft.com/en-us/library/dd941945.aspx
+	cnt, i = getUInt32(s, offset)
+	fmt, i = getUInt32(s, i)
+	dat =  s[i:i+cnt-4]
+	return (fmt, dat), i+cnt-4
+def Property_VT_BOOL(s, offset): # VARIANT_BOOL, 16 bits bool, 0x0000=Fals, 0xFFFF=True
+	# see https://msdn.microsoft.com/en-us/library/cc237864.aspx
+	value, i = getUInt16(s, offset)
+	return bool(value), i
+def Property_VT_R4(s, offset): # 32 bit single precision
+	return getFloat32(s, offset)
+def Property_VT_R8(s, offset): # 64 bit double precision
+	return getFloat64(s, offset)
+def Property_VT_CY(s, offset): # 8 Byte Currency
+	value, i = getSInt64(s, offset)
+	return value / 1000.0, i
+def Property_VT_DECIMAL(s, offset): # 96 bit Decimal
+	reserved, i = getSInt16(s, offset)
+	scale, i = getUInt8(s, i)
+	if (scale == 0):
+		return None, offset
+	sign, i = getUInt8(s, i)
+	hi32, i = getUInt32(s, i)
+	hi64, i = getUInt64(s, i)
+	value = (hi32 << 64 + hi64) * scale
+	if (sign):
+		value *= -1;
+	return value, i
+def Property_VT_DATE(s, offset): # B byte floating point
+	return  getFloat64(s, offset) # FIXME convert to datetime!
+def Property_VT_DISPATCH(s, offset): # B byte floating point
+	logWarning("Don't know how to read VT_DISPATCH data!")
+	return  None, offset # FIXME convert to datetime!
+def Property_VT_UNKNOWN(s, offset): # B byte floating point
+	logWarning("Don't know how to read VT_UNKNOW data!")
+	return  None, offset # FIXME convert to datetime!
+def Property_VT_VARIANT(s, offset): # B byte floating point
+	logWarning("Don't know how to read VT_VARIANT data!")
+	return  None, offset # FIXME convert to datetime!
+
+def _parse_property_basic(s, offset, property_id, property_type):
+	type_name = VT.get(property_type, f"VT_0x{property_type:04X}")
+	# test for common types first (should perhaps use a dictionary instead?)
+	fkt_name = f"Property_{type_name}"
+	fkt = getattr(sys.modules[__name__], fkt_name, None)
+	if (fkt is None):
+		logError(f"    Property id={property_id:08X}: {type_name} not implemented in parser yet")
+		# see https://msdn.microsoft.com/en-us/library/dd942033.aspx
+		return None, offset
+	return fkt(s, offset)

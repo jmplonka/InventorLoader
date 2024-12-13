@@ -77,12 +77,37 @@ def _dump_SMB(f3d, path):
 					smb_files.append(reader)
 	return result
 
+def get_manifest_item(data, offset):
+	t1, i = getLen32Text16(data, offset)
+	t2, i = getLen32Text16(data, i)
+	t3, i = getLen32Text16(data, i)
+	t4, i = getLen32Text16(data, i)
+	a1, i = getUInt32A(data, i, 4)
+	cnt, i = getUInt32(data, i)
+	a2 = {}
+	for j in range(cnt):
+		k, i = getLen32Text16(data, i)
+		v, i = getLen32Text16(data, i)
+		a2[k] = v
+	return (t1, t2, t3, t4, a1, a2), i
+
+def get_manifest_items(data, offset):
+	a = []
+	n1, i = getUInt8(data, offset)
+	if (n1):
+		cnt, i = getUInt32(data, i)
+		for j in range(cnt):
+			mi, i = get_manifest_item(data, i)
+			a.append(mi)
+	return a, i
+
 def read_manifest(f3d, path):
 	name = path.split('/')[-1]
 	if (name):
 		with f3d.open(path) as manifest:
+			i = 0
 			data = manifest.read()
-			t1,  i = getLen32Text8(data, 0)
+			t1,  i = getLen32Text8(data, i)
 			t2,  i = getLen32Text8(data, i)  # fusion doc type
 			t3,  i = getLen32Text16(data, i) # .f3d
 			t4,  i = getLen32Text16(data, i) # Fusion Document
@@ -101,30 +126,31 @@ def read_manifest(f3d, path):
 			for j in range(cnt):
 				t, i = getLen32Text16(data, i)
 				l2.append(t)
-			n1, i = getUInt8(data, i)
+			l3, i = get_manifest_items(data, i)
 			t8, i = getLen32Text16(data, i)  # UID
-			n2, i = getUInt32(data, i)
+			n1, i = getUInt32(data, i) # 1
 			folder, i = getLen32Text16(data, i) # -> folder name
-			n3, i = getUInt32(data, i)
-			n4, i = getUInt8(data, i)
+			n2, i = getUInt32(data, i)
+			n3, i = getUInt8(data, i)
 	# dump
 	dumpFolder = getDumpFolder()
 	with open(u"%s/Manifest.log" %(dumpFolder), 'w') as log:
-		log.write("t1 = '%s'\n"%(t1))
-		log.write("t2 = '%s'\n"%(t2))
-		log.write("t3 = '%s'\n"%(t3))
-		log.write("t4 = '%s'\n"%(t4))
-		log.write("t5 = '%s'\n"%(t5))
-		log.write("t6 = '%s'\n"%(t6))
-		log.write("t7 = '%s'\n"%(t7))
-		log.write("a1 = (%s)\n"%(",".join(["('%s', %04X)"%(t, v) for t, v in l1])))
-		log.write("a1 = (%s)\n"%(",".join(["('%s')"%(t) for t in l2])))
-		log.write("n1 = %02X\n"%(n1))
+		log.write(f"t1 = '{t1}'\n")
+		log.write(f"t2 = '{t2}'\n")
+		log.write(f"t3 = '{t3}'\n")
+		log.write(f"t4 = '{t4}'\n")
+		log.write(f"t5 = '{t5}'\n")
+		log.write(f"t6 = {t6}\n")
+		log.write(f"t7 = {t7}\n")
+		log.write("a1 = (%s)\n" % (",".join([f"{t:04X}" for t in a1])))
+		log.write("l1 = (%s)\n" % (",".join([f"{t}={v:04X}" for t, v in l1])))
+		log.write("l2 = (%s)\n" % (",".join([f"'{t}'" for t in l2])))
+		log.write("l3 = %s\n" % (l3))
 		log.write("t8 = '%s'\n"%(t8))
-		log.write("n2 = %04X\n"%(n2))
-		log.write("folder = '%s'\n"%(folder))
-		log.write("n3 = %04X\n"%(n3))
-		log.write("n4 = %02X\n"%(n4))
+		log.write(f"n1 = {n1:08X}\n")
+		log.write(f"n2 = {n2:08X}\n")
+		log.write(f"n3 = {n3:02X}\n")
+
 		log.write(" ".join(["%02X"%(c) for c in data[i:]]))
 
 	return folder

@@ -177,17 +177,7 @@ class EeSceneReader(StyleReader):
 		return i
 
 	def Read_A529D1E2(self, node): # Part GroupNode
-		i = node.Read_Header0('GroupNode')
-		i = node.ReadUInt32(i, 'u32_0')
-		i = node.ReadChildRef(i, 'attrs')
-		i = node.ReadUInt8(i, 'u8_0')
-		i = self.skipBlockSize(i)
-		if (self.version < 2025):
-			i = node.ReadList3(i, importerSegNode._TYP_NODE_REF_, 'parts')
-		else:
-			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'parts')
-#		i = self.skipBlockSize(i)
-#		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
+		i = self.ReadHeaderU32RefU8List3(node, 'GroupNode', 'parts')
 		return i
 
 	def Read_36ABFE49(self, node): # Assembly GroupNode

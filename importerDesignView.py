@@ -71,11 +71,7 @@ class DesignViewReader(SegmentReader):
 
 	def Read_9B043321(self, node):
 		i = node.Read_Header0()
-		if (self.version > 2024):
-			i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
-			i = node.ReadUInt32(i, 'u32_1')
-			i = node.ReadUInt32(i, 'u32_2')
-		else:
+		if (self.version < 2025):
 			i = self.skipBlockSize(i)
 			i = node.ReadChildRef(i, 'ref0')
 			i = self.skipBlockSize(i)
@@ -84,6 +80,10 @@ class DesignViewReader(SegmentReader):
 			else:
 				i = node.ReadUInt32(i, 'u32_1')
 			if (self.version > 2012): i += 4 # skip ?? ?? ?? ??
+		else:
+			i = node.ReadList2(i, _TYP_NODE_REF_, 'lst0')
+			i = node.ReadUInt32(i, 'u32_1')
+			i = node.ReadUInt32(i, 'u32_2')
 		return i
 
 	def Read_551FB1BF(self, node):

@@ -665,7 +665,6 @@ def _createSurfaceSpline(acisFace):
 	surface = acisFace.getSurface()
 	if (surface.subtype == 'ref'):
 		surface = surface.getSurface()
-
 	if (surface.spline):
 		return _createSurfaceBS(surface, acisFace.sense)
 	shape = acisFace.build()
