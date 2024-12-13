@@ -893,7 +893,7 @@ def createBSplinesPCurve(pcurve, surface, sense):
 		)
 	shape = bsc.toShape(surf, bsc.FirstParameter, bsc.LastParameter)
 	if (shape is not None):
-		shape.Orientation = str('Reversed') if (sense == 'reversed') else str('Forward')
+		shape.Orientation = 'Reversed' if (sense == 'reversed') else 'Forward'
 	return shape
 
 def createBSplinesCurve(nubs, sense, subtype):
@@ -1841,6 +1841,7 @@ class Face(Topology):
 						faces = elements[0]
 						if (len(faces) == 0):
 							logWarning("Can't apply wires for face (no elements) for %s" %(self._surface))
+							self.shape = surface
 						else:
 							self.shape = eliminateOuterFaces(faces, edges)
 							if (self.shape is None):
@@ -2645,10 +2646,6 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 					while b >= x:
 						p.append(VEC(l.evaluate(x)))
 						x += d
-					closed = False
-					if (p[0] == p[-1]):
-						p.pop()
-						closed = True
 					spline = Part.BSplineCurve()
 					spline.interpolate(p)
 					self.shape = spline.toShape()
@@ -4043,16 +4040,19 @@ class SurfaceSpline(Surface):
 			elif (self.subtype == 'helix_spl_circ'):
 #				self.shape = self.path.helix.buildSurfaceCircle(self.path.shape, self.radius, self.angle.getLowerLimit(), self.angle.getUpperLimit())
 				path   = self.path.shape
-				center  = path.valueAt(0)
-				normal  = (path.valueAt(0) - path.valueAt(0.01)).normalize()
-				profile  = Part.makeCircle(self.radius, center, normal) # Edge
-				self.shape = Part.makeSweepSurface(path, profile, 0) # Face
-				Part.show(self.shape)
+				center1 = path.valueAt(path.FirstParameter)
+				center2 = path.valueAt(path.LastParameter)
+				normal  = self.path.helix.dirMinor #(path.valueAt(0) - path.valueAt(0.01)).normalize()
+				profile1  = Part.makeCircle(self.radius, center1, normal) # Edge
+				profile2  = Part.makeCircle(self.radius, center2, normal) # Edge
+				self.shape = Part.Wire(path).makePipeShell((Part.Wire(profile1), Part.Wire(profile2)), False, True, 0) # Face
+#				self.shape = Part.makeSweepSurface(path, profile, 0) # Face
 #			elif (self.subtype == 'helix_spl_line'):
 #				# TODO pt1 = ???, pt2 = ???
 #				self.shape = self.path.helix.buildSurfaceLine(pt1, pt2)
 			if (isinstance(self.surface, Surface)):
 				self.shape = self.surface.build()
+#				logWarning(f"{type(self.surface)}.build({self.surface.subtype}) => {type(self.shape)}")
 				try:
 					if (isinstance(self.shape.Surface, Part.SurfaceOfRevolution)):
 						self.profile = self.surface.profile
@@ -4213,6 +4213,10 @@ class AttribAnsoftId(AttribAnsoft):
 	def __init__(self): super(AttribAnsoftId, self).__init__()
 class AttribAnsoftProperties(AttribAnsoft):
 	def __init__(self): super(AttribAnsoftProperties, self).__init__()
+class AttribCwkBase(Attrib):
+	def __init__(self): super(AttribCwkBase, self).__init__()
+class AttribCwkBaseCswDbid(AttribCwkBase):
+	def __init__(self): super(AttribCwkBaseCswDbid, self).__init__()
 class AttribDxid(Attrib):
 	def __init__(self): super(AttribDxid, self).__init__()
 class AttribCustom(Attrib):
@@ -4285,6 +4289,17 @@ class AttribGenNameReal(AttribGenName):
 	def set(self, record):
 		i = super(AttribGenNameReal, self).set(record)
 		self.value, i = getFloat(record.chunks, i)
+		return i
+class AttribGenNameVector(AttribGenName):
+	def __init__(self):
+			super(AttribGenNameVector, self).__init__()
+			self.value = (0., 0., 0.)
+	def set(self, record):
+		i = super(AttribGenNameVector, self).set(record)
+		x, i = getFloat(record.chunks, i)
+		y, i = getFloat(record.chunks, i)
+		z, i = getFloat(record.chunks, i)
+		self.value = (x, y, z)
 		return i
 class AttribKcId(Attrib):
 	# string with numbers
@@ -5521,6 +5536,8 @@ RECORD_2_ENTITY = {
 	"bt-attrib":                                                                                   AttribBt,
 	"entatt_color-bt-attrib":                                                                      AttribBtEntityColor,
 	"DXID-attrib":                                                                                 AttribDxid,
+	"cwkbase-attrib":                                                                              AttribCwkBase,
+	"cwkdbid-cwkbase-attrib":                                                                      AttribCwkBaseCswDbid,
 	"ATTRIB_CUSTOM-attrib":                                                                        AttribCustom,
 	"Designer-attrib":                                                                             AttribDesigner,
 	"history-Designer-attrib":                                                                     AttribDesignerHistory,
@@ -5538,6 +5555,7 @@ RECORD_2_ENTITY = {
 	"int64_attrib-name_attrib-gen-attrib":                                                         AttribGenNameInt64,
 	"string_attrib-name_attrib-gen-attrib":                                                        AttribGenNameString,
 	"real_attrib-name_attrib-gen-attrib":                                                          AttribGenNameReal,
+	"vector_attrib-name_attrib-gen-attrib":                                                        AttribGenNameVector,
 	"kc_id-attrib":                                                                                AttribKcId,
 	"lwd-attrib":                                                                                  AttribLwd,
 	"fmesh-lwd-attrib":                                                                            AttribLwdFMesh,

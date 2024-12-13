@@ -105,9 +105,8 @@ def read_manifest(f3d, path):
 	name = path.split('/')[-1]
 	if (name):
 		with f3d.open(path) as manifest:
-			i = 0
 			data = manifest.read()
-			t1,  i = getLen32Text8(data, i)
+			t1,  i = getLen32Text8(data, 0)
 			t2,  i = getLen32Text8(data, i)  # fusion doc type
 			t3,  i = getLen32Text16(data, i) # .f3d
 			t4,  i = getLen32Text16(data, i) # Fusion Document

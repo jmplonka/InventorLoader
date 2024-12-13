@@ -760,8 +760,9 @@ def _convertFace(acisFace, parentColor, context):
 				assignColor(color, face, context)
 				shells.append(face)
 			return shells
-	except:
-		logError('Fatal for acisFace= %s', acisFace.getSurface().getSurface())
+	except Exception as ex:
+		logError('Fatal: %s - %s', acisFace.getSurface().getSurface(), ex)
+		traceback.print_exception(ex)
 	return None
 
 def _convertShell(acisShell, representation, parentColor):
@@ -776,7 +777,7 @@ def _convertShell(acisShell, representation, parentColor):
 		for acisFace in faces:
 			#>MC vecchio
 			faces = _convertFace(acisFace, color, representation.context)
-			if (faces):
+			if (faces is not None):
 				shell.faces += faces
 
 			#face = _convertFace(acisFace, color, representation.context)
