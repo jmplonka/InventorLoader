@@ -1363,33 +1363,34 @@ class Helix(object):
 		helix.translate(self.posCenter)
 		return helix.toShape()
 
-	def buildSurfaceCircle(self, r, min_V, max_V):
-		min_U   = self.radAngles.getLowerLimit()
-		max_U   = self.radAngles.getUpperLimit()
-		r_maj   = self.dirMajor.Length
-		r_min   = self.dirMinor.Length
-		pitch   = self.dirPitch.Length
-		steps_U = Helix.calcSteps(min_U, max_U, 8)
-		steps_V = Helix.calcSteps(min_V, max_V, 6)
-		handed  = 1 if (self.isLeftHanded()) else -1
-		points  = []
-
-		for u  in steps_U:
-			c = Helix.calcPoint(u, min_U, self.facApex, r_maj, r_min, handed, pitch)
-			circle = []
-			m = MAT(cos(u), sin(u), 0, 0, -sin(u), cos(u), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-			for v in steps_V:
-				p = m.multiply(VEC(r * cos(v), 0, r * sin(v)))
-				circle.append(p + c)
-			points.append(circle)
-
-		# bring the helix into the correct position:
-		helix = Part.BSplineSurface()
-		helix.interpolate(points)
-		self.rotateShape(helix, DIR_X, VEC(self.dirMajor.x, self.dirMajor.y, 0), DIR_Z)
-		self.rotateShape(helix, DIR_Z, self.vecAxis, DIR_X)
-		helix.translate(self.posCenter)
-		return helix.toShape()
+#	def buildSurfaceCircle(self, r, min_V, max_V):
+#		min_U   = self.radAngles.getLowerLimit()
+#		max_U   = self.radAngles.getUpperLimit()
+#		r_maj   = self.dirMajor.Length
+#		r_min   = self.dirMinor.Length
+#		pitch   = self.dirPitch.Length
+#		steps_U = Helix.calcSteps(min_U, max_U, 8)
+#		steps_V = Helix.calcSteps(min_V, max_V, 6)
+#		handed  = 1 if (self.isLeftHanded()) else -1
+#		points  = []
+#
+#		for u  in steps_U:
+#
+#			c = Helix.calcPoint(u, min_U, self.facApex, r_maj, r_min, handed, pitch)
+#			circle = []
+#			m = MAT(cos(u), sin(u), 0, 0, -sin(u), cos(u), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+#			for v in steps_V:
+#				p = m.multiply(VEC(r * cos(v), 0, r * sin(v)))
+#				circle.append(p + c)
+#			points.append(circle)
+#
+#		# bring the helix into the correct position:
+#		helix = Part.BSplineSurface()
+#		helix.interpolate(points)
+#		self.rotateShape(helix, DIR_X, VEC(self.dirMajor.x, self.dirMajor.y, 0), DIR_Z)
+#		self.rotateShape(helix, DIR_Z, self.vecAxis, DIR_X)
+#		helix.translate(self.posCenter)
+#		return helix.toShape()
 
 	def buildSurfaceLine(self, p1, p2):
 		min_U   = self.radAngles.getLowerLimit()
@@ -1450,7 +1451,7 @@ class Interval(object):
 		self.lower = upper
 		self.upper = lower
 	def __str__(self): return "%s %s" %(self.lower, self.upper)
-	def __repr__(self): return "[%r-%r]" %(self.lower, self.upper)
+	def __repr__(self): return "[%r - %r]" %(self.lower, self.upper)
 	def getLowerType(self):  return self.lower.type
 	def getLowerLimit(self): return self.lower.getLimit()
 	def getUpperType(self):  return self.upper.type
@@ -1822,9 +1823,8 @@ class Face(Topology):
 	def buildCoEdges(self):
 		edges = []
 		loop = self.getLoop()
-		while (loop is not None):
+		if (loop is not None):
 			edges += loop.buildEdges()
-			loop = loop.getNext()
 		return edges
 	def build(self):
 		if (self.__ready_to_build__):
@@ -4041,7 +4041,13 @@ class SurfaceSpline(Surface):
 					if (path):
 						self.shape = Part.makeSweepSurface(path, profile)
 			elif (self.subtype == 'helix_spl_circ'):
-				self.shape = self.path.helix.buildSurfaceCircle(self.radius, self.angle.getLowerLimit(), self.angle.getUpperLimit())
+#				self.shape = self.path.helix.buildSurfaceCircle(self.path.shape, self.radius, self.angle.getLowerLimit(), self.angle.getUpperLimit())
+				path   = self.path.shape
+				center  = path.valueAt(0)
+				normal  = (path.valueAt(0) - path.valueAt(0.01)).normalize()
+				profile  = Part.makeCircle(self.radius, center, normal) # Edge
+				self.shape = Part.makeSweepSurface(path, profile, 0) # Face
+				Part.show(self.shape)
 #			elif (self.subtype == 'helix_spl_line'):
 #				# TODO pt1 = ???, pt2 = ???
 #				self.shape = self.path.helix.buildSurfaceLine(pt1, pt2)
