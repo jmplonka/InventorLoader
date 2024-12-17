@@ -2989,7 +2989,7 @@ class FreeCADImporter(object):
 #		getProperty(properties, 0x10) # ???
 #		surface     = getProperty(properties, 0x11) # SurfaceBody 'Surface1'
 #		getProperty(properties, 0x12) # FeatureDimensions
-		solid       = getProperty(properties, 0x13) # SolidBody 'Solid1'
+		solidBody   = getProperty(properties, 0x13) # SolidBody 'Solid1'
 
 		if (coilType.getValueText() == "Spiral"):
 			logWarning(u"        ... %s '%s' / Spiral not implemented yet - please use SAT or STEP instead!", coilNode.typeName, coilNode.getSubTypeName())
@@ -2998,30 +2998,37 @@ class FreeCADImporter(object):
 		base      = p2v(axis)
 		direction = axis.get('dir').normalize()
 		boundary  = self.createBoundary(profile)
-		coil      = makeCoil(coilNode.name, boundary)
-		coil.Axis       = direction
-		coil.Center     = base
-		coil.Reversed   = getBOOL(reverse)
-		coil.Rotation   = 'Clockwise' if getBOOL(rotate) else 'Counterclockwise'
-		coil.CoilType   = coilType.getValueText()
-		coil.TaperAngle = getGRAD(taperAngle)
-		coil.Solid      = (not solid is None)
-		if (coil.CoilType == "PitchAndRevolution"):
-			coil.Pitch        = getMM(pitch)
-			coil.Revolutions  = revolutions.getNominalValue()
-		elif (coil.CoilType == "RevolutionAndHeight"):
-			coil.Revolutions  = revolutions.getNominalValue()
-			coil.Height       = getMM(height)
-		elif (coil.CoilType == "PitchAndHeight"):
-			coil.Pitch        = getMM(pitch)
-			coil.Height       = getMM(height)
+		reversed   = getBOOL(reverse)
+		rotation   = 'Clockwise' if getBOOL(rotate) else 'Counterclockwise'
+		coil_type   = coilType.getValueText()
+		taperAngle = getGRAD(taperAngle)
+		solid      = (not solidBody is None)
+		if (coil_type == "PitchAndRevolution"):
+			pitch  = getMM(pitch)
+			turns  = revolutions.getNominalValue()
+			height = pitch * turns
+		elif (coil_type == "RevolutionAndHeight"):
+			turns  = revolutions.getNominalValue()
+			height = getMM(height)
+			pitch  = height / turns
+		elif (coil_type == "PitchAndHeight"):
+			pitch  = getMM(pitch)
+			height = getMM(height)
+			turns  = height / pitch
 		if (getBOOL(startIsFlat) == False):
-			coil.StartTransit = getGRAD(startTrans)
-			coil.StartFlat    = getGRAD(startFlat)
+			start_transit = getGRAD(startTrans)
+			start_flat    = getGRAD(startFlat)
+		else:
+			start_transit = 0.0
+			start_flat    = 0.0
 		if (getBOOL(endIsFlat) == False):
-			coil.EndTransit   = getGRAD(endTrans)
-			coil.EndFlat      = getGRAD(endFlat)
-		return coil
+			end_transit   = getGRAD(endTrans)
+			end_flat      = getGRAD(endFlat)
+		else:
+			end_transit   = 0.0
+			end_flat      = 0.0
+
+		return makeCoil(coilNode.name, boundary, base, direction, reversed, rotation, coil_type, taperAngle, solid, pitch, turns, height, start_flat, start_transit, end_flat, end_transit)
 
 	def Create_FxChamfer(self, chamferNode):
 		properties  = chamferNode.get('properties')
@@ -3120,7 +3127,7 @@ class FreeCADImporter(object):
 		# = getProperty(properties, 0x0A) # FilletFullRoundSet <=> type!='Edge'
 		# filletType          = getProperty(properties, 0x0B) # 'Edge', 'Face' or 'FullRound'
 		faceRadius  = getProperty(properties, 0x0C) # Parameter 'd144'=54.1mm
-		# noOptimice          = getProperty(properties, 0x0D) # boolean
+		# noOptimize          = getProperty(properties, 0x0D) # boolean
 		# = getProperty(properties, 0x0E) # None (always)
 		body = getProperty(properties, 0x0F) # SolidBody 'Solid1'
 		if (body is None):

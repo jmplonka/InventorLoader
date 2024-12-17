@@ -6,7 +6,7 @@ Simple approach to read/analyse Autodesk (R) Invetor (R) part file's (IPT) brows
 The importer can read files from Autodesk (R) Invetor (R) Inventro V2010 on. Older versions will fail!
 '''
 
-from importerClasses        import AbstractData, AbstractValue, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry, ParameterNode
+from importerClasses        import AbstractData, AbstractValue, Header0, Angle, GraphicsFont, Lightning, ModelerTxnMgr, NtEntry, ParameterNode, ResultItem4
 from importerConstants      import REF_CHILD, REF_CROSS, REF_PARENT, VAL_UINT8, VAL_UINT16, VAL_UINT32, VAL_REF, VAL_STR8, VAL_STR16, VAL_ENUM
 from importerUtils          import *
 from math                   import log10, pi
@@ -1352,10 +1352,6 @@ class SecNode(AbstractData):
 		if (typeName is not None): self.typeName = typeName
 
 		return i
-
-	def updateTypeId(self, uid):
-		self.uid = UUID(uid)
-		self.typeName = '%08X' %(self.uid.time_low)
 
 	def getUnitOffset(self):
 		unitRef = self.get('unit')

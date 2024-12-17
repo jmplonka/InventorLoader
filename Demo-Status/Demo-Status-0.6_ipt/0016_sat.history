@@ -1,0 +1,341 @@
+SAT history_stream: 193 193 0 720 $0  $0  $1  -1:
+0 delta_state 0 1 0 $-1  $2  $0  $-1  0 11
+2 delta_state 193 1 0 $0  $4  $2  $-1  0 11
+	BulletinBoard: 2
+		$-1   $8    // inserted:   -8 body $-1 711 $-1 $18 $-1 $-1 #
+		$-1   $165  // inserted:   -165 coedge $-1 -1 $-1 $165 $165 $116 $168 forward $114 0 $-1 #
+		$-1   $168  // inserted:   -168 edge $222 715 $-1 $223 -3.14159 $223 3.14159 $165 $224 forward @7 unknown #
+		$-1   $222  // inserted:   -222 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $168 38 1 1259 -1 9 0 2 #
+		$-1   $223  // inserted:   -223 vertex $-1 -1 $-1 $168 0 $277 #
+		$-1   $224  // inserted:   -224 ellipse-curve $-1 -1 $-1 2.18838 -0.926177 -2.77853 -5.97361e-17 0.948683 -0.316228 -0.00150756 0.00150756 0.00452267 1 I I #
+		$-1   $277  // inserted:   -277 point $-1 -1 $-1 2.20345 -0.941252 -2.82376 #
+		$-1   $61   // inserted:   -61 face $112 713 $-1 $113 $114 $27 $-1 $115 reversed single #
+		$-1   $114  // inserted:   -114 loop $-1 -1 $-1 $-1 $165 $61 #
+		$-1   $27   // inserted:   -27 shell $-1 -1 $-1 $-1 $-1 $36 $-1 $18 #
+		$-1   $18   // inserted:   -18 lump $-1 -1 $-1 $-1 $27 $8 #
+		$-1   $115  // inserted:   -115 plane-surface $-1 -1 $-1 2.18838 -0.926177 -2.77853 9.10997e-17 -0.948683 0.316228 1.32205e-16 -0.316228 -0.948683 forward_v I I I I #
+		$-1   $113  // inserted:   -113 face $162 714 $-1 $-1 $163 $27 $-1 $164 forward single #
+		$-1   $116  // inserted:   -116 coedge $-1 -1 $-1 $166 $167 $165 $168 reversed $62 0 $169 #
+		$-1   $163  // inserted:   -163 loop $-1 -1 $-1 $-1 $217 $113 #
+		$-1   $299  // inserted:   -299 point $-1 -1 $-1 0.970101 -0.343959 0.214316 #
+		$-1   $275  // inserted:   -275 vertex $-1 -1 $-1 $219 1 $299 #
+		$-1   $276  // inserted:   -276 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 32.9867 1.96509 -0.965089 -2.89527 0.0238366 0.00238366 0.00715097 -0 -0.0237171 0.00790569 -0.0189521 0.0189521 0.0568564 0.109776 -0.301511 0.301511 0.904534 null_surface null_surface nullbs nullbs } I I #
+		$-1   $219  // inserted:   -219 edge $-1 716 $-1 $223 0 $275 32.9867 $166 $276 forward @7 tangent #
+		$-1   $298  // inserted:   -298 ellipse-curve $-1 -1 $-1 0.955026 -0.328884 0.259542 -0.953463 -0.0953463 -0.286039 -0.00150756 0.00150756 0.00452267 1 I I #
+		$-1   $273  // inserted:   -273 edge $297 717 $-1 $275 -3.14159 $275 3.14159 $218 $298 forward @7 unknown #
+		$-1   $166  // inserted:   -166 coedge $-1 -1 $-1 $218 $116 $167 $219 forward $62 0 $220 #
+		$-1   $218  // inserted:   -218 coedge $-1 -1 $-1 $167 $166 $217 $273 reversed $62 0 $274 #
+		$-1   $167  // inserted:   -167 coedge $-1 -1 $-1 $116 $218 $166 $219 reversed $62 0 $221 #
+		$-1   $62   // inserted:   -62 loop $-1 -1 $-1 $-1 $116 $36 #
+		$-1   $63   // inserted:   -63 spline-surface $-1 -1 $-1 reversed { helix_spl_circ 22000 F -3.14159 F 3.14159 F 0 F 32.9867 1.5708 F 0 F 32.9867 1.95001 -0.950013 -2.85004 0.0238366 0.00238366 0.00715097 -0 -0.0237171 0.00790569 -0.0189521 0.0189521 0.0568564 0.109776 -0.301511 0.301511 0.904534 null_surface null_surface nullbs nullbs 0.005 } I I I I #
+		$-1   $36   // inserted:   -36 face $60 712 $-1 $61 $62 $27 $-1 $63 forward single #
+		$-1   $169  // inserted:   -169 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 3.14159 0 -3.14159 0 0 spline reversed { ref 4 } I I I I } 0 0 #
+		$-1   $220  // inserted:   -220 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 0 1 32.9867 1 3.14159 0 3.14159 32.9867 0 spline reversed { ref 4 } I I I I } 0 0 #
+		$-1   $274  // inserted:   -274 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 -3.14159 32.9867 3.14159 32.9867 0 spline reversed { ref 4 } I I I I } 0 0 #
+		$-1   $221  // inserted:   -221 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 -32.9867 1 -0 1 -3.14159 32.9867 -3.14159 0 0 spline reversed { ref 4 } I I I I } 0 0 #
+		$-1   $217  // inserted:   -217 coedge $-1 -1 $-1 $217 $217 $218 $273 forward $163 0 $-1 #
+		$-1   $164  // inserted:   -164 plane-surface $-1 -1 $-1 0.955026 -0.328884 0.259542 -0.953463 -0.0953463 -0.286039 0.28748 -0.00144101 -0.957786 forward_v I I I I #
+		$-1   $109  // inserted:   -109 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $60 $36 38 1 1259 -1 9 0 20 0 0 0 0 0 0 0 #
+		$-1   $112  // inserted:   -112 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $61 38 1 1259 -1 0 0 4 0 0 0 0 0 0 0 #
+		$-1   $162  // inserted:   -162 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $113 38 1 1259 -1 0 0 12 0 0 0 0 0 0 0 #
+		$-1   $297  // inserted:   -297 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $273 38 1 1259 -1 9 0 10 0 0 0 0 0 0 0 #
+		$-1   $110  // inserted:   -110 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 32.9867 1.95001 -0.950013 -2.85004 0.0238366 0.00238366 0.00715097 -0 -0.0237171 0.00790569 -0.0189521 0.0189521 0.0568564 0.109776 -0.301511 0.301511 0.904534 null_surface null_surface nullbs nullbs } I I #
+		$-1   $60   // inserted:   -60 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $109 $-1 $36 38 $110 $111 #
+		$-1   $111  // inserted:   -111 ellipse-curve $-1 -1 $-1 2.18838 -0.926177 -2.77853 -4.16334e-17 0.948683 -0.316228 -0.00150756 0.00150756 0.00452267 1 I I #
+4 delta_state 191 1 0 $2  $6  $4  $-1  0 11
+	BulletinBoard: 2
+		$-1   $7    // inserted:   -7 body $-1 696 $-1 $17 $-1 $-1 #
+		$-1   $26   // inserted:   -26 shell $-1 -1 $-1 $-1 $-1 $35 $-1 $17 #
+		$-1   $17   // inserted:   -17 lump $-1 -1 $-1 $-1 $26 $7 #
+		$-1   $59   // inserted:   -59 sphere-surface $-1 -1 $-1 2.00001 -1.00001 -3.00004 0.025 1 0 0 0 0 1 forward_v I I I I #
+		$-1   $35   // inserted:   -35 face $58 710 $-1 $-1 $-1 $26 $-1 $59 forward single #
+		$-1   $106  // inserted:   -106 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $58 $35 38 1 1239 -1 5 0 20 0 0 0 0 0 0 0 #
+		$-1   $107  // inserted:   -107 ellipse-curve $-1 -1 $-1 2.00001 -1.00001 -3.00004 0.953463 0.0953463 0.286039 -0.00753778 0.00753778 0.0226134 1 I I #
+		$-1   $58   // inserted:   -58 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $106 $-1 $35 38 $107 $108 #
+		$-1   $108  // inserted:   -108 ellipse-curve $-1 -1 $-1 2.00001 -1.00001 -3.00004 4.16334e-17 -0.948683 0.316228 0.0238366 0.00238366 0.00715097 1 F 6.50521e-16 F 3.14159 #
+6 delta_state 190 1 0 $4  $8  $6  $-1  0 11
+	BulletinBoard: 2
+		$-1   $6    // inserted:   -6 body $-1 695 $-1 $16 $-1 $-1 #
+		$-1   $105  // inserted:   -105 coedge $-1 -1 $-1 $157 $158 $159 $160 forward $56 0 $161 #
+		$-1   $160  // inserted:   -160 edge $214 707 $-1 $215 -3.14159 $215 3.14159 $105 $216 forward @7 unknown #
+		$-1   $214  // inserted:   -214 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $160 38 1 1103 -1 9 0 2 #
+		$-1   $215  // inserted:   -215 vertex $-1 -1 $-1 $160 0 $272 #
+		$-1   $216  // inserted:   -216 ellipse-curve $-1 -1 $-1 -2.25002 0.947557 -2.84267 -1.97484e-17 -0.948683 -0.316228 -0.005 1.73472e-19 -1.21431e-19 1 I I #
+		$-1   $272  // inserted:   -272 point $-1 -1 $-1 -2.20002 0.947557 -2.84267 #
+		$-1   $55   // inserted:   -55 face $101 705 $-1 $102 $103 $25 $-1 $104 forward single #
+		$-1   $103  // inserted:   -103 loop $-1 -1 $-1 $-1 $156 $55 #
+		$-1   $25   // inserted:   -25 shell $-1 -1 $-1 $-1 $-1 $34 $-1 $16 #
+		$-1   $16   // inserted:   -16 lump $-1 -1 $-1 $-1 $25 $6 #
+		$-1   $155  // inserted:   -155 plane-surface $-1 -1 $-1 -2.25002 0.947557 -2.84267 -1.97484e-17 -0.948683 -0.316228 -2.63313e-17 0.316228 -0.948683 forward_v I I I I #
+		$-1   $102  // inserted:   -102 face $153 706 $-1 $-1 $154 $25 $-1 $155 reversed single #
+		$-1   $159  // inserted:   -159 coedge $-1 -1 $-1 $159 $159 $105 $160 reversed $154 0 $-1 #
+		$-1   $154  // inserted:   -154 loop $-1 -1 $-1 $-1 $159 $102 #
+		$-1   $296  // inserted:   -296 point $-1 -1 $-1 -0.943304 -0.575305 0.0177219 #
+		$-1   $269  // inserted:   -269 vertex $-1 -1 $-1 $211 1 $296 #
+		$-1   $271  // inserted:   -271 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 32.9867 -1.97056 0.97037 -2.91111 -0.0229456 -0.00228132 0.00684397 -6.51442e-18 -0.0228187 -0.00760622 0.0195668 -0.0196803 0.059041 0.237293 0.299928 -0.301669 0.905008 null_surface null_surface nullbs nullbs } I I #
+		$-1   $211  // inserted:   -211 edge $-1 708 $-1 $215 0 $269 32.9867 $157 $271 forward @7 tangent #
+		$-1   $270  // inserted:   -270 ellipse-curve $-1 -1 $-1 -0.947802 -0.616032 -0.0109335 0.953962 0.0948457 -0.284537 -0.000449785 -0.00407264 -0.00286553 1 I I #
+		$-1   $210  // inserted:   -210 edge $268 709 $-1 $269 -3.14159 $269 3.14159 $209 $270 forward @7 unknown #
+		$-1   $157  // inserted:   -157 coedge $-1 -1 $-1 $209 $105 $158 $211 forward $56 0 $212 #
+		$-1   $209  // inserted:   -209 coedge $-1 -1 $-1 $158 $157 $156 $210 reversed $56 0 $267 #
+		$-1   $158  // inserted:   -158 coedge $-1 -1 $-1 $105 $209 $157 $211 reversed $56 0 $213 #
+		$-1   $56   // inserted:   -56 loop $-1 -1 $-1 $-1 $105 $34 #
+		$-1   $57   // inserted:   -57 spline-surface $-1 -1 $-1 forward { helix_spl_circ 22000 F -3.14159 F 3.14159 F 0 F 32.9867 -2.83697 F 0 F 32.9867 -1.97506 0.974894 -2.92468 -0.0274958 -0.00273372 0.00820116 -7.80626e-18 -0.0273437 -0.00911457 0.0195668 -0.0196803 0.059041 0.198024 0.299928 -0.301669 0.905008 null_surface null_surface nullbs nullbs 0.005 } I I I I #
+		$-1   $34   // inserted:   -34 face $54 704 $-1 $55 $56 $25 $-1 $57 forward single #
+		$-1   $161  // inserted:   -161 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 -3.14159 0 3.14159 0 0 spline forward { ref 3 } I I I I } 0 0 #
+		$-1   $212  // inserted:   -212 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 0 1 32.9867 1 3.14159 0 3.14159 32.9867 0 spline forward { ref 3 } I I I I } 0 0 #
+		$-1   $267  // inserted:   -267 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 3.14159 32.9867 -3.14159 32.9867 0 spline forward { ref 3 } I I I I } 0 0 #
+		$-1   $213  // inserted:   -213 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 -32.9867 1 -0 1 -3.14159 32.9867 -3.14159 0 0 spline forward { ref 3 } I I I I } 0 0 #
+		$-1   $156  // inserted:   -156 coedge $-1 -1 $-1 $156 $156 $209 $210 forward $103 0 $-1 #
+		$-1   $104  // inserted:   -104 plane-surface $-1 -1 $-1 -0.947802 -0.616032 -0.0109335 0.953962 0.0948457 -0.284537 -0.28612 0.572318 -0.768497 forward_v I I I I #
+		$-1   $98   // inserted:   -98 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $54 $34 38 1 1103 -1 9 0 20 0 0 0 0 0 0 0 #
+		$-1   $153  // inserted:   -153 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $102 38 1 1103 -1 0 0 4 0 0 0 0 0 0 0 #
+		$-1   $101  // inserted:   -101 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $55 38 1 1103 -1 0 0 12 0 0 0 0 0 0 0 #
+		$-1   $268  // inserted:   -268 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $210 38 1 1103 -1 9 0 10 0 0 0 0 0 0 0 #
+		$-1   $99   // inserted:   -99 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 32.9867 -1.97506 0.974894 -2.92468 -0.0274958 -0.00273372 0.00820116 -7.80626e-18 -0.0273437 -0.00911457 0.0195668 -0.0196803 0.059041 0.198024 0.299928 -0.301669 0.905008 null_surface null_surface nullbs nullbs } I I #
+		$-1   $54   // inserted:   -54 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $98 $-1 $34 38 $99 $100 #
+		$-1   $100  // inserted:   -100 ellipse-curve $-1 -1 $-1 -2.25002 0.947557 -2.84267 0 -0.948683 -0.316228 -0.005 -0 -0 1 I I #
+8 delta_state 186 1 0 $6  $10  $8  $-1  0 11
+	BulletinBoard: 2
+		$-1   $5    // inserted:   -5 body $-1 649 $-1 $15 $-1 $-1 #
+		$-1   $24   // inserted:   -24 shell $-1 -1 $-1 $-1 $-1 $33 $-1 $15 #
+		$-1   $15   // inserted:   -15 lump $-1 -1 $-1 $-1 $24 $5 #
+		$-1   $53   // inserted:   -53 sphere-surface $-1 -1 $-1 -2.00002 0.999997 -2.99999 0.025 1 0 0 0 0 1 forward_v I I I I #
+		$-1   $33   // inserted:   -33 face $52 687 $-1 $-1 $-1 $24 $-1 $53 forward single #
+		$-1   $95   // inserted:   -95 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $52 $33 38 1 1144 -1 5 0 20 0 0 0 0 0 0 0 #
+		$-1   $96   // inserted:   -96 ellipse-curve $-1 -1 $-1 -2.00002 0.999997 -2.99999 1 -3.51083e-16 1.05325e-15 -2.77556e-17 -0.00790569 0.0237171 1 I I #
+		$-1   $52   // inserted:   -52 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $95 $-1 $33 38 $96 $97 #
+		$-1   $97   // inserted:   -97 ellipse-curve $-1 -1 $-1 -2.00002 0.999997 -2.99999 0 0.948683 0.316228 -0.025 1.75542e-17 -5.26625e-17 1 F -6.15957e-17 F 3.14159 #
+10 delta_state 185 1 0 $8  $12  $10  $-1  0 11
+	BulletinBoard: 2
+		$-1   $206  // inserted:   -206 NMx_Matched_Entity-NamingMatching-attrib $-1 -1 $264 $-1 $151 38 1 1094 -1 4 0 #
+		$312  $264  // updated id: -264 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $206 $151 38 1 939 -1 15 0 2 #
+		$313  $151  // updated id: -151 edge $206 656 $-1 $207 -3.14159 $207 3.14159 $94 $208 forward @7 unknown #
+		$-1   $295  // inserted:   -295 NMx_Matched_Entity-NamingMatching-attrib $-1 -1 $-1 $265 $207 38 1 1094 -1 3 1 #
+		$314  $207  // updated id: -207 vertex $265 -1 $-1 $151 0 $266 #
+		$-1   $265  // inserted:   -265 NMx_Matched_Entity-NamingMatching-attrib $-1 -1 $295 $-1 $207 38 1 1089 -1 3 1 #
+12 delta_state 184 1 0 $10  $13  $12  $-1  0 11
+	BulletinBoard: 2
+		$-1   $4    // inserted:   -4 body $-1 648 $-1 $13 $-1 $14 #
+		$-1   $94   // inserted:   -94 coedge $-1 -1 $-1 $148 $149 $150 $151 forward $50 0 $152 #
+		$-1   $151  // inserted:   -151 edge $206 656 $-1 $207 -3.14159 $207 3.14159 $94 $208 forward @7 unknown #
+		$-1   $264  // inserted:   -264 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $206 $151 38 1 939 -1 15 0 2 #
+		$-1   $207  // inserted:   -207 vertex $265 -1 $-1 $151 0 $266 #
+		$-1   $208  // inserted:   -208 ellipse-curve $-1 -1 $-1 -1.00579 0 0 0 -1 0 0.005 -0 -0 1 I I #
+		$-1   $266  // inserted:   -266 point $-1 -1 $-1 -1.05579 0 6.12323e-18 #
+		$-1   $14   // inserted:   -14 transform $-1 -1 1 0 0 0 1 0 0 0 1 0 0 0 1 no_rotate no_reflect no_shear #
+		$-1   $49   // inserted:   -49 face $90 654 $-1 $91 $92 $23 $-1 $93 reversed single #
+		$-1   $92   // inserted:   -92 loop $-1 -1 $-1 $-1 $147 $49 #
+		$-1   $23   // inserted:   -23 shell $-1 -1 $-1 $-1 $-1 $32 $-1 $13 #
+		$-1   $13   // inserted:   -13 lump $-1 -1 $-1 $-1 $23 $4 #
+		$-1   $146  // inserted:   -146 plane-surface $-1 -1 $-1 -1.00579 0 0 -0 1 0 0 -0 1 forward_v I I I I #
+		$-1   $91   // inserted:   -91 face $144 655 $-1 $-1 $145 $23 $-1 $146 forward single #
+		$-1   $150  // inserted:   -150 coedge $-1 -1 $-1 $150 $150 $94 $151 reversed $145 0 $-1 #
+		$-1   $145  // inserted:   -145 loop $-1 -1 $-1 $-1 $150 $91 #
+		$-1   $294  // inserted:   -294 point $-1 -1 $-1 -1.05579 7.75781e-16 1 #
+		$-1   $261  // inserted:   -261 vertex $-1 -1 $-1 $203 1 $294 #
+		$-1   $263  // inserted:   -263 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 18.8496 0 0 6.12323e-18 -0.105579 0 0 0 -0.105579 0 0 0 0.0333333 0 0 0 1 null_surface null_surface nullbs nullbs } I I #
+		$-1   $203  // inserted:   -203 edge $-1 657 $-1 $207 0 $261 18.8496 $148 $263 forward @7 tangent #
+		$-1   $262  // inserted:   -262 ellipse-curve $-1 -1 $-1 -1.00579 7.39041e-16 1 -7.34788e-16 -1 0 0.005 -3.67394e-18 0 1 I I #
+		$-1   $202  // inserted:   -202 edge $260 658 $-1 $261 -3.14159 $261 3.14159 $201 $262 forward @7 unknown #
+		$-1   $148  // inserted:   -148 coedge $-1 -1 $-1 $201 $94 $149 $203 forward $50 0 $204 #
+		$-1   $201  // inserted:   -201 coedge $-1 -1 $-1 $149 $148 $147 $202 reversed $50 0 $259 #
+		$-1   $149  // inserted:   -149 coedge $-1 -1 $-1 $94 $201 $148 $203 reversed $50 0 $205 #
+		$-1   $50   // inserted:   -50 loop $-1 -1 $-1 $-1 $94 $32 #
+		$-1   $51   // inserted:   -51 spline-surface $-1 -1 $-1 forward { helix_spl_circ 22000 F -3.14159 F 3.14159 F 0 F 18.8496 0 F 0 F 18.8496 0 0 0 -0.100579 0 0 0 -0.100579 0 0 0 0.0333333 0 0 0 1 null_surface null_surface nullbs nullbs 0.005 } I I I I #
+		$-1   $32   // inserted:   -32 face $48 653 $-1 $49 $50 $23 $-1 $51 forward single #
+		$-1   $152  // inserted:   -152 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 -3.14159 0 3.14159 0 0 spline forward { ref 2 } I I I I } 0 0 #
+		$-1   $204  // inserted:   -204 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 0 1 18.8496 1 3.14159 0 3.14159 18.8496 0 spline forward { ref 2 } I I I I } 0 0 #
+		$-1   $259  // inserted:   -259 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 3.14159 18.8496 -3.14159 18.8496 0 spline forward { ref 2 } I I I I } 0 0 #
+		$-1   $205  // inserted:   -205 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 -18.8496 1 -0 1 -3.14159 18.8496 -3.14159 0 0 spline forward { ref 2 } I I I I } 0 0 #
+		$-1   $147  // inserted:   -147 coedge $-1 -1 $-1 $147 $147 $201 $202 forward $92 0 $-1 #
+		$-1   $93   // inserted:   -93 plane-surface $-1 -1 $-1 -1.00579 7.39041e-16 1 7.34788e-16 1 0 0 0 1 forward_v I I I I #
+		$-1   $87   // inserted:   -87 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $48 $32 38 1 939 -1 15 0 20 0 0 0 0 0 0 0 #
+		$-1   $144  // inserted:   -144 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $91 38 1 939 -1 0 0 4 0 0 0 0 0 0 0 #
+		$-1   $90   // inserted:   -90 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $49 38 1 939 -1 0 0 12 0 0 0 0 0 0 0 #
+		$-1   $260  // inserted:   -260 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $202 38 1 939 -1 15 0 10 0 0 0 0 0 0 0 #
+		$-1   $88   // inserted:   -88 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 18.8496 0 0 0 -0.100579 0 0 0 -0.100579 0 0 0 0.0333333 0 0 0 1 null_surface null_surface nullbs nullbs } I I #
+		$-1   $48   // inserted:   -48 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $87 $-1 $32 38 $88 $89 #
+		$-1   $89   // inserted:   -89 ellipse-curve $-1 -1 $-1 -1.00579 0 0 0 -1 0 0.005 -0 -0 1 I I #
+13 delta_state 183 1 0 $12  $11  $13  $-1  0 11
+	BulletinBoard: 2
+		$-1   $3    // inserted:   -3 body $-1 647 $-1 $11 $-1 $12 #
+		$-1   $86   // inserted:   -86 coedge $-1 -1 $-1 $139 $140 $141 $142 forward $46 0 $143 #
+		$-1   $142  // inserted:   -142 edge $198 668 $-1 $199 -3.14159 $199 3.14159 $86 $200 forward @7 unknown #
+		$-1   $198  // inserted:   -198 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $142 38 1 915 -1 17 0 2 #
+		$-1   $199  // inserted:   -199 vertex $-1 -1 $-1 $142 0 $258 #
+		$-1   $200  // inserted:   -200 ellipse-curve $-1 -1 $-1 -1 0 1 0 -1 0 0.005 -0 -0 1 I I #
+		$-1   $258  // inserted:   -258 point $-1 -1 $-1 -1.05 0 1 #
+		$-1   $12   // inserted:   -12 transform $-1 -1 1 0 0 0 1 0 0 0 1 0 0 0 1 no_rotate no_reflect no_shear #
+		$-1   $45   // inserted:   -45 face $82 666 $-1 $83 $84 $22 $-1 $85 reversed single #
+		$-1   $84   // inserted:   -84 loop $-1 -1 $-1 $-1 $138 $45 #
+		$-1   $22   // inserted:   -22 shell $-1 -1 $-1 $-1 $-1 $31 $-1 $11 #
+		$-1   $11   // inserted:   -11 lump $-1 -1 $-1 $-1 $22 $3 #
+		$-1   $137  // inserted:   -137 plane-surface $-1 -1 $-1 -1 0 1 -0 1 0 0 -0 1 forward_v I I I I #
+		$-1   $83   // inserted:   -83 face $135 667 $-1 $-1 $136 $22 $-1 $137 forward single #
+		$-1   $141  // inserted:   -141 coedge $-1 -1 $-1 $141 $141 $86 $142 reversed $136 0 $-1 #
+		$-1   $136  // inserted:   -136 loop $-1 -1 $-1 $-1 $141 $83 #
+		$-1   $293  // inserted:   -293 point $-1 -1 $-1 1.50714 -0.828555 3.5 #
+		$-1   $255  // inserted:   -255 vertex $-1 -1 $-1 $195 1 $293 #
+		$-1   $257  // inserted:   -257 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 34.0549 0 0 1 -0.105 0 0 0 -0.105 0 0 0 0.0461255 0.117707 0 0 1 null_surface null_surface nullbs nullbs } I I #
+		$-1   $195  // inserted:   -195 edge $-1 669 $-1 $199 0 $255 34.0549 $139 $257 forward @7 tangent #
+		$-1   $256  // inserted:   -256 ellipse-curve $-1 -1 $-1 1.46332 -0.804467 3.5 0.481754 0.876307 0 -0.00438153 0.00240877 0 1 I I #
+		$-1   $194  // inserted:   -194 edge $254 670 $-1 $255 -3.14159 $255 3.14159 $193 $256 forward @7 unknown #
+		$-1   $139  // inserted:   -139 coedge $-1 -1 $-1 $193 $86 $140 $195 forward $46 0 $196 #
+		$-1   $193  // inserted:   -193 coedge $-1 -1 $-1 $140 $139 $138 $194 reversed $46 0 $253 #
+		$-1   $140  // inserted:   -140 coedge $-1 -1 $-1 $86 $193 $139 $195 reversed $46 0 $197 #
+		$-1   $46   // inserted:   -46 loop $-1 -1 $-1 $-1 $86 $31 #
+		$-1   $47   // inserted:   -47 spline-surface $-1 -1 $-1 forward { helix_spl_circ 22000 F -3.14159 F 3.14159 F 0 F 34.0549 0 F 0 F 34.0549 0 0 1 -0.1 0 0 0 -0.1 0 0 0 0.0461255 0.123593 0 0 1 null_surface null_surface nullbs nullbs 0.005 } I I I I #
+		$-1   $31   // inserted:   -31 face $44 665 $-1 $45 $46 $22 $-1 $47 forward single #
+		$-1   $143  // inserted:   -143 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 -3.14159 0 3.14159 0 0 spline forward { ref 1 } I I I I } 0 0 #
+		$-1   $196  // inserted:   -196 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 0 1 34.0549 1 3.14159 0 3.14159 34.0549 0 spline forward { ref 1 } I I I I } 0 0 #
+		$-1   $253  // inserted:   -253 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 3.14159 34.0549 -3.14159 34.0549 0 spline forward { ref 1 } I I I I } 0 0 #
+		$-1   $197  // inserted:   -197 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 -34.0549 1 -0 1 -3.14159 34.0549 -3.14159 0 0 spline forward { ref 1 } I I I I } 0 0 #
+		$-1   $138  // inserted:   -138 coedge $-1 -1 $-1 $138 $138 $193 $194 forward $84 0 $-1 #
+		$-1   $85   // inserted:   -85 plane-surface $-1 -1 $-1 1.46332 -0.804467 3.5 -0.481754 -0.876307 0 0 0 1 forward_v I I I I #
+		$-1   $79   // inserted:   -79 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $44 $31 38 1 915 -1 17 0 20 0 0 0 0 0 0 0 #
+		$-1   $135  // inserted:   -135 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $83 38 1 915 -1 0 0 4 0 0 0 0 0 0 0 #
+		$-1   $82   // inserted:   -82 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $45 38 1 915 -1 0 0 12 0 0 0 0 0 0 0 #
+		$-1   $254  // inserted:   -254 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $194 38 1 915 -1 17 0 10 0 0 0 0 0 0 0 #
+		$-1   $80   // inserted:   -80 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 34.0549 0 0 1 -0.1 0 0 0 -0.1 0 0 0 0.0461255 0.123593 0 0 1 null_surface null_surface nullbs nullbs } I I #
+		$-1   $44   // inserted:   -44 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $79 $-1 $31 38 $80 $81 #
+		$-1   $81   // inserted:   -81 ellipse-curve $-1 -1 $-1 -1 0 1 0 -1 0 0.005 -0 -0 1 I I #
+11 delta_state 182 1 0 $13  $9  $11  $-1  0 11
+	BulletinBoard: 2
+		$-1   $2    // inserted:   -2 body $-1 646 $-1 $10 $-1 $-1 #
+		$-1   $21   // inserted:   -21 shell $-1 -1 $-1 $-1 $-1 $30 $-1 $10 #
+		$-1   $10   // inserted:   -10 lump $-1 -1 $-1 $-1 $21 $2 #
+		$-1   $30   // inserted:   -30 face $42 686 $-1 $-1 $-1 $21 $-1 $43 forward single #
+		$-1   $43   // inserted:   -43 sphere-surface $-1 -1 $-1 -2.17465e-05 0 4 0.05 0 -1 0 1 0 0 forward_v I I I I #
+		$-1   $76   // inserted:   -76 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $42 $30 38 1 882 -1 9 0 20 0 0 0 0 0 0 0 #
+		$-1   $77   // inserted:   -77 ellipse-curve $-1 -1 $-1 -2.17465e-05 0 4 -1 0 1.11022e-15 5.55112e-17 0 0.05 1 I I #
+		$-1   $42   // inserted:   -42 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $76 $-1 $30 38 $77 $78 #
+		$-1   $78   // inserted:   -78 ellipse-curve $-1 -1 $-1 -2.17465e-05 0 4 0 1 -0 -0.05 0 5.55112e-17 1 F 0 F 3.14159 #
+9 delta_state 181 1 0 $11  $7  $9  $-1  0 11
+	BulletinBoard: 2
+		$-1   $75   // inserted:   -75 coedge $-1 -1 $-1 $130 $131 $132 $133 forward $40 0 $134 #
+		$-1   $133  // inserted:   -133 edge $189 678 $-1 $190 -3.14159 $191 2.15648 $75 $192 forward @7 unknown #
+		$-1   $189  // inserted:   -189 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $133 38 1 753 -1 10 0 2 #
+		$-1   $190  // inserted:   -190 vertex $-1 -1 $-1 $133 0 $250 #
+		$-1   $192  // inserted:   -192 ellipse-curve $-1 -1 $-1 2.70408 0.977949 1.0441 -5.83994e-17 0.894427 0.447214 -0.00204124 -0.00204124 0.00408248 1 I I #
+		$-1   $250  // inserted:   -250 point $-1 -1 $-1 2.72449 0.998361 1.00328 #
+		$-1   $39   // inserted:   -39 face $71 672 $-1 $72 $73 $20 $-1 $74 forward single #
+		$-1   $73   // inserted:   -73 loop $-1 -1 $-1 $-1 $129 $39 #
+		$-1   $128  // inserted:   -128 plane-surface $-1 -1 $-1 2.70408 0.977949 1.0441 -8.06332e-17 0.894427 0.447214 -3.41348e-17 -0.447214 0.894427 forward_v I I I I #
+		$-1   $72   // inserted:   -72 face $125 673 $-1 $126 $127 $20 $-1 $128 reversed single #
+		$-1   $132  // inserted:   -132 coedge $-1 -1 $-1 $185 $185 $75 $133 reversed $127 0 $-1 #
+		$-1   $127  // inserted:   -127 loop $-1 -1 $-1 $-1 $132 $72 #
+		$-1   $292  // inserted:   -292 point $-1 -1 $-1 1.53638 -0.663201 3.49762 #
+		$-1   $245  // inserted:   -245 vertex $-1 -1 $-1 $187 1 $292 #
+		$-1   $249  // inserted:   -249 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 30.1593 2.95271 0.952718 1.09456 -0.0228218 0.00456435 -0.00912871 -8.67362e-19 0.0223607 0.0111803 -0.0272166 -0.0272166 0.0544331 0.116429 -0.408248 -0.408248 0.816497 null_surface null_surface nullbs nullbs } I I #
+		$-1   $187  // inserted:   -187 edge $-1 680 $-1 $190 0 $245 30.1593 $184 $249 forward @7 tangent #
+		$-1   $246  // inserted:   -246 ellipse-curve $-1 -1 $-1 1.51597 -0.683613 3.53845 -0.868192 0.450032 -0.20908 -0.00204124 -0.00204124 0.00408248 1 I I #
+		$-1   $183  // inserted:   -183 edge $244 681 $-1 $245 -3.14159 $245 3.14159 $182 $246 forward @7 unknown #
+		$-1   $184  // inserted:   -184 coedge $-1 -1 $-1 $182 $130 $131 $187 forward $40 0 $247 #
+		$-1   $182  // inserted:   -182 coedge $-1 -1 $-1 $131 $184 $129 $183 reversed $40 0 $243 #
+		$-1   $131  // inserted:   -131 coedge $-1 -1 $-1 $75 $182 $184 $187 reversed $40 0 $188 #
+		$-1   $40   // inserted:   -40 loop $-1 -1 $-1 $-1 $75 $29 #
+		$-1   $41   // inserted:   -41 spline-surface $-1 -1 $-1 reversed { helix_spl_circ 22000 F -3.14159 F 3.14159 F 0 F 30.1593 1.5708 F 0 F 30.1593 2.9323 0.932305 1.13539 -0.0228218 0.00456435 -0.00912871 -8.67362e-19 0.0223607 0.0111803 -0.0272166 -0.0272166 0.0544331 0.116429 -0.408248 -0.408248 0.816497 null_surface null_surface nullbs nullbs 0.005 } I I I I #
+		$-1   $29   // inserted:   -29 face $38 671 $-1 $39 $40 $20 $-1 $41 forward single #
+		$-1   $134  // inserted:   -134 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 3.14159 0 -3.14159 0 0 spline reversed { ref 0 } I I I I } 0 0 #
+		$-1   $247  // inserted:   -247 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 0 1 30.1593 1 3.14159 0 3.14159 30.1593 0 spline reversed { ref 0 } I I I I } -6.28319 0 #
+		$-1   $243  // inserted:   -243 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 -3.14159 30.1593 3.14159 30.1593 0 spline reversed { ref 0 } I I I I } 0 0 #
+		$-1   $188  // inserted:   -188 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 -30.1593 1 -0 1 -3.14159 30.1593 -3.14159 0 0 spline reversed { ref 0 } I I I I } 6.28319 0 #
+		$-1   $129  // inserted:   -129 coedge $-1 -1 $-1 $129 $129 $182 $183 forward $73 0 $-1 #
+		$-1   $74   // inserted:   -74 plane-surface $-1 -1 $-1 1.51597 -0.683613 3.53845 -0.868192 0.450032 -0.20908 -0.257514 -0.048434 0.96506 forward_v I I I I #
+		$-1   $68   // inserted:   -68 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $38 $29 38 1 753 -1 10 0 20 0 0 0 0 0 0 0 #
+		$-1   $125  // inserted:   -125 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $72 38 1 753 -1 0 0 4 0 0 0 0 0 0 0 #
+		$-1   $71   // inserted:   -71 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $39 38 1 753 -1 0 0 12 0 0 0 0 0 0 0 #
+		$-1   $244  // inserted:   -244 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $183 38 1 753 -1 10 0 10 0 0 0 0 0 0 0 #
+		$-1   $69   // inserted:   -69 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 30.1593 2.9323 0.932305 1.13539 -0.0228218 0.00456435 -0.00912871 -8.67362e-19 0.0223607 0.0111803 -0.0272166 -0.0272166 0.0544331 0.116429 -0.408248 -0.408248 0.816497 null_surface null_surface nullbs nullbs } I I #
+		$-1   $38   // inserted:   -38 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $68 $-1 $29 38 $69 $70 #
+		$-1   $70   // inserted:   -70 ellipse-curve $-1 -1 $-1 2.70408 0.977949 1.0441 -2.77556e-17 0.894427 0.447214 -0.00204124 -0.00204124 0.00408248 1 I I #
+		$-1   $252  // inserted:   -252 point $-1 -1 $-1 2.7534 0.981625 1.03675 #
+		$-1   $191  // inserted:   -191 vertex $251 -1 $-1 $-1 2 $252 #
+		$-1   $291  // inserted:   -291 edge $-1 718 $-1 $191 1 $191 0 $242 $-1 forward @7 unknown #
+		$-1   $242  // inserted:   -242 coedge $-1 -1 $-1 $242 $242 $-1 $291 forward $180 0 $-1 #
+		$-1   $186  // inserted:   -186 edge $248 679 $-1 $191 2.15648 $190 3.14159 $130 $192 forward @7 unknown #
+		$-1   $248  // inserted:   -248 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $186 38 1 753 -1 10 0 2 #
+		$-1   $130  // inserted:   -130 coedge $-1 -1 $-1 $184 $75 $185 $186 forward $40 0 $134 #
+		$-1   $185  // inserted:   -185 coedge $-1 -1 $-1 $132 $132 $130 $186 reversed $127 0 $-1 #
+		$-1   $180  // inserted:   -180 loop $-1 -1 $-1 $-1 $242 $126 #
+		$307  $126  // updated id: -126 face $179 674 $-1 $-1 $180 $20 $-1 $181 forward single #
+		$308  $1    // updated id: -1 body $-1 416 $-1 $9 $-1 $-1 #
+		$309  $19   // updated id: -19 lump $-1 -1 $-1 $-1 $28 $1 #
+		$310  $9    // updated id: -9 lump $-1 -1 $-1 $19 $20 $1 #
+		$311  $20   // updated id: -20 shell $-1 -1 $-1 $-1 $-1 $29 $-1 $9 #
+		$-1   $251  // inserted:   -251 vertedge-sys-attrib $-1 -1 $-1 $-1 $191 4 $291 0 $186 0 $-1 2 $-1 2 #
+7 delta_state 180 1 0 $9  $5  $7  $-1  0 11
+	BulletinBoard: 2
+		$-1   $9    // inserted:   -9 lump $-1 -1 $-1 $19 $20 $1 #
+		$-1   $20   // inserted:   -20 shell $-1 -1 $-1 $-1 $-1 $29 $-1 $9 #
+		$-1   $126  // inserted:   -126 face $179 674 $-1 $-1 $180 $20 $-1 $181 forward single #
+		$-1   $179  // inserted:   -179 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $239 $-1 $126 38 $240 $241 #
+		$-1   $239  // inserted:   -239 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $179 $126 38 1 794 -1 5 0 20 0 0 0 0 0 0 0 #
+		$-1   $181  // inserted:   -181 sphere-surface $-1 -1 $-1 3 1.00001 0.999989 0.025 1 0 0 0 0 1 forward_v I I I I #
+		$-1   $240  // inserted:   -240 ellipse-curve $-1 -1 $-1 3 1.00001 0.999989 0.912871 -0.182574 0.365148 -0.0102062 -0.0102062 0.0204124 1 I I #
+		$-1   $241  // inserted:   -241 ellipse-curve $-1 -1 $-1 3 1.00001 0.999989 2.77556e-17 -0.894427 -0.447214 0.0228218 -0.00456435 0.00912871 1 F -3.46945e-16 F 3.14159 #
+		$306  $19   // updated id: -19 lump $-1 -1 $-1 $-1 $28 $1 #
+5 delta_state 179 1 0 $7  $3  $5  $-1  0 11
+	BulletinBoard: 2
+		$-1   $174  // inserted:   -174 coedge $-1 -1 $-1 $229 $229 $124 $177 forward $122 0 $-1 #
+		$-1   $177  // inserted:   -177 edge $235 682 $-1 $236 -3.14159 $237 0.585686 $174 $238 forward @7 unknown #
+		$-1   $235  // inserted:   -235 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $177 38 1 627 -1 9 0 2 #
+		$-1   $236  // inserted:   -236 vertex $-1 -1 $-1 $177 0 $288 #
+		$-1   $238  // inserted:   -238 ellipse-curve $-1 -1 $-1 -2.75001 -1.88163 1.11837 -1.83995e-17 -0.707107 0.707107 -0.005 8.67362e-21 -0 1 I I #
+		$-1   $288  // inserted:   -288 point $-1 -1 $-1 -2.70001 -1.88163 1.11837 #
+		$-1   $65   // inserted:   -65 face $120 676 $-1 $121 $122 $28 $-1 $123 forward single #
+		$-1   $122  // inserted:   -122 loop $-1 -1 $-1 $-1 $174 $65 #
+		$-1   $123  // inserted:   -123 plane-surface $-1 -1 $-1 -2.75001 -1.88163 1.11837 -1.83995e-17 -0.707107 0.707107 1 -1.73472e-18 0 forward_v I I I I #
+		$-1   $121  // inserted:   -121 face $170 677 $-1 $171 $172 $28 $-1 $173 reversed single #
+		$-1   $124  // inserted:   -124 coedge $-1 -1 $-1 $175 $176 $174 $177 reversed $66 0 $178 #
+		$-1   $172  // inserted:   -172 loop $-1 -1 $-1 $-1 $228 $121 #
+		$-1   $303  // inserted:   -303 point $-1 -1 $-1 -1.64057 -0.0455049 3.2525 #
+		$-1   $285  // inserted:   -285 vertex $-1 -1 $-1 $232 1 $303 #
+		$-1   $286  // inserted:   -286 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 30.7876 -2.9145 -1.82798 1.17202 0.0214495 -0.00536537 -0.00536537 0 0.0160881 -0.0160881 0.0204183 0.0408138 0.0408138 0.117489 0.333499 0.666625 0.666625 null_surface null_surface nullbs nullbs } I I #
+		$-1   $232  // inserted:   -232 edge $-1 683 $-1 $236 0 $285 30.7876 $175 $286 forward @7 tangent #
+		$-1   $302  // inserted:   -302 ellipse-curve $-1 -1 $-1 -1.68209 -0.0280363 3.23079 0.554135 0.43345 -0.710672 -0.00415129 0.00174687 -0.00217146 1 I I #
+		$-1   $282  // inserted:   -282 edge $301 684 $-1 $285 -3.14159 $285 3.14159 $230 $302 forward @7 unknown #
+		$-1   $175  // inserted:   -175 coedge $-1 -1 $-1 $230 $124 $231 $232 forward $66 0 $233 #
+		$-1   $230  // inserted:   -230 coedge $-1 -1 $-1 $231 $175 $228 $282 reversed $66 0 $283 #
+		$-1   $231  // inserted:   -231 coedge $-1 -1 $-1 $176 $230 $175 $232 reversed $66 0 $284 #
+		$-1   $66   // inserted:   -66 loop $-1 -1 $-1 $-1 $124 $37 #
+		$-1   $67   // inserted:   -67 spline-surface $-1 -1 $-1 forward { helix_spl_circ 22000 F -3.14159 F 3.14159 F 0 F 30.7876 -0.340012 F 0 F 30.7876 -2.92006 -1.8391 1.1609 0.0170056 -0.00425378 -0.00425378 0 0.012755 -0.012755 0.0204183 0.0408138 0.0408138 0.148191 0.333499 0.666625 0.666625 null_surface null_surface nullbs nullbs 0.005 } I I I I #
+		$-1   $37   // inserted:   -37 face $64 675 $-1 $65 $66 $28 $-1 $67 forward single #
+		$-1   $178  // inserted:   -178 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 -3.14159 0 3.14159 0 0 spline forward { ref 5 } I I I I } 0 0 #
+		$-1   $233  // inserted:   -233 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 0 1 30.7876 1 3.14159 0 3.14159 30.7876 0 spline forward { ref 5 } I I I I } 0 0 #
+		$-1   $283  // inserted:   -283 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 periodic 2 -3.14159 1 3.14159 1 3.14159 30.7876 -3.14159 30.7876 0 spline forward { ref 5 } I I I I } 0 0 #
+		$-1   $284  // inserted:   -284 pcurve $-1 -1 $-1 0 forward { exp_par_cur nubs 1 open 2 -30.7876 1 -0 1 -3.14159 30.7876 -3.14159 0 0 spline forward { ref 5 } I I I I } 0 0 #
+		$-1   $228  // inserted:   -228 coedge $-1 -1 $-1 $228 $228 $230 $282 forward $172 0 $-1 #
+		$-1   $173  // inserted:   -173 plane-surface $-1 -1 $-1 -1.68209 -0.0280363 3.23079 -0.554135 -0.43345 0.710672 0.830258 -0.349373 0.434292 forward_v I I I I #
+		$-1   $117  // inserted:   -117 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $64 $37 38 1 627 -1 9 0 20 0 0 0 0 0 0 0 #
+		$-1   $120  // inserted:   -120 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $65 38 1 627 -1 0 0 4 0 0 0 0 0 0 0 #
+		$-1   $170  // inserted:   -170 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $121 38 1 627 -1 0 0 12 0 0 0 0 0 0 0 #
+		$-1   $301  // inserted:   -301 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $282 38 1 627 -1 9 0 10 0 0 0 0 0 0 0 #
+		$-1   $118  // inserted:   -118 intcurve-curve $-1 -1 $-1 forward { helix_int_cur 22000 F 0 F 30.7876 -2.92006 -1.8391 1.1609 0.0170056 -0.00425378 -0.00425378 0 0.012755 -0.012755 0.0204183 0.0408138 0.0408138 0.148191 0.333499 0.666625 0.666625 null_surface null_surface nullbs nullbs } I I #
+		$-1   $64   // inserted:   -64 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $117 $-1 $37 38 $118 $119 #
+		$-1   $119  // inserted:   -119 ellipse-curve $-1 -1 $-1 -2.75001 -1.88163 1.11837 0 -0.707107 0.707107 -0.005 -0 -0 1 I I #
+		$-1   $290  // inserted:   -290 point $-1 -1 $-1 -2.79167 -1.90118 1.09882 #
+		$-1   $237  // inserted:   -237 vertex $289 -1 $-1 $-1 2 $290 #
+		$-1   $300  // inserted:   -300 edge $-1 719 $-1 $237 1 $237 0 $281 $-1 forward @7 unknown #
+		$-1   $281  // inserted:   -281 coedge $-1 -1 $-1 $281 $281 $-1 $300 forward $226 0 $-1 #
+		$-1   $234  // inserted:   -234 edge $287 685 $-1 $237 0.585686 $236 3.14159 $229 $238 forward @7 unknown #
+		$-1   $287  // inserted:   -287 NMx_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $-1 $234 38 1 627 -1 9 0 2 #
+		$-1   $229  // inserted:   -229 coedge $-1 -1 $-1 $174 $174 $176 $234 forward $122 0 $-1 #
+		$-1   $176  // inserted:   -176 coedge $-1 -1 $-1 $124 $231 $229 $234 reversed $66 0 $178 #
+		$-1   $226  // inserted:   -226 loop $-1 -1 $-1 $-1 $281 $171 #
+		$304  $171  // updated id: -171 face $225 427 $-1 $-1 $226 $28 $-1 $227 forward single #
+		$305  $28   // updated id: -28 shell $-1 -1 $-1 $-1 $-1 $37 $-1 $19 #
+		$-1   $289  // inserted:   -289 vertedge-sys-attrib $-1 -1 $-1 $-1 $237 4 $300 0 $234 0 $-1 2 $-1 2 #
+3 delta_state 129 1 0 $5  $1  $3  $-1  0 11
+	BulletinBoard: 2
+		$-1   $1    // inserted:   -1 body $-1 416 $-1 $9 $-1 $-1 #
+		$-1   $28   // inserted:   -28 shell $-1 -1 $-1 $-1 $-1 $37 $-1 $19 #
+		$-1   $19   // inserted:   -19 lump $-1 -1 $-1 $-1 $28 $1 #
+		$-1   $227  // inserted:   -227 sphere-surface $-1 -1 $-1 -3.00001 -1.9989 1.0011 0.025 1 0 0 0 0 1 forward_v I I I I #
+		$-1   $171  // inserted:   -171 face $225 427 $-1 $-1 $226 $28 $-1 $227 forward single #
+		$-1   $278  // inserted:   -278 NMx_Sweep_Generated_Brep_tag-NMx_Brep_Name_tag-NMx_Brep_tag-NamingMatching-attrib $-1 -1 $-1 $225 $171 38 1 608 -1 5 0 20 0 0 0 0 0 0 0 #
+		$-1   $279  // inserted:   -279 ellipse-curve $-1 -1 $-1 -3.00001 -1.9989 1.0011 -1 0 -0 0 0.0176777 0.0176777 1 I I #
+		$-1   $225  // inserted:   -225 NMx_Feature_Orientation-NamingMatching-attrib $-1 -1 $278 $-1 $171 38 $279 $280 #
+		$-1   $280  // inserted:   -280 ellipse-curve $-1 -1 $-1 -3.00001 -1.9989 1.0011 0 0.707107 -0.707107 -0.025 0 -0 1 F 0 F 3.14159 #
+1 delta_state 2 1 0 $3  $-1  $1  $-1  0 11

@@ -730,7 +730,7 @@ def getDiscontinuityInfo(chunks, index, inventor):
 def rotateShape(shape, dir):
 	# Setting the axis directly doesn't work for directions other than x-axis!
 	angle = degrees(DIR_Z.getAngle(dir))
-	if (isEqual1D(angle, 0)):
+	if (not isEqual1D(angle, 0)):
 		axis = DIR_Z.cross(dir) if angle != 180 else DIR_X
 		shape.rotate(PLC(CENTER, axis, angle))
 	return
@@ -1362,35 +1362,6 @@ class Helix(object):
 		self.rotateShape(helix, DIR_Z, self.vecAxis, DIR_X)
 		helix.translate(self.posCenter)
 		return helix.toShape()
-
-#	def buildSurfaceCircle(self, r, min_V, max_V):
-#		min_U   = self.radAngles.getLowerLimit()
-#		max_U   = self.radAngles.getUpperLimit()
-#		r_maj   = self.dirMajor.Length
-#		r_min   = self.dirMinor.Length
-#		pitch   = self.dirPitch.Length
-#		steps_U = Helix.calcSteps(min_U, max_U, 8)
-#		steps_V = Helix.calcSteps(min_V, max_V, 6)
-#		handed  = 1 if (self.isLeftHanded()) else -1
-#		points  = []
-#
-#		for u  in steps_U:
-#
-#			c = Helix.calcPoint(u, min_U, self.facApex, r_maj, r_min, handed, pitch)
-#			circle = []
-#			m = MAT(cos(u), sin(u), 0, 0, -sin(u), cos(u), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-#			for v in steps_V:
-#				p = m.multiply(VEC(r * cos(v), 0, r * sin(v)))
-#				circle.append(p + c)
-#			points.append(circle)
-#
-#		# bring the helix into the correct position:
-#		helix = Part.BSplineSurface()
-#		helix.interpolate(points)
-#		self.rotateShape(helix, DIR_X, VEC(self.dirMajor.x, self.dirMajor.y, 0), DIR_Z)
-#		self.rotateShape(helix, DIR_Z, self.vecAxis, DIR_X)
-#		helix.translate(self.posCenter)
-#		return helix.toShape()
 
 	def buildSurfaceLine(self, p1, p2):
 		min_U   = self.radAngles.getLowerLimit()
@@ -3282,7 +3253,7 @@ class SurfaceSpline(Surface):
 	def setSurfaceShape(self, chunks, index, inventor, subtype = 'spl_sur'):
 		self.subtype = subtype
 		self.spline, self.tolerance, i = readSplineSurface(chunks, index, True)
-#		self.shape = createBSplinesSurface(selfspline)
+#		self.shape = createBSplinesSurface(self.spline)
 		if (getVersion() >= 2.0):
 			arr, i  = getDiscontinuityInfo(chunks, i, inventor)
 		return i
@@ -4032,21 +4003,25 @@ class SurfaceSpline(Surface):
 				else:
 					logError("    Can't create ruled surface of 1st curve - (%r)" %(self.curve1))
 			elif (self.subtype == 'sweep_spl_sur'):
-				profile = self.profile.build(None, None)
-				if (profile):
-					path = self.path.build(None, None)
-					if (path):
-						self.shape = Part.makeSweepSurface(path, profile)
+				if (hasattr(self, 'spline')):
+					self.shape = createBSplinesSurface(self.spline)
+				if (self.shape == None):
+					profile = self.profile.build(None, None)
+					if (profile):
+						print(self.path)
+						path = self.path.build(None, None)
+						if (path):
+							self.shape = Part.Wire(path.Edges).makePipeShell(profile)
 			elif (self.subtype == 'helix_spl_circ'):
-#				self.shape = self.path.helix.buildSurfaceCircle(self.path.shape, self.radius, self.angle.getLowerLimit(), self.angle.getUpperLimit())
-				path   = self.path.shape
-				center1 = path.valueAt(path.FirstParameter)
-				center2 = path.valueAt(path.LastParameter)
-				normal  = self.path.helix.dirMinor #(path.valueAt(0) - path.valueAt(0.01)).normalize()
-				profile1  = Part.makeCircle(self.radius, center1, normal) # Edge
-				profile2  = Part.makeCircle(self.radius, center2, normal) # Edge
+				path = self.path.shape
+				center1 = path.firstVertex().Point
+				center2 = path.lastVertex().Point
+
+				normal   = self.path.helix.dirMinor
+				profile1 = Part.makeCircle(self.radius, center1, normal) # Edge
+				profile2 = Part.makeCircle(self.radius, center2, normal) # Edge
+
 				self.shape = Part.Wire(path).makePipeShell((Part.Wire(profile1), Part.Wire(profile2)), False, True, 0) # Face
-#				self.shape = Part.makeSweepSurface(path, profile, 0) # Face
 #			elif (self.subtype == 'helix_spl_line'):
 #				# TODO pt1 = ???, pt2 = ???
 #				self.shape = self.path.helix.buildSurfaceLine(pt1, pt2)
@@ -5007,13 +4982,6 @@ class Header(object):
 			sat += "%g %g %g\n" %(self.scale, self.resabs, self.resnor)
 		return sat
 
-def getNextText(data):
-	m = LENGTH_TEXT.match(data)
-	count = int(m.group(1))
-	text  = m.group(2)[0:count]
-	remaining = m.group(2)[count+1:]
-	return text, remaining
-
 def int2version(num):
 	return float("%d.%d" %(num / 100, num % 100))
 
@@ -5152,9 +5120,9 @@ class AcisReader(object):
 		self.header.flags   = int(tokens[3])
 		if (self.version >= 2.0):
 			data = self._stream.readline()
-			self.header.prodId,  data = getNextText(data)
-			self.header.prodVer, data = getNextText(data)
-			self.date,    data = getNextText(data)
+			self.header.prodId,  data = self._getNextText(data)
+			self.header.prodVer, data = self._getNextText(data)
+			self.date,    data = self._getNextText(data)
 			data = self._stream.readline()
 			tokens = data.split(' ')
 			self.header.scale  = fabs(float(tokens[0])) # prevent STEP importer from handling negative scales -> "Cannot compute Inventor representation for the shape of Part__Feature"
@@ -5341,6 +5309,18 @@ class AcisReader(object):
 		self._resolfChunkReferences()
 		setReader(self)
 		return True
+
+	def _getNextText(self, data):
+		i = 0
+		while (data[i].isdigit()):
+			i += 1
+		count = int(data[:i])
+		data = data[i+1:]
+		if (len(data) < count):
+			data = self._stream.readline()
+		text  = data[0:count]
+		remaining = data[count+1:]
+		return text, remaining
 
 class Record(object):
 	def __init__(self, name):

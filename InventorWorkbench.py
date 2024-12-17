@@ -134,6 +134,14 @@ def runPartDesignCommand(cmd):
 		FreeCADGui.runCommand("PartDesign_" + cmd)
 	return
 
+def runInventorCommand(cmd):
+	if FreeCAD.ActiveDocument:
+		doc  = FreeCAD.ActiveDocument
+		doc.openTransaction(cmd)
+		FreeCADGui.addModule("InventorViewProviders")
+		FreeCADGui.doCommand(f"InventorViewProviders.{cmd}()")
+		doc.commitTransaction()
+
 def createPrimitive(name):
 	import PartDesign
 	doc = FreeCAD.ActiveDocument
@@ -231,6 +239,8 @@ class _CmdFxRib(_CmdAbstract):
 class _CmdFxCoil(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxCoil, self).__init__(menuText="&Coil", toolTip="Create coils", pixmap=getIconPath("FxCoil.png"))
+	def Activated(self):
+		runInventorCommand("makeCoil")
 class _CmdFxEmboss(_CmdAbstract):
 	def __init__(self):
 		super(_CmdFxEmboss, self).__init__(menuText="Embos&s", toolTip="Creates a raised (emboss) or recessed (engrave) feature from a profile", pixmap=getIconPath("FxEmboss.png"))
@@ -353,11 +363,7 @@ class _CmdFxPatch(_CmdAbstract):
 		super(_CmdFxPatch, self).__init__(menuText="&Boundary Patch", toolTip="Create a boundary patch for the selected edges", pixmap=getIconPath("FxBoundaryPatch.png"), accel="I, P")
 	def Activated(self):
 		if FreeCAD.ActiveDocument:
-			edges = []
-			selections = FreeCADGui.Selection.getSelectionEx(FreeCAD.ActiveDocument.Name)
-			for selection in selections:
-				for obj in selection.SubObjects:
-					edges += obj.Edges
+			edges = getProfileFromSelection()
 			if (len(edges) > 0):
 				makeBoundaryPatch(edges)
 	def IsActive(self):
