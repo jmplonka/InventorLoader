@@ -774,9 +774,9 @@ class _Coil(_ObjectProxy):
 		coil.addProperty("App::PropertyFloat"      , "Revolutions" , "Coil", "The number of revolutions for the coil").Revolutions = revolutions
 		coil.addProperty("App::PropertyAngle"      , "TaperAngle"  , "Coil", "The taper angle, if needed, for all coil types except spiral").TaperAngle = taper_angle # Cylinder!
 		coil.addProperty("App::PropertyBool"       , "Solid"       , "Coil", "Create a solid instead of a shell").Solid = solid
-		coil.addProperty("App::PropertyAngle"      , "StartTransit", "Ends", "The degrees over which the coil achieves the start transition (normally less than one revolution)").StartTransit = 0.0 #start_transit
+		coil.addProperty("App::PropertyAngle"      , "StartTransit", "Ends", "The degrees over which the coil achieves the start transition (normally less than one revolution)").StartTransit = start_transit
 		coil.addProperty("App::PropertyAngle"      , "StartFlat"   , "Ends", "The degrees the coil extends before transition with not pitch").StartFlat  = start_flat
-		coil.addProperty("App::PropertyAngle"      , "EndTransit"  , "Ends", "The degrees over which the coil achieves the end transition (normally less than one revolution)").EndTransit = 0.0 #end_transit
+		coil.addProperty("App::PropertyAngle"      , "EndTransit"  , "Ends", "The degrees over which the coil achieves the end transition (normally less than one revolution)").EndTransit = end_transit
 		coil.addProperty("App::PropertyAngle"      , "EndFlat"     , "Ends", "The degrees the coil extends after transition with no pitch (flat)").EndFlat  = end_flat
 		coil.setPropertyStatus('StartTransit', 'Hidden') # not yet implemented
 		coil.setPropertyStatus('EndTransit', 'Hidden')   # not yet implemented
@@ -787,7 +787,7 @@ class _Coil(_ObjectProxy):
 			coil.Profile = profile
 		return
 	def onChanged(self, coil, prop):
-		if prop == "CoilType":
+		if (prop == 'CoilType'):
 			if (coil.CoilType == 'Spiral'):
 				return _Coil._hide(coil, 'None') # dummy property to show all.
 			if (coil.CoilType == 'PitchAndRevolution'):
@@ -800,54 +800,55 @@ class _Coil(_ObjectProxy):
 	def _createPathStart(self, coil):
 		self.pathWires = []
 		m = coil.Profile.Shape.BoundBox.Center # Center of the profile
-		r = m.distanceToLine(coil.Base, coil.Base+coil.Axis)
-		base = Part.Circle(coil.Base, coil.Axis, r)
+		center = coil.Base
+		r = m.distanceToLine(center, center+coil.Axis)
+		base = Part.Circle(center, coil.Axis, r)
 		self.a = base.parameter(m)
-		if (coil.StartFlat.Value > 0.0): # Angle of the flat part
+		flat_rad = radians(coil.StartFlat.Value)
+		if (flat_rad > 0.0): # Angle of the flat part
 			if (coil.Rotation == 'Counterclockwise'):
-				b = self.a - radians(coil.StartFlat.Value)
+				b = self.a - flat_rad
 				arc = Part.ArcOfCircle(base, b, self.a)
 			else:
-				b = self.a + radians(coil.StartFlat.Value)
+				b = self.a + flat_rad
 				arc = Part.ArcOfCircle(base, self.a, b)
 			self.a = b
-			Part.show(arc.toShape(), "start")
 			self.pathWires.append(arc.toShape())
-#		if (coil.StartTransit.Value > 0.0):
+		trans_rad = radians(coil.StartTransit.Value)
+#		if (trans_rad > 0.0):
 #			if (coil.Rotation == 'Counterclockwise'):
-#				b = self.a + radians(coil.StartTransit.Value)
-#				transit = Draft.makeBSpline(points)
+#				b = self.a + trans_rad
 #			else:
-#				b = self.a - radians(coil.StartTransit.Value)
-#				transit = Draft.makeBSpline(points)
-#			b = self.a + radians(coil.StartTransit.Value)
+#				b = self.a - trans_rad
 #			transit = Draft.makeBSpline(points)
 #			self.a = b
 #			self.pathWires.append(transit)
 
 	def _createPathEnd(self, coil):
 		if (coil.EndTransit.Value > 0) or  (coil.EndFlat.Value > 0):
-			m = coil.Profile.Shape.BoundBox.Base # Center of the profile
-			r = m.distanceToLine(coil.Base, coil.Base+coil.Axis)
+			m = coil.Profile.Shape.BoundBox.Center # Center of the profile
+			center = coil.Base
+			r = m.distanceToLine(center, center+coil.Axis)
 			r -= coil.Height.Value * sin(radians(coil.TaperAngle.Value))
-			base = Part.Circle(coil.Base, coil.Axis, r)
-#			if (coil.EndTransit.Value > 0):
+			base = Part.Circle(center + coil.Height.Value * coil.Axis, coil.Axis, r)
+			trans_rad = radians(coil.EndTransit.Value)
+#			if (trans_rad > 0):
 #				if (coil.Rotation == 'Counterclockwise'):
-#					b = self.a + radians(coil.EndTransit.Value)
+#					b = self.a + trans_rad
 #				else:
-#					b = self.a - radians(coil.EndTransit.Value)
-#					transit = Draft.makeBSpline(points)
+#					b = self.a - trans_rad
+#				transit = Draft.makeBSpline(points)
 #				self.a = b
 #				self.pathWires.append(transit)
+			flat_rad = radians(coil.EndFlat.Value)
 			if (coil.EndFlat.Value > 0):
 				if (coil.Rotation == 'Counterclockwise'):
-					b = self.a - radians(coil.EndFlat.Value)
+					b = self.a - flat_rad
 					arc = Part.ArcOfCircle(base, b, self.a)
 				else:
-					b = self.a + radians(coil.EndFlat.Value)
+					b = self.a + flat_rad
 					arc = Part.ArcOfCircle(base, self.a, b)
 				self.a = b
-				Part.show(arc.toShape(), "end")
 				self.pathWires.append(arc.toShape())
 
 	def _createSpiral(self, coil):
@@ -942,7 +943,7 @@ class _Coil(_ObjectProxy):
 			return self._createRevolutionAndHeight(coil)
 		if (coil.CoilType == 'PitchAndHeight'):
 			return self._createPitchAndHeight(coil)
-		raise Exception(u"Unknown Coil-Type '%s'" %(coil.CoilType))
+		raise Exception(f"Unknown Coil-Type '{coil.CoilType}'")
 
 	def _createCoil(self, coil):
 		# loft the profile along the path
@@ -969,14 +970,14 @@ class _ViewProviderCoil(_ViewProvider):
 
 	def claimChildren(self):
 		children = []
-		if (hasattr(self.Object,"Profile")):
+		if (hasattr(self.Object, 'Profile')):
 			children.append(self.Object.Profile)
 		return children
 
 	def getIcon(self):
 		return getIconPath('FxCoil.png')
 
-def makeCoil(name = u"Coil", profile=None, base=CENTER, axis=DIR_Z,
+def makeCoil(name = 'Coil', profile=None, base=CENTER, axis=DIR_Z,
 			reversed=False, rotation='Clockwise', coil_type='PitchAndRevolution',
 			taper_angle=0.0, solid=True, pitch=5.0, turns=4.0, height=20.0,
 			start_flat=0.0, start_transit=0.0, end_flat=0.0, end_transit=0.0):
@@ -990,4 +991,7 @@ def makeCoil(name = u"Coil", profile=None, base=CENTER, axis=DIR_Z,
 	if FreeCAD.GuiUp:
 		_ViewProviderCoil(coil.ViewObject)
 	profile.Visibility = False
+	coil.touch()
+	FreeCAD.ActiveDocument.recompute()
+	FreeCADGui.SendMsgToActiveView('ViewFit')
 	return coil

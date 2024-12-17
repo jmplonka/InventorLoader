@@ -4002,16 +4002,13 @@ class SurfaceSpline(Surface):
 						logError("    Can't create ruled surface of 2nd curve - (%r)" %(self.curve2))
 				else:
 					logError("    Can't create ruled surface of 1st curve - (%r)" %(self.curve1))
-			elif (self.subtype == 'sweep_spl_sur'):
-				if (hasattr(self, 'spline')):
-					self.shape = createBSplinesSurface(self.spline)
-				if (self.shape == None):
-					profile = self.profile.build(None, None)
-					if (profile):
-						print(self.path)
-						path = self.path.build(None, None)
-						if (path):
-							self.shape = Part.Wire(path.Edges).makePipeShell(profile)
+#			elif (self.subtype == 'sweep_spl_sur'):
+#				profile = self.profile.build(None, None)
+#				if (profile):
+#					print(self.path)
+#					path = self.path.build(None, None)
+#					if (path):
+#						self.shape = Part.Wire(path.Edges).makePipeShell(profile)
 			elif (self.subtype == 'helix_spl_circ'):
 				path = self.path.shape
 				center1 = path.firstVertex().Point
@@ -4025,9 +4022,12 @@ class SurfaceSpline(Surface):
 #			elif (self.subtype == 'helix_spl_line'):
 #				# TODO pt1 = ???, pt2 = ???
 #				self.shape = self.path.helix.buildSurfaceLine(pt1, pt2)
+			else:
+				if (hasattr(self, 'spline')):
+					self.shape = createBSplinesSurface(self.spline)
+
 			if (isinstance(self.surface, Surface)):
 				self.shape = self.surface.build()
-#				logWarning(f"{type(self.surface)}.build({self.surface.subtype}) => {type(self.shape)}")
 				try:
 					if (isinstance(self.shape.Surface, Part.SurfaceOfRevolution)):
 						self.profile = self.surface.profile
