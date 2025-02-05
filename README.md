@@ -17,8 +17,6 @@ As Fusion360 files contains a complete ACIS model representation these files can
 
 This Addon also requires additional python packages:
 * https://pypi.python.org/pypi/xlrd - for reading embedded Excel workbooks
-* http://pypi.python.org/pypi/xlutils - for preparing imported Excel workbooks to
-    be stored
 * https://pypi.python.org/pypi/xlwt - for writing embedded Excel workbooks
 * http://www.decalage.info/python/olefileio - olefile for reading Microsoft OLE(2)
     files.

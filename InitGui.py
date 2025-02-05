@@ -39,11 +39,6 @@ def checkImports():
 	except:
 		missingDependency("xlwt-1.3.0.tar.gz")
 
-	try:
-		import xlutils
-	except:
-		missingDependency("xlutils-2.0.0.tar.gz")
-
 	import importerUtils
 	try:
 		import SheetMetalCmd
