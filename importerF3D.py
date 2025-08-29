@@ -101,9 +101,9 @@ def get_manifest_items(data, offset):
 			a.append(mi)
 	return a, i
 
-def read_manifest(f3d, path):
+def read_manifest(f3d: ZipFile, path: str):
 	name = path.split('/')[-1]
-	if (name):
+	if name:
 		with f3d.open(path) as manifest:
 			data = manifest.read()
 			t1,  i = getLen32Text8(data, 0)
@@ -113,7 +113,13 @@ def read_manifest(f3d, path):
 			t5,  i = getLen32Text16(data, i) # A Fusion Document
 			t6,  i = getLen32Text16(data, i) # UID
 			t7,  i = getLen32Text16(data, i) # UID
-			a1,  i = getUInt32A(data, i, 2)  # ???
+			# a1 finishes 8 bytes before 'Application'
+			# (4 bytes for `cnt` and 4 bytes for the length of the
+			# `Application` string)
+			# There's probably a more elegant way get the length of `a1`.
+			application_index = data.index(b'Application')
+			len_a1 = (application_index - i - 8) // 4
+			a1,  i = getUInt32A(data, i, len_a1)  # ???
 			cnt, i = getUInt32(data, i)
 			l1 = []
 			for j in range(cnt):
@@ -127,8 +133,8 @@ def read_manifest(f3d, path):
 				l2.append(t)
 			l3, i = get_manifest_items(data, i)
 			t8, i = getLen32Text16(data, i)  # UID
-			n1, i = getUInt32(data, i) # 1
-			folder, i = getLen32Text16(data, i) # -> folder name
+			n1, i = getUInt32(data, i)  # 1
+			folder, i = getLen32Text16(data, i)  # -> folder name
 			n2, i = getUInt32(data, i)
 			n3, i = getUInt8(data, i)
 	# dump
