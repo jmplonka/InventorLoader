@@ -1895,7 +1895,7 @@ class DCReader(EeDataReader):
 		i = node.ReadCrossRef(i, 'face')
 		i = node.ReadList2(i, importerSegNode._TYP_NODE_X_REF_, 'lst0')
 		i = node.ReadCrossRef(i, 'ref_2')
-		i = node.ReadUInt32(i, 'number') # The numbber of the selection
+		i = node.ReadUInt32(i, 'number') # The number of the selection
 		return i
 
 	def Read_BA6E3112(self, node): # Fillet edge with variable radii
@@ -4492,7 +4492,7 @@ class DCReader(EeDataReader):
 		i = self.ReadHeaderBendExtent(node, 'Width')
 		i = node.ReadCrossRef(i, 'point')       # reference point for offset
 		i = node.ReadCrossRef(i, 'offset1')     # length for the offset
-		i = node.ReadCrossRef(i, 'extentWidth') # extent witdth
+		i = node.ReadCrossRef(i, 'extentWidth') # extent width
 		i = node.ReadCrossRef(i, 'ref_3')       # bool
 		i = node.ReadCrossRef(i, 'ref_4')       # bool
 		return i
@@ -4575,7 +4575,7 @@ class DCReader(EeDataReader):
 		return i
 
 	#######################
-	# edge identifyer sections
+	# edge identifier sections
 	def ReadHeaderEdgeId(self, node, typeName = None, name = 'creator'):
 		i = self.ReadHeadersS32ss(node, typeName, name) # The edge
 		i = self.ReadClassInfo(node, i, 'body')

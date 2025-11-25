@@ -448,7 +448,7 @@ def Property_VT_USERDEFINED(s, offset):
 	return value, i
 def Property_VT_USER_42(s, offset):
 	return Property_VT_USERDEFINED(s, offset)
-def Property_VT_USER_48(s, offset): # used for dimenstions
+def Property_VT_USER_48(s, offset): # used for dimensions
 	return Property_VT_USERDEFINED(s, offset)
 def Property_VT_USER_49(s, offset):
 	return Property_VT_USERDEFINED(s, offset)
@@ -469,7 +469,7 @@ def Property_VT_CF(s, offset): # PropertyIdentifier or ClipboardData??
 	fmt, i = getUInt32(s, i)
 	dat =  s[i:i+cnt-4]
 	return (fmt, dat), i+cnt-4
-def Property_VT_BOOL(s, offset): # VARIANT_BOOL, 16 bits bool, 0x0000=Fals, 0xFFFF=True
+def Property_VT_BOOL(s, offset): # VARIANT_BOOL, 16 bits bool, 0x0000=False, 0xFFFF=True
 	# see https://msdn.microsoft.com/en-us/library/cc237864.aspx
 	value, i = getUInt16(s, offset)
 	return bool(value), i

@@ -2572,7 +2572,7 @@ class CurveInt(Curve):     # interpolated ('Bezier') curve "intcurve-curve"
 		self.ref, i = getInteger(chunks, index)
 		self.curve  = getReader().getSubtypeEntity(self.ref)
 		if (not isinstance(self.curve, Curve)):
-			logError("Expeced CURVE for 'ref %d' but found %s", self.ref, self.curve.__name__)
+			logError("Expected CURVE for 'ref %d' but found %s", self.ref, self.curve.__name__)
 			self.curve = None
 		return i
 	def setBulk(self, chunks, index):
@@ -2685,7 +2685,7 @@ class CurveP(Curve):       # projected curve "pcurve" for each point in CurveP: 
 		self.ref, i = getInteger(chunks, index)
 		self.pcurve = getReader().getSubtypeEntity(self.ref)
 		if (not isinstance(self.pcurve, CurveP)):
-			logError("Expeced PCURVE for 'ref %d' but found %s", self.ref, self.pcurve.__name__)
+			logError("Expected PCURVE for 'ref %d' but found %s", self.ref, self.pcurve.__name__)
 			self.pcurve = None
 		return i
 	def setBulk(self, chunks, index):
@@ -3582,7 +3582,7 @@ class SurfaceSpline(Surface):
 		self.s1, i = getEnumByTag(chunks, i, SURF_SWEEP)
 		if (chunks[i].tag in (TAG_LONG, TAG_FLOAT, TAG_DOUBLE)):
 			n, i = getInteger(chunks, i) # ???? s1 = normal
-			self.profile, i = readCurve(chunks, i) # prfile[0]
+			self.profile, i = readCurve(chunks, i) # profile[0]
 			self.prof_rng, i  = getInterval(chunks, i, MIN_INF, MAX_INF, 1.0)
 			b1, i = getBoolean(chunks, i)          # T
 			if (b1):
@@ -3641,7 +3641,7 @@ class SurfaceSpline(Surface):
 				f1, i = readFormula(chunks, i)
 				b3, i = getBoolean(chunks, i) # T 	AcisChunkEnumValue
 		else:
-			self.profile, i = readCurve(chunks, i) # prfile[0]
+			self.profile, i = readCurve(chunks, i) # profile[0]
 			self.path, i    = readCurve(chunks, i) # sweep-path
 			self.s2, i      = getEnumByTag(chunks, i, SURF_SWEEP)
 			self.v1, i      = getVector(chunks, i)
@@ -3892,7 +3892,7 @@ class SurfaceSpline(Surface):
 		self.ref, i  = getInteger(chunks, index)
 		self.surface = getReader().getSubtypeEntity(self.ref)
 		if (not isinstance(self.surface, Surface)):
-			logError("Expeced SURFACE for 'ref %d' but found %s", self.ref, self.surface.__name__)
+			logError("Expected SURFACE for 'ref %d' but found %s", self.ref, self.surface.__name__)
 			self.surface = None
 		return i
 	def setBulk(self, chunks, index):
@@ -4170,14 +4170,14 @@ class AttribADeskMaterial(AttribADesk):
 class AttribADeskTrueColor(AttribADesk):
 	def __init__(self):
 		super(AttribADeskTrueColor, self).__init__()
-		self.alhpa = 0.0
+		self.alpha = 0.0
 		self.red   = .749
 		self.green = .749
 		self.blue  = .749
 	def set(self, record):
 		i = super(AttribADeskTrueColor, self).set(record)
 		rgba, i = getInteger(record.chunks, i)
-		self.alhpa = ((rgba >> 24) & 0xFF) / 255.0
+		self.alpha = ((rgba >> 24) & 0xFF) / 255.0
 		self.red   = ((rgba >> 16) & 0xFF) / 255.0
 		self.green = ((rgba >>  8) & 0xFF) / 255.0
 		self.blue  = ((rgba >>  0) & 0xFF) / 255.0

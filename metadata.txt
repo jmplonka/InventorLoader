@@ -38,7 +38,7 @@ changelog=The changelog lists the plugin versions and their changes:
     0.6  - added Coil Feature workaround for installing 3rd Party libraries
     0.5  - added Sweep, Loft and Thicken Feature
     0.4  - added Rectangular-/Circular-Pattern, Mirror and Hole Feature
-    0.3  - added Extrude and Revolve Featrues
+    0.3  - added Extrude and Revolve Features
     0.2  - added parameter table
     0.1  - First testing release with 2D-Sketches
 

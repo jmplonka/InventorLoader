@@ -727,8 +727,8 @@ class DataNode(object):
 	def getParticipants(self):
 		attributes = self.getFxAttributes()
 		for atrName in attributes:
-			atribute = attributes[atrName]
-			participants = atribute.get('participants')
+			attribute = attributes[atrName]
+			participants = attribute.get('participants')
 			if (participants):
 				return participants
 		return []

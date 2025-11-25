@@ -3,8 +3,8 @@
 '''
 Acis2Step.py:
 MC:
- Le classi maiuscolo sono 1-1 con le entity STEP. E' buono cosi si rimodella agevolmente l'object model di STEP.
- Con la reflection viene dumpato il nome della classe.
+ Uppercase classes are 1-1 with STEP entities. This is a good way to easily reshape the STEP object model.
+ Reflection dumps the class name.
 '''
 
 import traceback, os, sys, math, io
@@ -788,8 +788,8 @@ def _convertShell(acisShell, representation, parentColor):
 	return None
 
 def _convertLump(acisLump, name, appContext, parentColor, transformation):
-	#MC:
-	#NOTA quando si volesse usare Part nativo, siccome li le trasformate le ho gia applicate, bastera esportare in STEP
+	# MC:
+	# NOTE: When you want to use the native Part, since I have already applied the transformations there, you just need to export to STEP
 
 	# Da OCCT
 	#product_definition
@@ -835,7 +835,7 @@ def _convertLump(acisLump, name, appContext, parentColor, transformation):
 		xDir      = _rotate(DIR_X, transformation.Rotation)
 		transf    = _createAxis2Placement3D('', placement, '', zDir, '', xDir, '')
 
-		# rappresentazione contenente tutte le trasformate utilizzate nelle istanze
+		# representation containing all the transforms used in the instances
 		shapeRepresentation_trsfs = SHAPE_REPRESENTATION(unit)
 		shapeRepresentation_trsfs.items.append(ident_transf)
 		shapeRepresentation_trsfs.items.append(transf)
@@ -1304,7 +1304,7 @@ class SHAPE_REPRESENTATION_RELATIONSHIP(REPRESENTATION_RELATIONSHIP):
 #relationship between two shape_representations that is established via a transformation, a complex
 #instantiation of shape_representation_relationship AND representation_relationship_with_transformation is
 #used.
-#NOTA peccato che nella pratica shape_representation_relationship sia sempre senza argomenti
+#NOTE: It is a pity that in practice the shape representation relationship is always without arguments.
 class REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION(REPRESENTATION_RELATIONSHIP):
 	def __init__(self, transform):
 		super(REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION, self).__init__()
@@ -1338,7 +1338,7 @@ class CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(ExportEntity):
 		self.shape_unassembled = shape_unassembled
 		self.shape_assembled = shape_assembled
 	def _getParameters(self):
-		return [self.shape_unassembled, self.shape_assembled] # MC non mi interessa di scrivere il nome
+		return [self.shape_unassembled, self.shape_assembled] # MC I don't care to write the name
 
 class SOLID_ANGLE_UNIT(NAMED_UNIT):
 	def __init__(self, dimensions):

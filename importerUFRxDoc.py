@@ -128,7 +128,7 @@ class UFRxInvFiles(UFRxObject):
 	def __init__(self):
 		self.caption = ''
 		self.padding = 0
-		self.fils    = []
+		self.files   = []
 
 class UFRxInvFile(UFRxObject):
 	def __init__(self):
@@ -490,7 +490,7 @@ def readInvFiles(data, offset, log):
 	invFiles.padding, i = readUInt32(data, i, log, 'Padding')
 	for j in range(cnt):
 		invFile, i = readInvFile(data, i, log)
-		invFiles.fils.append(invFile)
+		invFiles.files.append(invFile)
 		log.write(u"\t\tINV-FILE[%02X]: %s\n" %(j, invFile))
 	if (secVrs >= 0x02): i += 1 # skip 00
 	log.write("\n")
