@@ -303,11 +303,12 @@ def chooseImportStrategyAcis():
 	msgBox.setDefaultButton(btnMapping[getStrategy()])
 
 	QApplication.setOverrideCursor(Qt.ArrowCursor)
-	result = msgBox.exec_()
+	msgBox.exec_()
 	QApplication.restoreOverrideCursor()
 
-	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_CANCEL}
-	strategy = resultMapping[result]
+	# exec_() returns an opaque value for custom buttons (Qt6 no longer returns the button index)
+	resultMapping = {btnCnvrt: STRATEGY_STEP, btnNativ: STRATEGY_SAT}
+	strategy = resultMapping.get(msgBox.clickedButton(), STRATEGY_CANCEL)
 	setStrategy(strategy)
 	return strategy
 
@@ -334,11 +335,12 @@ def chooseImportStrategy():
 	msgBox.setDefaultButton(btnMapping[getStrategy()])
 
 	QApplication.setOverrideCursor(Qt.ArrowCursor)
-	result = msgBox.exec_()
+	msgBox.exec_()
 	QApplication.restoreOverrideCursor()
 
-	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE, 3:STRATEGY_CANCEL}
-	strategy = resultMapping[result]
+	# exec_() returns an opaque value for custom buttons (Qt6 no longer returns the button index)
+	resultMapping = {btnCnvrt: STRATEGY_STEP, btnSat: STRATEGY_SAT, btnNativ: STRATEGY_NATIVE}
+	strategy = resultMapping.get(msgBox.clickedButton(), STRATEGY_CANCEL)
 	setStrategy(strategy)
 	return strategy
 
