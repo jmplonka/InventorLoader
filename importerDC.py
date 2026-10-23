@@ -697,6 +697,9 @@ class DCReader(EeDataReader):
 	def Read_55CE9B23(self, node):
 		i = self.ReadHeadersS32ss(node)
 		if (self.version > 2017): i += 4 # skip 00 00 00 00
+		if (self.version > 2024):
+			# Inventor 2025 inserts a word before the referenced DCx record.
+			i = node.ReadUInt32(i, 'u32_2025')
 		i = node.ReadCrossRef(i, 'ref_0')
 		i = node.ReadUInt32(i, 'u32_1')
 		dummy, k = getUInt32(node.data, i)
@@ -7569,8 +7572,13 @@ class DCReader(EeDataReader):
 			i = node.ReadLen32Text16(i)
 			i = node.ReadLen32Text16(i, 'txt0')
 			i = node.ReadUInt16(i, 'u16_0')
+			if (self.version > 2024):
+				# The DCx header gained two bytes in Inventor 2025.
+				i = node.ReadUInt16(i, 'u16_2025')
 		i = self.skipBlockSize(i)
 		i = node.ReadUInt32(i, 'u32_0')
+		if (self.version > 2024):
+			i = node.ReadUInt32(i, 'u32_2025')
 		i = node.ReadCrossRef(i, 'ref_1')
 		i = node.ReadUInt32(i, 'u32_1')
 		i = node.ReadList2(i, importerSegNode._TYP_TRANSFORMATIONS_, 'transformations')

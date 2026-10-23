@@ -1376,7 +1376,7 @@ class Segment(object):
 
 	def getDcSatAttributes(self):
 		if (self.acis is None): return {}
-		return self.acis.get('dcAttributes', {})
+		return getattr(self.acis, 'dcAttributes', None) or self.acis.get('dcAttributes') or {}
 
 	@property
 	def type(self):
@@ -1523,7 +1523,7 @@ class BSplineEdge(_AbstractEdge_):
 		super(BSplineEdge, self).__init__()
 		self.a0 = a0 + a4 # LLLd + dLLdd
 		self.a1 = a1[0]
-		self.a2 = a2[1]
+		self.a2 = a1[1]
 		self.a3 = a2[0]
 		self.a4 = a2[1]
 		self.a5 = a3[0]
@@ -1531,31 +1531,16 @@ class BSplineEdge(_AbstractEdge_):
 	def __str__(self):
 		return u"BSpline:(%s),[%s],[%s],[%s],[%s],[%s],[%s]" %(FloatArr2Str(self.a0), FloatArr2Str(self.a1), FloatArr2Str(self.a2), FloatArr2Str(self.a3), FloatArr2Str(self.a4), FloatArr2Str(self.a5), u",".join([u"(%g,%g,%g)"%(p[0], p[1], p[2]) for p in self.a6]))
 	def getGeometry(self):
-		bsc = Part.BSplineCurve()
-		d   = self.a0[2] # TODO get degrees from a0[2 ???]
-		p   = self.a6    #
-		m   = []         # TODO get mults from ???
-		k   = []         # TODO get knots from ???
-		w   = []         # TODO get weights from ???
-		rat = False      # TODO get Rational from a0[]
-		if (rat):
-			bsc.buildFromPolesMultsKnots( \
-				poles         = p,        \
-				mults         = m,        \
-				knots         = k,        \
-				periodic      = False,    \
-				degree        = d,        \
-				weights       = w
-			)
-		else:
-			bsc.buildFromPolesMultsKnots( \
-				poles         = p,        \
-				mults         = m,        \
-				knots         = k,        \
-				periodic      = False,    \
-				degree        = d
-			)
-		return bsc
+		from collections import Counter
+		counts = Counter(self.a2)
+		knots = sorted(counts)
+		degree = self.a0[2]
+		poles = [self.p2v(p, 10.0) for p in self.a6]
+		if len(self.a2) != len(poles) + degree + 1:
+			raise ValueError('Unsupported stored profile spline knot layout')
+		curve = Part.BSplineCurve()
+		curve.buildFromPolesMultsKnots(poles, [counts[k] for k in knots], knots, False, degree, list(self.a4) or None)
+		return curve
 
 class BezierEdge(_AbstractEdge_):
 	def __init__(self, a0, a1):

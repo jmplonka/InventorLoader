@@ -106,6 +106,11 @@ def insert(filename, docname, skip = [], only = [], root = None):
 	'''
 	opens an Autodesk Inventor file in the current document
 	'''
+	if os.path.splitext(filename)[1].lower() in ('.ipt', '.iam'):
+		if isFileValid(filename):
+			from importerInventor import importFile
+			return importFile(filename, FreeCAD.listDocuments().get(docname), root)
+		return
 	doc = FreeCAD.listDocuments().get(docname)
 	if (doc):
 		if (isFileValid(filename)):
@@ -145,6 +150,9 @@ def open(filename, skip = [], only = [], root = None):
 	if (isFileValid(filename)):
 		abs_file_name = os.path.abspath(filename)
 		logAlways(f"Reading: {abs_file_name}")
+		if os.path.splitext(filename)[1].lower() in ('.ipt', '.iam'):
+			from importerInventor import importFile
+			return importFile(abs_file_name, root=root)
 		_open(abs_file_name, skip, only, root)
 		logInfo('DONE!')
 	return

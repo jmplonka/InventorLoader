@@ -434,9 +434,21 @@ CREATE_CURVE_INT ={
 #MC vecchio/nuovo mergiato
 def _createCurveInt(acisCurve):
 	global _curveBSplines
+	from importerIntersection import intersectionSpline, splineData
+	exact = intersectionSpline(acisCurve)
+	if exact is not None:
+		if isinstance(exact, Acis.CurveEllipse):
+			return _createCurveEllipse(exact)
+		return __create_b_spline_curve(exact)
 	shape = acisCurve.build() # fa il build con Part, va benissimo
 	spline = acisCurve.spline
 	if (spline):
+		if acisCurve.sense == 'reversed':
+			# STEP uses this direction to select the correct arc of closed guides.
+			bsc = Acis.createBSplinesCurve(spline, 'forward', acisCurve.subtype).Curve
+			if isinstance(bsc, Part.BSplineCurve):
+				bsc.reverse()
+				spline = splineData(bsc)
 		curve = __create_b_spline_curve(spline)
 		return curve
 	elif (isinstance(shape, Part.Edge)):
@@ -665,6 +677,11 @@ def _createSurfaceSpline(acisFace):
 	surface = acisFace.getSurface()
 	if (surface.subtype == 'ref'):
 		surface = surface.getSurface()
+	if surface.subtype == 'sweep_spl_sur':
+		from importerHelix import sweepSurface
+		exact = sweepSurface(surface)
+		if exact is not None:
+			return _createSurfaceBSpline(exact, surface, acisFace.sense)
 	if (surface.spline):
 		return _createSurfaceBS(surface, acisFace.sense)
 	shape = acisFace.build()

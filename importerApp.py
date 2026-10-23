@@ -20,6 +20,14 @@ class AppReader(SegmentReader):
 		super(AppReader, self).__init__(segment)
 		self.defStyle = None
 
+	def HandleBlock(self, node):
+		# Native feature import needs only this explicit font-definition table.
+		# Avoid decoding unrelated application/style records in this mode.
+		if getattr(self.segment, 'fontDefinitionsOnly', False) and node.typeName != '37186901':
+			node.data = b''
+			return
+		return super(AppReader, self).HandleBlock(node)
+
 	def readHeaderStyle(self, node, typeName = None, ref1Name = 'collection'):
 		i = node.Read_Header0(typeName)
 		i = node.ReadUInt8(i, 'u8_0')

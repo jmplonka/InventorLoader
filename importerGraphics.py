@@ -624,10 +624,11 @@ class GraphicsReader(EeSceneReader):
 	# attribute sections
 	def Read_022AC1B1(self, node): # PersistentScenePath
 		node.typeName = 'PersistentScenePath'
-		b, i = getBoolean(node.data, 0)
-		if (b):
+		i = node.ReadUInt8(0, 'kind')
+		kind = node.get('kind')
+		if (kind == 1):
 			i = node.ReadList2(i, importerSegNode._TYP_NODE_REF_, 'lst0')
-		else:
+		elif (kind in (0, 3)):
 			b, i = getBoolean(node.data, i)
 			i = node.ReadUInt8(i, 'u8_0')
 			if (b == False):
@@ -635,7 +636,22 @@ class GraphicsReader(EeSceneReader):
 				i = node.ReadLen32Text16(i, 'txt0')
 				i = node.ReadLen32Text16(i, 'txt1')
 				i = node.ReadUInt16(i, 'u16_0')
+		else:
+			raise ValueError('Unknown persistent scene path kind %d' % kind)
 		return i
+
+	def Read_E6E39AFA(self, node):
+		# Retain the optional cached graphics record without claiming its schema.
+		node.typeName = 'OpaqueGraphicsRecord_E6E39AFA'
+		node.set('payload_hex', node.data.hex(), None)
+		return len(node.data)
+
+	def Read_46CBE538(self, node):
+		# Optional graphics attribute. Its schema is not known; keep the complete
+		# payload rather than guessing references from an empty observed list.
+		node.typeName = 'OpaqueGraphicsAttribute_46CBE538'
+		node.set('payload_hex', node.data.hex(), None)
+		return len(node.data)
 
 	def Read_0B2C8AE9(self, node):
 		i = self.skipBlockSize(0)

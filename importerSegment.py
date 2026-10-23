@@ -641,8 +641,8 @@ class SegmentReader(object):
 		if (reader.readBinary()):
 			node.SAT = reader
 			resolveEntityReferences(node)
-			node.nameMatches = getNameMatchAttributes()
-			node.dcAttributes = getDcAttributes()
+			node.nameMatches = dict(getNameMatchAttributes())
+			node.dcAttributes = dict(getDcAttributes())
 			self.segment.AcisList.append(node)
 			i = self.skipBlockSize(e)
 			i = node.ReadUInt32(i, 'selectedKey')

@@ -750,6 +750,13 @@ def getReader(seg):
 		return SegmentReader(seg)
 	return reader(seg)
 
+def decompressInventorData(data):
+	if data.startswith(bytes.fromhex("28b52ffd")):
+		import io, zstandard
+		with zstandard.ZstdDecompressor().stream_reader(io.BytesIO(data)) as reader:
+			return reader.read()
+	return zlib.decompressobj().decompress(data)
+
 def ReadRSeMetaDataB(dataB, seg):
 	reader = getReader(seg)
 	if (reader):
@@ -761,8 +768,7 @@ def ReadRSeMetaDataB(dataB, seg):
 		i = 0
 		uid, i = getUUID(dataB, i)
 		n, i = getUInt16(dataB, i)
-		z = zlib.decompressobj()
-		data = z.decompress(dataB[i:])
+		data = decompressInventorData(dataB[i:])
 
 		reader.ReadSegmentData(newFile, data)
 		if (not (newFile is None)):
@@ -794,10 +800,11 @@ def ReadRSeMetaDataM(dataM, name):
 		value.val2    = 0
 		value.dat2, i = getLen32Text8(dataM, i)
 
-	bTrue, i = getBoolean(dataM, i) # should always be True!!!
-
-	z = zlib.decompressobj()
-	data = z.decompress(dataM[i:])
+	compression = dataM[i]
+	i += 1
+	if compression not in (1, 2):
+		raise ValueError("Unsupported Inventor compression marker: %02X" % compression)
+	data = decompressInventorData(dataM[i:])
 
 	i = 0
 	value.arr3, i = getUInt16A(data, i, 7)

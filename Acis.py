@@ -1336,32 +1336,27 @@ class Helix(object):
 		return VEC(x, y, z)
 
 	def build(self):
-		# TODO: see InporterViewProvider._Coil._makeHelix(self, coil) instead:
-		# line = Part.Line(self.posCenter, self.posCenter + self.vecAxis)
-		# radius = line.projectPoint(self.Profile.Shape.CenterOfMass, "LowerDistance")
-		# helix = Part.makeLongHelix(slef.getPitch(), self.getHeight(), self.getRadius(), self.getApexAngle(), self.isLeftHanded())
-		# self.pathWires.append(helix)
-
-		min_U   = self.radAngles.getLowerLimit()
-		max_U   = self.radAngles.getUpperLimit()
-		r_maj   = self.dirMajor.Length
-		r_min   = self.dirMinor.Length
-		pitch   = self.dirPitch.Length
-		steps_U = Helix.calcSteps(min_U, max_U)
-		handed  = 1 if (self.isLeftHanded()) else -1
-		points  = []
-
-		for u in steps_U:
-			c = Helix.calcPoint(u, min_U, self.facApex, r_maj, r_min, handed, pitch)
-			points.append(c)
-
-		# bring the helix into the correct position:
-		helix = Part.BSplineCurve()
-		helix.interpolate(points)
-		self.rotateShape(helix, DIR_X, VEC(self.dirMajor.x, self.dirMajor.y, 0), DIR_Z)
-		self.rotateShape(helix, DIR_Z, self.vecAxis, DIR_X)
-		helix.translate(self.posCenter)
-		return helix.toShape()
+		# ACIS stores a complete signed basis. Rotating an unsigned angle from X
+		# and then from Z mirrors helices in some quadrants and loses pitch sign.
+		# Evaluate the basis directly, including arbitrary axes and elliptical radii.
+		lo = self.radAngles.getLowerLimit()
+		hi = self.radAngles.getUpperLimit()
+		if hi <= lo:
+			raise ValueError('Invalid ACIS helix parameter interval')
+		def point(u):
+			turns = (u-lo)/(2*pi)
+			return self.posCenter + (self.dirMajor*cos(u) + self.dirMinor*sin(u))*(1+self.facApex*turns) + self.dirPitch*turns
+		# Refine until independent between-knot samples agree to 0.1 micrometre.
+		n = max(8, int(ceil((hi-lo)/(pi/32))))
+		while n <= 65536:
+			params = [lo+(hi-lo)*i/n for i in range(n+1)]
+			curve = Part.BSplineCurve()
+			curve.interpolate(Points=[point(u) for u in params], Parameters=params, Tolerance=1e-9)
+			error = max((curve.value(params[i]+(params[i+1]-params[i])*f)-point(params[i]+(params[i+1]-params[i])*f)).Length for i in range(n) for f in (0.25,0.5,0.75))
+			if error <= 1e-7:
+				return curve.toShape()
+			n *= 2
+		raise ValueError('ACIS helix approximation did not converge')
 
 	def buildSurfaceLine(self, p1, p2):
 		min_U   = self.radAngles.getLowerLimit()
@@ -1868,7 +1863,7 @@ class Loop(Topology):
 			ce = ce.getNext()
 		return coedges
 	def getEdges(self):
-		return [coEdge.getEdge() for coEdge in self.getCoEdges().values()]
+		return [coEdge.getEdge() for coEdge in self.getCoEdges()]
 	def buildEdges(self):
 		edges = []
 		coedges = self.getCoEdges()
@@ -4196,6 +4191,17 @@ class AttribDxid(Attrib):
 	def __init__(self): super(AttribDxid, self).__init__()
 class AttribCustom(Attrib):
 	def __init__(self): super(AttribCustom, self).__init__()
+	def set(self, record):
+		i = super(AttribCustom, self).set(record)
+		self.customKind, i = getText(record.chunks, i)
+		self.customVersion, i = getInteger(record.chunks, i)
+		self.customSchema, i = getInteger(record.chunks, i)
+		if (self.customVersion, self.customSchema) == (1, 44) and self.customKind in (
+			'INV_NMX_MATCHED_ATTRIB', 'INV_NMX_SWEEPGENERATED_TAG',
+			'INV_NMX_GEN_TAG', 'INV_NMX_BLEND_TAG'):
+			self.mapping, i = getDcIndexMappings(record.chunks, i, self)
+		self.payload = record.chunks[i:]
+		return len(record.chunks)
 class AttribDesigner(Attrib):
 	def __init__(self): super(AttribDesigner, self).__init__()
 class AttribDesignerHistory(AttribDesigner):
@@ -5215,9 +5221,12 @@ class AcisReader(object):
 		return record, id + 1
 
 	def _resolfChunkReferences(self):
+		# History delimiters occupy list positions but do not consume entity IDs.
+		# Records after the history must be resolved by their stored ID.
+		records = {r.index: r for r in self._records if r is not None and r.index >= 0}
 		for ref in self._refChunks.values():
 			try:
-				ref.record = self._records[ref.val]
+				ref.record = records[ref.val]
 			except:
 				pass
 		self._refChunks[-1].record = None

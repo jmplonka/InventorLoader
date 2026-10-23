@@ -306,8 +306,8 @@ def chooseImportStrategyAcis():
 	result = msgBox.exec_()
 	QApplication.restoreOverrideCursor()
 
-	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_CANCEL}
-	strategy = resultMapping[result]
+	buttonMapping = {btnCnvrt: STRATEGY_STEP, btnNativ: STRATEGY_SAT, btnCancel: STRATEGY_CANCEL}
+	strategy = buttonMapping.get(msgBox.clickedButton(), STRATEGY_CANCEL)
 	setStrategy(strategy)
 	return strategy
 
@@ -337,8 +337,8 @@ def chooseImportStrategy():
 	result = msgBox.exec_()
 	QApplication.restoreOverrideCursor()
 
-	resultMapping = {0:STRATEGY_STEP, 1: STRATEGY_SAT, 2:STRATEGY_NATIVE, 3:STRATEGY_CANCEL}
-	strategy = resultMapping[result]
+	buttonMapping = {btnCnvrt: STRATEGY_STEP, btnSat: STRATEGY_SAT, btnNativ: STRATEGY_NATIVE, btnCancel: STRATEGY_CANCEL}
+	strategy = buttonMapping.get(msgBox.clickedButton(), STRATEGY_CANCEL)
 	setStrategy(strategy)
 	return strategy
 
