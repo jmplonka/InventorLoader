@@ -306,7 +306,7 @@ def __create_b_spline_curve(spline):
 			if (spline.rational):
 				p0 = BOUNDED_CURVE()
 				p1 = B_SPLINE_CURVE(name=None, degree=degree, points=points, form='UNSPECIFIED', closed=closed, selfIntersecting=False)
-				p2 = B_SPLINE_CURVE_WITH_KNOTS(name='', mults=mults, knots=knots, form2='UNSPECIFIED', closed=closed)
+				p2 = B_SPLINE_CURVE_WITH_KNOTS(mults=mults, knots=knots, form2='UNSPECIFIED') # the complex-entity part takes no name/closed (OCCT 7.8 crashed reading them)
 				p3 = CURVE()
 				p4 = GEOMETRIC_REPRESENTATION_ITEM()
 				p5 = RATIONAL_B_SPLINE_CURVE(spline.weights)
