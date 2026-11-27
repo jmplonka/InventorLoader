@@ -15,6 +15,7 @@ import traceback
 
 smb_files = []
 smb_only  = []
+_label    = None # imported solids are labelled after the .f3d file
 bulk_data = None
 meta_data = None
 
@@ -191,7 +192,8 @@ def _zip_without_zstd(filename):
 	return out
 
 def read(filename):
-	global smb_files, smb_only, bulk_data, sketches, refs
+	global smb_files, smb_only, bulk_data, sketches, refs, _label
+	_label = filename.replace('\\', '/').split('/')[-1].rsplit('.', 1)[0]
 	smb_files.clear()
 	smb_only.clear()
 	sketches.clear()
@@ -241,12 +243,34 @@ def importModel(root):
 			buildBody(group, body)
 	return
 
+def _insert_as_solids(stepfile, docName):
+	'''The ACIS->STEP export writes loose faces: sew them into closed solids where possible.'''
+	import os, FreeCAD, Part
+	shape = Part.read(stepfile)
+	sewn = shape.copy()
+	sewn.sewShape()
+	solids = [Part.Solid(shell) for shell in sewn.Shells if shell.isClosed()]
+	doc = FreeCAD.getDocument(docName)
+	name = _label or os.path.splitext(os.path.basename(stepfile))[0]
+	finite = lambda shape: shape.BoundBox.isValid() and shape.BoundBox.DiagonalLength < 1e5 # mm; broken thread geometry can be 'infinite'
+	solids = [solid for solid in solids if finite(solid)]
+	for i, solid in enumerate(solids):
+		if (solid.Volume < 0):
+			solid.reverse()
+		obj = doc.addObject('Part::Feature', name if (len(solids) == 1) else '%s_%d' %(name, i))
+		obj.Shape = solid
+	open_faces = [face for shell in sewn.Shells if not shell.isClosed() for face in shell.Faces if finite(face)]
+	if (open_faces):
+		obj = doc.addObject('Part::Feature', name + '_open_faces')
+		obj.Shape = Part.makeCompound(open_faces)
+	doc.recompute()
+
 def convertModel(docName):
 	global smb_files
 	for acis in smb_files:
 		bodies = resolveNodes(acis)
 		stepfile = export(acis.name, acis.header, bodies)
-		insert(stepfile, docName)
+		_insert_as_solids(stepfile, docName)
 
 def create3dModel(root, doc):
 	strategy = chooseImportStrategyAcis()
