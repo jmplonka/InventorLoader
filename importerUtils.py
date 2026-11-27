@@ -1020,7 +1020,11 @@ def cleanDumpFolder():
 def setDumpFolder(anyInputFile):
 	global _dump_folder
 	fileParts = os.path.splitext(anyInputFile)
-	_dump_folder = os.path.abspath(u"%s_%s" %(fileParts[0], fileParts[1][1:]))
+	# keep debug dumps in the temp folder, not next to the imported file
+	import tempfile
+	_dump_root = os.path.join(tempfile.gettempdir(), u"InventorLoader")
+	os.makedirs(_dump_root, exist_ok=True)
+	_dump_folder = os.path.join(_dump_root, u"%s_%s" %(os.path.basename(fileParts[0]), fileParts[1][1:]))
 
 	if (os.path.exists(_dump_folder)):
 		cleanDumpFolder()
