@@ -14,6 +14,7 @@ from importerConstants import VAL_DATETIME, VAL_ENUM, VAL_GUESS, VAL_REF, VAL_ST
 import traceback
 
 smb_files = []
+smb_only  = []
 bulk_data = None
 meta_data = None
 
@@ -75,6 +76,8 @@ def _dump_SMB(f3d, path):
 				dumpSat(name[0:name.rfind('.')], reader)
 				if (name[-3:].lower() != 'smb'):
 					smb_files.append(reader)
+				else:
+					smb_only.append(reader) # newer Fusion files store the B-rep only as .smb
 	return result
 
 def get_manifest_item(data, offset):
@@ -154,18 +157,60 @@ def read_manifest(f3d, path):
 
 	return folder
 
+def _zip_without_zstd(filename):
+	'''Fusion files saved since 2025 compress entries with Zstandard (zip method 93), which Python's
+	zipfile only reads from 3.14 on. Rewrite such archives as an uncompressed copy in the temp folder.'''
+	import os, struct, tempfile, zipfile
+	with zipfile.ZipFile(filename) as src:
+		infos = src.infolist()
+		if (not any(i.compress_type == 93 for i in infos)):
+			return filename
+		try:
+			from compression import zstd # Python 3.14+
+			decompress = lambda data, size: zstd.decompress(data)
+		except ImportError:
+			try:
+				import zstandard
+			except ImportError:
+				raise ImportError("This Fusion file uses Zstandard compression (zip method 93): install the Python package 'zstandard' for FreeCAD, or use a FreeCAD built with Python 3.14 or newer.")
+			dctx = zstandard.ZstdDecompressor()
+			decompress = lambda data, size: dctx.decompress(data, max_output_size=max(size, 1))
+		root = os.path.join(tempfile.gettempdir(), u"InventorLoader")
+		os.makedirs(root, exist_ok=True)
+		out = os.path.join(root, os.path.basename(filename))
+		with open(filename, 'rb') as raw, zipfile.ZipFile(out, 'w', zipfile.ZIP_STORED) as dst:
+			for i in infos:
+				if (i.compress_type == 93):
+					raw.seek(i.header_offset)
+					nlen, xlen = struct.unpack('<HH', raw.read(30)[26:30])
+					raw.seek(i.header_offset + 30 + nlen + xlen)
+					data = decompress(raw.read(i.compress_size), i.file_size)
+				else:
+					data = src.read(i)
+				dst.writestr(zipfile.ZipInfo(i.filename, date_time=i.date_time), data)
+	return out
+
 def read(filename):
-	global smb_files, bulk_data, sketches, refs
+	global smb_files, smb_only, bulk_data, sketches, refs
 	smb_files.clear()
+	smb_only.clear()
 	sketches.clear()
 	refs = []
 	result = is_zipfile(filename)
+	if (result):
+		filename = _zip_without_zstd(filename)
 	data = None
 	meta = None
 	if (result):
 		setDumpFolder(filename)
 		f3d = ZipFile(filename)
-		folder = read_manifest(f3d, 'Manifest.dat')
+		try:
+			folder = read_manifest(f3d, 'Manifest.dat')
+		except Exception:
+			folder = None # newer (assembly) manifests are not understood
+		if (not folder) or (not any(n.startswith(folder + '[Active]/') for n in f3d.namelist())):
+			active = [n for n in f3d.namelist() if '[Active]/' in n]
+			folder = active[0].split('[Active]/')[0] if (active) else 'FusionAssetName'
 		folderPreview = folder + '[Active]/Previews/'
 		folderBreps   = folder + '[Active]/Breps.BlobParts/'
 		fileBulk      = folder + '[Active]/Design1/BulkStream.dat'
@@ -177,6 +222,8 @@ def read(filename):
 				if (_dump_SMB(f3d, name)):
 					result = True
 
+		if (not smb_files):
+			smb_files.extend(smb_only)
 		bulk_data = (data, meta)
 		f3d.close()
 	return result

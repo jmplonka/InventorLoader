@@ -866,7 +866,7 @@ def getText8(data, offset, l):
 	try:
 		txt = data[i: end].decode(ENCODING_FS)
 	except:
-		txt = data[i: end].decode('ansi')
+		txt = data[i: end].decode('cp1252', errors='replace') # 'ansi' is a Windows-only codec
 	if (txt[-1:] == '\0'):
 		txt = txt[:-1]
 
